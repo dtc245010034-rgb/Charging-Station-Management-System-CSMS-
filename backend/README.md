@@ -34,7 +34,7 @@ API chạy tại `http://localhost:3000`. Kiểm tra bằng `GET /api/health`.
 
 Tài khoản mặc định được tạo khi database khởi tạo:
 
-- Tài khoản / Email: `admin@.com` (hoặc `admin.com`, `admin@admin.com`)
+- Tài khoản / Email: `admin@.com` (hoặc `admin@admin.com`)
 - Mật khẩu: `admin123`
 - Vai trò (Role): `ADMIN`
 
