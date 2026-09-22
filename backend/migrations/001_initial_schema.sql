@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 INSERT INTO users (name, email, password_hash, role)
-VALUES ('CSMS Administrator', 'admin@csms.vn', '$2a$12$7X4vATp6CzYhAwpRECYQR.3q0Yy2wyJ3uDmE2v5/vWCawnYDCbPky', 'ADMIN')
+VALUES ('CSMS Administrator', 'admin@.com', '$argon2id$v=19$m=65536,p=4,t=3$I7xFdCesPOpYPY9bSdNOjg$2M72cwW6AJuAbLvxV0pCnam21qaBaDBOP3zfN4m39yM', 'ADMIN')
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO tariffs (name, price_per_kwh)

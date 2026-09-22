@@ -413,6 +413,212 @@ body.light-theme .auth-panel {
   line-height: 1.5;
 }
 
+.auth-alert {
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.4;
+  animation: fadeIn 0.2s ease;
+}
+
+.auth-alert.error {
+  background: rgba(255, 107, 122, 0.15);
+  border: 1px solid var(--error);
+  color: var(--error);
+}
+
+.auth-alert.success {
+  background: rgba(74, 222, 128, 0.15);
+  border: 1px solid var(--success);
+  color: var(--success);
+}
+
+.auth-alert.warning {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+}
+
+/* Dashboard styles */
+.dashboard-layout {
+  background: var(--card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 32px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: fadeIn 0.3s ease;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+}
+
+.user-profile-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-badge {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #03141c;
+  font-weight: 800;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.05em;
+}
+
+.user-email {
+  font-size: 0.95rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.logout-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--toggle-bg);
+  color: var(--toggle-text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 107, 122, 0.2);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.dashboard-banner {
+  background: var(--inner-panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.dashboard-banner h3 {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+}
+
+.dashboard-banner p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.role-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.role-card {
+  background: var(--inner-panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.role-card h5 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.role-card p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.role-card .badge {
+  align-self: flex-start;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(36, 211, 180, 0.15);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.session-test-panel {
+  background: var(--inner-panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.session-test-panel h4 {
+  margin: 0 0 6px;
+}
+
+.session-test-panel p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: rgba(36, 211, 180, 0.2);
+  border-color: var(--primary);
+}
+
+.action-btn.danger:hover {
+  background: rgba(255, 107, 122, 0.2);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.api-log-box {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: none;
+  word-break: break-all;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 920px) {
   .auth-layout {
     grid-template-columns: 1fr;
@@ -421,6 +627,12 @@ body.light-theme .auth-panel {
   .brand-panel {
     border-right: 0;
     border-bottom: 1px solid var(--border);
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
 }
 
