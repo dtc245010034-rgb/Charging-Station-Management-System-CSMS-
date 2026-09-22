@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSMS | Đăng nhập</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-theme="dark">
+    <div class="theme-switch-wrap">
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Chuyển chế độ sáng tối">
+        <span class="theme-icon">☀️</span>
+        <span class="theme-label">Chế độ sáng</span>
+      </button>
+    </div>
+
+    <div class="page-shell">
+      <div class="brand-panel">
+        <div class="brand-content">
+          <div class="brand-mark">CSMS</div>
+          <h1>Hệ thống quản lý trạm sạc thông minh</h1>
+          <p>
+            Theo dõi trạng thái trạm, quản lý doanh thu, tối ưu hóa vận hành
+            và đảm bảo trải nghiệm sạc liền mạch cho người dùng.
+          </p>
+
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-number">128</span>
+              <span class="stat-label">Trạm hoạt động</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">24/7</span>
+              <span class="stat-label">Giám sát thời gian thực</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">99.8%</span>
+              <span class="stat-label">Tỷ lệ sẵn sàng</span>
+            </div>
+          </div>
+
+          <ul class="feature-list">
+            <li>Giám sát tình trạng sạc theo thời gian thực</li>
+            <li>Quản lý giá điện theo khung giờ</li>
+            <li>Đối soát doanh thu và báo cáo chi tiết</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="auth-panel">
+        <div class="auth-card active" id="login-panel">
+          <div class="topbar">
+            <span class="eyebrow">Chào mừng trở lại</span>
+            <h2>Đăng nhập</h2>
+          </div>
+
+          <form class="auth-form" id="loginForm">
+            <div class="input-group">
+              <label for="login-email">Email</label>
+              <input id="login-email" type="email" placeholder="name@company.com" required />
+            </div>
+
+            <div class="input-group">
+              <label for="login-password">Mật khẩu</label>
+              <input id="login-password" type="password" placeholder="••••••••" required />
+            </div>
+
+            <div class="form-row">
+              <label class="checkbox-wrap">
+                <input type="checkbox" />
+                <span>Ghi nhớ đăng nhập</span>
+              </label>
+              <a href="#">Quên mật khẩu?</a>
+            </div>
+
+            <button type="submit" class="primary-btn">Đăng nhập</button>
+          </form>
+
+          <div class="switch-line">
+            <span>Chưa có tài khoản?</span>
+            <button class="text-btn" data-target="register-panel">Tạo tài khoản</button>
+          </div>
+        </div>
+
+        <div class="auth-card" id="register-panel">
+          <div class="topbar">
+            <span class="eyebrow">Bắt đầu ngay</span>
+            <h2>Tạo tài khoản</h2>
+          </div>
+
+          <form class="auth-form" id="registerForm">
+            <div class="two-col">
+              <div class="input-group">
+                <label for="register-name">Họ và tên</label>
+                <input id="register-name" type="text" placeholder="Nguyễn Văn A" required />
+              </div>
+
+              <div class="input-group">
+                <label for="register-phone">Số điện thoại</label>
+                <input id="register-phone" type="tel" placeholder="0909 123 456" required />
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label for="register-email">Email</label>
+              <input id="register-email" type="email" placeholder="name@company.com" required />
+            </div>
+
+            <div class="two-col">
+              <div class="input-group">
+                <label for="register-password">Mật khẩu</label>
+                <input id="register-password" type="password" placeholder="Tối thiểu 8 ký tự" required />
+              </div>
+
+              <div class="input-group">
+                <label for="register-confirm">Xác nhận</label>
+                <input id="register-confirm" type="password" placeholder="Nhập lại mật khẩu" required />
+              </div>
+            </div>
+
+            <button type="submit" class="primary-btn">Tạo tài khoản</button>
+          </form>
+
+          <div class="switch-line">
+            <span>Đã có tài khoản?</span>
+            <button class="text-btn" data-target="login-panel">Đăng nhập</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">Thao tác thành công</div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
