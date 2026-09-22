@@ -2,16 +2,30 @@ require('dotenv').config();
 const http = require('node:http');
 const express = require('express');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
+const cookieParser = require('cookie-parser');
 const { WebSocketServer } = require('ws');
 const db = require('./db');
-const { authenticate, allow, issueToken, publicUser, verifyPassword } = require('./auth');
+const {
+  authenticate,
+  allow,
+  issueToken,
+  publicUser,
+  hashPassword,
+  verifyPassword,
+  checkUserLock,
+  recordUserFailedLogin,
+  resetUserFailedAttempts,
+  getUserRoles,
+} = require('./auth');
 
+const path = require('node:path');
 const app = express();
 const server = http.createServer(app);
 const port = Number(process.env.PORT || 3000);
-app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || true }));
+app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || true, credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
+app.use(express.static(path.resolve(__dirname, '../../')));
 const now = () => new Date().toISOString();
 const fail = (res, error, status = 400) => res.status(status).json({ error: error.message || error });
 const numeric = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
@@ -22,21 +36,98 @@ app.get('/api/health', async (req, res) => {
   catch (error) { fail(res, error, 503); }
 });
 
+app.get('/api/roles', async (req, res) => {
+  try {
+    const roles = await db.prepare('SELECT id, code, name, description, created_at FROM roles ORDER BY id ASC').all();
+    res.json(roles);
+  } catch (error) {
+    fail(res, error, 500);
+  }
+});
+
 app.post('/api/auth/register', async (req, res) => {
   const { name, email, password, role = 'OPERATOR' } = req.body;
   if (!name || !email || !password || password.length < 8) return fail(res, 'name, email và password >= 8 ký tự là bắt buộc');
   try {
-    const result = await db.prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)').run(name, email, bcrypt.hashSync(password, 12), role);
+    const normalizedEmail = email.toLowerCase().trim();
+    const passwordHash = await hashPassword(password);
+    const result = await db.prepare(
+      'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)'
+    ).run(name, normalizedEmail, passwordHash, role);
+
     const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json({ user: publicUser(user), token: issueToken(user) });
+    const roleRow = await db.prepare('SELECT id FROM roles WHERE code = ?').get(role);
+    if (roleRow) {
+      await db.prepare('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?) ON CONFLICT DO NOTHING').run(user.id, roleRow.id);
+    }
+    const roles = await getUserRoles(user.id);
+    const token = issueToken(user, roles);
+
+    // Set httpOnly cookie for session
+    res.cookie('token', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 8 * 3600 * 1000,
+      secure: process.env.NODE_ENV === 'production',
+    });
+
+    res.status(201).json({ user: publicUser(user, roles), token });
   } catch (error) { fail(res, error.code === '23505' ? 'Email đã tồn tại' : error); }
 });
+
 app.post('/api/auth/login', async (req, res) => {
-  const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(req.body.email || '');
-  if (!user || !verifyPassword(user, req.body.password || '')) return fail(res, 'Email hoặc mật khẩu không đúng', 401);
-  res.json({ user: publicUser(user), token: issueToken(user) });
+  const email = (req.body.email || '').toLowerCase().trim();
+  const password = req.body.password || '';
+
+  // Look up user in PostgreSQL users table
+  const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+
+  // Check persistent lock status stored in users table (not in-memory)
+  if (user) {
+    const lockStatus = await checkUserLock(user);
+    if (lockStatus.locked) {
+      return fail(res, lockStatus.message, 429);
+    }
+  }
+
+  const isValid = user ? await verifyPassword(user, password) : false;
+
+  if (!isValid) {
+    // Record failed attempt directly in users table if user exists
+    if (user) {
+      await recordUserFailedLogin(user);
+    }
+    // Generic error message that does not leak email existence
+    return fail(res, 'Email hoặc mật khẩu không đúng', 401);
+  }
+
+  // Reset failed attempts in users table on successful login
+  await resetUserFailedAttempts(user.id);
+  const roles = await getUserRoles(user.id);
+  const token = issueToken(user, roles);
+
+  // Issue httpOnly session cookie
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 8 * 3600 * 1000,
+    secure: process.env.NODE_ENV === 'production',
+  });
+
+  res.json({ user: publicUser(user, roles), token });
 });
-app.get('/api/auth/me', authenticate, async (req, res) => res.json(publicUser(await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id))));
+
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('token');
+  res.json({ ok: true, message: 'Đăng xuất thành công' });
+});
+
+app.get('/api/auth/me', authenticate, async (req, res) => {
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user) return fail(res, 'Người dùng không tồn tại', 404);
+  const roles = await getUserRoles(user.id);
+  res.json(publicUser(user, roles));
+});
 
 app.get('/api/stations', authenticate, async (req, res) => res.json(await db.prepare('SELECT s.*, COUNT(cp.id)::int AS charge_point_count FROM stations s LEFT JOIN charge_points cp ON cp.station_id = s.id GROUP BY s.id ORDER BY s.id DESC').all()));
 app.post('/api/stations', authenticate, allow('ADMIN', 'MANAGER'), async (req, res) => {

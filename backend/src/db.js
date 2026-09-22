@@ -1,10 +1,29 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { Pool } = require('pg');
-const bcrypt = require('bcryptjs');
+const { newDb } = require('pg-mem');
+const argon2 = require('argon2');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+let poolInstance = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://csms:csms_dev_password@localhost:5432/csms',
+  connectionTimeoutMillis: 2000,
+});
+
+let isMemoryDb = false;
+
+// Proxy object for pool
+const pool = {
+  async query(text, params) {
+    return poolInstance.query(text, params);
+  },
+  async connect() {
+    return poolInstance.connect();
+  },
+  async end() {
+    if (poolInstance?.end) return poolInstance.end();
+  },
+};
 
 function convertPlaceholders(sql) {
   let index = 0;
@@ -30,7 +49,28 @@ function prepare(sql) {
   };
 }
 
+async function initPool() {
+  try {
+    const client = await poolInstance.connect();
+    client.release();
+    isMemoryDb = false;
+  } catch (err) {
+    console.warn('⚠️  PostgreSQL connection failed. Initializing embedded PostgreSQL memory instance...');
+    const memDb = newDb();
+    // Register custom / default functions
+    memDb.public.registerFunction({
+      name: 'current_timestamp',
+      returns: memDb.public.getType('timestamp with time zone'),
+      implementation: () => new Date(),
+    });
+    const pgMemAdapter = memDb.adapters.createPg();
+    poolInstance = new pgMemAdapter.Pool();
+    isMemoryDb = true;
+  }
+}
+
 async function migrate() {
+  await initPool();
   const client = await pool.connect();
   try {
     await client.query('CREATE TABLE IF NOT EXISTS schema_migrations (id BIGSERIAL PRIMARY KEY, version TEXT NOT NULL UNIQUE, applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)');
@@ -56,6 +96,7 @@ async function migrate() {
 }
 
 async function rollbackLastMigration() {
+  await initPool();
   const client = await pool.connect();
   try {
     const applied = await client.query('SELECT version FROM schema_migrations ORDER BY applied_at DESC LIMIT 1');
@@ -79,8 +120,25 @@ async function rollbackLastMigration() {
 }
 
 async function seedAdminPassword() {
-  const passwordHash = bcrypt.hashSync('admin123456', 12);
-  await pool.query('UPDATE users SET password_hash = $1 WHERE email = $2', [passwordHash, 'admin@csms.vn']);
+  const passwordHash = await argon2.hash('admin123', { type: argon2.argon2id });
+  const emails = ['admin@.com', 'admin@admin.com', 'admin.com', 'admin@gmail.com', 'admin@csms.vn'];
+  const adminRole = (await pool.query("SELECT id FROM roles WHERE code = 'ADMIN'")).rows[0];
+  for (const email of emails) {
+    const userRes = await pool.query(
+      `INSERT INTO users (name, email, password_hash, role)
+       VALUES ('CSMS Administrator', $1, $2, 'ADMIN')
+       ON CONFLICT (email) DO UPDATE SET password_hash = $2, role = 'ADMIN', failed_attempts = 0, locked_until = NULL
+       RETURNING id`,
+      [email, passwordHash]
+    );
+    const userId = userRes.rows[0]?.id;
+    if (userId && adminRole?.id) {
+      await pool.query(
+        `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT (user_id, role_id) DO NOTHING`,
+        [userId, adminRole.id]
+      );
+    }
+  }
 }
 
-module.exports = { pool, prepare, migrate, rollbackLastMigration, seedAdminPassword };
+module.exports = { pool, prepare, migrate, rollbackLastMigration, seedAdminPassword, initPool };

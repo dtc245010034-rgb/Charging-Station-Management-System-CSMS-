@@ -34,9 +34,9 @@ API chạy tại `http://localhost:3000`. Kiểm tra bằng `GET /api/health`.
 
 Tài khoản mặc định được tạo khi database khởi tạo:
 
-- Email: `admin@csms.vn`
-- Password: `admin123456`
-- Role: `ADMIN`
+- Tài khoản / Email: `admin@.com` (hoặc `admin@admin.com`)
+- Mật khẩu: `admin123`
+- Vai trò (Role): `ADMIN`
 
 Gửi JWT nhận từ `/api/auth/login` trong header `Authorization: Bearer <token>` cho các API cần đăng nhập.
 
