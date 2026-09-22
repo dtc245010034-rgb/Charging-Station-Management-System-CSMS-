@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSMS | Đăng nhập</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Chuyển đổi giao diện sáng/tối">
+        <span class="theme-icon">☀️</span>
+        <span class="theme-label">Sáng</span>
+      </button>
+
+      <div class="auth-layout">
+        <aside class="brand-panel">
+          <div class="brand-header">
+            <div class="brand-mark">CS</div>
+            <div>
+              <p class="eyebrow">Charging Station</p>
+              <h1>CSMS</h1>
+            </div>
+          </div>
+
+          <div class="hero-copy">
+            <span class="status-badge">Hệ thống quản lý trạm sạc</span>
+            <h2>Giám sát, vận hành và tối ưu năng lực sạc theo thời gian thực.</h2>
+            <p>
+              Theo dõi trạng thái trạm, doanh thu, hiệu suất vận hành và dữ liệu
+              OCPP trên mọi điểm sạc trong mạng lưới.
+            </p>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-value">128</span>
+              <span class="metric-label">Trạm đang hoạt động</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-value">96.8%</span>
+              <span class="metric-label">Tỷ lệ sẵn sàng</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-value">4.2M</span>
+              <span class="metric-label">kWh đã cấp</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-value">24/7</span>
+              <span class="metric-label">Giám sát liên tục</span>
+            </div>
+          </div>
+        </aside>
+
+        <main class="auth-panel">
+          <div class="auth-window">
+            <div class="tab-bar" role="tablist" aria-label="Authentication tabs">
+              <button class="tab-btn active" type="button" data-tab="login" aria-selected="true">
+                Đăng nhập
+              </button>
+              <button class="tab-btn" type="button" data-tab="register" aria-selected="false">
+                Tạo tài khoản
+              </button>
+            </div>
+
+            <section class="auth-form active" id="loginFormSection" data-form="login">
+              <div class="form-header">
+                <h3>Chào mừng quay trở lại</h3>
+                <p>Đăng nhập để quản lý trạm sạc và vận hành hệ thống</p>
+              </div>
+
+              <form class="form-body" id="loginForm">
+                <label class="field">
+                  <span>Email hoặc tên đăng nhập</span>
+                  <input type="text" placeholder="nhap@csms.vn" required />
+                </label>
+
+                <label class="field">
+                  <span>Mật khẩu</span>
+                  <input type="password" placeholder="••••••••" required />
+                </label>
+
+                <div class="row inline-row">
+                  <label class="checkbox-wrap">
+                    <input type="checkbox" checked />
+                    <span>Ghi nhớ</span>
+                  </label>
+                  <a href="#">Quên mật khẩu?</a>
+                </div>
+
+                <button class="primary-btn" type="submit">Đăng nhập</button>
+              </form>
+            </section>
+
+            <section class="auth-form" id="registerFormSection" data-form="register">
+              <div class="form-header">
+                <h3>Tạo tài khoản mới</h3>
+                <p>Thiết lập quyền truy cập cho quản lý trạm và đội vận hành</p>
+              </div>
+
+              <form class="form-body" id="registerForm">
+                <div class="row two-col">
+                  <label class="field">
+                    <span>Họ và tên</span>
+                    <input type="text" placeholder="Nguyễn Văn A" required />
+                  </label>
+                  <label class="field">
+                    <span>Số điện thoại</span>
+                    <input type="tel" placeholder="0901 234 567" required />
+                  </label>
+                </div>
+
+                <div class="row two-col">
+                  <label class="field">
+                    <span>Email</span>
+                    <input type="email" placeholder="ten@csms.vn" required />
+                  </label>
+                  <label class="field">
+                    <span>Mật khẩu</span>
+                    <input type="password" placeholder="Tối thiểu 8 ký tự" required />
+                  </label>
+                </div>
+
+                <div class="row two-col">
+                  <label class="field">
+                    <span>Xác nhận mật khẩu</span>
+                    <input type="password" placeholder="Nhập lại mật khẩu" required />
+                  </label>
+                  <label class="field">
+                    <span> </span>
+                    <div class="field-spacer"></div>
+                  </label>
+                </div>
+
+                <div class="row two-col">
+                  <label class="field">
+                    <span>Mật khẩu</span>
+                    <input type="password" placeholder="Tối thiểu 8 ký tự" required />
+                  </label>
+                  <label class="field">
+                    <span>Xác nhận mật khẩu</span>
+                    <input type="password" placeholder="Nhập lại mật khẩu" required />
+                  </label>
+                </div>
+
+                <label class="checkbox-wrap terms">
+                  <input type="checkbox" required />
+                  <span>Tôi đồng ý với điều khoản và chính sách bảo mật.</span>
+                </label>
+
+                <button class="primary-btn" type="submit">Tạo tài khoản</button>
+              </form>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
