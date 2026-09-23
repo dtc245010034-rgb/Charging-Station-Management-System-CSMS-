@@ -28,7 +28,7 @@ async function resetSchema() {
 }
 
 async function truncateAll() {
-  await query('TRUNCATE audit_logs, connectors, charge_points, stations, user_roles, users RESTART IDENTITY CASCADE');
+  await query('TRUNCATE audit_logs, login_throttle, connectors, charge_points, stations, user_roles, users RESTART IDENTITY CASCADE');
 }
 
 module.exports = { BASE, env, run, query, resetSchema, truncateAll };

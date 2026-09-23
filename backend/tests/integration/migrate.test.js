@@ -23,12 +23,16 @@ describe('S-01 migrate: baseline up/down/up', () => {
       assert.deepStrictEqual(roles.rows.map((r) => r.code), ['ACCOUNTANT', 'ADMIN', 'DRIVER', 'OPERATOR', 'STATION_OWNER']);
       const col = await query("SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'role'");
       assert.strictEqual(col.rowCount, 0);
+      const lock = await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name IN ('failed_attempts', 'locked_until')");
+      assert.strictEqual(lock.rowCount, 0);
     })();
   });
 
   it('down về rỗng, rồi up lại sạch', async () => {
-    const down = run('src/db/migrate.js', ['down']);
-    assert.strictEqual(down.status, 0, down.stderr);
+    for (let i = 0; i < 2; i += 1) {
+      const down = run('src/db/migrate.js', ['down']);
+      assert.strictEqual(down.status, 0, down.stderr);
+    }
     assert.deepStrictEqual(await tables(), []);
     const up = run('src/db/migrate.js');
     assert.strictEqual(up.status, 0, up.stderr);

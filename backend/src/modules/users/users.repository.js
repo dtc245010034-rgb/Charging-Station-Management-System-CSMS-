@@ -14,9 +14,4 @@ const roleCodesOf = async (userId) => {
   return rows.map((r) => r.code);
 };
 
-const setFailedAttempts = (userId, count, lockedUntil) =>
-  prepare('UPDATE users SET failed_attempts = ?, locked_until = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(count, lockedUntil, userId);
-const resetFailedAttempts = (userId) =>
-  prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(userId);
-
-module.exports = { findByEmail, findById, insert, listRoles, findRoleByCode, assignRole, roleCodesOf, setFailedAttempts, resetFailedAttempts };
+module.exports = { findByEmail, findById, insert, listRoles, findRoleByCode, assignRole, roleCodesOf };

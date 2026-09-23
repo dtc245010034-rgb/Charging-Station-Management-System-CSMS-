@@ -207,9 +207,8 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 // Check initial session
-const storedToken = localStorage.getItem('csms-token');
 const storedUser = localStorage.getItem('csms-user');
-if (storedToken && storedUser) {
+if (storedUser) {
   try {
     const user = JSON.parse(storedUser);
     showDashboard(user);
@@ -245,9 +244,8 @@ loginForm?.addEventListener('submit', async (event) => {
 
     const data = await response.json();
 
-    if (response.ok && data.token && data.user) {
+    if (response.ok && data.user) {
       // AC1: Giả sử thông tin đúng, Khi đăng nhập, Thì tạo phiên đăng nhập và chuyển tới trang chính của vai trò đó
-      localStorage.setItem('csms-token', data.token);
       localStorage.setItem('csms-user', JSON.stringify(data.user));
       loginForm.reset();
       showDashboard(data.user);

@@ -8,6 +8,7 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32),
   APP_ORIGIN: z.string().min(1),
+  LOGIN_IP_MAX_FAILURES: z.coerce.number().int().positive().default(20),
 });
 
 const parsed = schema.safeParse(process.env);
