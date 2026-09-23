@@ -92,4 +92,27 @@ describe('S-02 frontend: api.js và auth.js', () => {
     assert.deepStrictEqual(env.calls.storageWrites, []);
     assert.deepStrictEqual(env.calls.fetch.map((c) => c.url), ['/api/auth/login', '/api/auth/logout']);
   });
+
+  it('ApiError mang details của envelope để gắn lỗi vào đúng ô nhập', async () => {
+    const details = [{ field: 'email', message: 'Email không hợp lệ' }];
+    env = stubBrowser({ respond: () => ({ status: 400, body: { error: { code: 'VALIDATION_ERROR', message: 'Email không hợp lệ', details } } }) });
+    const { api } = await load('api.js');
+    await assert.rejects(api('/api/auth/register', { method: 'POST', body: {} }), (e) => e.status === 400 && JSON.stringify(e.details) === JSON.stringify(details));
+  });
+});
+
+describe('S-02 frontend: kiểm tra form phía client (validate.js)', () => {
+  it('đăng nhập: bắt buộc email và mật khẩu, email phải đúng định dạng', async () => {
+    const { validateLogin } = await load('validate.js');
+    assert.deepStrictEqual(Object.keys(validateLogin({ email: '', password: '' })).sort(), ['email', 'password']);
+    assert.deepStrictEqual(Object.keys(validateLogin({ email: 'khong-phai-email', password: 'x' })), ['email']);
+    assert.deepStrictEqual(validateLogin({ email: 'a@b.co', password: 'x' }), {});
+  });
+
+  it('đăng ký: tên bắt buộc, email hợp lệ, mật khẩu >= 8 ký tự', async () => {
+    const { validateRegister } = await load('validate.js');
+    assert.deepStrictEqual(Object.keys(validateRegister({ name: ' ', email: 'a', password: 'short' })).sort(), ['email', 'name', 'password']);
+    assert.match(validateRegister({ name: 'A', email: 'a@b.co', password: '1234567' }).password, /8/);
+    assert.deepStrictEqual(validateRegister({ name: 'A', email: 'a@b.co', password: '12345678' }), {});
+  });
 });

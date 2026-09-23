@@ -7,6 +7,7 @@ function errorHandler(err, req, res, next) {
   let status = 500;
   let code = 'INTERNAL_ERROR';
   let message = 'Lỗi hệ thống';
+  let details;
 
   if (err instanceof AppError) {
     ({ status, code } = err);
@@ -15,6 +16,7 @@ function errorHandler(err, req, res, next) {
     status = 400;
     code = 'VALIDATION_ERROR';
     message = err.issues[0]?.message || 'Dữ liệu không hợp lệ';
+    details = err.issues.map((issue) => ({ field: issue.path.join('.'), message: issue.message }));
   } else if (err.code === '22P02') {
     status = 400;
     code = 'BAD_REQUEST';
@@ -30,7 +32,7 @@ function errorHandler(err, req, res, next) {
   }
 
   if (status >= 500) console.error(err);
-  return res.status(status).json({ error: { code, message } });
+  return res.status(status).json({ error: details ? { code, message, details } : { code, message } });
 }
 
 module.exports = { errorHandler };

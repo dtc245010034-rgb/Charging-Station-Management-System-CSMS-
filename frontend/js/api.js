@@ -1,8 +1,9 @@
 export class ApiError extends Error {
-  constructor(status, code, message) {
+  constructor(status, code, message, details = []) {
     super(message);
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -20,7 +21,7 @@ export async function api(path, { method = 'GET', body, redirectOn401 = true } =
     location.replace('/index.html');
   }
   if (!response.ok) {
-    throw new ApiError(response.status, data?.error?.code, data?.error?.message || 'Có lỗi xảy ra, vui lòng thử lại');
+    throw new ApiError(response.status, data?.error?.code, data?.error?.message || 'Có lỗi xảy ra, vui lòng thử lại', data?.error?.details);
   }
   return data;
 }
