@@ -49,5 +49,6 @@ describe('S-01 env: cấu hình bắt buộc', () => {
     const cfg = JSON.parse(r.stdout);
     assert.strictEqual(cfg.NODE_ENV, 'development');
     assert.strictEqual(cfg.PORT, 3000);
+    assert.strictEqual(cfg.TRUST_PROXY, 0);
   });
 });

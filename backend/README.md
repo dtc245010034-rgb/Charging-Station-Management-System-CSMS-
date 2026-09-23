@@ -60,6 +60,14 @@ Phiên là JWT trong cookie `httpOnly` (SameSite=Lax, Secure khi production); AP
 - `POST /api/stations/:stationId/charge-points`, `PATCH /api/charge-points/:id`
 - Frontend hiện dùng trực tiếp các route auth ở trên; các route trạm và trụ sạc sẵn sàng cho dashboard mở rộng.
 
+## Phân quyền và bảo mật request
+
+- Mọi route khai báo qua `secureRouter()` với `{ access }`; ma trận quyền nằm duy nhất ở `src/security/permissions.js`. Route thiếu `access` bị từ chối 403 (kể cả ADMIN) và có cảnh báo khi khởi động. ESLint cấm `express.Router()` trực tiếp trong `src/modules/`.
+- Chống CSRF: request POST/PUT/PATCH/DELETE tới `/api` phải là `application/json` (415 nếu không) và nếu trình duyệt gửi `Origin` thì phải nằm trong `APP_ORIGIN` (403). Client không phải trình duyệt (curl) thường không có `Origin` nên vẫn qua. Nếu đổi cổng/địa chỉ truy cập (ví dụ `APP_PORT`), đặt `APP_ORIGIN` khớp.
+- Phiên chỉ nhận qua cookie httpOnly, không nhận `Authorization: Bearer`.
+- `TRUST_PROXY` = số reverse proxy tin cậy (mặc định 0). Khi > 0, IP khách lấy từ `X-Forwarded-For` để khoá đăng nhập theo IP đúng.
+- Cần Node.js >= 22.7 (`engine-strict`, ứng dụng thoát với thông báo rõ nếu thấp hơn).
+
 ## Kiểm thử
 
 ```powershell

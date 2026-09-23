@@ -39,4 +39,12 @@ describe('S-02 NFR: đếm lần sai theo IP', () => {
     await login('c@example.com', 'wrong-password');
     assert.strictEqual((await login('victim@example.com', 'CorrectHorse-9')).status, 429);
   });
+
+  it('mặc định bỏ qua X-Forwarded-For: giả mạo IP vẫn bị gom về một IP thật', async () => {
+    for (const [i, email] of ['a@example.com', 'b@example.com', 'c@example.com'].entries()) {
+      await login(email, 'wrong-password').set('X-Forwarded-For', `10.0.0.${i + 1}`);
+    }
+    const res = await login('victim@example.com', 'CorrectHorse-9').set('X-Forwarded-For', '203.0.113.99');
+    assert.strictEqual(res.status, 429);
+  });
 });
