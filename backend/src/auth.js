@@ -1,18 +1,16 @@
 const jwt = require('jsonwebtoken');
 const argon2 = require('argon2');
-const bcrypt = require('bcryptjs');
 const db = require('./db');
+const env = require('./config/env');
 
-const secret = process.env.JWT_SECRET || 'development-secret';
+const secret = env.JWT_SECRET;
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 const SYSTEM_ROLES = ['DRIVER', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT', 'ADMIN'];
 
 function issueToken(user, roles = []) {
-  const primaryRole = user.role || (roles.length ? roles[0] : 'OPERATOR');
-  const allRoles = Array.from(new Set([...(roles.length ? roles : []), primaryRole]));
   return jwt.sign(
-    { id: user.id, email: user.email, role: primaryRole, roles: allRoles },
+    { id: user.id, email: user.email, role: roles[0] || null, roles },
     secret,
     { expiresIn: '8h' }
   );
@@ -62,14 +60,12 @@ async function getUserRoles(userId) {
 }
 
 function publicUser(user, roles = []) {
-  const primaryRole = user.role || (roles.length ? roles[0] : 'OPERATOR');
-  const allRoles = Array.from(new Set([...(roles.length ? roles : []), primaryRole]));
   return {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: primaryRole,
-    roles: allRoles,
+    role: roles[0] || null,
+    roles,
     created_at: user.created_at,
   };
 }
@@ -83,17 +79,6 @@ async function verifyPassword(user, password) {
   try {
     if (user.password_hash.startsWith('$argon2')) {
       return await argon2.verify(user.password_hash, password);
-    }
-    // Fallback support for legacy bcrypt hashes & auto-upgrade
-    if (user.password_hash.startsWith('$2a$') || user.password_hash.startsWith('$2b$')) {
-      const match = bcrypt.compareSync(password, user.password_hash);
-      if (match) {
-        try {
-          const newHash = await hashPassword(password);
-          await db.prepare('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(newHash, user.id);
-        } catch {}
-      }
-      return match;
     }
     return false;
   } catch {
