@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="page-shell">
@@ -154,47 +154,8 @@
           </div>
         </main>
       </div>
-
-      <!-- Dashboard Layout for Logged In User -->
-      <div class="dashboard-layout" id="dashboardLayout" style="display: none;">
-        <header class="dashboard-header">
-          <div class="brand-header">
-            <div class="brand-mark">CS</div>
-            <div>
-              <p class="eyebrow">Charging Station Management System</p>
-              <h2 id="dashboardRoleTitle">Trang làm việc</h2>
-            </div>
-          </div>
-          <div class="user-profile-menu">
-            <span class="user-badge" id="userBadge">ADMIN</span>
-            <span class="user-email" id="userEmail">admin@csms.vn</span>
-            <button class="logout-btn" id="logoutBtn" type="button">Đăng xuất</button>
-          </div>
-        </header>
-
-        <main class="dashboard-content">
-          <div class="dashboard-banner">
-            <h3>Chào mừng, <span id="userName">Người dùng</span>!</h3>
-            <p id="roleDescription">Bạn đã đăng nhập thành công vào trang chính của vai trò này.</p>
-          </div>
-
-          <div class="role-cards-grid" id="roleCardsGrid">
-            <!-- Dynamic cards rendered based on role -->
-          </div>
-
-          <div class="session-test-panel">
-            <h4>Kiểm tra phiên đăng nhập (AC4)</h4>
-            <p>Gọi API thử nghiệm hoặc giả lập hết hạn token để kiểm tra tự động chuyển về trang đăng nhập khi nhận HTTP 401.</p>
-            <div class="action-buttons">
-              <button class="action-btn" id="testApiBtn" type="button">Gọi API hợp lệ (/api/auth/me)</button>
-              <button class="action-btn danger" id="testExpireBtn" type="button">Giả lập Token hết hạn & Gọi API</button>
-            </div>
-            <div id="apiResponseLog" class="api-log-box"></div>
-          </div>
-        </main>
-      </div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="/js/pages/login.js"></script>
   </body>
 </html>

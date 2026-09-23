@@ -50,7 +50,7 @@ describe('S-01 baseline: khung dự án an toàn', () => {
 
   it('S-01: chỉ phục vụ frontend/ (trang chủ và script.js vẫn tải được)', async () => {
     assert.strictEqual((await request(app).get('/index.html')).status, 200);
-    assert.strictEqual((await request(app).get('/script.js')).status, 200);
+    assert.strictEqual((await request(app).get('/js/pages/login.js')).status, 200);
     assert.strictEqual((await request(app).get('/styles.css')).status, 200);
   });
 
