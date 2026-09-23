@@ -1,10 +1,10 @@
-require('dotenv').config();
 const http = require('node:http');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { WebSocketServer } = require('ws');
+const env = require('./config/env');
 const db = require('./db');
 const {
   authenticate,
@@ -23,8 +23,8 @@ const {
 const path = require('node:path');
 const app = express();
 const server = http.createServer(app);
-const port = Number(process.env.PORT || 3000);
-app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || true, credentials: true }));
+const port = env.PORT;
+app.use(cors({ origin: env.APP_ORIGIN.split(','), credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.resolve(__dirname, '../../')));
@@ -62,8 +62,8 @@ app.post('/api/auth/register', async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
     const passwordHash = await hashPassword(password);
     const result = await db.prepare(
-      'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)'
-    ).run(name, normalizedEmail, passwordHash, role);
+      'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)'
+    ).run(name, normalizedEmail, passwordHash);
 
     const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     const roleRow = await db.prepare('SELECT id FROM roles WHERE code = ?').get(role);
@@ -78,7 +78,7 @@ app.post('/api/auth/register', async (req, res) => {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: 8 * 3600 * 1000,
-      secure: process.env.NODE_ENV === 'production',
+      secure: env.NODE_ENV === 'production',
     });
 
     res.status(201).json({ user: publicUser(user, roles), token });
@@ -121,7 +121,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     httpOnly: true,
     sameSite: 'lax',
     maxAge: 8 * 3600 * 1000,
-    secure: process.env.NODE_ENV === 'production',
+    secure: env.NODE_ENV === 'production',
   });
 
   res.json({ user: publicUser(user, roles), token });
@@ -184,7 +184,6 @@ app.post('/api/stations/:stationId/charge-points', authenticate, allow('ADMIN', 
 app.patch('/api/charge-points/:id', authenticate, allow('ADMIN', 'STATION_OWNER'), async (req, res) => {
   const point = await db.prepare('SELECT * FROM charge_points WHERE id = ?').get(req.params.id);
   if (!point) return fail(res, 'Không tìm thấy trụ sạc', 404);
-  if (req.body.code && req.body.code !== point.code && await db.prepare('SELECT 1 FROM charging_sessions WHERE charge_point_id = ? LIMIT 1').get(point.id)) return fail(res, 'Không thể đổi mã trụ đã có lịch sử sạc', 409);
   const keys = ['code', 'model', 'vendor', 'status', 'power_kw'].filter((key) => req.body[key] !== undefined);
   if (!keys.length) return fail(res, 'Không có trường cần cập nhật');
   try { await db.prepare(`UPDATE charge_points SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...keys.map((key) => req.body[key]), point.id); res.json(await db.prepare('SELECT * FROM charge_points WHERE id = ?').get(point.id)); }
@@ -196,5 +195,5 @@ const wss = new WebSocketServer({ noServer: true });
 server.on('upgrade', (request, socket, head) => { const match = request.url.match(/^\/ocpp\/([^/?]+)/); if (!match) return socket.destroy(); wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, decodeURIComponent(match[1]))); });
 wss.on('connection', (ws, code) => { ws.send(JSON.stringify([3, `welcome-${Date.now()}`, { chargePoint: code, status: 'Connected' }])); ws.on('message', (raw) => { try { const [type, id, action, payload] = JSON.parse(raw.toString()); const responses = { BootNotification: { status: 'Accepted', currentTime: now(), interval: 60 }, Heartbeat: { currentTime: now() }, StatusNotification: { status: 'Accepted' }, Authorize: { idTagInfo: { status: payload?.idTag ? 'Accepted' : 'Invalid' } } }; ws.send(JSON.stringify(type === 2 && responses[action] ? [3, id, responses[action]] : [4, id, 'NotSupported', {}])); } catch { ws.send(JSON.stringify([4, null, 'FormatViolation', {}])); } }); });
 
-async function start() { await db.migrate(); await db.seedAdminPassword(); server.listen(port, () => console.log(`CSMS backend listening on http://localhost:${port}`)); }
+async function start() { await db.migrate(); server.listen(port, () => console.log(`CSMS backend listening on http://localhost:${port}`)); }
 start().catch((error) => { console.error('Database startup failed:', error); process.exitCode = 1; });

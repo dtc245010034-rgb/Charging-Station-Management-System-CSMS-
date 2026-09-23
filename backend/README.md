@@ -6,11 +6,13 @@ Backend PostgreSQL cho hệ thống quản lý trạm sạc, đồng bộ với 
 
 ## Chạy bằng Docker Compose
 
-Từ thư mục gốc project:
+Tạo file `.env` ở thư mục gốc project với `POSTGRES_PASSWORD` và `JWT_SECRET` (≥ 32 ký tự, ví dụ `openssl rand -hex 32`), rồi:
 
 ```powershell
 docker compose up --build
 ```
+
+**Baseline reset (một lần, Sprint 1):** migration đã được gộp thành `001_baseline`. Mọi thành viên có DB cũ phải chạy `docker compose down -v` để xoá volume rồi khởi động lại.
 
 Ứng dụng chạy tại `http://localhost:3000`, PostgreSQL chạy tại `localhost:5432`. Container app tự chạy migration trước khi mở cổng.
 
@@ -32,11 +34,13 @@ npm run dev
 
 API chạy tại `http://localhost:3000`. Kiểm tra bằng `GET /api/health`.
 
-Tài khoản mặc định được tạo khi database khởi tạo:
+Không có tài khoản mặc định. Tạo admin đầu tiên (đặt `ADMIN_EMAIL`, `ADMIN_PASSWORD` ≥ 12 ký tự trong `.env`):
 
-- Tài khoản / Email: `admin@.com` (hoặc `admin@admin.com`)
-- Mật khẩu: `admin123`
-- Vai trò (Role): `ADMIN`
+```powershell
+npm run create-admin
+```
+
+Các biến `DATABASE_URL`, `JWT_SECRET` (≥ 32 ký tự), `APP_ORIGIN` là bắt buộc; thiếu biến nào ứng dụng thoát ngay và in tên biến đó.
 
 Gửi JWT nhận từ `/api/auth/login` trong header `Authorization: Bearer <token>` cho các API cần đăng nhập.
 
@@ -46,10 +50,9 @@ Gửi JWT nhận từ `/api/auth/login` trong header `Authorization: Bearer <tok
 - `GET/POST /api/stations`, `GET/PATCH /api/stations/:id`
 - `GET /api/charge-points`, `GET /api/charge-points/:id`
 - `POST /api/stations/:stationId/charge-points`, `PATCH /api/charge-points/:id`
-- `GET /api/sessions`, `POST /api/sessions/start`, `POST /api/sessions/:id/meter-values`, `POST /api/sessions/:id/stop`
 - Frontend hiện dùng trực tiếp các route auth ở trên; các route trạm và trụ sạc sẵn sàng cho dashboard mở rộng.
 
-Migration đầu tiên nằm tại `migrations/001_initial_schema.sql`, rollback tại `migrations/001_initial_schema.down.sql`. Đây là mẫu quy ước cho các migration sau: tên `snake_case`, khóa chính `id`, và cột `created_at`/`updated_at`.
+Migration đầu tiên nằm tại `migrations/001_baseline.sql`, rollback tại `migrations/001_baseline.down.sql`. Đây là mẫu quy ước cho các migration sau: tên `snake_case`, khóa chính `id`, và cột `created_at`/`updated_at`.
 
 `charge_points.code` có UNIQUE trực tiếp trong PostgreSQL. Nếu trụ đã có phiên sạc, backend từ chối đổi mã. Mỗi trụ tự tạo connector 1-4 với trạng thái `UNKNOWN`.
 

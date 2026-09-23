@@ -1,4 +1,4 @@
-const { migrate, rollbackLastMigration, pool, seedAdminPassword } = require('./db');
+const { migrate, rollbackLastMigration, pool } = require('./db');
 
 (async () => {
   try {
@@ -6,7 +6,6 @@ const { migrate, rollbackLastMigration, pool, seedAdminPassword } = require('./d
       await rollbackLastMigration();
     } else {
       await migrate();
-      await seedAdminPassword();
     }
   } finally {
     await pool.end();
