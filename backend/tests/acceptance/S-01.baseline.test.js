@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const request = require('supertest');
 const { run, resetSchema, truncateAll } = require('../helpers/db');
 const { app, closePool } = require('../helpers/app');
+const { pool } = require('../../src/db/pool');
 const { createUser } = require('../helpers/auth');
 
 describe('S-01 baseline: khung dự án an toàn', () => {
@@ -67,5 +68,9 @@ describe('S-01 baseline: khung dự án an toàn', () => {
     const bad = await request(app).post('/api/stations').set('Cookie', owner.cookie).set('Content-Type', 'application/json').send('{"name":');
     assert.strictEqual(bad.status, 400);
     assert.strictEqual((await request(app).get('/api/stations/99999').set('Cookie', owner.cookie)).status, 404);
+  });
+
+  it('S-01: lỗi client rảnh của pool không làm sập process (có handler "error")', () => {
+    assert.ok(pool.listenerCount('error') >= 1);
   });
 });

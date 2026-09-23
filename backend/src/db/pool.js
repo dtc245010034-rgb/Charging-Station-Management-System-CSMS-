@@ -6,6 +6,9 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
+// Lỗi trên client rảnh (DB restart, mất mạng) không được làm sập process.
+pool.on('error', (error) => console.error('Lỗi kết nối PostgreSQL:', error.message));
+
 function convertPlaceholders(sql) {
   let index = 0;
   return sql.replace(/\?/g, () => `$${++index}`);
