@@ -6,6 +6,7 @@ const db = require('./db');
 const secret = process.env.JWT_SECRET || 'development-secret';
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
+const SYSTEM_ROLES = ['DRIVER', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT', 'ADMIN'];
 
 function issueToken(user, roles = []) {
   const primaryRole = user.role || (roles.length ? roles[0] : 'OPERATOR');
@@ -69,8 +70,6 @@ function publicUser(user, roles = []) {
     email: user.email,
     role: primaryRole,
     roles: allRoles,
-    failed_attempts: user.failed_attempts || 0,
-    locked_until: user.locked_until || null,
     created_at: user.created_at,
   };
 }
@@ -89,9 +88,10 @@ async function verifyPassword(user, password) {
     if (user.password_hash.startsWith('$2a$') || user.password_hash.startsWith('$2b$')) {
       const match = bcrypt.compareSync(password, user.password_hash);
       if (match) {
-        hashPassword(password).then((newHash) => {
-          db.prepare('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(newHash, user.id);
-        }).catch(() => {});
+        try {
+          const newHash = await hashPassword(password);
+          await db.prepare('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(newHash, user.id);
+        } catch {}
       }
       return match;
     }
@@ -156,5 +156,6 @@ module.exports = {
   getUserRoles,
   MAX_ATTEMPTS,
   LOCKOUT_MINUTES,
+  SYSTEM_ROLES,
   db,
 };

@@ -36,6 +36,17 @@ const authAlert = document.getElementById('authAlert');
 const authLayout = document.getElementById('authLayout');
 const dashboardLayout = document.getElementById('dashboardLayout');
 
+document.querySelectorAll('.password-toggle').forEach((toggle) => {
+  toggle.addEventListener('click', () => {
+    const input = toggle.previousElementSibling;
+    const isVisible = input.type === 'text';
+    input.type = isVisible ? 'password' : 'text';
+    toggle.textContent = isVisible ? '👁' : '🙈';
+    toggle.setAttribute('aria-label', isVisible ? 'Hiển thị mật khẩu' : 'Ẩn mật khẩu');
+    toggle.setAttribute('title', isVisible ? 'Hiển thị mật khẩu' : 'Ẩn mật khẩu');
+  });
+});
+
 const showAlert = (message, type = 'error') => {
   if (!authAlert) return;
   authAlert.textContent = message;

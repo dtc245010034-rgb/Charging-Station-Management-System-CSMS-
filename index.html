@@ -87,7 +87,10 @@
 
                 <label class="field">
                   <span>Mật khẩu</span>
-                  <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password" />
+                  <span class="password-input">
+                    <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password" />
+                    <button class="password-toggle" type="button" aria-label="Hiển thị mật khẩu" title="Hiển thị mật khẩu">👁</button>
+                  </span>
                 </label>
 
                 <div class="row inline-row">
@@ -116,7 +119,7 @@
                   </label>
                   <label class="field">
                     <span>Vai trò (Role)</span>
-                    <select id="regRole" style="width:100%; height:48px; border-radius:12px; padding:0 14px; background:var(--input-bg); color:var(--text); border:1px solid var(--border);">
+                    <select id="regRole">
                       <option value="DRIVER">Tài xế (DRIVER)</option>
                       <option value="STATION_OWNER">Chủ trạm (STATION_OWNER)</option>
                       <option value="OPERATOR">Vận hành viên (OPERATOR)</option>
@@ -133,7 +136,10 @@
                   </label>
                   <label class="field">
                     <span>Mật khẩu</span>
-                    <input type="password" id="regPassword" placeholder="Tối thiểu 8 ký tự" required minlength="8" autocomplete="new-password" />
+                    <span class="password-input">
+                      <input type="password" id="regPassword" placeholder="Tối thiểu 8 ký tự" required minlength="8" autocomplete="new-password" />
+                      <button class="password-toggle" type="button" aria-label="Hiển thị mật khẩu" title="Hiển thị mật khẩu">👁</button>
+                    </span>
                   </label>
                 </div>
 

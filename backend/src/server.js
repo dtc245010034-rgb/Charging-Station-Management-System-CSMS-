@@ -1,6 +1,7 @@
 require('dotenv').config();
 const http = require('node:http');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { WebSocketServer } = require('ws');
@@ -16,6 +17,7 @@ const {
   recordUserFailedLogin,
   resetUserFailedAttempts,
   getUserRoles,
+  SYSTEM_ROLES,
 } = require('./auth');
 
 const path = require('node:path');
@@ -30,6 +32,13 @@ const now = () => new Date().toISOString();
 const fail = (res, error, status = 400) => res.status(status).json({ error: error.message || error });
 const numeric = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const audit = async (req, action, entity, entityId, metadata = {}) => db.prepare('INSERT INTO audit_logs (user_id, action, entity, entity_id, metadata) VALUES (?, ?, ?, ?, ?)').run(req.user?.id || null, action, entity, entityId || null, JSON.stringify(metadata));
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Quá nhiều yêu cầu đăng nhập từ IP này. Vui lòng thử lại sau 15 phút.' },
+});
 
 app.get('/api/health', async (req, res) => {
   try { await db.pool.query('SELECT 1'); res.json({ ok: true, service: 'csms-backend', database: 'postgresql', time: now() }); }
@@ -47,7 +56,8 @@ app.get('/api/roles', async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   const { name, email, password, role = 'OPERATOR' } = req.body;
-  if (!name || !email || !password || password.length < 8) return fail(res, 'name, email và password >= 8 ký tự là bắt buộc');
+  if (!name?.trim() || !email?.trim() || !password || password.length < 8) return fail(res, 'name, email và password >= 8 ký tự là bắt buộc');
+  if (!SYSTEM_ROLES.includes(role)) return fail(res, 'Vai trò không hợp lệ');
   try {
     const normalizedEmail = email.toLowerCase().trim();
     const passwordHash = await hashPassword(password);
@@ -75,7 +85,7 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (error) { fail(res, error.code === '23505' ? 'Email đã tồn tại' : error); }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const email = (req.body.email || '').toLowerCase().trim();
   const password = req.body.password || '';
 
@@ -130,7 +140,7 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
 });
 
 app.get('/api/stations', authenticate, async (req, res) => res.json(await db.prepare('SELECT s.*, COUNT(cp.id)::int AS charge_point_count FROM stations s LEFT JOIN charge_points cp ON cp.station_id = s.id GROUP BY s.id ORDER BY s.id DESC').all()));
-app.post('/api/stations', authenticate, allow('ADMIN', 'MANAGER'), async (req, res) => {
+app.post('/api/stations', authenticate, allow('ADMIN', 'STATION_OWNER'), async (req, res) => {
   const { name, address, latitude, longitude, status = 'ACTIVE' } = req.body;
   if (!name || !address) return fail(res, 'name và address là bắt buộc');
   const result = await db.prepare('INSERT INTO stations (name, address, latitude, longitude, status) VALUES (?, ?, ?, ?, ?)').run(name, address, latitude ?? null, longitude ?? null, status);
@@ -143,7 +153,7 @@ app.get('/api/stations/:id', authenticate, async (req, res) => {
   station.charge_points = await db.prepare('SELECT * FROM charge_points WHERE station_id = ? ORDER BY id').all(station.id);
   res.json(station);
 });
-app.patch('/api/stations/:id', authenticate, allow('ADMIN', 'MANAGER'), async (req, res) => {
+app.patch('/api/stations/:id', authenticate, allow('ADMIN', 'STATION_OWNER'), async (req, res) => {
   const keys = ['name', 'address', 'latitude', 'longitude', 'status'].filter((key) => req.body[key] !== undefined);
   if (!keys.length) return fail(res, 'Không có trường cần cập nhật');
   await db.prepare(`UPDATE stations SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...keys.map((key) => req.body[key]), req.params.id);
@@ -158,7 +168,7 @@ app.get('/api/charge-points/:id', authenticate, async (req, res) => {
   point.connectors = await db.prepare('SELECT * FROM connectors WHERE charge_point_id = ? ORDER BY connector_no').all(point.id);
   res.json(point);
 });
-app.post('/api/stations/:stationId/charge-points', authenticate, allow('ADMIN', 'MANAGER'), async (req, res) => {
+app.post('/api/stations/:stationId/charge-points', authenticate, allow('ADMIN', 'STATION_OWNER'), async (req, res) => {
   const { code, model, vendor, status = 'UNKNOWN', power_kw = 0 } = req.body;
   if (!code) return fail(res, 'code là bắt buộc');
   const client = await db.pool.connect();
@@ -171,7 +181,7 @@ app.post('/api/stations/:stationId/charge-points', authenticate, allow('ADMIN', 
     res.status(201).json(await db.prepare('SELECT * FROM charge_points WHERE id = ?').get(point.rows[0].id));
   } catch (error) { await client.query('ROLLBACK'); fail(res, error.code === '23505' ? 'Mã trụ đã tồn tại' : error); } finally { client.release(); }
 });
-app.patch('/api/charge-points/:id', authenticate, allow('ADMIN', 'MANAGER'), async (req, res) => {
+app.patch('/api/charge-points/:id', authenticate, allow('ADMIN', 'STATION_OWNER'), async (req, res) => {
   const point = await db.prepare('SELECT * FROM charge_points WHERE id = ?').get(req.params.id);
   if (!point) return fail(res, 'Không tìm thấy trụ sạc', 404);
   if (req.body.code && req.body.code !== point.code && await db.prepare('SELECT 1 FROM charging_sessions WHERE charge_point_id = ? LIMIT 1').get(point.id)) return fail(res, 'Không thể đổi mã trụ đã có lịch sử sạc', 409);
