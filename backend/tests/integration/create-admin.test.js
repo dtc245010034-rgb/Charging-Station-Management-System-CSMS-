@@ -1,12 +1,12 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
-const { run, query, resetSchema } = require('./helpers');
+const { run, query, resetSchema } = require('../helpers/db');
 
 const PASSWORD = 'CorrectHorse-Battery9';
 const admin = { ADMIN_EMAIL: 'Owner@Example.com', ADMIN_PASSWORD: PASSWORD };
 
 describe('S-01 create-admin', () => {
-  before(async () => { await resetSchema(); assert.strictEqual(run('src/migrate.js').status, 0); });
+  before(async () => { await resetSchema(); assert.strictEqual(run('src/db/migrate.js').status, 0); });
   after(resetSchema);
 
   it('tạo 1 admin argon2id có role ADMIN, không in mật khẩu', async () => {

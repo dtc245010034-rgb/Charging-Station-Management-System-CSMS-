@@ -253,7 +253,7 @@ loginForm?.addEventListener('submit', async (event) => {
       showDashboard(data.user);
     } else {
       // AC2 & AC3: Thông báo lỗi chung hoặc thông báo khóa tài khoản do nhập sai >= 5 lần
-      const errorMessage = data.error || 'Email hoặc mật khẩu không đúng';
+      const errorMessage = data.error?.message || 'Email hoặc mật khẩu không đúng';
       showAlert(errorMessage, response.status === 429 ? 'error' : 'error');
     }
   } catch (error) {
@@ -295,7 +295,7 @@ registerForm?.addEventListener('submit', async (event) => {
       switchTab('login');
       showAlert(`Tạo tài khoản thành công cho ${data.user.name} (${data.user.role}). Vui lòng đăng nhập.`, 'success');
     } else {
-      showAlert(data.error || 'Không thể tạo tài khoản', 'error');
+      showAlert(data.error?.message || 'Không thể tạo tài khoản', 'error');
     }
   } catch (error) {
     showAlert('Không thể kết nối tới máy chủ backend.', 'error');
