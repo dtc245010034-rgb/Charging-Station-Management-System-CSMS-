@@ -181,44 +181,6 @@ app.patch('/api/charge-points/:id', authenticate, allow('ADMIN', 'MANAGER'), asy
   catch (error) { fail(res, error.code === '23505' ? 'Mã trụ đã tồn tại' : error); }
 });
 
-app.get('/api/sessions', authenticate, async (req, res) => res.json(await db.prepare('SELECT cs.*, cp.code AS charge_point_code, s.name AS station_name FROM charging_sessions cs JOIN charge_points cp ON cp.id = cs.charge_point_id JOIN stations s ON s.id = cp.station_id ORDER BY cs.id DESC').all()));
-app.post('/api/sessions/start', authenticate, async (req, res) => {
-  const { charge_point_id, connector_no = 1, start_meter = 0, transaction_id } = req.body;
-  if (!await db.prepare('SELECT id FROM charge_points WHERE id = ?').get(charge_point_id)) return fail(res, 'Không tìm thấy trụ sạc', 404);
-  if (await db.prepare("SELECT id FROM charging_sessions WHERE charge_point_id = ? AND connector_no = ? AND status = 'ACTIVE'").get(charge_point_id, connector_no)) return fail(res, 'Connector đang có phiên sạc', 409);
-  const result = await db.prepare('INSERT INTO charging_sessions (charge_point_id, connector_no, user_id, transaction_id, start_meter) VALUES (?, ?, ?, ?, ?)').run(charge_point_id, connector_no, req.user.id, transaction_id || `TX-${Date.now()}`, numeric(start_meter));
-  await db.prepare("UPDATE connectors SET status = 'CHARGING', updated_at = CURRENT_TIMESTAMP WHERE charge_point_id = ? AND connector_no = ?").run(charge_point_id, connector_no);
-  res.status(201).json(await db.prepare('SELECT * FROM charging_sessions WHERE id = ?').get(result.lastInsertRowid));
-});
-app.post('/api/sessions/:id/meter-values', authenticate, async (req, res) => {
-  const session = await db.prepare("SELECT * FROM charging_sessions WHERE id = ? AND status = 'ACTIVE'").get(req.params.id);
-  if (!session) return fail(res, 'Phiên sạc không hoạt động', 404);
-  const meter = numeric(req.body.meter, session.start_meter);
-  if (meter < session.start_meter) return fail(res, 'Meter không được nhỏ hơn meter bắt đầu');
-  const result = await db.prepare('INSERT INTO meter_values (session_id, meter, power_kw, voltage, current_amp) VALUES (?, ?, ?, ?, ?)').run(session.id, meter, req.body.power_kw ?? null, req.body.voltage ?? null, req.body.current_amp ?? null);
-  await db.prepare('UPDATE charging_sessions SET energy_kwh = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(meter - session.start_meter, session.id);
-  res.status(201).json(await db.prepare('SELECT * FROM meter_values WHERE id = ?').get(result.lastInsertRowid));
-});
-app.post('/api/sessions/:id/stop', authenticate, async (req, res) => {
-  const session = await db.prepare("SELECT * FROM charging_sessions WHERE id = ? AND status = 'ACTIVE'").get(req.params.id);
-  if (!session) return fail(res, 'Phiên sạc không hoạt động', 404);
-  const endMeter = numeric(req.body.end_meter, Number(session.start_meter) + Number(session.energy_kwh));
-  const tariff = await db.prepare('SELECT * FROM tariffs WHERE active = TRUE ORDER BY id DESC LIMIT 1').get();
-  const amount = (endMeter - Number(session.start_meter)) * Number(tariff?.price_per_kwh || 0);
-  await db.prepare("UPDATE charging_sessions SET status = 'COMPLETED', ended_at = CURRENT_TIMESTAMP, end_meter = ?, energy_kwh = ?, amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(endMeter, endMeter - Number(session.start_meter), amount, session.id);
-  await db.prepare("UPDATE connectors SET status = 'AVAILABLE', updated_at = CURRENT_TIMESTAMP WHERE charge_point_id = ? AND connector_no = ?").run(session.charge_point_id, session.connector_no);
-  res.json(await db.prepare('SELECT * FROM charging_sessions WHERE id = ?').get(session.id));
-});
-
-app.get('/api/tariffs', authenticate, async (req, res) => res.json(await db.prepare('SELECT * FROM tariffs ORDER BY id DESC').all()));
-app.post('/api/tariffs', authenticate, allow('ADMIN', 'MANAGER', 'FINANCE'), async (req, res) => { const result = await db.prepare('INSERT INTO tariffs (name, price_per_kwh, start_time, end_time, active) VALUES (?, ?, ?, ?, ?)').run(req.body.name, numeric(req.body.price_per_kwh), req.body.start_time || null, req.body.end_time || null, req.body.active !== false); res.status(201).json(await db.prepare('SELECT * FROM tariffs WHERE id = ?').get(result.lastInsertRowid)); });
-app.get('/api/payments', authenticate, async (req, res) => res.json(await db.prepare('SELECT p.*, cs.transaction_id FROM payments p LEFT JOIN charging_sessions cs ON cs.id = p.session_id ORDER BY p.id DESC').all()));
-app.post('/api/payments', authenticate, async (req, res) => { const result = await db.prepare('INSERT INTO payments (session_id, amount, method, status, reference, paid_at) VALUES (?, ?, ?, ?, ?, ?)').run(req.body.session_id || null, numeric(req.body.amount), req.body.method || 'CASH', req.body.status || 'PAID', req.body.reference || `PAY-${Date.now()}`, req.body.status === 'PENDING' ? null : now()); res.status(201).json(await db.prepare('SELECT * FROM payments WHERE id = ?').get(result.lastInsertRowid)); });
-app.get('/api/maintenance', authenticate, async (req, res) => res.json(await db.prepare('SELECT m.*, cp.code AS charge_point_code FROM maintenance m JOIN charge_points cp ON cp.id = m.charge_point_id ORDER BY m.id DESC').all()));
-app.post('/api/maintenance', authenticate, async (req, res) => { const result = await db.prepare('INSERT INTO maintenance (charge_point_id, title, description, status, scheduled_at) VALUES (?, ?, ?, ?, ?)').run(req.body.charge_point_id, req.body.title, req.body.description || null, req.body.status || 'OPEN', req.body.scheduled_at || null); res.status(201).json(await db.prepare('SELECT * FROM maintenance WHERE id = ?').get(result.lastInsertRowid)); });
-app.get('/api/dashboard', authenticate, async (req, res) => res.json({ stations: await db.prepare('SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status = \'ACTIVE\')::int AS active FROM stations').get(), charge_points: await db.prepare('SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status = \'AVAILABLE\')::int AS available FROM charge_points').get(), active_sessions: (await db.prepare("SELECT COUNT(*)::int AS total FROM charging_sessions WHERE status = 'ACTIVE'").get()).total, revenue: (await db.prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE status = 'PAID'").get()).total }));
-app.get('/api/reconciliation', authenticate, allow('ADMIN', 'MANAGER', 'FINANCE'), async (req, res) => res.json(await db.prepare("SELECT DATE(ended_at) AS date, COUNT(*)::int AS sessions, COALESCE(SUM(energy_kwh), 0) AS energy_kwh, COALESCE(SUM(amount), 0) AS revenue FROM charging_sessions WHERE status IN ('COMPLETED', 'STOPPED') GROUP BY DATE(ended_at) ORDER BY date DESC").all()));
-app.get('/api/audit-logs', authenticate, allow('ADMIN', 'MANAGER'), async (req, res) => res.json(await db.prepare('SELECT al.*, u.email FROM audit_logs al LEFT JOIN users u ON u.id = al.user_id ORDER BY al.id DESC LIMIT 500').all()));
 
 const wss = new WebSocketServer({ noServer: true });
 server.on('upgrade', (request, socket, head) => { const match = request.url.match(/^\/ocpp\/([^/?]+)/); if (!match) return socket.destroy(); wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, decodeURIComponent(match[1]))); });
