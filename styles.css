@@ -342,6 +342,44 @@ body.light-theme .auth-panel {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.password-input {
+  position: relative;
+  display: block;
+}
+
+.password-input input {
+  padding-right: 52px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  background: var(--tab-bg);
+  color: var(--text);
+  outline: none;
+}
+
+.field select option {
+  background: var(--surface);
+  color: var(--text);
+}
+
 .field-spacer {
   height: 50px;
   width: 100%;

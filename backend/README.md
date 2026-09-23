@@ -2,7 +2,7 @@
 
 Yêu cầu Node.js `22.5+` và PostgreSQL 14+ (hoặc Docker Compose).
 
-MVP backend cho hệ thống quản lý trạm sạc: JWT/RBAC, SQLite, quản lý trạm/trụ/connector, phiên sạc, meter values, biểu giá, thanh toán, bảo trì, dashboard, đối soát, audit log và WebSocket OCPP-style.
+Backend PostgreSQL cho hệ thống quản lý trạm sạc, đồng bộ với frontend tại thư mục gốc: JWT + httpOnly cookie, RBAC với 5 role, khóa tài khoản sau 5 lần sai, giới hạn đăng nhập theo IP và WebSocket OCPP-style.
 
 ## Chạy bằng Docker Compose
 
@@ -42,13 +42,12 @@ Gửi JWT nhận từ `/api/auth/login` trong header `Authorization: Bearer <tok
 
 ## API chính
 
-- `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
+- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
 - `GET/POST /api/stations`, `GET/PATCH /api/stations/:id`
 - `GET /api/charge-points`, `GET /api/charge-points/:id`
 - `POST /api/stations/:stationId/charge-points`, `PATCH /api/charge-points/:id`
 - `GET /api/sessions`, `POST /api/sessions/start`, `POST /api/sessions/:id/meter-values`, `POST /api/sessions/:id/stop`
-- `GET/POST /api/tariffs`, `GET/POST /api/payments`
-- `GET/POST /api/maintenance`, `GET /api/dashboard`, `GET /api/reconciliation`, `GET /api/audit-logs`
+- Frontend hiện dùng trực tiếp các route auth ở trên; các route trạm và trụ sạc sẵn sàng cho dashboard mở rộng.
 
 Migration đầu tiên nằm tại `migrations/001_initial_schema.sql`, rollback tại `migrations/001_initial_schema.down.sql`. Đây là mẫu quy ước cho các migration sau: tên `snake_case`, khóa chính `id`, và cột `created_at`/`updated_at`.
 
