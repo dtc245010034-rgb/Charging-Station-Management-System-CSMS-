@@ -15,12 +15,13 @@ function load(env) {
   });
 }
 
+const without = (obj, key) => Object.fromEntries(Object.entries(obj).filter(([k]) => k !== key));
+
 const valid = { DATABASE_URL: URL_VALUE, JWT_SECRET: SECRET, APP_ORIGIN: 'http://localhost:3000' };
 
 describe('S-01 env: cấu hình bắt buộc', () => {
   it('thiếu JWT_SECRET → thoát mã 1, nêu tên biến, không lộ giá trị', () => {
-    const { JWT_SECRET, ...rest } = valid;
-    const r = load(rest);
+    const r = load(without(valid, 'JWT_SECRET'));
     assert.strictEqual(r.status, 1);
     assert.match(r.stderr, /JWT_SECRET/);
     assert.ok(!r.stderr.includes('supersecretpw'));
@@ -28,8 +29,7 @@ describe('S-01 env: cấu hình bắt buộc', () => {
 
   it('thiếu DATABASE_URL hoặc APP_ORIGIN → thoát mã 1', () => {
     for (const key of ['DATABASE_URL', 'APP_ORIGIN']) {
-      const { [key]: _omit, ...rest } = valid;
-      const r = load(rest);
+      const r = load(without(valid, key));
       assert.strictEqual(r.status, 1, key);
       assert.match(r.stderr, new RegExp(key));
     }

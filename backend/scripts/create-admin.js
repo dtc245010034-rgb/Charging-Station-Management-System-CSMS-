@@ -1,6 +1,6 @@
 const { z } = require('zod');
 const argon2 = require('argon2');
-const { pool } = require('../src/db');
+const { pool } = require('../src/db/pool');
 
 const input = z.object({
   ADMIN_EMAIL: z.string().trim().toLowerCase().email(),

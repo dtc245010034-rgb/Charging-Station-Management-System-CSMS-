@@ -7,11 +7,11 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "migrate": "node src/migrate.js",
-    "migrate:down": "node src/migrate.js down",
+    "migrate": "node src/db/migrate.js",
+    "migrate:down": "node src/db/migrate.js down",
     "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
     "create-admin": "node scripts/create-admin.js",
-    "lint": "node --check src/server.js && node --check src/db.js && node --check src/auth.js && node --check src/migrate.js && node --check src/config/env.js && node --check scripts/create-admin.js"
+    "lint": "eslint ."
   },
   "engines": {
     "node": ">=22.5"
@@ -21,11 +21,17 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2",
+    "express": "^5.2.1",
     "express-rate-limit": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.1",
     "ws": "^8.18.0",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.12.0",
+    "supertest": "^7.3.0"
   }
 }

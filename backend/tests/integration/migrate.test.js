@@ -1,6 +1,6 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
-const { run, query, resetSchema } = require('./helpers');
+const { run, query, resetSchema } = require('../helpers/db');
 
 const TABLES = ['audit_logs', 'charge_points', 'connectors', 'login_throttle', 'roles', 'stations', 'user_roles', 'users'];
 
@@ -14,7 +14,7 @@ describe('S-01 migrate: baseline up/down/up', () => {
   after(resetSchema);
 
   it('up tạo đúng 8 bảng trong phạm vi, không seed user, đúng 5 roles, không cột users.role', () => {
-    const up = run('src/migrate.js');
+    const up = run('src/db/migrate.js');
     assert.strictEqual(up.status, 0, up.stderr);
     return (async () => {
       assert.deepStrictEqual(await tables(), TABLES);
@@ -27,10 +27,10 @@ describe('S-01 migrate: baseline up/down/up', () => {
   });
 
   it('down về rỗng, rồi up lại sạch', async () => {
-    const down = run('src/migrate.js', ['down']);
+    const down = run('src/db/migrate.js', ['down']);
     assert.strictEqual(down.status, 0, down.stderr);
     assert.deepStrictEqual(await tables(), []);
-    const up = run('src/migrate.js');
+    const up = run('src/db/migrate.js');
     assert.strictEqual(up.status, 0, up.stderr);
     assert.deepStrictEqual(await tables(), TABLES);
   });
