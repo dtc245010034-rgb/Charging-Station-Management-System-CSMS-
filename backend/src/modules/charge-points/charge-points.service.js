@@ -1,22 +1,23 @@
 const repo = require('./charge-points.repository');
 const audit = require('../audit/audit.repository');
 const { withTransaction } = require('../../db/tx');
-const { BadRequestError, ConflictError, NotFoundError } = require('../../lib/errors');
+const { denyOrNotFound } = require('../../lib/ownership');
+const { BadRequestError, ConflictError } = require('../../lib/errors');
 
 const numeric = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const duplicateCode = (error) => (error.code === '23505' ? new ConflictError('Mã trụ đã tồn tại') : error);
 
-const list = () => repo.list();
+const list = (actor) => repo.list(actor);
 
-async function get(id) {
-  const point = await repo.findDetailById(id);
-  if (!point) throw new NotFoundError('Không tìm thấy trụ sạc');
+async function get(actor, id) {
+  const point = await repo.findDetailById(actor, id)
+    || await denyOrNotFound(actor, 'charge_point', id, repo.existsById, 'Không tìm thấy trụ sạc');
   point.connectors = await repo.connectorsOf(point.id);
   return point;
 }
 
 async function create(actor, stationId, data) {
-  if (!await repo.stationExists(stationId)) throw new NotFoundError('Không tìm thấy trạm');
+  if (!await repo.stationInScope(actor, stationId)) await denyOrNotFound(actor, 'station', stationId, repo.stationExists, 'Không tìm thấy trạm');
   let id;
   try {
     id = await withTransaction(async (client) => {
@@ -27,19 +28,19 @@ async function create(actor, stationId, data) {
   } catch (error) {
     throw duplicateCode(error);
   }
-  await audit.record(actor.id, 'CREATE', 'charge_point', id, data);
-  return repo.findById(id);
+  await audit.record(actor.id, 'CREATE', 'charge_point', id, { fields: Object.keys(data) });
+  return repo.findById(actor, id);
 }
 
-async function update(id, data) {
-  if (!await repo.findById(id)) throw new NotFoundError('Không tìm thấy trụ sạc');
+async function update(actor, id, data) {
+  if (!await repo.findById(actor, id)) await denyOrNotFound(actor, 'charge_point', id, repo.existsById, 'Không tìm thấy trụ sạc');
   if (!repo.UPDATABLE.some((key) => data[key] !== undefined)) throw new BadRequestError('Không có trường cần cập nhật');
   try {
     await repo.update(id, data);
   } catch (error) {
     throw duplicateCode(error);
   }
-  return repo.findById(id);
+  return repo.findById(actor, id);
 }
 
 module.exports = { list, get, create, update };

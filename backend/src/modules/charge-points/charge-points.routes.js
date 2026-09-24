@@ -6,9 +6,9 @@ const { createBody, updateBody } = require('./charge-points.schema');
 
 const router = secureRouter();
 
-router.get('/charge-points', { access: access('charge-points:read') }, async (req, res) => res.json(await service.list()));
+router.get('/charge-points', { access: access('charge-points:read') }, async (req, res) => res.json(await service.list(req.user)));
 router.get('/charge-points/:id', { access: access('charge-points:read') }, async (req, res) => {
-  res.json(await service.get(idParam.parse(req.params).id));
+  res.json(await service.get(req.user, idParam.parse(req.params).id));
 });
 router.post('/stations/:stationId/charge-points', { access: access('charge-points:write') }, async (req, res) => {
   const { stationId } = stationIdParam.parse(req.params);
@@ -16,7 +16,7 @@ router.post('/stations/:stationId/charge-points', { access: access('charge-point
 });
 router.patch('/charge-points/:id', { access: access('charge-points:write') }, async (req, res) => {
   const { id } = idParam.parse(req.params);
-  res.json(await service.update(id, updateBody.parse(req.body ?? {})));
+  res.json(await service.update(req.user, id, updateBody.parse(req.body ?? {})));
 });
 
 module.exports = router;

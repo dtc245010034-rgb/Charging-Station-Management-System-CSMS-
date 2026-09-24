@@ -1,9 +1,25 @@
 const { prepare } = require('../../db/pool');
+const { scopeByOwner } = require('../../db/scope');
 
-const list = () => prepare('SELECT cp.*, s.name AS station_name FROM charge_points cp JOIN stations s ON s.id = cp.station_id ORDER BY cp.id DESC').all();
-const findDetailById = (id) => prepare('SELECT cp.*, s.name AS station_name FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.id = ?').get(id);
-const findById = (id) => prepare('SELECT * FROM charge_points WHERE id = ?').get(id);
+const list = (actor) => {
+  const scope = scopeByOwner(actor, 's');
+  return prepare(`SELECT cp.*, s.name AS station_name FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE ${scope.sql} ORDER BY cp.id DESC`).all(...scope.params);
+};
+const findDetailById = (actor, id) => {
+  const scope = scopeByOwner(actor, 's');
+  return prepare(`SELECT cp.*, s.name AS station_name FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.id = ? AND ${scope.sql}`).get(id, ...scope.params);
+};
+const findById = (actor, id) => {
+  const scope = scopeByOwner(actor, 's');
+  return prepare(`SELECT cp.* FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.id = ? AND ${scope.sql}`).get(id, ...scope.params);
+};
 const connectorsOf = (chargePointId) => prepare('SELECT * FROM connectors WHERE charge_point_id = ? ORDER BY connector_no').all(chargePointId);
+const stationInScope = async (actor, stationId) => {
+  const scope = scopeByOwner(actor, 's');
+  return Boolean(await prepare(`SELECT 1 FROM stations s WHERE s.id = ? AND ${scope.sql}`).get(stationId, ...scope.params));
+};
+// Không lọc sở hữu: chỉ để phân biệt "của người khác" (403) với "không tồn tại" (404).
+const existsById = async (id) => Boolean(await prepare('SELECT 1 FROM charge_points WHERE id = ?').get(id));
 const stationExists = async (stationId) => Boolean(await prepare('SELECT 1 FROM stations WHERE id = ?').get(stationId));
 
 const insert = async (client, stationId, cp) => {
@@ -23,4 +39,4 @@ const update = (id, fields) => {
     .run(...keys.map((key) => fields[key]), id);
 };
 
-module.exports = { list, findDetailById, findById, connectorsOf, stationExists, insert, insertConnector, update, UPDATABLE };
+module.exports = { list, findDetailById, findById, connectorsOf, stationInScope, existsById, stationExists, insert, insertConnector, update, UPDATABLE };

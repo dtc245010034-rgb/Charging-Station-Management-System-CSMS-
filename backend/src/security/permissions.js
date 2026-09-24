@@ -6,7 +6,7 @@ const READ_OPERATIONS = ['ADMIN', 'STATION_OWNER', 'OPERATOR'];
 const WRITE_OPERATIONS = ['ADMIN', 'STATION_OWNER'];
 
 // Ma trận quyền Sprint 1 — NGUỒN DUY NHẤT. Route chỉ tham chiếu khoá ở đây qua access().
-// Lọc "của mình" cho STATION_OWNER làm ở tầng truy vấn (PR-6), không nằm trong ma trận này.
+// Lọc "của mình" cho STATION_OWNER làm ở tầng truy vấn (db/scope.js), không nằm trong ma trận này.
 const permissions = {
   'auth:public': PUBLIC,
   'health:read': PUBLIC,

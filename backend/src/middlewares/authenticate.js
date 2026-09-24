@@ -8,7 +8,7 @@ function authenticate(req, res, next) {
   if (!token) return next(new UnauthorizedError());
 
   try {
-    req.user = jwt.verify(token, env.JWT_SECRET);
+    req.user = { ...jwt.verify(token, env.JWT_SECRET), ip: req.ip };
     return next();
   } catch {
     return next(new UnauthorizedError('Phiên đăng nhập đã hết hạn hoặc không hợp lệ'));
