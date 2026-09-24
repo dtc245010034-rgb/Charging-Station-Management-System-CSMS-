@@ -28,7 +28,7 @@ async function create(actor, stationId, data) {
   } catch (error) {
     throw duplicateCode(error);
   }
-  await audit.record(actor.id, 'CREATE', 'charge_point', id, data);
+  await audit.record(actor.id, 'CREATE', 'charge_point', id, { fields: Object.keys(data) });
   return repo.findById(actor, id);
 }
 

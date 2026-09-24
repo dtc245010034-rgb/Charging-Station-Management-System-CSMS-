@@ -109,4 +109,15 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
     assert.deepStrictEqual(res.body.charge_points.map((c) => c.code), ['CP-A']);
   });
 
+  it('S-03 NFR: audit CREATE/UPDATE chỉ lưu tên trường, không lưu giá trị', async () => {
+    const st = await as(u.A).post('/api/stations', { name: 'GiaTriBiMat-Ten', address: 'GiaTriBiMat-DiaChi' });
+    await as(u.A).patch(`/api/stations/${st.body.id}`, { name: 'GiaTriBiMat-TenMoi' });
+    const cp = await as(u.A).post(`/api/stations/${st.body.id}/charge-points`, { code: 'GiaTriBiMat-Ma', vendor: 'GiaTriBiMat-Hang' });
+    assert.strictEqual(cp.status, 201);
+    const rows = (await query("SELECT action, entity, metadata FROM audit_logs WHERE action IN ('CREATE', 'UPDATE') ORDER BY id")).rows;
+    assert.deepStrictEqual(rows.map((r) => `${r.action}:${r.entity}`), ['CREATE:station', 'UPDATE:station', 'CREATE:charge_point']);
+    assert.ok(!JSON.stringify(rows).includes('GiaTriBiMat'), 'metadata không được chứa giá trị nhập vào');
+    assert.deepStrictEqual(rows[1].metadata.fields, ['name']);
+    assert.ok(rows[0].metadata.fields.includes('name') && rows[0].metadata.fields.includes('address'));
+  });
 });

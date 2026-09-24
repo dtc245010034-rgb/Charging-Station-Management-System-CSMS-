@@ -20,7 +20,7 @@ async function get(actor, id) {
 
 async function create(actor, data) {
   const result = await repo.insert(actor, data);
-  await audit.record(actor.id, 'CREATE', 'station', result.lastInsertRowid, data);
+  await audit.record(actor.id, 'CREATE', 'station', result.lastInsertRowid, { fields: Object.keys(data) });
   return repo.findById(actor, result.lastInsertRowid);
 }
 
@@ -28,7 +28,7 @@ async function update(actor, id, data) {
   if (!repo.UPDATABLE.some((key) => data[key] !== undefined)) throw new BadRequestError('Không có trường cần cập nhật');
   await find(actor, id);
   await repo.update(id, data);
-  await audit.record(actor.id, 'UPDATE', 'station', id, data);
+  await audit.record(actor.id, 'UPDATE', 'station', id, { fields: repo.UPDATABLE.filter((key) => data[key] !== undefined) });
   return repo.findById(actor, id);
 }
 
