@@ -2,7 +2,8 @@ const express = require('express');
 const env = require('../../config/env');
 const { authenticate } = require('../../middlewares/authenticate');
 const service = require('./auth.service');
-const { registerBody, loginBody } = require('./auth.schema');
+const { loginBody } = require('./auth.schema');
+const { publicRegisterBody } = require('../users/users.schema');
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ const cookieOptions = { httpOnly: true, sameSite: 'lax', secure: env.NODE_ENV ==
 const setSessionCookie = (res, token) => res.cookie('token', token, { ...cookieOptions, maxAge: 8 * 3600 * 1000 });
 
 router.post('/auth/register', async (req, res) => {
-  const { user, token } = await service.register(registerBody.parse(req.body ?? {}));
+  const { user, token } = await service.register(publicRegisterBody.parse(req.body ?? {}));
   setSessionCookie(res, token);
   res.status(201).json({ user });
 });

@@ -53,7 +53,8 @@ Phiên là JWT trong cookie `httpOnly` (SameSite=Lax, Secure khi production); AP
 
 ## API chính
 
-- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
+- `POST /api/auth/register` (công khai, luôn tạo tài khoản DRIVER; gửi kèm `role` → 400), `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
+- `POST /api/admin/users` (chỉ ADMIN): tạo tài khoản với bất kỳ vai trò nào trong 5 vai trò; không tự đăng nhập tài khoản mới
 - `GET/POST /api/stations`, `GET/PATCH /api/stations/:id`
 - `GET /api/charge-points`, `GET /api/charge-points/:id`
 - `POST /api/stations/:stationId/charge-points`, `PATCH /api/charge-points/:id`
@@ -64,7 +65,7 @@ Phiên là JWT trong cookie `httpOnly` (SameSite=Lax, Secure khi production); AP
 ```powershell
 docker compose up -d db_test   # Postgres test, cổng 5433, dữ liệu trong RAM
 cd backend
-npm run lint
+npm run lint                    # ESLint cho backend/ và frontend/js (config ở thư mục gốc)
 npm test                        # cần Node 22; mỗi test tự dựng lại schema trên DB *_test
 ```
 

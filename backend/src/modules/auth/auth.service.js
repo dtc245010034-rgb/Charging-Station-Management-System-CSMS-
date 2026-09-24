@@ -1,14 +1,15 @@
 const crypto = require('node:crypto');
 const jwt = require('jsonwebtoken');
-const argon2 = require('argon2');
 const env = require('../../config/env');
 const users = require('../users/users.repository');
+const usersService = require('../users/users.service');
+const { hashPassword, verifyPassword } = require('../../lib/password');
 const throttle = require('./login-throttle.repository');
-const { AppError, ConflictError, UnauthorizedError, NotFoundError } = require('../../lib/errors');
+const { AppError, UnauthorizedError, NotFoundError } = require('../../lib/errors');
 
 const EMAIL_MAX_FAILURES = 5;
 const LOCKED_MESSAGE = 'Đăng nhập tạm bị khoá, thử lại sau';
-const SYSTEM_ROLES = ['DRIVER', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT', 'ADMIN'];
+const { publicUser } = usersService;
 
 function issueToken(user, roles = []) {
   return jwt.sign(
@@ -18,46 +19,14 @@ function issueToken(user, roles = []) {
   );
 }
 
-function publicUser(user, roles = []) {
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: roles[0] || null,
-    roles,
-    created_at: user.created_at,
-  };
-}
-
-const hashPassword = (password) => argon2.hash(password, { type: argon2.argon2id });
-
-async function verifyPassword(user, password) {
-  if (!user || !user.password_hash || !password) return false;
-  try {
-    return user.password_hash.startsWith('$argon2') && await argon2.verify(user.password_hash, password);
-  } catch {
-    return false;
-  }
-}
-
 // Hash giả để email không tồn tại vẫn tốn thời gian argon2.verify như email có thật.
 let dummyHash;
 const getDummyHash = () => { dummyHash ??= hashPassword('dummy-password-for-timing'); return dummyHash; };
 
-async function register({ name, email, password, role }) {
-  const passwordHash = await hashPassword(password);
-  let result;
-  try {
-    result = await users.insert(name, email.toLowerCase().trim(), passwordHash);
-  } catch (error) {
-    if (error.code === '23505') throw new ConflictError('Email đã tồn tại');
-    throw error;
-  }
-  const roleRow = await users.findRoleByCode(role);
-  if (roleRow) await users.assignRole(result.lastInsertRowid, roleRow.id);
-  const user = await users.findById(result.lastInsertRowid);
-  const roles = await users.roleCodesOf(user.id);
-  return { user: publicUser(user, roles), token: issueToken(user, roles) };
+async function register({ name, email, password }) {
+  // Đăng ký công khai luôn là DRIVER (vai trò khác do ADMIN tạo qua /api/admin/users).
+  const user = await usersService.create({ name, email, password, role: 'DRIVER' });
+  return { user: publicUser(user, ['DRIVER']), token: issueToken(user, ['DRIVER']) };
 }
 
 async function login(rawEmail, password, ip) {
@@ -86,4 +55,4 @@ async function me(userId) {
   return publicUser(user, await users.roleCodesOf(user.id));
 }
 
-module.exports = { register, login, me, issueToken, publicUser, hashPassword, verifyPassword, SYSTEM_ROLES };
+module.exports = { register, login, me, issueToken, publicUser };

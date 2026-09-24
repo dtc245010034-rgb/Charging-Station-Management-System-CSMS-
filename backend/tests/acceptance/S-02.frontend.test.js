@@ -48,4 +48,14 @@ describe('S-02 frontend: trang theo vai trò, không lưu token ở client', () 
     for (const word of ['dashboardLayout', 'testExpireBtn', 'apiResponseLog', 'script.js"']) assert.ok(!html.includes(word), word);
     assert.ok(html.includes('type="module"') && html.includes('/js/pages/login.js'));
   });
+
+  it('S-03: đăng ký không còn ô chọn vai trò và không gửi role; lỗi hiện dưới từng ô nhập', () => {
+    const html = fs.readFileSync(path.join(frontend, 'index.html'), 'utf8');
+    assert.ok(!html.includes('regRole'));
+    for (const id of ['loginEmail', 'loginPassword', 'regName', 'regEmail', 'regPassword']) {
+      assert.ok(html.includes(`data-error-for="${id}"`), id);
+    }
+    const login = fs.readFileSync(path.join(frontend, 'js/pages/login.js'), 'utf8');
+    assert.ok(!/\brole\b/.test(login.split('register(')[1] || ''), 'login.js không được gửi role khi đăng ký');
+  });
 });
