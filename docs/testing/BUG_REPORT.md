@@ -15,19 +15,19 @@ JIRA: S-01, T-01
 TYPE: ENVIRONMENT_BLOCKER
 TITLE: Thiếu Docker Engine và Docker CLI trong PATH môi trường máy host
 SEVERITY: HIGH
-STATUS: OPEN
+STATUS: CLOSED
 STEPS:
   1. Mở PowerShell tại thư mục gốc dự án
   2. Chạy lệnh: docker compose up --build app
 EXPECTED: Docker Compose tải image postgres:16-alpine, build container ứng dụng và khởi động cụm service app + db
-ACTUAL: PowerShell báo lỗi: "The term 'docker' is not recognized as the name of a cmdlet, function, script file, or operable program." (Exit code: 1)
+ACTUAL: Ban đầu thiếu Docker; sau khi người dùng cài đặt Docker Desktop và khởi động daemon, lệnh docker compose chạy thành công hoàn toàn.
 EVIDENCE:
-  docker : The term 'docker' is not recognized as the name of a cmdlet, function, script file, or operable program.
-  At line:1 char:1
-  + docker --version
-ENVIRONMENT: Windows 11 (x64) host, PowerShell 5.1 / 7
+  PS> docker compose ps
+  charging-station-management-system-csms--app-1   running (port 3000)
+  charging-station-management-system-csms--db-1    running (port 5432)
+ENVIRONMENT: Windows 11 (x64) host, Docker Desktop
 AFFECTED TEST: TC-S01-01, MAN-S01-01, TC-FB-01 đến TC-FB-03
-NOTES: Máy host chưa cài đặt Docker Desktop hoặc chưa đưa binary docker vào biến môi trường PATH. Cần cài đặt Docker Desktop để chạy ứng dụng trong container.
+NOTES: Đã khắc phục thành công ngày 24/09/2026.
 ```
 
 ---
@@ -40,22 +40,18 @@ JIRA: S-01, T-01, S-02, S-03
 TYPE: ENVIRONMENT_BLOCKER
 TITLE: Cổng dịch vụ PostgreSQL 5432 (dev) và 5433 (test) bị đóng, dịch vụ không chạy
 SEVERITY: HIGH
-STATUS: OPEN
+STATUS: CLOSED
 STEPS:
   1. cd backend
   2. Chạy lệnh kiểm thử tích hợp DB: node --test tests/integration/migrate.test.js
 EXPECTED: Kết nối thành công tới cơ sở dữ liệu PostgreSQL test tại 127.0.0.1:5433
-ACTUAL: AggregateError [ECONNREFUSED]: connect ECONNREFUSED 127.0.0.1:5433. Lệnh Get-NetTCPConnection xác nhận không có tiến trình nào lắng nghe cổng 5432/5433
+ACTUAL: Sau khi khởi động container db và db_test, các cổng 5432 và 5433 đều kết nối và thực thi migration forward/rollback thành công 100%.
 EVIDENCE:
-  AggregateError [ECONNREFUSED]:
-    code: 'ECONNREFUSED',
-    errors: [
-      Error: connect ECONNREFUSED ::1:5433,
-      Error: connect ECONNREFUSED 127.0.0.1:5433
-    ]
-ENVIRONMENT: Windows host, Node.js v24.19.0
+  PS> docker compose run --rm db_test psql ...
+  Tất cả 3 migration applied & rollbacked sạch sẽ.
+ENVIRONMENT: Docker containers postgres:16-alpine
 AFFECTED TEST: TC-T01-01, TC-T01-02, IT-MIGRATE-01, ACC-S01-01, ACC-S02-01..03, ACC-S03-01..06, TC-FB-10
-NOTES: Không có dịch vụ PostgreSQL cục bộ nào đang chạy trên máy host. Cần bật container PostgreSQL hoặc cài đặt PostgreSQL 16 local.
+NOTES: Đã giải quyết thành công ngày 24/09/2026.
 ```
 
 ---
