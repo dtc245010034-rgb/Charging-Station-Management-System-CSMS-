@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="page-shell">
@@ -79,10 +79,11 @@
                 <p>Đăng nhập để quản lý trạm sạc và vận hành hệ thống</p>
               </div>
 
-              <form class="form-body" id="loginForm">
+              <form class="form-body" id="loginForm" novalidate>
                 <label class="field">
                   <span>Tài khoản / Email</span>
                   <input type="text" id="loginEmail" placeholder="admin@.com" required autocomplete="username" />
+                  <p class="field-error" data-error-for="loginEmail" role="alert" hidden></p>
                 </label>
 
                 <label class="field">
@@ -91,6 +92,7 @@
                     <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password" />
                     <button class="password-toggle" type="button" aria-label="Hiển thị mật khẩu" title="Hiển thị mật khẩu">👁</button>
                   </span>
+                  <p class="field-error" data-error-for="loginPassword" role="alert" hidden></p>
                 </label>
 
                 <div class="row inline-row">
@@ -111,21 +113,12 @@
                 <p>Thiết lập quyền truy cập cho quản lý trạm và đội vận hành</p>
               </div>
 
-              <form class="form-body" id="registerForm">
+              <form class="form-body" id="registerForm" novalidate>
                 <div class="row two-col">
                   <label class="field">
                     <span>Họ và tên</span>
                     <input type="text" id="regName" placeholder="Nguyễn Văn A" required />
-                  </label>
-                  <label class="field">
-                    <span>Vai trò (Role)</span>
-                    <select id="regRole">
-                      <option value="DRIVER">Tài xế (DRIVER)</option>
-                      <option value="STATION_OWNER">Chủ trạm (STATION_OWNER)</option>
-                      <option value="OPERATOR">Vận hành viên (OPERATOR)</option>
-                      <option value="ACCOUNTANT">Kế toán (ACCOUNTANT)</option>
-                      <option value="ADMIN">Quản trị viên (ADMIN)</option>
-                    </select>
+                    <p class="field-error" data-error-for="regName" role="alert" hidden></p>
                   </label>
                 </div>
 
@@ -133,6 +126,7 @@
                   <label class="field">
                     <span>Email</span>
                     <input type="email" id="regEmail" placeholder="ten@csms.vn" required autocomplete="email" />
+                    <p class="field-error" data-error-for="regEmail" role="alert" hidden></p>
                   </label>
                   <label class="field">
                     <span>Mật khẩu</span>
@@ -140,6 +134,7 @@
                       <input type="password" id="regPassword" placeholder="Tối thiểu 8 ký tự" required minlength="8" autocomplete="new-password" />
                       <button class="password-toggle" type="button" aria-label="Hiển thị mật khẩu" title="Hiển thị mật khẩu">👁</button>
                     </span>
+                    <p class="field-error" data-error-for="regPassword" role="alert" hidden></p>
                   </label>
                 </div>
 
@@ -154,47 +149,8 @@
           </div>
         </main>
       </div>
-
-      <!-- Dashboard Layout for Logged In User -->
-      <div class="dashboard-layout" id="dashboardLayout" style="display: none;">
-        <header class="dashboard-header">
-          <div class="brand-header">
-            <div class="brand-mark">CS</div>
-            <div>
-              <p class="eyebrow">Charging Station Management System</p>
-              <h2 id="dashboardRoleTitle">Trang làm việc</h2>
-            </div>
-          </div>
-          <div class="user-profile-menu">
-            <span class="user-badge" id="userBadge">ADMIN</span>
-            <span class="user-email" id="userEmail">admin@csms.vn</span>
-            <button class="logout-btn" id="logoutBtn" type="button">Đăng xuất</button>
-          </div>
-        </header>
-
-        <main class="dashboard-content">
-          <div class="dashboard-banner">
-            <h3>Chào mừng, <span id="userName">Người dùng</span>!</h3>
-            <p id="roleDescription">Bạn đã đăng nhập thành công vào trang chính của vai trò này.</p>
-          </div>
-
-          <div class="role-cards-grid" id="roleCardsGrid">
-            <!-- Dynamic cards rendered based on role -->
-          </div>
-
-          <div class="session-test-panel">
-            <h4>Kiểm tra phiên đăng nhập (AC4)</h4>
-            <p>Gọi API thử nghiệm hoặc giả lập hết hạn token để kiểm tra tự động chuyển về trang đăng nhập khi nhận HTTP 401.</p>
-            <div class="action-buttons">
-              <button class="action-btn" id="testApiBtn" type="button">Gọi API hợp lệ (/api/auth/me)</button>
-              <button class="action-btn danger" id="testExpireBtn" type="button">Giả lập Token hết hạn & Gọi API</button>
-            </div>
-            <div id="apiResponseLog" class="api-log-box"></div>
-          </div>
-        </main>
-      </div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="/js/pages/login.js"></script>
   </body>
 </html>

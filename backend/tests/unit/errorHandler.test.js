@@ -1,6 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const { errorHandler } = require('../../src/middlewares/errorHandler');
+const { z } = require('zod');
 const { NotFoundError } = require('../../src/lib/errors');
 
 function handle(err) {
@@ -36,5 +37,18 @@ describe('S-01 errorHandler', () => {
     assert.deepStrictEqual(Object.keys(r.body.error).sort(), ['code', 'message']);
     assert.ok(!JSON.stringify(r.body).includes('10.0.0.5'));
     assert.ok(!JSON.stringify(r.body).includes('at '));
+  });
+
+  it('lỗi zod → 400 VALIDATION_ERROR kèm details theo từng trường', () => {
+    const { error } = z.object({ email: z.string().email('Email không hợp lệ'), user: z.object({ name: z.string().min(1, 'Thiếu tên') }) })
+      .safeParse({ email: 'x', user: { name: '' } });
+    const r = handle(error);
+    assert.strictEqual(r.statusCode, 400);
+    assert.strictEqual(r.body.error.code, 'VALIDATION_ERROR');
+    assert.strictEqual(r.body.error.message, 'Email không hợp lệ');
+    assert.deepStrictEqual(r.body.error.details, [
+      { field: 'email', message: 'Email không hợp lệ' },
+      { field: 'user.name', message: 'Thiếu tên' },
+    ]);
   });
 });

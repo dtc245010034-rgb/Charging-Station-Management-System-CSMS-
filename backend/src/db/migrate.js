@@ -30,7 +30,7 @@ async function migrate() {
 async function rollbackLastMigration() {
   const client = await pool.connect();
   try {
-    const applied = await client.query('SELECT version FROM schema_migrations ORDER BY applied_at DESC LIMIT 1');
+    const applied = await client.query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
     if (!applied.rowCount) return false;
     const version = applied.rows[0].version;
     const downFile = path.resolve(__dirname, '../../migrations', version.replace(/\.sql$/, '.down.sql'));

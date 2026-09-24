@@ -11,10 +11,10 @@
     "migrate:down": "node src/db/migrate.js down",
     "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
     "create-admin": "node scripts/create-admin.js",
-    "lint": "eslint ."
+    "lint": "cd .. && eslint backend frontend/js"
   },
   "engines": {
-    "node": ">=22.5"
+    "node": ">=22.7"
   },
   "dependencies": {
     "argon2": "^0.45.1",
@@ -22,7 +22,6 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
-    "express-rate-limit": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.1",
     "ws": "^8.18.0",

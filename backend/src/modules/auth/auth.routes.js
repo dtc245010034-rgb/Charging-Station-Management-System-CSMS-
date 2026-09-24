@@ -1,42 +1,30 @@
 const express = require('express');
-const rateLimit = require('express-rate-limit');
 const env = require('../../config/env');
 const { authenticate } = require('../../middlewares/authenticate');
 const service = require('./auth.service');
-const { registerBody, loginBody } = require('./auth.schema');
+const { loginBody } = require('./auth.schema');
+const { publicRegisterBody } = require('../users/users.schema');
 
 const router = express.Router();
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 10,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: { code: 'TOO_MANY_REQUESTS', message: 'Quá nhiều yêu cầu đăng nhập từ IP này. Vui lòng thử lại sau 15 phút.' } },
-});
-
-const setSessionCookie = (res, token) => res.cookie('token', token, {
-  httpOnly: true,
-  sameSite: 'lax',
-  maxAge: 8 * 3600 * 1000,
-  secure: env.NODE_ENV === 'production',
-});
+const cookieOptions = { httpOnly: true, sameSite: 'lax', secure: env.NODE_ENV === 'production' };
+const setSessionCookie = (res, token) => res.cookie('token', token, { ...cookieOptions, maxAge: 8 * 3600 * 1000 });
 
 router.post('/auth/register', async (req, res) => {
-  const { user, token } = await service.register(registerBody.parse(req.body ?? {}));
+  const { user, token } = await service.register(publicRegisterBody.parse(req.body ?? {}));
   setSessionCookie(res, token);
-  res.status(201).json({ user, token });
+  res.status(201).json({ user });
 });
 
-router.post('/auth/login', loginLimiter, async (req, res) => {
+router.post('/auth/login', async (req, res) => {
   const { email, password } = loginBody.parse(req.body ?? {});
-  const { user, token } = await service.login(email, password);
+  const { user, token } = await service.login(email, password, req.ip ?? 'unknown');
   setSessionCookie(res, token);
-  res.json({ user, token });
+  res.json({ user });
 });
 
 router.post('/auth/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', cookieOptions);
   res.json({ ok: true, message: 'Đăng xuất thành công' });
 });
 

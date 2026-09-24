@@ -1,12 +1,15 @@
+const crypto = require('node:crypto');
 const jwt = require('jsonwebtoken');
-const argon2 = require('argon2');
 const env = require('../../config/env');
 const users = require('../users/users.repository');
-const { AppError, ConflictError, UnauthorizedError, NotFoundError } = require('../../lib/errors');
+const usersService = require('../users/users.service');
+const { hashPassword, verifyPassword } = require('../../lib/password');
+const throttle = require('./login-throttle.repository');
+const { AppError, UnauthorizedError, NotFoundError } = require('../../lib/errors');
 
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_MINUTES = 15;
-const SYSTEM_ROLES = ['DRIVER', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT', 'ADMIN'];
+const EMAIL_MAX_FAILURES = 5;
+const LOCKED_MESSAGE = 'Đăng nhập tạm bị khoá, thử lại sau';
+const { publicUser } = usersService;
 
 function issueToken(user, roles = []) {
   return jwt.sign(
@@ -16,75 +19,32 @@ function issueToken(user, roles = []) {
   );
 }
 
-function publicUser(user, roles = []) {
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: roles[0] || null,
-    roles,
-    created_at: user.created_at,
-  };
+// Hash giả để email không tồn tại vẫn tốn thời gian argon2.verify như email có thật.
+let dummyHash;
+const getDummyHash = () => { dummyHash ??= hashPassword('dummy-password-for-timing'); return dummyHash; };
+
+async function register({ name, email, password }) {
+  // Đăng ký công khai luôn là DRIVER (vai trò khác do ADMIN tạo qua /api/admin/users).
+  const user = await usersService.create({ name, email, password, role: 'DRIVER' });
+  return { user: publicUser(user, ['DRIVER']), token: issueToken(user, ['DRIVER']) };
 }
 
-const hashPassword = (password) => argon2.hash(password, { type: argon2.argon2id });
-
-async function verifyPassword(user, password) {
-  if (!user || !user.password_hash || !password) return false;
-  try {
-    return user.password_hash.startsWith('$argon2') && await argon2.verify(user.password_hash, password);
-  } catch {
-    return false;
-  }
-}
-
-function checkUserLock(user) {
-  if (!user || !user.locked_until) return { locked: false };
-  const lockedUntil = new Date(user.locked_until);
-  if (lockedUntil <= new Date()) return { locked: false };
-  const remainingMinutes = Math.ceil((lockedUntil.getTime() - Date.now()) / (60 * 1000));
-  return {
-    locked: true,
-    message: `Tài khoản tạm thời bị khóa do nhập sai mật khẩu quá ${MAX_ATTEMPTS} lần liên tiếp. Vui lòng thử lại sau ${remainingMinutes} phút.`,
-  };
-}
-
-async function recordFailedLogin(user) {
-  const expired = user.locked_until && new Date(user.locked_until) <= new Date();
-  const count = expired ? 1 : Number(user.failed_attempts || 0) + 1;
-  const lockedUntil = count >= MAX_ATTEMPTS ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) : null;
-  await users.setFailedAttempts(user.id, count, lockedUntil);
-}
-
-async function register({ name, email, password, role }) {
-  const passwordHash = await hashPassword(password);
-  let result;
-  try {
-    result = await users.insert(name, email.toLowerCase().trim(), passwordHash);
-  } catch (error) {
-    if (error.code === '23505') throw new ConflictError('Email đã tồn tại');
-    throw error;
-  }
-  const roleRow = await users.findRoleByCode(role);
-  if (roleRow) await users.assignRole(result.lastInsertRowid, roleRow.id);
-  const user = await users.findById(result.lastInsertRowid);
-  const roles = await users.roleCodesOf(user.id);
-  return { user: publicUser(user, roles), token: issueToken(user, roles) };
-}
-
-async function login(rawEmail, password) {
+async function login(rawEmail, password, ip) {
   const email = rawEmail.toLowerCase().trim();
+  const emailKey = `email:${crypto.createHash('sha256').update(email).digest('hex')}`;
+  const ipKey = `ip:${ip}`;
+
+  // Khoá theo email HOẶC IP: chặn trước khi verify nên nhập đúng mật khẩu vẫn bị từ chối.
+  if (await throttle.isLocked([emailKey, ipKey])) throw new AppError(429, 'ACCOUNT_LOCKED', LOCKED_MESSAGE);
+
   const user = await users.findByEmail(email);
-  if (user) {
-    const lock = checkUserLock(user);
-    if (lock.locked) throw new AppError(429, 'ACCOUNT_LOCKED', lock.message);
-  }
-  if (!(user && await verifyPassword(user, password))) {
-    if (user) await recordFailedLogin(user);
-    // Generic message that does not leak email existence
+  const passwordOk = await verifyPassword({ password_hash: user ? user.password_hash : await getDummyHash() }, password);
+  if (!user || !passwordOk) {
+    // Đếm cả email không tồn tại để hành vi giống hệt email có thật.
+    await Promise.all([throttle.recordFailure(emailKey, EMAIL_MAX_FAILURES), throttle.recordFailure(ipKey, env.LOGIN_IP_MAX_FAILURES)]);
     throw new UnauthorizedError('Email hoặc mật khẩu không đúng');
   }
-  await users.resetFailedAttempts(user.id);
+  await throttle.clear(emailKey);
   const roles = await users.roleCodesOf(user.id);
   return { user: publicUser(user, roles), token: issueToken(user, roles) };
 }
@@ -95,4 +55,4 @@ async function me(userId) {
   return publicUser(user, await users.roleCodesOf(user.id));
 }
 
-module.exports = { register, login, me, issueToken, publicUser, hashPassword, verifyPassword, checkUserLock, SYSTEM_ROLES, MAX_ATTEMPTS, LOCKOUT_MINUTES };
+module.exports = { register, login, me, issueToken, publicUser };

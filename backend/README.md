@@ -42,11 +42,19 @@ npm run create-admin
 
 Các biến `DATABASE_URL`, `JWT_SECRET` (≥ 32 ký tự), `APP_ORIGIN` là bắt buộc; thiếu biến nào ứng dụng thoát ngay và in tên biến đó.
 
-Gửi JWT nhận từ `/api/auth/login` trong header `Authorization: Bearer <token>` cho các API cần đăng nhập.
+## Đăng nhập và khoá tạm
+
+Phiên là JWT trong cookie `httpOnly` (SameSite=Lax, Secure khi production); API không trả token trong body. Sai mật khẩu trả lỗi chung "Email hoặc mật khẩu không đúng", kể cả khi email không tồn tại.
+
+- Sai 5 lần (trong cửa sổ 15 phút) với cùng một email → khoá 15 phút, lần đăng nhập tiếp theo trả 429 kể cả khi nhập đúng.
+- Sai `LOGIN_IP_MAX_FAILURES` lần (mặc định 20) từ cùng một IP → khoá IP 15 phút.
+- Bộ đếm lưu ở bảng `login_throttle` (khoá `email:<sha256>` / `ip:<ip>`), nên khởi động lại vẫn còn khoá. Đếm cả email không tồn tại để không lộ email nào có tài khoản.
+- IP lấy từ `req.ip`; nếu chạy sau reverse proxy cần cấu hình `trust proxy` (chưa có).
 
 ## API chính
 
-- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
+- `POST /api/auth/register` (công khai, luôn tạo tài khoản DRIVER; gửi kèm `role` → 400), `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
+- `POST /api/admin/users` (chỉ ADMIN): tạo tài khoản với bất kỳ vai trò nào trong 5 vai trò; không tự đăng nhập tài khoản mới
 - `GET/POST /api/stations`, `GET/PATCH /api/stations/:id`
 - `GET /api/charge-points`, `GET /api/charge-points/:id`
 - `POST /api/stations/:stationId/charge-points`, `PATCH /api/charge-points/:id`
@@ -57,7 +65,7 @@ Gửi JWT nhận từ `/api/auth/login` trong header `Authorization: Bearer <tok
 ```powershell
 docker compose up -d db_test   # Postgres test, cổng 5433, dữ liệu trong RAM
 cd backend
-npm run lint
+npm run lint                    # ESLint cho backend/ và frontend/js (config ở thư mục gốc)
 npm test                        # cần Node 22; mỗi test tự dựng lại schema trên DB *_test
 ```
 
