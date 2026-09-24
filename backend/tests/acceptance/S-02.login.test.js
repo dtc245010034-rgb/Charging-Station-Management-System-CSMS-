@@ -144,7 +144,7 @@ describe('S-02 đăng nhập và khoá tạm', () => {
     const agent = request.agent(app);
     await agent.post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });
     assert.strictEqual((await agent.get('/api/auth/me')).status, 200);
-    const out = await agent.post('/api/auth/logout');
+    const out = await agent.post('/api/auth/logout').set('Content-Type', 'application/json');
     assert.match(out.headers['set-cookie'][0], /^token=;.*(Expires=Thu, 01 Jan 1970|Max-Age=0)/i);
     assert.match(out.headers['set-cookie'][0], /HttpOnly/i);
     assert.strictEqual((await agent.get('/api/auth/me')).status, 401);

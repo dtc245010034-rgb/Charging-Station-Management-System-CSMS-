@@ -15,6 +15,16 @@ module.exports = [
     languageOptions: { ecmaVersion: 2023, sourceType: 'commonjs', globals: { ...globals.node } },
   },
   {
+    // Route phải khai quyền: dùng secureRouter() (security/routeGuard.js), không dùng express.Router() trực tiếp.
+    files: ['backend/src/modules/**/*.js'],
+    rules: {
+      'no-restricted-syntax': ['error',
+        { selector: "Identifier[name='Router']", message: 'Dùng secureRouter() từ security/routeGuard.js thay cho express.Router().' },
+        { selector: "CallExpression[callee.property.name='route']", message: 'Không dùng router.route(); khai route bằng secureRouter().get/post/... với { access }.' },
+      ],
+    },
+  },
+  {
     files: ['frontend/js/**/*.js'],
     languageOptions: { ecmaVersion: 2023, sourceType: 'module', globals: { ...globals.browser } },
   },

@@ -1,12 +1,12 @@
-const express = require('express');
-const { authenticate, allow } = require('../../middlewares/authenticate');
+const { secureRouter } = require('../../security/routeGuard');
+const { access } = require('../../security/permissions');
 const service = require('./users.service');
 const { adminCreateUserBody } = require('./users.schema');
 
-const router = express.Router();
+const router = secureRouter();
 
-router.get('/roles', async (req, res) => res.json(await service.listRoles()));
-router.post('/admin/users', authenticate, allow('ADMIN'), async (req, res) => {
+router.get('/roles', { access: access('roles:read') }, async (req, res) => res.json(await service.listRoles()));
+router.post('/admin/users', { access: access('users:create') }, async (req, res) => {
   res.status(201).json({ user: await service.createByAdmin(req.user, adminCreateUserBody.parse(req.body ?? {})) });
 });
 

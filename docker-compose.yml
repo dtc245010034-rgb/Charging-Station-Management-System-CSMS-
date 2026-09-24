@@ -36,6 +36,7 @@ services:
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET:?đặt JWT_SECRET (>=32 ký tự) trong .env}
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
       DATABASE_URL: postgresql://${POSTGRES_USER:-csms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-csms}
     ports:
       - "${APP_PORT:-3000}:3000"

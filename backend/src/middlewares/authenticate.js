@@ -3,12 +3,8 @@ const env = require('../config/env');
 const { UnauthorizedError, ForbiddenError } = require('../lib/errors');
 
 function authenticate(req, res, next) {
-  // Read token from httpOnly cookie first, then fallback to Authorization header
-  let token = req.cookies?.token || null;
-  if (!token) {
-    const header = req.headers.authorization || '';
-    if (header.startsWith('Bearer ')) token = header.slice(7);
-  }
+  // Chỉ nhận phiên qua cookie httpOnly (không nhận Authorization: Bearer).
+  const token = req.cookies?.token || null;
   if (!token) return next(new UnauthorizedError());
 
   try {
