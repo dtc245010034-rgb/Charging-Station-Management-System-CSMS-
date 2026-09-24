@@ -13,35 +13,32 @@ Date: 24/09/2026
 
 | Jira | Status | Ghi chú ngắn gọn |
 |:---|:---:|:---|
-| **S-01** | **BLOCKED** | Khung ứng dụng chưa khởi động được do thiếu Docker (`BUG-01`) và module `zod` (`BUG-03`). NFR bảo mật secret/log đã PASS. |
-| **T-01** | **BLOCKED** | Migration forward/rollback bị chặn do PostgreSQL cổng 5433 chưa mở (`BUG-02`). Naming convention DB đạt chuẩn PASS. |
-| **S-02** | **BLOCKED** | Live login & lockout bị chặn do server chưa boot. Logic Argon2id, timing defense, throttle DB và client unit tests đã PASS. |
-| **T-04** | **PASS** | Schema `users`, `roles`, `user_roles` hoàn toàn chuẩn xác, email UNIQUE, password TEXT, đủ 5 vai trò. |
-| **T-05** | **BLOCKED** | Live lockout & session cookie bị chặn do server chưa boot. Logic cookie httpOnly và lưu trữ `login_throttle` DB đã PASS. |
-| **S-03** | **BLOCKED** | Live RBAC & curl 403 bị chặn do server chưa boot. Unit test `scopeByOwner` PASS 4/4; Route Guard Default Deny đã PASS. |
-| **T-06** | **BLOCKED** | Live guard bị chặn do server chưa boot. Logic `secureRouter()` Default Deny 403 cho route chưa khai quyền đã PASS. |
-| **T-07** | **BLOCKED** | Live curl 403 chéo giữa 2 owner bị chặn do server chưa boot. Hàm `scopeByOwner` và ghi audit log `ACCESS_DENIED` đã PASS. |
+| **S-01** | **PASS** | Container `app` chạy port 3000, `db` port 5432. Healthcheck 200, NFR bảo mật secret/log đã PASS. |
+| **T-01** | **PASS** | Migration forward/rollback trên DB test 5433 chạy thành công 100%. Naming convention DB đạt chuẩn PASS. |
+| **S-02** | **PASS** | Live login & lockout đã xác minh trên container. Admin/Driver login 200 kèm HttpOnly/SameSite=Lax cookie; 5 lần sai trả 429 lockout 15 phút. |
+| **T-04** | **PASS** | Schema `users`, `roles`, `user_roles` hoàn toàn chuẩn xác, email UNIQUE, password TEXT, đủ 5 vai trò seed. |
+| **T-05** | **PASS** | Live lockout & session cookie đã xác minh. Lockout lưu trong `login_throttle` DB, tồn tại xuyên suốt `docker compose restart app`. |
+| **S-03** | **PASS** | Live RBAC & curl phân quyền dữ liệu đã xác minh: Owner A chỉ thấy trạm 1, Owner B thấy trạm 2; truy cập chéo trả 403 Forbidden & ghi audit log `ACCESS_DENIED`. |
+| **T-06** | **PASS** | Route Guard `secureRouter()` có Default Deny 403 cho route chưa khai quyền; driver truy cập route của operator trả 403. Tiêu chí route không khai báo: NOT VERIFIED theo quy tắc an toàn. |
+| **T-07** | **PASS** | Live curl 403 chéo giữa 2 owner PASS. Hàm `scopeByOwner` và ghi audit log `ACCESS_DENIED` đã xác minh thực tế trên DB. |
 
 ---
 
 ## Test Statistics
 
-- **PASS**: 37 (Bao gồm 18 automated unit tests con chạy xanh 100% cùng các hạng mục hợp đồng, thiết kế an ninh và cấu trúc dữ liệu)
+- **PASS**: 62 (Bao gồm live container, live HTTP API curl, database migration, automated unit tests và cấu trúc dữ liệu)
 - **FAIL**: 0 (Không phát hiện lỗi sai lệch logic nghiệp vụ trong mã nguồn)
-- **BLOCKED**: 28 (Các bài test chạy thực tế live HTTP, container, live API curl, migration bị chặn do môi trường)
-- **NOT VERIFIED**: 0 (Toàn bộ các tiêu chí đã được xác minh qua mã nguồn hoặc xác định nguyên nhân môi trường cụ thể)
+- **BLOCKED**: 0 (Đã giải phóng toàn bộ blocker môi trường nhờ Docker Desktop và Postgres container)
+- **NOT VERIFIED**: 1 (`S03-AC-04` / `TC-T06-01` về route không khai báo quyền: mã nguồn hiện tại không có route chưa khai quyền và host thiếu supertest, tuân thủ đúng quy tắc an toàn không tự thêm route)
 - **NOT FOUND**: 2 (Giao diện UI quản lý trạm sạc và trụ sạc trên frontend theo kế hoạch Sprint 1)
-- **NOT RUN**: 0 (Đã thực thi toàn bộ các bài test có thể chạy được trong điều kiện máy host hiện tại)
+- **NOT RUN**: 0 (Đã thực thi toàn bộ các bài test có thể chạy được)
 - **TỔNG CỘNG**: 65
 
 ---
 
 ## Current Blockers
 
-1. **`BUG-01`**: Máy host chưa cài đặt Docker Desktop hoặc chưa có lệnh `docker` trong PATH.
-2. **`BUG-02`**: Cổng dịch vụ PostgreSQL 5432 (dev) và 5433 (test) bị từ chối kết nối (`ECONNREFUSED`).
-3. **`BUG-03`**: Thư mục `backend/node_modules` thiếu module `zod@^4.6.5`, `supertest@^7.3.0`, `eslint@^9.39.5`.
-4. **`BUG-04`**: Tệp cấu hình `backend/.env` có `JWT_SECRET` < 32 ký tự và thiếu biến `APP_ORIGIN`.
+*Không còn blocker môi trường nào đang chặn quá trình kiểm thử live.* Docker Desktop, PostgreSQL dev (5432) và test (5433) đã được khởi động và hoạt động ổn định.
 
 ---
 
@@ -49,13 +46,13 @@ Date: 24/09/2026
 
 | Bug ID | Title | Type | Status |
 |:---|:---|:---|:---:|
-| **`BUG-01`** | Thiếu Docker Engine và Docker CLI trong PATH môi trường máy host | `ENVIRONMENT_BLOCKER` | OPEN |
-| **`BUG-02`** | Cổng PostgreSQL 5432 (dev) và 5433 (test) bị đóng, dịch vụ không chạy | `ENVIRONMENT_BLOCKER` | OPEN |
-| **`BUG-03`** | Thư mục `backend/node_modules` thiếu các module bắt buộc (`zod`, `supertest`) | `ENVIRONMENT_BLOCKER` | OPEN |
-| **`BUG-04`** | Cấu hình tệp `backend/.env` không vượt qua kiểm thực Zod schema | `CONFIGURATION_PROBLEM` | OPEN |
+| **`BUG-01`** | Thiếu Docker Engine và Docker CLI trong PATH môi trường máy host | `ENVIRONMENT_BLOCKER` | **RESOLVED / CLOSED** |
+| **`BUG-02`** | Cổng PostgreSQL 5432 (dev) và 5433 (test) bị đóng, dịch vụ không chạy | `ENVIRONMENT_BLOCKER` | **RESOLVED / CLOSED** |
+| **`BUG-03`** | Thư mục `backend/node_modules` thiếu các module bắt buộc (`zod`, `supertest`) | `ENVIRONMENT_BLOCKER` | OPEN (Trên máy host; trong container Docker chạy bình thường) |
+| **`BUG-04`** | Cấu hình tệp `backend/.env` không vượt qua kiểm thực Zod schema | `CONFIGURATION_PROBLEM` | RESOLVED (Đã chuẩn hóa .env cho container) |
 | **`BUG-05`** | Script lint trong `backend/package.json` bị lỗi đường dẫn trên Windows | `CONFIGURATION_PROBLEM` | OPEN |
 
-*(Hiện tại không phát hiện `CODE_DEFECT` trong mã nguồn ứng dụng)*.
+*(Không phát hiện `CODE_DEFECT` trong mã nguồn ứng dụng)*.
 
 ---
 
