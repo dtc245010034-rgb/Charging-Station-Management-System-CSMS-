@@ -1,190 +1,60 @@
-# Testing — CSMS
+# CSMS TESTING DOCUMENTATION
 
-Tài liệu hướng dẫn thiết lập, thực thi kiểm thử và tra cứu báo cáo chất lượng cho hệ thống Quản lý Mạng lưới Trạm Sạc Xe Điện (CSMS - Charging Station Management System).
-
----
-
-## 1. Mục đích
-
-Thư mục `docs/testing/` lưu trữ toàn bộ tài liệu kiểm thử chuẩn hóa của dự án (Kế hoạch, Danh mục test, Báo cáo kết quả, Hồ sơ lỗi và Báo cáo hồi quy). Tài liệu này giúp các thành viên mới hoặc thành viên clone project về có thể nhanh chóng hiểu cấu trúc kiểm thử, thiết lập môi trường và chạy toàn bộ test suite một cách nhất quán.
+> **Dự án**: Charging-Station-Management-System-CSMS-  
+> **Người thực hiện**: TESTER / QA ANALYST  
+> **Current Baseline Date**: 24/09/2026  
+> **Commit snapshot**: `4bc5758` (Nhánh `main`)  
 
 ---
 
-## 2. Cấu trúc thư mục
+## 1. Mục đích Thư mục (Purpose)
+Thư mục `docs/testing/` là nguồn sự thật duy nhất (Single Source of Truth) lưu trữ toàn bộ hồ sơ kiểm thử, chiến lược kiểm thử, danh mục các bài test, báo cáo lỗi và tình trạng tích hợp của dự án CSMS tính đến ngày 24/09/2026.
 
-### 2.1. Cấu trúc tài liệu kiểm thử (`docs/testing/`)
+---
+
+## 2. Cấu trúc Tài liệu (Documentation Structure)
+
 ```text
 docs/testing/
-├── README.md               # Hướng dẫn tổng quan về testing (tài liệu này)
-├── TEST_INVENTORY.md       # Bảng kê hiện trạng test, phân loại module và baseline coverage
-├── TEST_PLAN.md            # Kế hoạch kiểm thử chi tiết (Scope, Strategy, Priority, Traceability)
-├── TEST_CASES.md           # Danh mục chi tiết 45 test cases kèm Scenario, Input, Expected/Actual
-├── TEST_REPORT.md          # Báo cáo kết quả chạy test toàn diện, coverage và phân tích lỗi
-├── BUG_REPORT.md           # Hồ sơ các lỗi phát hiện trong production code (BUG-01, BUG-02)
-└── REGRESSION_REPORT.md    # Báo cáo kiểm thử hồi quy đối chiếu test cũ và test mới
-```
-
-### 2.2. Vị trí mã nguồn kiểm thử (`backend/`)
-Toàn bộ mã kiểm thử tự động được tổ chức trong thư mục `backend/`:
-```text
-backend/
-├── test-auth.js                   # Bộ kiểm thử bảo mật & xác thực gốc (Sprint 1)
-└── tests/                         # Thư mục chứa các bộ Unit Test bổ sung (Sprint 2)
-    ├── auth.unit.test.js          # Unit tests cho Authentication, RBAC và Lockout
-    ├── billing_session.unit.test.js # Unit tests cho Session Math, Meter Validation & Billing
-    └── ocpp.unit.test.js          # Unit tests cho giao thức bản tin WebSocket OCPP 1.6
-```
-
----
-
-## 3. Test Framework & Công cụ kiểm thử
-
-- **Ngôn ngữ**: JavaScript (Node.js CommonJS).
-- **Test Runner**: Node.js Native Test Runner (`node:test`), hỗ trợ cấu trúc `describe`, `it`.
-- **Assertion Library**: `node:assert` (module chuẩn built-in của Node.js).
-- **Coverage Engine**: V8 Native Coverage qua cờ `--experimental-test-coverage` của Node.js.
-- **Database giả lập cho test**: `pg-mem` (v3.0.14) tích hợp sẵn cơ chế fallback tự động trong `backend/src/db.js`, không bắt buộc cài đặt PostgreSQL server vật lý để chạy test.
-
----
-
-## 4. Yêu cầu môi trường
-
-- **Node.js**: Phiên bản `22.5+` (khuyến nghị Node.js `v22` hoặc `v24`; đã kiểm tra thực tế trên Node.js `v24.19.0`).
-- **npm**: Đi kèm với Node.js (đã kiểm tra trên `npm v10.8.2`).
-- **PostgreSQL**: Không bắt buộc để chạy Unit Test (nhờ có `pg-mem`). Nếu chạy live integration với server cần PostgreSQL 14+ hoặc Docker Compose.
-
----
-
-## 5. Cài đặt
-
-Từ thư mục gốc của dự án, di chuyển vào thư mục `backend` và cài đặt dependencies:
-
-```powershell
-cd backend
-npm install
+│
+├── README.md                 # Hướng dẫn tổng quan & cấu trúc thư mục kiểm thử
+│
+├── stories/                  # Chi tiết kiểm thử theo từng Jira Story
+│   ├── S-01.md               # S-01: Khung ứng dụng & Database (T-01)
+│   ├── S-02.md               # S-02: Authentication & Temporary Lockout (T-04, T-05)
+│   └── S-03.md               # S-03: Role Matrix & Ownership Isolation (T-06, T-07)
+│
+├── integration/              # Kiểm thử tích hợp toàn trình giữa các hệ thống
+│   └── FRONTEND_BACKEND.md   # Kiểm thử tích hợp Frontend ↔ Backend (FB-01 đến FB-11)
+│
+├── TEST_PLAN.md              # Chiến lược, tiêu chí chấp nhận & quy tắc kiểm thử
+├── TEST_INVENTORY.md         # Bảng kê toàn bộ danh mục kiểm thử và trạng thái thực thi
+├── TEST_REPORT.md            # Báo cáo tổng hợp kết quả kiểm thử hiện tại
+├── BUG_REPORT.md             # Hồ sơ chi tiết các lỗi và rào cản môi trường
+└── REGRESSION_REPORT.md      # Đánh giá tính toàn vẹn và nguy cơ hồi quy chức năng
 ```
 
 ---
 
-## 6. Chạy Unit Test
+## 3. Hướng dẫn Sử dụng Hồ sơ Kiểm thử (File Directory Guide)
 
-### 6.1. Chạy test xác thực mặc định (Script gốc trong `package.json`):
-```powershell
-npm test
-```
-*Lệnh này sẽ thực thi script `"test": "node test-auth.js"` kiểm tra 4 kịch bản bảo mật cơ bản.*
-
-### 6.2. Chạy toàn bộ các file Unit Test mới:
-```powershell
-node --test tests/*.unit.test.js
-```
-
----
-
-## 7. Chạy toàn bộ Automated Test Suite
-
-Để chạy đồng thời toàn bộ test cũ và các unit test mới (45 test cases):
-
-```powershell
-node --test test-auth.js tests/*.unit.test.js
-```
-
-*(Lưu ý: `package.json` hiện tại chưa cấu hình script npm riêng cho lệnh này, do đó hãy chạy trực tiếp qua lệnh `node --test` ở trên).*
+| Thư mục / Tệp | Mục đích sử dụng | Khi nào cần xem? |
+|:---|:---|:---|
+| **[`stories/`](./stories/)** | Chứa chi tiết yêu cầu, AC, NFR, test cases, expected/actual của từng Story Jira (`S-01.md`, `S-02.md`, `S-03.md`) | Khi cần kiểm tra sâu logic, kịch bản test và bằng chứng của một tính năng cụ thể |
+| **[`integration/`](./integration/)** | Chứa chi tiết toàn bộ các kịch bản kiểm thử tích hợp Frontend ↔ Backend (`FRONTEND_BACKEND.md`) | Khi cần xác minh hợp đồng API, chuỗi middleware, session cookie, xử lý lỗi, bảo mật |
+| **[`TEST_PLAN.md`](./TEST_PLAN.md)** | Định nghĩa phạm vi, mục tiêu, môi trường, thứ tự thực thi phụ thuộc, và nguyên tắc kiểm thử | Khi cần nắm bắt chiến lược kiểm thử cấp cao và điều kiện nghiệm thu |
+| **[`TEST_INVENTORY.md`](./TEST_INVENTORY.md)** | Bảng kê danh mục toàn bộ test case (ID, Jira, Category, Type, Status, Last Run) | Khi cần tra cứu nhanh danh mục bài test mà không cần đọc chi tiết từng bước |
+| **[`TEST_REPORT.md`](./TEST_REPORT.md)** | Báo cáo tóm tắt hiện trạng kiểm thử mới nhất, tỷ lệ đạt, thống kê, và điểm nghẽn | Khi Developer hoặc Project Manager cần báo cáo tóm tắt trạng thái dự án |
+| **[`BUG_REPORT.md`](./BUG_REPORT.md)** | Danh sách chi tiết các lỗi đang mở, phân loại rạch ròi theo mức độ nghiêm trọng và nguyên nhân | Khi đội ngũ Dev cần fix lỗi hoặc setup môi trường (Docker, PostgreSQL, Zod) |
+| **[`REGRESSION_REPORT.md`](./REGRESSION_REPORT.md)** | Ghi nhận kết quả chạy lại các bài test cũ và so sánh hành vi trước - sau refactor | Khi chuẩn bị release hoặc kiểm tra xem tính năng cũ có bị ảnh hưởng không |
 
 ---
 
-## 8. Chạy Coverage (Đo độ phủ mã nguồn)
+## 4. Quy ước Trạng thái Kiểm thử (Status Conventions)
 
-Node.js v22/v24 hỗ trợ cờ đo coverage trực tiếp mà không cần cài thêm thư viện bên thứ ba:
-
-```powershell
-node --test --experimental-test-coverage test-auth.js tests/*.unit.test.js
-```
-
-Kết quả sẽ xuất ra bảng số liệu chi tiết:
-- **Line %** (Độ phủ dòng)
-- **Branch %** (Độ phủ nhánh rẽ)
-- **Funcs %** (Độ phủ hàm)
-- **Uncovered lines** (Các dòng code chưa được test gọi tới)
-
----
-
-## 9. Chạy từng Test File / Test Suite riêng lẻ
-
-Khi phát triển hoặc debug từng module cụ thể, có thể chạy riêng từng file:
-
-- **Chỉ chạy Unit Test Auth & RBAC**:
-  ```powershell
-  node --test tests/auth.unit.test.js
-  ```
-- **Chỉ chạy Unit Test Phiên sạc & Biểu giá**:
-  ```powershell
-  node --test tests/billing_session.unit.test.js
-  ```
-- **Chỉ chạy Unit Test Giao thức OCPP 1.6**:
-  ```powershell
-  node --test tests/ocpp.unit.test.js
-  ```
-
----
-
-## 10. Đọc kết quả test
-
-Khi chạy `node --test`, kết quả trả về theo định dạng TAP / BDD tiêu chuẩn:
-- **`✔` (PASS)**: Test case chạy thành công, assertion đúng với kỳ vọng.
-- **`✖` (FAIL)**: Test case thất bại (sai lệch giữa Expected và Actual, hoặc có Exception ngoài ý muốn).
-- **`ℹ tests X | pass Y | fail Z | duration_ms T`**: Bảng tổng kết số lượng test đã chạy, số test đỗ/hỏng và tổng thời gian thực thi.
-- **Coverage Summary**: Hiển thị tỷ lệ phần trăm theo từng file (`auth.js`, `db.js`,...).
-
----
-
-## 11. Các tài liệu kiểm thử liên quan
-
-| Tài liệu | Mô tả nội dung |
-|:---|:---|
-| [TEST_INVENTORY.md](./TEST_INVENTORY.md) | Thống kê số lượng test ban đầu, phân loại module cần test và độ phủ mã nguồn baseline. |
-| [TEST_PLAN.md](./TEST_PLAN.md) | Kế hoạch kiểm thử toàn diện, phạm vi (Scope / Out of Scope), chiến lược, mức độ ưu tiên (P0-P3) và Traceability Matrix. |
-| [TEST_CASES.md](./TEST_CASES.md) | Bảng mô tả chi tiết 45 test cases: ID, Module, Scenario, Input, Expected Result và Actual Result. |
-| [TEST_REPORT.md](./TEST_REPORT.md) | Báo cáo kiểm thử toàn diện sau khi chạy toàn bộ test suite và đo lường độ phủ. |
-| [BUG_REPORT.md](./BUG_REPORT.md) | Báo cáo chi tiết các lỗi phát hiện trong production code (`BUG-01: CRITICAL`, `BUG-02: MINOR`) kèm mã lỗi và các bước tái hiện. |
-| [REGRESSION_REPORT.md](./REGRESSION_REPORT.md) | Báo cáo kiểm thử hồi quy xác nhận các test case cũ không bị ảnh hưởng. |
-
----
-
-## 12. Quy trình Testing (Testing Workflow)
-
-Quy trình chuẩn được áp dụng trong dự án:
-
-```text
-Khảo sát mã nguồn (Scan)
-       ↓
-Lập danh mục & Kế hoạch (Inventory & Plan)
-       ↓
-Viết Test (Write Unit / Integration Tests)
-       ↓
-Thực thi kiểm thử (Run Tests & Coverage)
-       ↓
-Phân tích lỗi & Hồi quy (Analyze Fail & Regression)
-       ↓
-Lập hồ sơ Bug & Báo cáo (Bug Report & Deliverables)
-```
-
----
-
-## 13. Xử lý khi Test FAIL
-
-Tuân thủ nghiêm ngặt quy tắc của Team Charter:
-
-1. **KHÔNG tự ý sửa production code**: Mục tiêu của QA/Tester là phát hiện và ghi nhận lỗi, không tự ý sửa đổi code nghiệp vụ của thành viên khác.
-2. **KHÔNG nới lỏng assertion**: Không sửa đổi Expected Result chỉ để làm test chuyển sang màu xanh (PASS).
-3. **Phân loại nguyên nhân lỗi**:
-   - **Test Defect**: Do viết sai assertion, setup test data hoặc mock không phù hợp -> Sửa lại mã test và chạy lại.
-   - **Production Bug**: Do mã nguồn xử lý sai logic, văng ngoại lệ hoặc unhandled rejection -> Giữ nguyên test FAIL, ghi nhận đầy đủ vào [BUG_REPORT.md](./BUG_REPORT.md) (kèm steps to reproduce, severity) để đội Developer xử lý.
-   - **Environment Issue**: Do thiếu biến môi trường hoặc cổng mạng bị chiếm dụng -> Ghi nhận blocker môi trường.
-
----
-
-## 14. Lưu ý quan trọng
-
-- **Cơ chế In-Memory DB**: File `src/db.js` tự động khởi tạo `pg-mem` khi không kết nối được PostgreSQL ở `localhost:5432`. Điều này cho phép chạy toàn bộ Unit Test độc lập, tốc độ cao (dưới 500ms) mà không cần bật Docker hay cài database bên ngoài.
-- **Bảo vệ nhánh Git**: Nhánh `main` của repository được cài đặt quy tắc Protected Branch. Mọi thay đổi kiểm thử cần được push lên nhánh riêng (ví dụ `test/csms-unit-tests`) và tạo Pull Request để review trước khi merge vào `main`.
+- **PASS**: Yêu cầu kiểm thử được xác nhận đạt 100% qua bằng chứng thực thi tự động hoặc kiểm tra logic mã nguồn.
+- **FAIL**: Hành vi thực tế sai lệch với yêu cầu do lỗi trong mã nguồn (`CODE_DEFECT`) khi môi trường đã sẵn sàng.
+- **BLOCKED**: Kịch bản kiểm thử không thể thực thi trực tiếp do rào cản từ môi trường máy test (`ENVIRONMENT_BLOCKER`, `CONFIGURATION_PROBLEM`).
+- **NOT VERIFIED**: Chưa đủ căn cứ hoặc bằng chứng xác minh mới nhất tính đến thời điểm snapshot.
+- **NOT FOUND**: Chức năng, biểu mẫu UI hoặc endpoint chưa được khởi tạo trong mã nguồn.
+- **NOT RUN**: Kịch bản kiểm thử đã được thiết kế nhưng chưa đến lượt thực thi theo thứ tự phụ thuộc.

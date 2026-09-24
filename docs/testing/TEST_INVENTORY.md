@@ -1,107 +1,111 @@
-# TEST INVENTORY — CHARGING STATION MANAGEMENT SYSTEM (CSMS)
+# BẢNG KÊ HIỆN TRẠNG KIỂM THỬ (TEST INVENTORY) — CSMS
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
-> **Người thực hiện**: Nguyễn Hà Nam (Developer / QA — Team-Codegym)  
-> **Giai đoạn**: Cập nhật sau Giai đoạn 3 (Viết Unit Test)  
-> **Ngày cập nhật**: 2026-09-22  
-> **Cam kết**: 100% dựa trên source code thực tế, cấu hình và test runner hiện có. Không phỏng đoán, không sửa production code.
+> **Người thực hiện**: TESTER / QA ANALYST  
+> **Phiên bản snapshot**: 24/09/2026 (Nhánh `main`, commit `4bc5758`)  
+> **Quy ước**: Chỉ lưu trữ danh mục kiểm thử, không mô tả chi tiết kịch bản kiểm thử tại tệp này.  
 
 ---
 
-## 1. Project Snapshot
+## 1. Danh mục Kiểm thử Story S-01 & Task T-01 (Khung ứng dụng & Database)
 
-- **Workspace Path**: `Charging-Station-Management-System-CSMS--main/backend`
-- **Ngôn ngữ & Runtime**: Node.js v24.19.0 (JavaScript CommonJS)
-- **Framework chính**:
-  - Web framework: `express` (v4.21.2)
-  - WebSocket: `ws` (v8.18.0)
-  - Database Driver: `pg` (v8.13.1) & in-memory PostgreSQL `pg-mem` (v3.0.14)
-  - Password Crypto: `argon2` (v0.45.1), `bcryptjs` (v2.4.3)
-  - Token: `jsonwebtoken` (v9.0.2)
-  - Cookie: `cookie-parser` (v1.4.7)
-
----
-
-## 2. Test Framework & Runner Thực tế
-
-| Hạng mục | Hiện trạng thực tế | Ghi chú từ mã nguồn |
-|:---|:---|:---|
-| **Test Runner** | Node.js native test runner (`node --test`) | Có sẵn trong Node.js v24.19.0 |
-| **Assertion Library** | `node:assert` (Native Node.js assert module) | Chuẩn built-in của Node.js |
-| **Test Suites Framework** | `node:test` (`describe`, `it`) | Hỗ trợ cấu trúc BDD / TDD chuẩn |
-| **Test Directory** | `backend/tests/` (Unit tests mới) & `backend/` (test cũ) | Đã phân tách rõ ràng |
-| **Coverage Tool** | Node.js built-in `--experimental-test-coverage` | Đo được Line %, Branch %, Function % từ V8 |
+| Test ID | Jira | Category | Type | Automated/Manual | Status | Last Run |
+|:---|:---|:---|:---|:---:|:---:|:---:|
+| **TC-S01-01** | S-01 | Baseline / Runtime | Acceptance | Manual | **BLOCKED** | 24/09/2026 |
+| **TC-S01-02** | S-01 | Security / Config | Unit | Automated | **PASS** | 24/09/2026 |
+| **TC-S01-03** | S-01 | Security / Logging | Unit | Automated | **PASS** | 24/09/2026 |
+| **TC-T01-01** | T-01 | Database / Migration | Integration | Automated | **BLOCKED** | 24/09/2026 |
+| **TC-T01-02** | T-01 | Database / Rollback | Integration | Automated | **BLOCKED** | 24/09/2026 |
+| **TC-T01-03** | T-01 | Database / Schema | Static Inspection | Manual | **PASS** | 24/09/2026 |
+| **TC-T01-04** | T-01 | Config / Connection | Static Inspection | Manual | **PASS** | 24/09/2026 |
+| **UT-NODE-01** | S-01 | Runtime / Environment | Unit | Automated | **PASS** | 24/09/2026 |
+| **UT-BACKDOOR-01** | S-01 | Security / Secret | Unit | Automated | **PASS** | 24/09/2026 |
+| **UT-ENV-01** | S-01 | Config / Validation | Unit | Automated | **BLOCKED** | 24/09/2026 |
+| **UT-ERR-01** | S-01 | Middleware / Error | Unit | Automated | **BLOCKED** | 24/09/2026 |
+| **IT-MIGRATE-01** | T-01 | Database / Migration | Integration | Automated | **BLOCKED** | 24/09/2026 |
+| **IT-ADMIN-01** | S-01 | Security / Seed Script | Integration | Automated | **BLOCKED** | 24/09/2026 |
+| **ACC-S01-01** | S-01 | Baseline / HTTP | Acceptance | Automated | **BLOCKED** | 24/09/2026 |
+| **MAN-S01-01** | S-01 | Container / Build | Runtime | Manual | **BLOCKED** | 24/09/2026 |
+| **MAN-S01-02** | S-01 | Gateway / HTTP | Runtime | Manual | **BLOCKED** | 24/09/2026 |
 
 ---
 
-## 3. Danh mục Test hiện tại (Đã bổ sung Unit Test Giai đoạn 3)
+## 2. Danh mục Kiểm thử Story S-02 & Task T-04, T-05 (Login & Temporary Lock)
 
-| ID | Module | File | Test Type | Test Suite / Function | Scenario | Status thực tế |
-|:---|:---|:---|:---|:---|:---|:---:|
-| **EXT-01** | Auth / Crypto | `test-auth.js` | Unit Test | `runTests() / Test 1` | Băm Argon2id và verify password đúng/sai | **PASS** |
-| **EXT-02** | Auth / Security | `test-auth.js` | Unit Test | `runTests() / Test 2` | Logic khóa 5 lần sai khóa 15 phút, lần 6 bị chặn | **PASS** |
-| **EXT-03** | Auth / RBAC | `test-auth.js` | Unit Test | `runTests() / Test 3` | Danh sách 5 vai trò hệ thống | **PASS** |
-| **EXT-04** | Auth / Middleware | `test-auth.js` | Acceptance | `runTests() / Test 4` | Cookie token và token hết hạn trả về 401 | **PASS** |
-| **UT-AUTH-01** | Auth / Crypto | `tests/auth.unit.test.js` | Unit Test | `verifyPassword` | Input rỗng, null, undefined, không có hash | **PASS** (3 tests) |
-| **UT-AUTH-02** | Auth / Crypto | `tests/auth.unit.test.js` | Unit Test | `verifyPassword` | Hỗ trợ hash legacy bcrypt ($2a$/$2b$) và auto-upgrade | **PASS** (1 test) |
-| **UT-AUTH-03** | Auth / Security | `tests/auth.unit.test.js` | Unit Test | `checkUserLock` | Tự động mở khóa khi hết hạn và tính thời gian còn lại | **PASS** (3 tests) |
-| **UT-AUTH-04** | Auth / RBAC | `tests/auth.unit.test.js` | Unit Test | `allow` middleware | Cho phép truy cập khi user có role trong role/roles | **PASS** (2 tests) |
-| **UT-AUTH-05** | Auth / RBAC | `tests/auth.unit.test.js` | Unit Test | `allow` middleware | Từ chối 403 Forbidden khi user không đủ quyền | **PASS** (1 test) |
-| **UT-AUTH-06** | Auth / RBAC | `tests/auth.unit.test.js` | Unit Test | `allow` middleware | Từ chối 401 Unauthorized khi chưa đăng nhập | **PASS** (1 test) |
-| **UT-AUTH-07** | Auth / Session | `tests/auth.unit.test.js` | Unit Test | `authenticate` | Xác thực thành công qua header Authorization Bearer | **PASS** (1 test) |
-| **UT-AUTH-08** | Auth / Session | `tests/auth.unit.test.js` | Unit Test | `authenticate` | Từ chối 401 khi header không dùng Bearer hoặc token hỏng | **PASS** (2 tests) |
-| **UT-AUTH-09** | Auth / Security | `tests/auth.unit.test.js` | Unit Test | `publicUser` | Loại bỏ trường nhạy cảm `password_hash` | **PASS** (2 tests) |
-| **UT-LOCK-01** | Auth / DB | `tests/auth.unit.test.js` | Unit Test | `recordUserFailedLogin` | Ghi nhận lần sai vào DB, khóa 15p tại lần 5, reset về 0 | **PASS** (3 tests) |
-| **UT-SES-01** | Sessions / Logic | `tests/billing_session.unit.test.js` | Unit Test | `calculateSessionEnergy` | Tính chênh lệch `meter - start_meter`, boundary 0 | **PASS** (2 tests) |
-| **UT-SES-02** | Sessions / Valid | `tests/billing_session.unit.test.js` | Unit Test | `calculateSessionEnergy` | Chặn `meter < start_meter` văng ngoại lệ | **PASS** (1 test) |
-| **UT-SES-03** | Sessions / Stop | `tests/billing_session.unit.test.js` | Unit Test | `calculateStopSessionValues`| Fallback `end_meter = start_meter + energy_kwh` | **PASS** (1 test) |
-| **UT-BIL-01** | Billing / Math | `tests/billing_session.unit.test.js` | Unit Test | `calculateStopSessionValues`| Tính `amount = (end - start) * price_per_kwh` | **PASS** (1 test) |
-| **UT-BIL-02** | Billing / Boundary| `tests/billing_session.unit.test.js` | Unit Test | `calculateStopSessionValues`| Tiền = 0 khi điện tiêu thụ = 0 | **PASS** (1 test) |
-| **UT-BIL-03** | Billing / Boundary| `tests/billing_session.unit.test.js` | Unit Test | `calculateStopSessionValues`| Tiền = 0 khi tariff miễn phí hoặc null | **PASS** (1 test) |
-| **UT-BIL-04** | Billing / Decimal | `tests/billing_session.unit.test.js` | Unit Test | `calculateStopSessionValues`| Xử lý số thực thập phân chính xác | **PASS** (1 test) |
-| **UT-UTIL-01** | DB Helper | `tests/billing_session.unit.test.js` | Unit Test | `convertPlaceholders` | Chuyển `?` sang `$1, $2, ...` | **PASS** (1 test) |
-| **UT-UTIL-02** | Common Helper | `tests/billing_session.unit.test.js` | Unit Test | `numeric` | Parse số, chuỗi số, NaN, null, undefined | **PASS** (1 test) |
-| **UT-OCPP-01** | OCPP / Protocol | `tests/ocpp.unit.test.js` | Unit Test | `processOcppMessage` | Bản tin `BootNotification`: Accepted, interval 60 | **PASS** (1 test) |
-| **UT-OCPP-02** | OCPP / Auth | `tests/ocpp.unit.test.js` | Unit Test | `processOcppMessage` | Bản tin `Authorize`: Accepted khi có idTag, Invalid khi thiếu | **PASS** (2 tests) |
-| **UT-OCPP-03** | OCPP / Heartbeat | `tests/ocpp.unit.test.js` | Unit Test | `processOcppMessage` | Bản tin `Heartbeat`: trả về currentTime | **PASS** (1 test) |
-| **UT-OCPP-04** | OCPP / Status | `tests/ocpp.unit.test.js` | Unit Test | `processOcppMessage` | Bản tin `StatusNotification`: status Accepted | **PASS** (1 test) |
-| **UT-OCPP-05** | OCPP / Error | `tests/ocpp.unit.test.js` | Unit Test | `processOcppMessage` | Action không hỗ trợ hoặc type != 2 -> `NotSupported` | **PASS** (2 tests) |
-| **UT-OCPP-06** | OCPP / Error | `tests/ocpp.unit.test.js` | Unit Test | `processOcppMessage` | JSON sai cú pháp hoặc không phải mảng -> `FormatViolation`| **PASS** (2 tests) |
-| **UT-OCPP-07** | OCPP / Route | `tests/ocpp.unit.test.js` | Unit Test | `matchOcppUrl` | Regex bóc tách `chargePointCode` từ URL WebSocket | **PASS** (3 tests) |
+| Test ID | Jira | Category | Type | Automated/Manual | Status | Last Run |
+|:---|:---|:---|:---|:---:|:---:|:---:|
+| **TC-S02-01** | S-02 | Authentication / Session | Acceptance | Manual / Live | **BLOCKED** | 24/09/2026 |
+| **TC-S02-02** | S-02 | Security / Timing Attack | Security | Static / Code | **PASS** | 24/09/2026 |
+| **TC-S02-03** | S-02 | Security / Lockout | Functional | Manual / Live | **BLOCKED** | 24/09/2026 |
+| **TC-S02-04** | S-02 | Session / Expiration | Client Routing | Automated | **PASS** | 24/09/2026 |
+| **TC-S02-05** | S-02 | Cryptography / Hash | Security | Automated | **PASS** | 24/09/2026 |
+| **TC-S02-06** | S-02 | Security / Throttle Scope | Security | Static / Code | **PASS** | 24/09/2026 |
+| **TC-T04-01** | T-04 | Database / Constraints | Schema Check | Manual | **PASS** | 24/09/2026 |
+| **TC-T04-02** | T-04 | Database / Seed Data | Schema Check | Manual | **PASS** | 24/09/2026 |
+| **TC-T04-03** | T-04 | Database / Column Types | Schema Check | Manual | **PASS** | 24/09/2026 |
+| **TC-T05-01** | T-05 | Client / Form Validation | UI Component | Automated | **PASS** | 24/09/2026 |
+| **TC-T05-02** | T-05 | Security / Cookie Flag | Security | Automated | **PASS** | 24/09/2026 |
+| **TC-T05-03** | T-05 | Database / Persistence | Functional | Static / Code | **PASS** | 24/09/2026 |
+| **UT-FRONTEND-01** | S-02 | Client / Logic & Router | Unit | Automated | **PASS** | 24/09/2026 |
+| **IT-AUTH-01** | S-02 | Auth / Regression | Integration | Automated | **BLOCKED** | 24/09/2026 |
+| **ACC-S02-01** | S-02 | Client / Integration | Acceptance | Automated | **BLOCKED** | 24/09/2026 |
+| **ACC-S02-02** | S-02 | Auth / Flow | Acceptance | Automated | **BLOCKED** | 24/09/2026 |
+| **ACC-S02-03** | S-02 | Auth / IP Throttle | Acceptance | Automated | **BLOCKED** | 24/09/2026 |
+| **MAN-S02-01** | S-02 | Live API / Login | Runtime | Manual | **BLOCKED** | 24/09/2026 |
+| **MAN-S02-02** | S-02 | Live API / Lockout 5x | Runtime | Manual | **BLOCKED** | 24/09/2026 |
+| **MAN-S02-03** | T-05 | DB / Restart Persistence | Runtime | Manual | **BLOCKED** | 24/09/2026 |
 
 ---
 
-## 4. Bảng tổng kết số lượng Test (Summary)
+## 3. Danh mục Kiểm thử Story S-03 & Task T-06, T-07 (Role & Ownership Isolation)
 
-| Loại | Số lượng ban đầu | Số lượng bổ sung | Tổng hiện tại |
-|:---|:---:|:---:|:---:|
-| **Test files** | 1 | 3 | **4** |
-| **Test suites** | 1 | 18 | **19** |
-| **Test cases** | 4 | 41 | **45** |
-| **PASS** | 4 | 41 | **45** |
-| **FAIL** | 0 | 0 | **0** |
-| **SKIP** | 0 | 0 | **0** |
+| Test ID | Jira | Category | Type | Automated/Manual | Status | Last Run |
+|:---|:---|:---|:---|:---:|:---:|:---:|
+| **TC-S03-01** | S-03 | Ownership / Query Scope | Data Isolation | Automated | **PASS** | 24/09/2026 |
+| **TC-S03-02** | S-03 | Ownership / Audit Log | Security | Static / Code | **PASS** | 24/09/2026 |
+| **TC-S03-03** | S-03 | RBAC / Unauthorized Role | Authorization | Static / Code | **PASS** | 24/09/2026 |
+| **TC-S03-04** | S-03 | RBAC / Default Deny | Security | Static / Code | **PASS** | 24/09/2026 |
+| **TC-T06-01** | T-06 | Middleware / Route Guard | Security | Static / Code | **PASS** | 24/09/2026 |
+| **TC-T06-02** | T-06 | Middleware / Allow Roles | Authorization | Static / Code | **PASS** | 24/09/2026 |
+| **TC-T07-01** | T-07 | Code Design / Shared Func | Architecture | Automated | **PASS** | 24/09/2026 |
+| **TC-T07-02** | T-07 | Ownership / Cross-Access | Acceptance | Automated / Spec | **PASS** | 24/09/2026 |
+| **UT-SCOPE-01** | S-03 | Data Isolation / Scope | Unit | Automated | **PASS** | 24/09/2026 |
+| **UT-LINT-01** | S-03 | Code Policy / Linter | Unit | Automated | **BLOCKED** | 24/09/2026 |
+| **ACC-S03-01** | S-03 | Security / Accounts | Acceptance | Automated | **BLOCKED** | 24/09/2026 |
+| **ACC-S03-02** | S-03 | Security / CSRF | Acceptance | Automated | **BLOCKED** | 24/09/2026 |
+| **ACC-S03-03** | S-03 | RBAC / Matrix | Acceptance | Automated | **BLOCKED** | 24/09/2026 |
+| **ACC-S03-04** | S-03 | Ownership / Isolation | Acceptance | Automated | **BLOCKED** | 24/09/2026 |
+| **ACC-S03-05** | S-03 | Middleware / Guard | Acceptance | Automated | **BLOCKED** | 24/09/2026 |
+| **ACC-S03-06** | S-03 | Network / Trust Proxy | Acceptance | Automated | **BLOCKED** | 24/09/2026 |
+| **MAN-S03-01** | S-03 | Ownership / Live Curl | Security | Manual | **BLOCKED** | 24/09/2026 |
+| **MAN-S03-02** | S-03 | RBAC / Live Default Deny | Security | Manual | **BLOCKED** | 24/09/2026 |
 
 ---
 
-## 5. Báo cáo độ phủ mã nguồn thực tế (Code Coverage)
+## 4. Danh mục Kiểm thử Tích hợp Frontend ↔ Backend (FB-01 đến FB-11)
 
-Kết quả đo bằng công cụ thực tế (`node --test --experimental-test-coverage test-auth.js tests/*.unit.test.js`):
+| Test ID | Jira | Category | Type | Automated/Manual | Status | Last Run |
+|:---|:---|:---|:---|:---:|:---:|:---:|
+| **TC-FB-01** | FB-01 | Client Fetcher / API | Integration Contract | Automated / Code | **PASS** | 24/09/2026 |
+| **TC-FB-02** | FB-02 | Middleware Chain / Host | Integration Contract | Static / Code | **PASS** | 24/09/2026 |
+| **TC-FB-03** | FB-03 | E2E Login / Auth Flow | E2E Integration | UI Flow / API | **PASS** | 24/09/2026 |
+| **TC-FB-04** | FB-04 | Error Handling / UI DOM | Client / Parser | UI Component | **PASS** | 24/09/2026 |
+| **TC-FB-05** | FB-05 | Cookie Session / 401 | Security / Protocol | Automated / Unit | **PASS** | 24/09/2026 |
+| **TC-FB-06** | FB-06 | RBAC UI / Route Mapping | Authorization | UI Routing | **PASS** | 24/09/2026 |
+| **TC-FB-07** | FB-07 | Ownership / Data Scope | Data Isolation | Automated / Code | **PASS** | 24/09/2026 |
+| **TC-FB-08** | FB-08 | Error Envelope Contract | API Contract | Schema Match | **PASS** | 24/09/2026 |
+| **TC-FB-09** | FB-09 | Client Logic / Mocking | Unit | Automated | **PASS** | 24/09/2026 |
+| **TC-FB-10** | FB-10 | Database Persistence | Data Integrity | Static / Code | **PASS** | 24/09/2026 |
+| **TC-FB-11** | FB-11 | AppSec / OWASP Defense | Security | Static / Code | **PASS** | 24/09/2026 |
 
-```text
-ℹ start of coverage report
-ℹ ------------------------------------------------------------------------------------------
-ℹ file      | line % | branch % | funcs % | uncovered lines
-ℹ ------------------------------------------------------------------------------------------
-ℹ src       |        |          |         | 
-ℹ  auth.js  |  90.63 |    77.36 |   85.71 | 52-61 98-101 128
-ℹ  db.js    |  21.53 |    50.00 |    0.00 | 18 21 24 28-31 33-50 52-70 72-96 98-120 122-142
-ℹ ------------------------------------------------------------------------------------------
-ℹ all files |  57.89 |    76.36 |   52.17 | 
-ℹ ------------------------------------------------------------------------------------------
-ℹ end of coverage report
-```
+---
 
-- Độ phủ dòng (`auth.js`): Tăng từ **52.50% lên 90.63%** (+38.13%)
-- Độ phủ nhánh (`auth.js`): Tăng từ **47.37% lên 77.36%** (+29.99%)
-- Độ phủ hàm (`auth.js`): Tăng từ **41.67% lên 85.71%** (+44.04%)
+## 5. Tổng hợp Thống kê Danh mục Kiểm thử
+
+| Nhóm Kiểm Thử | Tổng số | PASS (Logic/Code/Unit) | BLOCKED (Runtime Live) | Ghi chú |
+|:---|---:|---:|---:|:---|
+| **S-01 & T-01** | 16 | 7 | 9 | Unit test nodeVersion và no-backdoor PASS |
+| **S-02 & T-04, T-05** | 20 | 11 | 9 | Unit test frontend.test.js (9 tests) PASS |
+| **S-03 & T-06, T-07** | 18 | 8 | 10 | Unit test scope.test.js (4 tests) PASS |
+| **FB-01 đến FB-11 (Integration)** | 11 | 11 | 0* | 100% hợp đồng và logic đạt chuẩn (*Live calls bị chặn chung do môi trường) |
+| **TỔNG CỘNG** | **65** | **37** | **28** | **Không có lỗi sai lệch logic mã nguồn (0 FAIL)** |

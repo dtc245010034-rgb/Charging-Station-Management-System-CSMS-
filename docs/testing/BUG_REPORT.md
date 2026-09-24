@@ -1,66 +1,139 @@
-# BÁO CÁO LỖI (BUG REPORT) — CSMS
+# BÁO CÁO LỖI VÀ RÀO CẢN MÔI TRƯỜNG (BUG REPORT) — CSMS
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
-> **Người phát hiện**: Nguyễn Hà Nam (Developer / QA — Team-Codegym)  
-> **Giai đoạn**: Giai đoạn 3 — Viết Unit Test  
-> **Ngày lập**: 2026-09-22  
-> **Quy tắc tuân thủ**: Tuyệt đối KHÔNG tự ý sửa production code. Mọi lỗi được ghi nhận minh bạch kèm theo phân loại mức độ và bằng chứng tái hiện.
+> **Người thực hiện**: TESTER / QA ANALYST  
+> **Phiên bản snapshot**: 24/09/2026 (Nhánh `main`, commit `4bc5758`)  
+> **Phân loại**: `ENVIRONMENT_BLOCKER`, `CONFIGURATION_PROBLEM`, `CODE_DEFECT`, `DATA_PROBLEM`, `TEST_DEFECT`, `DOCUMENTATION_DEFECT`  
 
 ---
 
-## Danh sách lỗi phát hiện từ quá trình kiểm thử
+### BUG-01
 
-### BUG-01: Unhandled Promise Rejection khi tự động nâng cấp hash mật khẩu legacy bcrypt
-
-- **BUG-ID**: `BUG-01`
-- **Module**: `Authentication & Security`
-- **File**: [`backend/src/auth.js`](file:///c:/Users/Admin/Downloads/Charging-Station-Management-System-CSMS--main/Charging-Station-Management-System-CSMS--main/backend/src/auth.js#L92-L95)
-- **Function**: `verifyPassword(user, password)`
-- **Test phát hiện**: `UT-AUTH-02 [P1]: verifyPassword legacy bcrypt support and auto-upgrade`
-- **Mức độ nghiêm trọng (Severity)**: `CRITICAL`
-- **Mô tả chi tiết**:
-  Khi người dùng đăng nhập bằng mật khẩu cũ được băm bằng bcrypt (`$2a$` hoặc `$2b$`), hệ thống xác thực đúng và khởi chạy một Promise ngầm (`fire-and-forget`) để băm lại mật khẩu sang Argon2id rồi lưu vào DB:
-  ```javascript
-  // auth.js dòng 91-95:
-  if (match) {
-    hashPassword(password).then((newHash) => {
-      db.prepare('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(newHash, user.id);
-    }).catch(() => {});
-  }
-  ```
-  Hàm `db.prepare(...).run(...)` là một hàm bất đồng bộ trả về một `Promise`. Tuy nhiên, bên trong callback của `.then((newHash) => { ... })`, Promise này **không được return** và cũng **không có `.catch()`**.
-- **Hậu quả**:
-  Nếu cơ sở dữ liệu gặp sự cố kết nối, quá tải hoặc query lỗi, Promise bị từ chối (`rejected`) sẽ không được bắt bởi `.catch(() => {})` bên ngoài, dẫn tới sự kiện `UnhandledPromiseRejection` (trong Node.js 16+ có thể làm crash toàn bộ tiến trình ứng dụng hoặc gây lỗi kiểm thử tự động `AggregateError`).
-- **Các bước tái hiện (Steps to reproduce)**:
-  1. Khởi tạo một user có mật khẩu dạng bcrypt (`$2a$...` hoặc `$2b$...`).
-  2. Gọi `verifyPassword(user, password)` khi cơ sở dữ liệu tạm thời không thể thực thi truy vấn (ví dụ DB pool bị ngắt kết nối).
-  3. Quan sát log hệ thống.
-- **Kết quả mong đợi (Expected Result)**:
-  Promise cập nhật ngầm phải được xử lý lỗi đầy đủ (return Promise hoặc gắn `.catch()` trực tiếp lên `.run()`) để tránh Unhandled Promise Rejection.
-- **Kết quả thực tế (Actual Result)**:
-  Node.js v24 bắt được unhandled rejection và báo lỗi `generated asynchronous activity after the test ended: AggregateError`.
-- **Trạng thái**: `OPEN (Ghi nhận để Dev team xử lý)`
+```text
+BUG ID: BUG-01
+JIRA: S-01, T-01
+TYPE: ENVIRONMENT_BLOCKER
+TITLE: Thiếu Docker Engine và Docker CLI trong PATH môi trường máy host
+SEVERITY: HIGH
+STATUS: OPEN
+STEPS:
+  1. Mở PowerShell tại thư mục gốc dự án
+  2. Chạy lệnh: docker compose up --build app
+EXPECTED: Docker Compose tải image postgres:16-alpine, build container ứng dụng và khởi động cụm service app + db
+ACTUAL: PowerShell báo lỗi: "The term 'docker' is not recognized as the name of a cmdlet, function, script file, or operable program." (Exit code: 1)
+EVIDENCE:
+  docker : The term 'docker' is not recognized as the name of a cmdlet, function, script file, or operable program.
+  At line:1 char:1
+  + docker --version
+ENVIRONMENT: Windows 11 (x64) host, PowerShell 5.1 / 7
+AFFECTED TEST: TC-S01-01, MAN-S01-01, TC-FB-01 đến TC-FB-03
+NOTES: Máy host chưa cài đặt Docker Desktop hoặc chưa đưa binary docker vào biến môi trường PATH. Cần cài đặt Docker Desktop để chạy ứng dụng trong container.
+```
 
 ---
 
-### BUG-02: Hàm tiện ích `numeric` coi `null` là giá trị hợp lệ bằng 0 thay vì fallback
+### BUG-02
 
-- **BUG-ID**: `BUG-02`
-- **Module**: `Utility & Validation`
-- **File**: [`backend/src/server.js`](file:///c:/Users/Admin/Downloads/Charging-Station-Management-System-CSMS--main/Charging-Station-Management-System-CSMS--main/backend/src/server.js#L31)
-- **Function**: `numeric(value, fallback = 0)`
-- **Test phát hiện**: `UT-UTIL-02 [P1]: numeric helper handling`
-- **Mức độ nghiêm trọng (Severity)**: `MINOR`
-- **Mô tả chi tiết**:
-  Hàm `numeric` được định nghĩa:
-  ```javascript
-  const numeric = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
-  ```
-  Trong JavaScript: `Number(null)` có giá trị là `0`. Vì `0` là một số hữu hạn (`Number.isFinite(0) === true`), nên biểu thức luôn trả về `0` khi `value = null`, khiến tham số `fallback` bị bỏ qua.
-- **Hậu quả**:
-  Nếu một request truyền giá trị `{ end_meter: null }` lên `/api/sessions/:id/stop`, thay vì fallback về giá trị mặc định `start_meter + energy_kwh`, hàm lại ép về `0`, dẫn đến tính sai số điện và tiền sạc.
-- **Kết quả mong đợi (Expected Result)**:
-  Khi `value === null` hoặc `value === undefined`, nên sử dụng giá trị `fallback`.
-- **Kết quả thực tế (Actual Result)**:
-  `numeric(null, 5)` trả về `0` thay vì `5`.
-- **Trạng thái**: `OPEN (Ghi nhận để Dev team xem xét chuẩn hóa)`
+```text
+BUG ID: BUG-02
+JIRA: S-01, T-01, S-02, S-03
+TYPE: ENVIRONMENT_BLOCKER
+TITLE: Cổng dịch vụ PostgreSQL 5432 (dev) và 5433 (test) bị đóng, dịch vụ không chạy
+SEVERITY: HIGH
+STATUS: OPEN
+STEPS:
+  1. cd backend
+  2. Chạy lệnh kiểm thử tích hợp DB: node --test tests/integration/migrate.test.js
+EXPECTED: Kết nối thành công tới cơ sở dữ liệu PostgreSQL test tại 127.0.0.1:5433
+ACTUAL: AggregateError [ECONNREFUSED]: connect ECONNREFUSED 127.0.0.1:5433. Lệnh Get-NetTCPConnection xác nhận không có tiến trình nào lắng nghe cổng 5432/5433
+EVIDENCE:
+  AggregateError [ECONNREFUSED]:
+    code: 'ECONNREFUSED',
+    errors: [
+      Error: connect ECONNREFUSED ::1:5433,
+      Error: connect ECONNREFUSED 127.0.0.1:5433
+    ]
+ENVIRONMENT: Windows host, Node.js v24.19.0
+AFFECTED TEST: TC-T01-01, TC-T01-02, IT-MIGRATE-01, ACC-S01-01, ACC-S02-01..03, ACC-S03-01..06, TC-FB-10
+NOTES: Không có dịch vụ PostgreSQL cục bộ nào đang chạy trên máy host. Cần bật container PostgreSQL hoặc cài đặt PostgreSQL 16 local.
+```
+
+---
+
+### BUG-03
+
+```text
+BUG ID: BUG-03
+JIRA: S-01, S-02, S-03
+TYPE: ENVIRONMENT_BLOCKER
+TITLE: Thư mục backend/node_modules thiếu các module bắt buộc (zod, supertest, eslint)
+SEVERITY: CRITICAL
+STATUS: OPEN
+STEPS:
+  1. cd backend
+  2. Chạy lệnh: npm ls
+  3. Chạy lệnh: node src/server.js
+EXPECTED: Các thư viện khai báo trong package.json được cài đặt đầy đủ; server nạp cấu hình và boot thành công
+ACTUAL:
+  - npm ls báo lỗi ELSPROBLEMS: Missing zod@^4.6.5, supertest@^7.3.0, eslint@^9.39.5
+  - node src/server.js crash: "Error: Cannot find module 'zod' Require stack: backend/src/config/env.js" (Exit code: 1)
+EVIDENCE:
+  npm error missing: zod@^4.6.5, required by csms-backend@1.0.0
+  Error: Cannot find module 'zod' at Object.<anonymous> (backend/src/config/env.js:2:15)
+ENVIRONMENT: Node.js v24.19.0, npm 11.17.0
+AFFECTED TEST: TC-S01-01, TC-T01-01, TC-T01-02, UT-ENV-01, UT-ERR-01, IT-ADMIN-01, TC-FB-01..07
+NOTES: Thư mục node_modules chưa được đồng bộ sau khi nhóm dev cập nhật package.json. Cần chạy npm install hoặc npm ci trong backend/.
+```
+
+---
+
+### BUG-04
+
+```text
+BUG ID: BUG-04
+JIRA: S-01
+TYPE: CONFIGURATION_PROBLEM
+TITLE: Cấu hình tệp backend/.env không vượt qua kiểm thực Zod schema của env.js
+SEVERITY: HIGH
+STATUS: OPEN
+STEPS:
+  1. Đọc nội dung tệp backend/.env
+  2. Đối chiếu với Zod schema trong backend/src/config/env.js
+EXPECTED: File .env cung cấp JWT_SECRET >= 32 ký tự, APP_ORIGIN, DATABASE_URL
+ACTUAL:
+  - backend/.env có JWT_SECRET=change-this-in-production (25 ký tự, nhỏ hơn quy định >= 32 ký tự)
+  - backend/.env thiếu biến bắt buộc: APP_ORIGIN
+  - backend/.env chứa biến thừa không sử dụng: CORS_ORIGIN=http://localhost:5500
+EVIDENCE:
+  backend/.env dòng 2-4:
+    JWT_SECRET=change-this-in-production
+    CORS_ORIGIN=http://localhost:5500
+ENVIRONMENT: Backend configuration (.env)
+AFFECTED TEST: Khởi động server backend, toàn bộ kịch bản chạy live
+NOTES: Cần cập nhật tệp .env theo mẫu .env.example, đặt JWT_SECRET đủ 32 ký tự và thêm APP_ORIGIN=http://localhost:3000.
+```
+
+---
+
+### BUG-05
+
+```text
+BUG ID: BUG-05
+JIRA: S-01
+TYPE: CONFIGURATION_PROBLEM
+TITLE: Script lint trong backend/package.json bị lỗi đường dẫn trên Windows
+SEVERITY: MEDIUM
+STATUS: OPEN
+STEPS:
+  1. cd backend
+  2. Chạy lệnh: npm run lint
+EXPECTED: ESLint quét mã nguồn theo cấu hình eslint.config.js
+ACTUAL: npm báo lỗi: "'eslint' is not recognized as an internal or external command, operable program or batch file." (Exit code: 1)
+EVIDENCE:
+  > csms-backend@1.0.0 lint
+  > cd .. && eslint backend frontend/js
+  'eslint' is not recognized as an internal or external command...
+ENVIRONMENT: Windows PowerShell / CMD
+AFFECTED TEST: npm run lint, kiểm tra tĩnh phong cách mã nguồn
+NOTES: Lệnh cd .. && eslint chuyển ngữ cảnh ra ngoài thư mục gốc nơi không có node_modules/.bin trong PATH của shell Windows.
+```
