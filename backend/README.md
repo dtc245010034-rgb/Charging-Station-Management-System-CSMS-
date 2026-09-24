@@ -2,7 +2,7 @@
 
 Yêu cầu Node.js `22.5+` và PostgreSQL 14+ (hoặc Docker Compose).
 
-Backend PostgreSQL cho hệ thống quản lý trạm sạc, đồng bộ với frontend tại thư mục gốc: JWT + httpOnly cookie, RBAC với 5 role, khóa tài khoản sau 5 lần sai, giới hạn đăng nhập theo IP và WebSocket OCPP-style.
+Backend PostgreSQL cho hệ thống quản lý trạm sạc, phục vụ frontend từ thư mục `frontend/` (cùng origin): JWT + httpOnly cookie, RBAC với 5 role, khóa tài khoản sau 5 lần sai, giới hạn đăng nhập theo IP và WebSocket OCPP-style.
 
 ## Chạy bằng Docker Compose
 
@@ -51,6 +51,19 @@ Gửi JWT nhận từ `/api/auth/login` trong header `Authorization: Bearer <tok
 - `GET /api/charge-points`, `GET /api/charge-points/:id`
 - `POST /api/stations/:stationId/charge-points`, `PATCH /api/charge-points/:id`
 - Frontend hiện dùng trực tiếp các route auth ở trên; các route trạm và trụ sạc sẵn sàng cho dashboard mở rộng.
+
+## Kiểm thử
+
+```powershell
+docker compose up -d db_test   # Postgres test, cổng 5433, dữ liệu trong RAM
+cd backend
+npm run lint
+npm test                        # cần Node 22; mỗi test tự dựng lại schema trên DB *_test
+```
+
+Test chỉ chạy trên database có tên kết thúc bằng `_test` (đặt `TEST_DATABASE_URL` nếu dùng DB khác).
+
+Cấu trúc mã: `src/app.js` (Express app), `src/server.js` (listen + WebSocket), `src/modules/<domain>/` (routes → service → repository), `src/db/`, `src/lib/`, `src/middlewares/`.
 
 Migration đầu tiên nằm tại `migrations/001_baseline.sql`, rollback tại `migrations/001_baseline.down.sql`. Đây là mẫu quy ước cho các migration sau: tên `snake_case`, khóa chính `id`, và cột `created_at`/`updated_at`.
 

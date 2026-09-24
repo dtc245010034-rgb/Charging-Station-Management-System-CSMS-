@@ -3,7 +3,11 @@ const path = require('node:path');
 const { Client } = require('pg');
 
 const root = path.resolve(__dirname, '../..');
-const BASE = process.env.TEST_DATABASE_URL || 'postgresql://csms:devpass_local@localhost:5432/csms';
+const BASE = process.env.TEST_DATABASE_URL || 'postgresql://csms:csms_test_only@localhost:5433/csms_test';
+
+if (!new URL(BASE).pathname.slice(1).endsWith('_test')) {
+  throw new Error('TEST_DATABASE_URL phải trỏ tới database có tên kết thúc bằng _test');
+}
 
 function env(extra = {}) {
   return { PATH: process.env.PATH, DATABASE_URL: BASE, JWT_SECRET: 'z'.repeat(40), APP_ORIGIN: 'http://localhost:3000', ...extra };
@@ -23,4 +27,8 @@ async function resetSchema() {
   await query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
 }
 
-module.exports = { run, query, resetSchema };
+async function truncateAll() {
+  await query('TRUNCATE audit_logs, connectors, charge_points, stations, user_roles, users RESTART IDENTITY CASCADE');
+}
+
+module.exports = { BASE, env, run, query, resetSchema, truncateAll };
