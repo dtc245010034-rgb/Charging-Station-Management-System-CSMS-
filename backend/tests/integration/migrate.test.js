@@ -29,7 +29,7 @@ describe('S-01 migrate: baseline up/down/up', () => {
   });
 
   it('down về rỗng, rồi up lại sạch', async () => {
-    for (let i = 0; i < 2; i += 1) {
+    for (let i = 0; i < 3; i += 1) {
       const down = run('src/db/migrate.js', ['down']);
       assert.strictEqual(down.status, 0, down.stderr);
     }
@@ -37,5 +37,18 @@ describe('S-01 migrate: baseline up/down/up', () => {
     const up = run('src/db/migrate.js');
     assert.strictEqual(up.status, 0, up.stderr);
     assert.deepStrictEqual(await tables(), TABLES);
+  });
+
+  it('003: up thêm owner_id, ip, index; down chỉ gỡ đúng phần đó', async () => {
+    const has = async (table, column) => (await query('SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2', [table, column])).rowCount === 1;
+    const index = async (name) => (await query('SELECT 1 FROM pg_indexes WHERE indexname = $1', [name])).rowCount === 1;
+    assert.ok(await has('stations', 'owner_id') && await has('audit_logs', 'ip'));
+    assert.ok(await index('stations_owner_id_idx') && await index('charge_points_station_id_idx'));
+    const down = run('src/db/migrate.js', ['down']);
+    assert.strictEqual(down.status, 0, down.stderr);
+    assert.ok(!await has('stations', 'owner_id') && !await has('audit_logs', 'ip'));
+    assert.ok(!await index('stations_owner_id_idx') && !await index('charge_points_station_id_idx'));
+    assert.deepStrictEqual(await tables(), TABLES);
+    assert.strictEqual(run('src/db/migrate.js').status, 0);
   });
 });

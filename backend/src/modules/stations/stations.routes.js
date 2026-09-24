@@ -6,12 +6,12 @@ const { createBody, updateBody } = require('./stations.schema');
 
 const router = secureRouter();
 
-router.get('/stations', { access: access('stations:read') }, async (req, res) => res.json(await service.list()));
+router.get('/stations', { access: access('stations:read') }, async (req, res) => res.json(await service.list(req.user)));
 router.post('/stations', { access: access('stations:write') }, async (req, res) => {
   res.status(201).json(await service.create(req.user, createBody.parse(req.body ?? {})));
 });
 router.get('/stations/:id', { access: access('stations:read') }, async (req, res) => {
-  res.json(await service.get(idParam.parse(req.params).id));
+  res.json(await service.get(req.user, idParam.parse(req.params).id));
 });
 router.patch('/stations/:id', { access: access('stations:write') }, async (req, res) => {
   const { id } = idParam.parse(req.params);
