@@ -16,7 +16,7 @@
 
 | Chức năng | Story | Ghi chú |
 |---|---|---|
-| Khung dự án: Docker Compose, PostgreSQL, migration tiến/lùi, test, lint | S-01 | Chạy trên máy cá nhân, **chưa có staging và CI** |
+| Khung dự án: Docker Compose, PostgreSQL, migration tiến/lùi, test, lint | S-01 | Chạy trên máy cá nhân; CI (GitHub Actions) chạy lint + test cho mọi PR, **chưa có staging** |
 | Đăng nhập email + mật khẩu, khoá 15 phút sau 5 lần sai, đếm theo tài khoản và theo IP | S-02 | Không tiết lộ email có tồn tại hay không |
 | Đăng ký công khai (luôn là tài khoản Tài xế); Quản trị tạo tài khoản các vai trò khác | S-02 | Tạo qua API, chưa có giao diện quản trị |
 | 5 vai trò, mỗi vai trò có trang chủ riêng sau đăng nhập | S-02, S-03 | Trang chủ hiện mới có lời chào |
@@ -282,7 +282,8 @@ Ví dụ sai: `update`, `fix bug`, `done`, `abc`, `sửa nhiều thứ`.
 - Mỗi PR cần **ít nhất 1 approve từ một thành viên khác** (không phải tác giả), theo Definition of Done.
 - Tác giả chọn reviewer, xoay vòng giữa các thành viên, ưu tiên người hiểu phần việc đó. PR đụng tới cấu trúc cơ sở dữ liệu (migration) hoặc phân quyền thì thêm **trưởng dev** làm reviewer.
 - Reviewer phản hồi **trong ngày làm việc**. Ai đang chờ review của ai thì nêu trong Daily, Scrum Master theo dõi.
-- Reviewer **tự chạy** `npm run lint && npm test` trên nhánh của PR trước khi approve.
+- PR phải có check **CI xanh** mới merge được (`main` có ruleset chặn). CI đỏ thì tác giả sửa, không nhờ người có quyền bỏ qua.
+- Reviewer vẫn **tự chạy thử chức năng** theo AC trên máy mình; CI chỉ thay phần chạy `npm run lint && npm test`.
 - Reviewer kiểm tra: code chạy đúng tiêu chí chấp nhận (AC) của việc trên Jira, không có bí mật, tên nhánh và commit đúng quy ước, code dễ đọc.
 - Góp ý tập trung vào code, không nhắm vào người viết. Nêu rõ, mang tính xây dựng, và phân biệt "cần sửa" với "gợi ý".
 - Không tự merge khi chưa có approve. Xung đột merge do tác giả tự xử lý, cần giúp thì hỏi trên nhóm chat.
@@ -292,6 +293,6 @@ Ví dụ sai: `update`, `fix bug`, `done`, `abc`, `sửa nhiều thứ`.
 Trích từ Definition of Done của dự án, phần liên quan tới code:
 
 - Đã được ít nhất 1 thành viên khác review và approve.
-- Có test cho logic mới; `npm run lint && npm test` xanh trên máy (nhóm chưa dùng CI).
+- Có test cho logic mới, gồm test nghiệm thu `tests/acceptance/S-xx.*.test.js` theo từng AC; check CI trên PR xanh.
 - Không có bí mật trong mã nguồn.
 - README được cập nhật nếu đổi cách chạy hoặc thêm biến môi trường.

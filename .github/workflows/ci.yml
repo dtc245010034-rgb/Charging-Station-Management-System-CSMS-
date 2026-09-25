@@ -1,0 +1,59 @@
+# Kiểm tra tự động cho mọi PR vào main và mọi lần merge vào main.
+# Chỉ KIỂM TRA (lint + test), không triển khai đi đâu. Staging/CD để Sprint 2.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Push thêm commit vào cùng một PR thì huỷ lần chạy cũ, đỡ chờ.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      # Giống db_test trong docker-compose.yml: cổng 5433, database kết thúc bằng _test.
+      db_test:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: csms_test
+          POSTGRES_USER: csms
+          POSTGRES_PASSWORD: csms_test_only
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U csms -d csms_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      TEST_DATABASE_URL: postgresql://csms:csms_test_only@localhost:5433/csms_test
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
