@@ -190,27 +190,31 @@ Test xoá sạch database `csms_test` mỗi lần chạy, **không đụng dữ 
 
 ### 2. Đặt tên nhánh
 
-Cú pháp: `<loại>/<MÃ-JIRA>-<mô-tả-ngắn>`
+Cú pháp: `<tên>/<MÃ-JIRA>-<mô-tả-ngắn>`
 
-| Loại | Dùng khi |
-|---|---|
-| `feature` | Thêm hoặc mở rộng chức năng |
-| `fix` | Sửa lỗi |
-| `docs` | Sửa tài liệu, README |
-| `test` | Thêm hoặc sửa test |
-| `chore` | Cấu hình, dọn dẹp, việc không đổi hành vi |
-
-Quy tắc: chữ thường, không dấu tiếng Việt, nối các từ bằng dấu gạch ngang, mô tả tối đa khoảng 5 từ, mã Jira giữ chữ hoa.
+Quy tắc: `<tên>` là tiền tố cố định của bạn (bảng dưới); chữ thường, không dấu tiếng Việt, nối các từ bằng dấu gạch ngang, mô tả tối đa khoảng 5 từ, mã Jira giữ chữ hoa. Mỗi thẻ Jira một nhánh mới tạo từ `main`.
 
 Ví dụ đúng:
 
 ```
-feature/GYM-19-form-tao-tram
-fix/GYM-25-loi-khoa-dang-nhap
-docs/GYM-13-quy-uoc-lam-viec
+lam/GYM-19-form-tao-tram
+kien/GYM-25-loi-khoa-dang-nhap
+phuc/GYM-13-quy-uoc-lam-viec
 ```
 
-Ví dụ sai: `test1`, `nhanh-cua-an`, `feature/them chuc nang`, `feature/tao-tram` (thiếu mã Jira).
+Ví dụ sai: `lam` (không gắn thẻ Jira), `lam/tao-tram` (thiếu mã Jira), `feature/GYM-19-form` (thiếu tên), `Lâm/GYM-19` (có dấu).
+
+| Thành viên | Tiền tố |
+|---|---|
+| Nguyễn Anh Phúc | `phuc/` |
+| Nguyễn Văn Hữu | `huu/` |
+| Sầm Nông Anh Khoa | `khoa/` |
+| Dương Trung Kiên | `kien/` |
+| Phạm Quang Anh | `quanganh/` |
+| Lý Ngọc Lâm | `lam/` |
+| Dương Công Lộc | `loc/` |
+| Lồ Đức Minh | `minh/` |
+| Nguyễn Hà Nam | `nam/` |
 
 ### 3. Viết commit
 
@@ -250,7 +254,7 @@ Ví dụ sai: `update`, `fix bug`, `done`, `abc`, `sửa nhiều thứ`.
    ```
    git checkout main
    git pull origin main
-   git checkout -b feature/GYM-19-form-tao-tram
+   git checkout -b lam/GYM-19-form-tao-tram
    ```
 
 3. Làm việc và commit theo quy ước ở mục 3.
@@ -264,7 +268,7 @@ Ví dụ sai: `update`, `fix bug`, `done`, `abc`, `sửa nhiều thứ`.
 5. Đẩy nhánh và mở PR vào `main` trên GitHub:
 
    ```
-   git push -u origin feature/GYM-19-form-tao-tram
+   git push -u origin lam/GYM-19-form-tao-tram
    ```
 
    Tiêu đề PR: `[GYM-19] Thêm form tạo trạm sạc`. Điền đầy đủ mẫu PR và chọn reviewer (mục 5).
