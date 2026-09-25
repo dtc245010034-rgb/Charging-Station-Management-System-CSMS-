@@ -1,5 +1,10 @@
 const assert = require('node:assert');
-const { migrate, rollbackLastMigration, pool } = require('../src/db');
+const { env } = require('./helpers/db');
+
+Object.assign(process.env, env());
+
+const { migrate, rollbackLastMigration } = require('../src/db/migrate');
+const { pool } = require('../src/db/pool');
 
 async function run() {
   await migrate();
@@ -17,8 +22,9 @@ async function run() {
   assert.ok(['real', 'double precision'].includes(longitudeType), 'longitude should be a floating-point REAL-like type');
 
   const userId = (await pool.query(
-    "INSERT INTO users (name, email, password_hash, role) VALUES ('Owner', 'owner@test.com', 'hash', 'ADMIN') RETURNING id"
+    "INSERT INTO users (name, email, password_hash) VALUES ('Owner', 'owner@test.com', 'hash') RETURNING id"
   )).rows[0].id;
+  await pool.query("INSERT INTO user_roles (user_id, role_id) SELECT $1, id FROM roles WHERE code = 'STATION_OWNER'", [userId]);
 
   const stationId = (await pool.query(
     "INSERT INTO stations (name, address, latitude, longitude, owner_id, is_active) VALUES ('Station A', 'Addr', 12.34, 56.78, $1, true) RETURNING id",
@@ -45,4 +51,4 @@ async function run() {
 run().catch((error) => {
   console.error('❌ Migration regression test failed:', error);
   process.exit(1);
-});
+}).finally(() => pool.end());

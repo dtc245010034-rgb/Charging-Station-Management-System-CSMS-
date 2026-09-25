@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSMS | Chủ trạm</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-role="STATION_OWNER" hidden>
+    <div class="page-shell">
+      <div class="dashboard-layout" style="display: flex;">
+        <header class="dashboard-header">
+          <div class="brand-header">
+            <div class="brand-mark">CS</div>
+            <div>
+              <p class="eyebrow">Charging Station Management System</p>
+              <h2>Chủ trạm</h2>
+            </div>
+          </div>
+          <div class="user-profile-menu">
+            <span class="user-badge" id="userBadge">STATION_OWNER</span>
+            <span class="user-email" id="userEmail"></span>
+            <button class="theme-toggle" id="themeToggle" type="button" aria-label="Chuyển đổi giao diện sáng/tối">
+              <span class="theme-icon">☀️</span>
+              <span class="theme-label">Sáng</span>
+            </button>
+            <button class="logout-btn" id="logoutBtn" type="button">Đăng xuất</button>
+          </div>
+        </header>
+        <main class="dashboard-content">
+          <div class="dashboard-banner">
+            <h3>Chào mừng, <span id="userName"></span>!</h3>
+            <p>Bạn đã đăng nhập với vai trò Chủ trạm.</p>
+          </div>
+          <section class="station-workspace" id="stationWorkspace">
+            <div class="workspace-heading">
+              <div>
+                <p class="eyebrow">My network</p>
+                <h3>Trạm của tôi</h3>
+              </div>
+              <div class="workspace-actions">
+                <button class="action-btn" id="refreshStationsBtn" type="button">Làm mới</button>
+                <button class="primary-btn" id="createStationBtn" type="button">Tạo trạm</button>
+              </div>
+            </div>
+            <p class="workspace-message" id="stationMessage" role="status"></p>
+            <div class="station-list" id="stationList"></div>
+            <form class="station-form" id="stationForm" hidden>
+              <h4 id="stationFormTitle">Tạo trạm</h4>
+              <div class="station-form-grid">
+                <label>Tên trạm<input id="stationName" name="name" required /></label>
+                <label>Địa chỉ<input id="stationAddress" name="address" required /></label>
+                <label>Vĩ độ<input id="stationLatitude" name="latitude" type="number" step="any" min="-90" max="90" /></label>
+                <label>Kinh độ<input id="stationLongitude" name="longitude" type="number" step="any" min="-180" max="180" /></label>
+                <label>Trạng thái<select id="stationStatus" name="status"><option value="ACTIVE">ACTIVE</option><option value="MAINTENANCE">MAINTENANCE</option><option value="INACTIVE">INACTIVE</option></select></label>
+              </div>
+              <div class="workspace-actions">
+                <button class="action-btn" id="cancelStationBtn" type="button">Hủy</button>
+                <button class="primary-btn" type="submit">Lưu trạm</button>
+              </div>
+            </form>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="/js/pages/dashboard.js"></script>
+  </body>
+</html>

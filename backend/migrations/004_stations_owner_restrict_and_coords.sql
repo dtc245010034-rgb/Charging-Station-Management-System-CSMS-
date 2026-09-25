@@ -1,15 +1,41 @@
--- Ensure owner_id column exists
+-- Enforce ownership only after legacy rows have been checked explicitly.
 ALTER TABLE stations ADD COLUMN IF NOT EXISTS owner_id BIGINT;
-
--- Replace existing FK with ON DELETE RESTRICT to block deleting an owner who still has stations
-ALTER TABLE stations DROP CONSTRAINT IF EXISTS fk_stations_owner;
-ALTER TABLE stations ADD CONSTRAINT fk_stations_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE RESTRICT;
-
--- Ensure index for owner_id
-CREATE INDEX IF NOT EXISTS idx_stations_owner_id ON stations(owner_id);
-
--- Ensure is_active column exists (active status)
 ALTER TABLE stations ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+
+DO $$
+DECLARE
+  unowned_count BIGINT;
+BEGIN
+  SELECT COUNT(*) INTO unowned_count FROM stations WHERE owner_id IS NULL;
+  IF unowned_count > 0 THEN
+    RAISE EXCEPTION 'Cannot enforce station ownership: % station(s) have no owner_id', unowned_count;
+  END IF;
+END$$;
+
+DO $$
+DECLARE
+  constraint_name TEXT;
+BEGIN
+  FOR constraint_name IN
+    SELECT con.conname
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    JOIN pg_attribute att ON att.attrelid = rel.oid AND att.attnum = ANY (con.conkey)
+    WHERE rel.relname = 'stations'
+      AND con.contype = 'f'
+      AND att.attname = 'owner_id'
+  LOOP
+    EXECUTE format('ALTER TABLE stations DROP CONSTRAINT %I', constraint_name);
+  END LOOP;
+END$$;
+
+ALTER TABLE stations ADD CONSTRAINT fk_stations_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE RESTRICT;
+ALTER TABLE stations ALTER COLUMN owner_id SET NOT NULL;
+
+CREATE INDEX IF NOT EXISTS stations_owner_id_idx ON stations(owner_id);
+
+UPDATE stations
+SET is_active = status IN ('ACTIVE', 'MAINTENANCE');
 
 -- Convert latitude/longitude to REAL if the columns exist. Use safe check and cast.
 DO $$
@@ -22,4 +48,4 @@ BEGIN
   END IF;
 END$$;
 
--- Keep status column and checks as-is; this migration only adjusts owner FK and coordinate types.
+-- Keep the status check and owner assignment policy explicit.

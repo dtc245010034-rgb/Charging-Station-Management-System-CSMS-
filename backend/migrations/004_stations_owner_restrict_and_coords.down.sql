@@ -1,10 +1,22 @@
--- Rollback: restore previous FK behavior and coordinate types
+-- Restore the pre-004 state while leaving 003-owned columns in place.
+DO $$
+DECLARE
+  constraint_name TEXT;
+BEGIN
+  FOR constraint_name IN
+    SELECT con.conname
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    JOIN pg_attribute att ON att.attrelid = rel.oid AND att.attnum = ANY (con.conkey)
+    WHERE rel.relname = 'stations'
+      AND con.contype = 'f'
+      AND att.attname = 'owner_id'
+  LOOP
+    EXECUTE format('ALTER TABLE stations DROP CONSTRAINT %I', constraint_name);
+  END LOOP;
+END$$;
 
--- Drop the restrictive FK if present
-ALTER TABLE stations DROP CONSTRAINT IF EXISTS fk_stations_owner;
-
--- Recreate FK with ON DELETE SET NULL to restore prior behavior (if you previously had SET NULL)
-ALTER TABLE stations ADD CONSTRAINT IF NOT EXISTS fk_stations_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE stations ALTER COLUMN owner_id DROP NOT NULL;
 
 -- Revert latitude/longitude to NUMERIC if the columns exist
 DO $$
@@ -16,5 +28,3 @@ BEGIN
     ALTER TABLE stations ALTER COLUMN longitude TYPE NUMERIC USING longitude::NUMERIC;
   END IF;
 END$$;
-
--- Note: this down migration intentionally does not DROP owner_id, idx_stations_owner_id or is_active to avoid accidental data loss.
