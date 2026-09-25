@@ -144,6 +144,8 @@ const showDashboard = (user) => {
       )
       .join('');
   }
+  // Load stations list for dashboard (if user is present)
+  try { fetchAndRenderStations(); } catch {}
 };
 
 const showLogin = () => {
@@ -327,3 +329,198 @@ document.getElementById('testExpireBtn')?.addEventListener('click', async () => 
     // apiFetch will catch 401, clear storage and redirect to login
   }
 });
+
+/* Stations UI: list, create, edit, inline validation, ownership filter (T-07) */
+const stationsListEl = document.getElementById('stationsList');
+const createStationBtn = document.getElementById('createStationBtn');
+const refreshStationsBtn = document.getElementById('refreshStationsBtn');
+const stationModal = document.getElementById('stationModal');
+const stationForm = document.getElementById('stationForm');
+const stationModalTitle = document.getElementById('stationModalTitle');
+const cancelStationBtn = document.getElementById('cancelStationBtn');
+const saveStationBtn = document.getElementById('saveStationBtn');
+
+let stationsCache = [];
+let editingStationId = null;
+
+const getCurrentUser = () => {
+  try { return JSON.parse(localStorage.getItem('csms-user') || 'null'); } catch { return null; }
+};
+
+function showFieldError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const field = el.closest('.field');
+  if (field) field.classList.toggle('has-error', Boolean(msg));
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function clearFormErrors() {
+  ['err_stationName','err_stationAddress','err_stationLatitude','err_stationLongitude'].forEach((id) => showFieldError(id, ''));
+}
+
+function openStationModal(mode = 'create', station = null) {
+  editingStationId = station?.id || null;
+  stationModalTitle.textContent = mode === 'edit' ? 'Sửa trạm' : 'Tạo trạm';
+  document.getElementById('stationName').value = station?.name || '';
+  document.getElementById('stationAddress').value = station?.address || '';
+  document.getElementById('stationLatitude').value = station?.latitude ?? '';
+  document.getElementById('stationLongitude').value = station?.longitude ?? '';
+  document.getElementById('stationStatus').value = station?.status || 'ACTIVE';
+  saveStationBtn.disabled = false;
+  saveStationBtn.textContent = editingStationId ? 'Lưu thay đổi' : 'Lưu';
+  clearFormErrors();
+  stationModal.style.display = 'grid';
+}
+
+function closeStationModal() {
+  stationModal.style.display = 'none';
+  editingStationId = null;
+  stationForm.reset && stationForm.reset();
+  clearFormErrors();
+}
+
+function validateStationForm() {
+  clearFormErrors();
+  const name = document.getElementById('stationName').value.trim();
+  const address = document.getElementById('stationAddress').value.trim();
+  const lat = document.getElementById('stationLatitude').value.trim();
+  const lon = document.getElementById('stationLongitude').value.trim();
+  let ok = true;
+
+  if (!name) {
+    showFieldError('err_stationName','Tên trạm là bắt buộc');
+    ok = false;
+  }
+
+  if (!address) {
+    showFieldError('err_stationAddress','Địa chỉ là bắt buộc');
+    ok = false;
+  }
+
+  if (lat !== '') {
+    const v = Number(lat);
+    if (!Number.isFinite(v)) {
+      showFieldError('err_stationLatitude','Vĩ độ không hợp lệ');
+      ok = false;
+    }
+  }
+
+  if (lon !== '') {
+    const v = Number(lon);
+    if (!Number.isFinite(v)) {
+      showFieldError('err_stationLongitude','Kinh độ không hợp lệ');
+      ok = false;
+    }
+  }
+
+  return ok;
+}
+
+async function fetchAndRenderStations() {
+  try {
+    const res = await apiFetch('/api/stations');
+    const data = await res.json();
+    stationsCache = Array.isArray(data) ? data : [];
+    renderStationsList();
+  } catch (err) {
+    showAlert('Không thể tải danh sách trạm', 'error');
+  }
+}
+
+function renderStationsList() {
+  const user = getCurrentUser();
+  let list = stationsCache.slice();
+  // Ownership filter: if STATION_OWNER show only owned stations
+  if (user && user.role === 'STATION_OWNER') {
+    list = list.filter((s) => Number(s.owner_id) === Number(user.id));
+  }
+  if (!stationsListEl) return;
+  stationsListEl.innerHTML = list.map((s) => `
+    <div class="station-row" data-id="${s.id}">
+      <div class="meta">
+        <div class="name">${escapeHtml(s.name || '')} <span style="color:var(--muted); font-weight:600; font-size:0.85rem;">#${s.id}</span></div>
+        <div class="addr">${escapeHtml(s.address || '')}</div>
+        <div style="color:var(--muted); font-size:0.85rem; margin-top:6px;">Trạng thái: ${s.status || ''} • Trụ: ${s.charge_point_count ?? 0}</div>
+      </div>
+      <div class="actions">
+        <button class="action-btn" data-action="view">Xem</button>
+        <button class="action-btn" data-action="edit">Sửa</button>
+      </div>
+    </div>
+  `).join('');
+
+  // attach handlers
+  stationsListEl.querySelectorAll('.station-row').forEach((row) => {
+    const id = row.dataset.id;
+    row.querySelector('[data-action="view"]').addEventListener('click', async () => {
+      try {
+        const res = await apiFetch(`/api/stations/${id}`);
+        const st = await res.json();
+        openStationModal('edit', st);
+      } catch (e) { showAlert('Không thể tải chi tiết trạm', 'error'); }
+    });
+    row.querySelector('[data-action="edit"]').addEventListener('click', async () => {
+      try {
+        const res = await apiFetch(`/api/stations/${id}`);
+        const st = await res.json();
+        openStationModal('edit', st);
+      } catch (e) { showAlert('Không thể tải chi tiết trạm', 'error'); }
+    });
+  });
+}
+
+function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+createStationBtn?.addEventListener('click', () => openStationModal('create', null));
+refreshStationsBtn?.addEventListener('click', () => fetchAndRenderStations());
+cancelStationBtn?.addEventListener('click', closeStationModal);
+
+stationForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!validateStationForm()) return;
+
+  saveStationBtn.disabled = true;
+  const originalText = saveStationBtn.textContent;
+  saveStationBtn.textContent = editingStationId ? 'Đang cập nhật...' : 'Đang tạo...';
+
+  const payload = {
+    name: document.getElementById('stationName').value.trim(),
+    address: document.getElementById('stationAddress').value.trim(),
+    latitude: document.getElementById('stationLatitude').value.trim() || null,
+    longitude: document.getElementById('stationLongitude').value.trim() || null,
+    status: document.getElementById('stationStatus').value,
+  };
+
+  if (payload.latitude !== null) payload.latitude = Number(payload.latitude);
+  if (payload.longitude !== null) payload.longitude = Number(payload.longitude);
+
+  try {
+    let res;
+    if (editingStationId) {
+      res = await apiFetch(`/api/stations/${editingStationId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    } else {
+      res = await apiFetch('/api/stations', { method: 'POST', body: JSON.stringify(payload) });
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Lỗi server');
+    await fetchAndRenderStations();
+    closeStationModal();
+  } catch (err) {
+    const msg = err.message || 'Không thể lưu trạm';
+    showAlert(msg, 'error');
+  } finally {
+    saveStationBtn.disabled = false;
+    saveStationBtn.textContent = originalText;
+  }
+});
+
+['stationName','stationAddress','stationLatitude','stationLongitude'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => validateStationForm());
+  el.addEventListener('blur', () => validateStationForm());
+});
+
+// (stations are fetched inside showDashboard implementation)

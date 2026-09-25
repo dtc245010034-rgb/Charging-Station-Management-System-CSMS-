@@ -342,6 +342,12 @@ body.light-theme .auth-panel {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.field.has-error input,
+.field.has-error select {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(255, 107, 122, 0.12);
+}
+
 .field-spacer {
   height: 50px;
   width: 100%;
@@ -600,6 +606,52 @@ body.light-theme .auth-panel {
   background: rgba(255, 107, 122, 0.2);
   border-color: var(--error);
   color: var(--error);
+}
+
+/* Station list and modal styles */
+.station-list {
+  display: grid;
+  gap: 10px;
+}
+.station-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+}
+.station-row .meta {
+  display:flex; flex-direction:column;
+}
+.station-row .meta .name { font-weight:700; }
+.station-row .meta .addr { color:var(--muted); font-size:0.9rem; }
+.station-row .actions { display:flex; gap:8px; }
+
+.field-error {
+  color: var(--error);
+  font-size: 0.85rem;
+  margin-top: 6px;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 60;
+}
+.modal-backdrop {
+  position:absolute; inset:0; background:rgba(2,6,23,0.6);
+}
+.modal-panel {
+  position:relative; z-index:61; width:min(680px,95%); border-radius:14px; padding:20px; background:var(--surface); border:1px solid var(--border);
+}
+
+.primary-btn[disabled], .action-btn[disabled] {
+  opacity: 0.55; cursor: not-allowed; transform: none;
 }
 
 .api-log-box {

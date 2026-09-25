@@ -129,24 +129,76 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
   res.json(publicUser(user, roles));
 });
 
-app.get('/api/stations', authenticate, async (req, res) => res.json(await db.prepare('SELECT s.*, COUNT(cp.id)::int AS charge_point_count FROM stations s LEFT JOIN charge_points cp ON cp.station_id = s.id GROUP BY s.id ORDER BY s.id DESC').all()));
-app.post('/api/stations', authenticate, allow('ADMIN', 'MANAGER'), async (req, res) => {
-  const { name, address, latitude, longitude, status = 'ACTIVE' } = req.body;
+app.get('/api/stations', authenticate, async (req, res) => {
+  const user = req.user;
+  let query = 'SELECT s.*, COUNT(cp.id)::int AS charge_point_count FROM stations s LEFT JOIN charge_points cp ON cp.station_id = s.id';
+  const params = [];
+
+  if (user?.role === 'STATION_OWNER') {
+    query += ' WHERE s.owner_id = ?';
+    params.push(user.id);
+  }
+
+  query += ' GROUP BY s.id ORDER BY s.id DESC';
+  const rows = await db.prepare(query).all(...params);
+  res.json(rows);
+});
+
+app.post('/api/stations', authenticate, async (req, res) => {
+  const { name, address, latitude, longitude, status = 'ACTIVE', owner_id } = req.body;
   if (!name || !address) return fail(res, 'name và address là bắt buộc');
-  const result = await db.prepare('INSERT INTO stations (name, address, latitude, longitude, status) VALUES (?, ?, ?, ?, ?)').run(name, address, latitude ?? null, longitude ?? null, status);
+
+  const userRole = req.user?.role;
+  if (userRole === 'STATION_OWNER') {
+    if (owner_id !== undefined && Number(owner_id) !== Number(req.user.id)) {
+      return fail(res, 'Bạn chỉ có thể tạo trạm thuộc sở hữu của mình', 403);
+    }
+  }
+
+  if (userRole && !['ADMIN', 'MANAGER', 'STATION_OWNER'].includes(userRole)) {
+    return fail(res, 'Bạn không có quyền tạo trạm', 403);
+  }
+
+  const ownerId = userRole === 'STATION_OWNER' ? req.user.id : (owner_id !== undefined && owner_id !== null && owner_id !== '') ? Number(owner_id) : null;
+
+  const result = await db.prepare('INSERT INTO stations (name, address, latitude, longitude, status, owner_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(name, address, latitude ?? null, longitude ?? null, status, ownerId, status === 'ACTIVE');
+
   await audit(req, 'CREATE', 'station', result.lastInsertRowid, req.body);
   res.status(201).json(await db.prepare('SELECT * FROM stations WHERE id = ?').get(result.lastInsertRowid));
 });
+
 app.get('/api/stations/:id', authenticate, async (req, res) => {
   const station = await db.prepare('SELECT * FROM stations WHERE id = ?').get(req.params.id);
   if (!station) return fail(res, 'Không tìm thấy trạm', 404);
+
+  if (req.user?.role === 'STATION_OWNER' && Number(station.owner_id) !== Number(req.user.id)) {
+    return fail(res, 'Bạn không có quyền xem trạm này', 403);
+  }
+
   station.charge_points = await db.prepare('SELECT * FROM charge_points WHERE station_id = ? ORDER BY id').all(station.id);
   res.json(station);
 });
-app.patch('/api/stations/:id', authenticate, allow('ADMIN', 'MANAGER'), async (req, res) => {
+
+app.patch('/api/stations/:id', authenticate, async (req, res) => {
+  const station = await db.prepare('SELECT * FROM stations WHERE id = ?').get(req.params.id);
+  if (!station) return fail(res, 'Không tìm thấy trạm', 404);
+
+  if (req.user?.role === 'STATION_OWNER' && Number(station.owner_id) !== Number(req.user.id)) {
+    return fail(res, 'Bạn không có quyền sửa trạm này', 403);
+  }
+
   const keys = ['name', 'address', 'latitude', 'longitude', 'status'].filter((key) => req.body[key] !== undefined);
   if (!keys.length) return fail(res, 'Không có trường cần cập nhật');
-  await db.prepare(`UPDATE stations SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...keys.map((key) => req.body[key]), req.params.id);
+
+  const values = keys.map((key) => req.body[key]);
+  const sql = `UPDATE stations SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+  await db.prepare(sql).run(...values, req.params.id);
+
+  if (req.body.status !== undefined) {
+    await db.prepare('UPDATE stations SET is_active = ? WHERE id = ?').run(req.body.status === 'ACTIVE', req.params.id);
+  }
+
   await audit(req, 'UPDATE', 'station', req.params.id, req.body);
   res.json(await db.prepare('SELECT * FROM stations WHERE id = ?').get(req.params.id));
 });

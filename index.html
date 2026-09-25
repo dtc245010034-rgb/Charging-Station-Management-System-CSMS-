@@ -185,6 +185,68 @@
             </div>
             <div id="apiResponseLog" class="api-log-box"></div>
           </div>
+
+          <section class="stations-section" id="stationsSection">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:8px;">
+              <h4>Danh sách trạm</h4>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button class="action-btn" id="refreshStationsBtn" type="button">Làm mới</button>
+                <button class="primary-btn" id="createStationBtn" type="button">Tạo trạm mới</button>
+              </div>
+            </div>
+
+            <div id="stationsList" class="station-list" style="margin-top:12px;"></div>
+          </section>
+
+          <!-- Station Form Modal -->
+          <div id="stationModal" class="modal" style="display:none;">
+            <div class="modal-backdrop"></div>
+            <div class="modal-panel">
+              <div class="form-header">
+                <h3 id="stationModalTitle">Tạo trạm</h3>
+              </div>
+              <form id="stationForm" class="form-body">
+                <label class="field">
+                  <span>Tên trạm</span>
+                  <input type="text" id="stationName" required />
+                  <div class="field-error" id="err_stationName" style="display:none;"></div>
+                </label>
+
+                <label class="field">
+                  <span>Địa chỉ</span>
+                  <input type="text" id="stationAddress" required />
+                  <div class="field-error" id="err_stationAddress" style="display:none;"></div>
+                </label>
+
+                <div class="row two-col">
+                  <label class="field">
+                    <span>Vĩ độ (latitude)</span>
+                    <input type="text" id="stationLatitude" placeholder="10.8231" />
+                    <div class="field-error" id="err_stationLatitude" style="display:none;"></div>
+                  </label>
+                  <label class="field">
+                    <span>Kinh độ (longitude)</span>
+                    <input type="text" id="stationLongitude" placeholder="106.6297" />
+                    <div class="field-error" id="err_stationLongitude" style="display:none;"></div>
+                  </label>
+                </div>
+
+                <label class="field">
+                  <span>Trạng thái</span>
+                  <select id="stationStatus">
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                    <option value="MAINTENANCE">MAINTENANCE</option>
+                  </select>
+                </label>
+
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px;">
+                  <button type="button" class="action-btn" id="cancelStationBtn">Hủy</button>
+                  <button type="submit" class="primary-btn" id="saveStationBtn">Lưu</button>
+                </div>
+              </form>
+            </div>
+          </div>
         </main>
       </div>
     </div>
