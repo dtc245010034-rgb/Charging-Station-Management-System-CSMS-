@@ -55,7 +55,9 @@ describe('S-01 baseline: khung dự án an toàn', () => {
   });
 
   it('S-01: trùng mã trụ → 409, không sập', async () => {
-    const st = await request(app).post('/api/stations').set('Cookie', owner.cookie).send({ name: 'A', address: 'HN' });
+    const st = await request(app).post('/api/stations').set('Cookie', owner.cookie)
+      .set('Idempotency-Key', 'baseline-station-0001')
+      .send({ name: 'A', address: 'HN', latitude: 21, longitude: 105 });
     assert.strictEqual(st.status, 201);
     const url = `/api/stations/${st.body.id}/charge-points`;
     assert.strictEqual((await request(app).post(url).set('Cookie', owner.cookie).send({ code: 'CP-1' })).status, 201);

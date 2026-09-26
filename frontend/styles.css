@@ -662,6 +662,449 @@ body.light-theme .auth-panel {
   word-break: break-all;
 }
 
+.station-management {
+  min-width: 0;
+}
+
+.station-page-heading,
+.station-section-heading,
+.station-detail-header,
+.charge-point-heading,
+.station-coordinate-heading,
+.station-dialog-heading,
+.station-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.station-page-heading {
+  margin: 0 0 28px;
+  align-items: flex-end;
+}
+
+.station-page-heading h1,
+.station-dialog-heading h2,
+.station-detail-title {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.2;
+}
+
+.station-page-heading > div > p:last-child,
+.station-detail-address,
+.station-coordinate-heading span {
+  color: var(--muted);
+}
+
+.station-page-heading > div > p:last-child {
+  margin: 8px 0 0;
+}
+
+.station-add-button {
+  flex: 0 0 auto;
+  padding: 0 20px;
+}
+
+.station-workspace {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.78fr) minmax(0, 1.5fr);
+  gap: 26px;
+  align-items: start;
+}
+
+.station-list-panel,
+.station-detail {
+  min-width: 0;
+}
+
+.station-section-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.station-section-heading h2,
+.station-section-heading h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.station-count {
+  display: inline-grid;
+  min-width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.station-list,
+.charge-point-list {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.station-row,
+.charge-point-row {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.station-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.station-row.selected {
+  border-color: var(--primary);
+  box-shadow: inset 3px 0 var(--primary);
+}
+
+.station-row-open,
+.station-row-edit {
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.station-row-open {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  padding: 14px 12px 14px 16px;
+  text-align: left;
+}
+
+.station-row-name,
+.station-row-address {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-row-name {
+  font-size: 0.95rem;
+}
+
+.station-row-address,
+.station-row-meta {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.station-row-edit {
+  align-self: stretch;
+  padding: 0 14px;
+  color: var(--primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.station-row-edit:hover,
+.station-row-open:hover {
+  background: var(--surface-strong);
+}
+
+.station-list-empty {
+  margin: 18px 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.station-detail {
+  border-left: 1px solid var(--border);
+  padding-left: 26px;
+}
+
+.station-empty-state {
+  min-height: 260px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+}
+
+.station-empty-state h2 {
+  margin: 12px 0 6px;
+  font-size: 1.2rem;
+}
+
+.station-empty-state p {
+  max-width: 300px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.empty-mark {
+  display: grid;
+  width: 42px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--primary);
+  font-size: 1.5rem;
+}
+
+.station-detail-header {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.station-detail-header > div {
+  flex: 1 1 180px;
+}
+
+.station-detail-header .eyebrow {
+  margin-bottom: 8px;
+}
+
+.station-detail-title {
+  overflow-wrap: anywhere;
+}
+
+.station-status {
+  padding: 6px 9px;
+  border-radius: 5px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.station-status.active,
+.field-hint.available {
+  color: var(--success);
+}
+
+.station-status.maintenance {
+  color: #f2b84b;
+}
+
+.station-detail-address {
+  margin: 16px 0 12px;
+}
+
+.station-coordinate-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.charge-point-section {
+  margin-top: 28px;
+}
+
+.charge-point-form {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto 110px auto;
+  align-items: end;
+  gap: 10px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.station-field {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.station-field[hidden] {
+  display: none;
+}
+
+.station-field input,
+.station-field select {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  background: var(--input-bg);
+  color: var(--text);
+}
+
+.station-field input:focus,
+.station-field select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(36, 211, 180, 0.12);
+}
+
+.station-field input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.station-field input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.field-hint {
+  min-height: 16px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.field-hint.unavailable {
+  color: var(--error);
+}
+
+.charge-point-form .primary-btn,
+.charge-point-form .action-btn {
+  min-height: 42px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.station-management button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
+.charge-point-form .auth-alert {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.charge-point-row {
+  padding: 13px 14px;
+}
+
+.charge-point-heading {
+  font-size: 0.9rem;
+}
+
+.charge-point-status {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.connector-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.connector-item {
+  padding: 5px 7px;
+  border-radius: 4px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.station-dialog {
+  width: min(680px, calc(100vw - 28px));
+  max-height: min(92vh, 900px);
+  overflow-y: auto;
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--inner-panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.station-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(3px);
+}
+
+.station-dialog form {
+  display: grid;
+  gap: 16px;
+}
+
+.station-dialog-heading {
+  margin-bottom: 4px;
+}
+
+.station-dialog-heading h2 {
+  font-size: 1.45rem;
+}
+
+.icon-close {
+  width: 38px;
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--toggle-bg);
+  color: var(--text);
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.station-coordinate-heading {
+  align-items: flex-end;
+}
+
+.station-coordinate-heading > div {
+  display: grid;
+  gap: 5px;
+}
+
+.station-coordinate-heading span {
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.compact-field {
+  width: 180px;
+}
+
+.station-map {
+  height: 230px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-strong);
+}
+
+.map-fallback {
+  margin: -8px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.station-coordinate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.station-dialog-actions {
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.station-dialog-actions .primary-btn {
+  min-width: 145px;
+  padding: 0 16px;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -681,6 +1124,16 @@ body.light-theme .auth-panel {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+  }
+
+  .station-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .station-detail {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    padding: 24px 0 0;
   }
 }
 
@@ -705,5 +1158,47 @@ body.light-theme .auth-panel {
 
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .station-page-heading {
+    align-items: flex-start;
+  }
+
+  .station-page-heading h1 {
+    font-size: 1.45rem;
+  }
+
+  .station-add-button {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+
+  .charge-point-form {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .charge-point-form .station-field:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .connector-count-field {
+    grid-column: 1;
+  }
+
+  .station-dialog {
+    padding: 18px;
+  }
+
+  .station-coordinate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .station-coordinate-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .compact-field {
+    width: 100%;
   }
 }

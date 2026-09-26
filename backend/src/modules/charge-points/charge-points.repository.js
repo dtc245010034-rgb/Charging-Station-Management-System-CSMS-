@@ -18,6 +18,7 @@ const stationInScope = async (actor, stationId) => {
   const scope = scopeByOwner(actor, 's');
   return Boolean(await prepare(`SELECT 1 FROM stations s WHERE s.id = ? AND ${scope.sql}`).get(stationId, ...scope.params));
 };
+const codeAvailable = async (code) => !await prepare('SELECT 1 FROM charge_points WHERE code = ?').get(code);
 // Không lọc sở hữu: chỉ để phân biệt "của người khác" (403) với "không tồn tại" (404).
 const existsById = async (id) => Boolean(await prepare('SELECT 1 FROM charge_points WHERE id = ?').get(id));
 const stationExists = async (stationId) => Boolean(await prepare('SELECT 1 FROM stations WHERE id = ?').get(stationId));
@@ -39,4 +40,4 @@ const update = (id, fields) => {
     .run(...keys.map((key) => fields[key]), id);
 };
 
-module.exports = { list, findDetailById, findById, connectorsOf, stationInScope, existsById, stationExists, insert, insertConnector, update, UPDATABLE };
+module.exports = { list, findDetailById, findById, connectorsOf, stationInScope, codeAvailable, existsById, stationExists, insert, insertConnector, update, UPDATABLE };

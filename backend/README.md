@@ -16,6 +16,8 @@ docker compose up --build
 
 **Migration `003_stations_owner` (S-03):** `stations.owner_id` là `NOT NULL`, nên DB dev đã có trạm sẽ báo lỗi khi `migrate`. Chạy lại `docker compose down -v` một lần (dữ liệu dev không có chủ nên không thể tự gán). DB mới hoàn toàn thì không cần.
 
+**Migration `004_station_management`:** chuẩn hóa độ chính xác/range tọa độ, yêu cầu tọa độ không NULL, đặt mặc định trạm mới là `INACTIVE`, tạo index tọa độ và bảng idempotency. Nếu DB có tọa độ NULL hoặc ngoài dải `[-90, 90]` / `[-180, 180]`, cần bổ sung/sửa bằng dữ liệu có căn cứ trước khi migrate; không điền tọa độ giả.
+
 Ứng dụng chạy tại `http://localhost:3000`, PostgreSQL chạy tại `localhost:5432`. Container app tự chạy migration trước khi mở cổng.
 
 Rollback migration cuối:
@@ -58,9 +60,15 @@ Phiên là JWT trong cookie `httpOnly` (SameSite=Lax, Secure khi production); AP
 - `POST /api/auth/register` (công khai, luôn tạo tài khoản DRIVER; gửi kèm `role` → 400), `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
 - `POST /api/admin/users` (chỉ ADMIN): tạo tài khoản với bất kỳ vai trò nào trong 5 vai trò; không tự đăng nhập tài khoản mới
 - `GET/POST /api/stations`, `GET/PATCH /api/stations/:id`
-- `GET /api/charge-points`, `GET /api/charge-points/:id`
-- `POST /api/stations/:stationId/charge-points`, `PATCH /api/charge-points/:id`
-- Frontend hiện dùng trực tiếp các route auth ở trên; các route trạm và trụ sạc sẵn sàng cho dashboard mở rộng.
+- `GET /api/charge-points`, `GET /api/charge-points/:id`, `GET /api/charge-points/check-code?code=...`
+- `POST /api/stations/:stationId/charge-points` (nhận `connector_count` từ 1 đến 4; mặc định 4 để giữ tương thích), `PATCH /api/charge-points/:id`
+- Trang Chủ trạm dùng các API trên để tạo/sửa trạm, chọn vị trí trên bản đồ, quản lý trụ/đầu nối và kiểm tra mã trụ.
+
+Tọa độ bắt buộc ở cả API và giao diện, lưu bằng `NUMERIC(10,8)` / `NUMERIC(11,8)` và có giới hạn địa lý. Trạm mới luôn được backend đặt `INACTIVE`; owner không được đổi trạng thái, còn tọa độ của trạm `ACTIVE` chỉ sửa được sau khi ADMIN chuyển trạm về `INACTIVE`. Index B-tree trên cặp tọa độ không thay thế spatial index; tìm trạm theo bán kính cần triển khai PostGIS/GIST trước khi làm S-47.
+
+`POST /api/stations` bắt buộc `Idempotency-Key` (8–128 ký tự). Cùng user, key và payload sẽ replay kết quả cũ; dùng lại key với payload khác trả 409. Frontend gửi và giữ key cho cùng một lần tạo khi retry. Hai ý định tạo độc lập phải có key riêng.
+
+Không có API xóa tài khoản/trạm; hiện không triển khai soft delete. FK `stations.owner_id` dùng `ON DELETE RESTRICT` để bảo toàn dữ liệu sở hữu. Schema hiện cũng chưa có `charging_sessions`, do đó chưa thể chặn đổi mã dựa trên lịch sử phiên sạc. Trạng thái kết nối OCPP hiện được đếm trong bộ nhớ của từng process và ngăn đổi mã khi socket đang mở; trạng thái này không bền qua restart và chưa dùng được an toàn khi chạy nhiều replica.
 
 ## Phân quyền và bảo mật request
 
@@ -85,6 +93,6 @@ Cấu trúc mã: `src/app.js` (Express app), `src/server.js` (listen + WebSocket
 
 Migration đầu tiên nằm tại `migrations/001_baseline.sql`, rollback tại `migrations/001_baseline.down.sql`. Đây là mẫu quy ước cho các migration sau: tên `snake_case`, khóa chính `id`, và cột `created_at`/`updated_at`.
 
-`charge_points.code` có UNIQUE trực tiếp trong PostgreSQL. Nếu trụ đã có phiên sạc, backend từ chối đổi mã. Mỗi trụ tự tạo connector 1-4 với trạng thái `UNKNOWN`.
+`charge_points.code` có UNIQUE trực tiếp trong PostgreSQL; duplicate race được trả về 409. Mỗi trụ tạo số connector theo `connector_count` với trạng thái `UNKNOWN`.
 
 WebSocket dùng OCPP-style MVP tại `ws://localhost:3000/ocpp/:chargePointCode`, hỗ trợ `BootNotification`, `Heartbeat`, `StatusNotification` và `Authorize`.

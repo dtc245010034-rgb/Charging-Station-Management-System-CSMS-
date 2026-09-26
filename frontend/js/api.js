@@ -8,10 +8,10 @@ export class ApiError extends Error {
 }
 
 // Mọi request đi qua đây: cùng origin, phiên nằm trong cookie httpOnly (không có token ở client).
-export async function api(path, { method = 'GET', body, redirectOn401 = true } = {}) {
+export async function api(path, { method = 'GET', body, headers = {}, redirectOn401 = true } = {}) {
   const response = await fetch(path, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     credentials: 'include',
     body: body === undefined ? undefined : JSON.stringify(body),
   });

@@ -74,12 +74,13 @@ describe('S-02 frontend: api.js và auth.js', () => {
   it('luôn gửi cookie (credentials include), JSON, không gắn Authorization', async () => {
     env = stubBrowser({ respond: () => ({ body: { ok: true } }) });
     const { api } = await load('api.js');
-    await api('/api/auth/login', { method: 'POST', body: { email: 'a@b.co', password: 'x' } });
+    await api('/api/auth/login', { method: 'POST', headers: { 'Idempotency-Key': 'station-request-0001' }, body: { email: 'a@b.co', password: 'x' } });
     const { url, options } = env.calls.fetch[0];
     assert.strictEqual(url, '/api/auth/login');
     assert.strictEqual(options.credentials, 'include');
     assert.strictEqual(options.headers['Content-Type'], 'application/json');
     assert.strictEqual(options.headers.Authorization, undefined);
+    assert.strictEqual(options.headers['Idempotency-Key'], 'station-request-0001');
     assert.strictEqual(options.body, JSON.stringify({ email: 'a@b.co', password: 'x' }));
   });
 

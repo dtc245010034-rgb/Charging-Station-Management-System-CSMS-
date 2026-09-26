@@ -20,11 +20,13 @@ describe('S-03 ma trận quyền Sprint 1 (PO đã xác nhận) trên API thật
     assert.strictEqual(run('src/db/migrate.js').status, 0);
     await truncateAll();
     for (const role of ROLES) users[role] = await createUser(`${role.toLowerCase()}@example.com`, role, 'password123');
-    const st = await request(app).post('/api/stations').set('Cookie', users.ADMIN.cookie).send({ name: 'Trạm A', address: 'Hà Nội' });
+    const st = await request(app).post('/api/stations').set('Cookie', users.ADMIN.cookie).set('Idempotency-Key', 'rbac-admin-station-01')
+      .send({ name: 'Trạm A', address: 'Hà Nội', latitude: 21, longitude: 105 });
     const cp = await request(app).post(`/api/stations/${st.body.id}/charge-points`).set('Cookie', users.ADMIN.cookie).send({ code: 'CP-SEED' });
     shared = { stationId: st.body.id, chargePointId: cp.body.id };
     // Từ PR-6 chủ trạm chỉ thao tác được trên trạm của chính mình → cho họ một bộ dữ liệu riêng.
-    const ownSt = await request(app).post('/api/stations').set('Cookie', users.STATION_OWNER.cookie).send({ name: 'Trạm chủ', address: 'Hà Nội' });
+    const ownSt = await request(app).post('/api/stations').set('Cookie', users.STATION_OWNER.cookie).set('Idempotency-Key', 'rbac-owner-station-01')
+      .send({ name: 'Trạm chủ', address: 'Hà Nội', latitude: 21, longitude: 105 });
     const ownCp = await request(app).post(`/api/stations/${ownSt.body.id}/charge-points`).set('Cookie', users.STATION_OWNER.cookie).send({ code: 'CP-OWN' });
     own = { stationId: ownSt.body.id, chargePointId: ownCp.body.id };
   });
@@ -35,7 +37,11 @@ describe('S-03 ma trận quyền Sprint 1 (PO đã xác nhận) trên API thật
     { name: 'GET /api/stations/:id', allowed: READ, ok: 200, call: (r, t) => r.get(`/api/stations/${t.stationId}`) },
     { name: 'GET /api/charge-points', allowed: READ, ok: 200, call: (r) => r.get('/api/charge-points') },
     { name: 'GET /api/charge-points/:id', allowed: READ, ok: 200, call: (r, t) => r.get(`/api/charge-points/${t.chargePointId}`) },
-    { name: 'POST /api/stations', allowed: WRITE, ok: 201, call: (r) => r.post('/api/stations').send({ name: `T${++seq}`, address: 'HN' }) },
+    { name: 'POST /api/stations', allowed: WRITE, ok: 201, call: (r) => {
+      seq += 1;
+      return r.post('/api/stations').set('Idempotency-Key', `rbac-matrix-${seq}-station`)
+        .send({ name: `T${seq}`, address: 'HN', latitude: 21, longitude: 105 });
+    } },
     { name: 'PATCH /api/stations/:id', allowed: WRITE, ok: 200, call: (r, t) => r.patch(`/api/stations/${t.stationId}`).send({ name: 'Đổi tên' }) },
     { name: 'POST /api/stations/:id/charge-points', allowed: WRITE, ok: 201, call: (r, t) => r.post(`/api/stations/${t.stationId}/charge-points`).send({ code: `CP-${++seq}` }) },
     { name: 'PATCH /api/charge-points/:id', allowed: WRITE, ok: 200, call: (r, t) => r.patch(`/api/charge-points/${t.chargePointId}`).send({ model: 'M1' }) },
