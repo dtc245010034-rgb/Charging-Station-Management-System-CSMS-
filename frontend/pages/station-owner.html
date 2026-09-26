@@ -21,7 +21,6 @@
           </div>
           <div class="user-profile-menu">
             <span class="user-badge" id="userBadge">STATION_OWNER</span>
-            <span class="user-name" id="userName"></span>
             <span class="user-email" id="userEmail"></span>
             <button class="theme-toggle" id="themeToggle" type="button" aria-label="Chuyển đổi giao diện sáng/tối">
               <span class="theme-icon">☀️</span>
@@ -79,6 +78,13 @@
         </label>
         <div class="station-coordinate-heading">
           <div><strong>Vị trí</strong><span>Chọn trên bản đồ hoặc nhập tọa độ</span></div>
+          <label id="stationStatusWrap" class="station-field compact-field" hidden>Trạng thái
+            <select id="stationStatus" name="status">
+              <option value="INACTIVE">Chưa hoạt động</option>
+              <option value="ACTIVE">Đang hoạt động</option>
+              <option value="MAINTENANCE">Bảo trì</option>
+            </select>
+          </label>
         </div>
         <div id="stationMap" class="station-map" aria-label="Bản đồ chọn vị trí"></div>
         <p id="mapFallback" class="map-fallback" hidden>Bản đồ chưa tải được. Bạn vẫn có thể nhập tọa độ bên dưới.</p>

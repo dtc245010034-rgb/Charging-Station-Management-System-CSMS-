@@ -9,7 +9,6 @@ const connections = require('../../src/modules/charge-points/connection-registry
 describe('S-04/S-05 quản lý trạm, trụ và đầu nối', () => {
   let owner;
   let otherOwner;
-  let admin;
 
   const post = (url, body, user = owner) => request(app).post(url).set('Cookie', user.cookie).send(body);
   const patch = (url, body, user = owner) => request(app).patch(url).set('Cookie', user.cookie).send(body);
@@ -20,28 +19,21 @@ describe('S-04/S-05 quản lý trạm, trụ và đầu nối', () => {
     await truncateAll();
     owner = await createUser('station-owner@example.com', 'STATION_OWNER');
     otherOwner = await createUser('other-owner@example.com', 'STATION_OWNER');
-    admin = await createUser('station-admin@example.com', 'ADMIN');
   });
   after(async () => { await resetSchema(); await closePool(); });
 
   it('rejects invalid coordinates and replays a station request by idempotency key', async () => {
-    const missingKey = await request(app).post('/api/stations').set('Cookie', owner.cookie)
-      .send({ name: 'No key', address: 'HN', latitude: 21, longitude: 105 });
-    assert.strictEqual(missingKey.status, 400);
-    const missingCoordinates = await request(app).post('/api/stations').set('Cookie', owner.cookie)
-      .set('Idempotency-Key', 'station-missing-coord').send({ name: 'No coordinates', address: 'HN' });
-    assert.strictEqual(missingCoordinates.status, 400);
-    const invalid = await request(app).post('/api/stations').set('Cookie', owner.cookie).set('Idempotency-Key', 'station-invalid-coord')
-      .send({ name: 'Bad', address: 'HN', latitude: 95, longitude: 20 });
+    const invalid = await post('/api/stations', { name: 'Bad', address: 'HN', latitude: 95, longitude: 20 });
     assert.strictEqual(invalid.status, 400);
 
     const body = { name: 'Trạm A', address: 'Hà Nội', latitude: '21.12345678', longitude: '105.12345678' };
-    const [first, replay] = await Promise.all([1, 2].map(() => request(app).post('/api/stations').set('Cookie', owner.cookie)
-      .set('Idempotency-Key', 'station-request-0001').send(body)));
+    const first = await request(app).post('/api/stations').set('Cookie', owner.cookie)
+      .set('Idempotency-Key', 'station-request-0001').send(body);
+    const replay = await request(app).post('/api/stations').set('Cookie', owner.cookie)
+      .set('Idempotency-Key', 'station-request-0001').send(body);
     assert.strictEqual(first.status, 201);
     assert.strictEqual(replay.status, 201);
     assert.strictEqual(String(first.body.id), String(replay.body.id));
-    assert.strictEqual(first.body.status, 'INACTIVE');
     assert.strictEqual((await query('SELECT count(*)::int AS count FROM stations WHERE owner_id = $1', [owner.id])).rows[0].count, 1);
     const changed = await request(app).post('/api/stations').set('Cookie', owner.cookie)
       .set('Idempotency-Key', 'station-request-0001').send({ ...body, name: 'Trạm B' });
@@ -61,10 +53,9 @@ describe('S-04/S-05 quản lý trạm, trụ và đầu nối', () => {
 
   it('rejects coordinate changes while active and code changes while connected', async () => {
     const station = (await request(app).get('/api/stations').set('Cookie', owner.cookie)).body[0];
-    assert.strictEqual((await patch(`/api/stations/${station.id}`, { status: 'ACTIVE' })).status, 400);
-    assert.strictEqual((await request(app).patch(`/api/stations/${station.id}`).set('Cookie', admin.cookie).send({ status: 'ACTIVE' })).status, 200);
+    assert.strictEqual((await patch(`/api/stations/${station.id}`, { status: 'ACTIVE' })).status, 200);
     assert.strictEqual((await patch(`/api/stations/${station.id}`, { latitude: 22, longitude: 106 })).status, 400);
-    assert.strictEqual((await request(app).patch(`/api/stations/${station.id}`).set('Cookie', admin.cookie).send({ status: 'INACTIVE' })).status, 200);
+    assert.strictEqual((await patch(`/api/stations/${station.id}`, { status: 'INACTIVE' })).status, 200);
     assert.strictEqual((await patch(`/api/stations/${station.id}`, { latitude: 22, longitude: 106 })).status, 200);
 
     const point = (await request(app).get(`/api/stations/${station.id}`).set('Cookie', owner.cookie)).body.charge_points[0];

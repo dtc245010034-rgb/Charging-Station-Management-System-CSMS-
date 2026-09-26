@@ -10,7 +10,7 @@ const router = secureRouter();
 router.get('/stations', { access: access('stations:read') }, async (req, res) => res.json(await service.list(req.user)));
 router.post('/stations', { access: access('stations:write') }, async (req, res) => {
   const key = req.get('Idempotency-Key');
-  if (!key || !/^[A-Za-z0-9._:-]{8,128}$/.test(key)) throw new BadRequestError('Idempotency-Key bắt buộc và phải có từ 8 đến 128 ký tự');
+  if (key && !/^[A-Za-z0-9._:-]{8,128}$/.test(key)) throw new BadRequestError('Idempotency-Key không hợp lệ');
   res.status(201).json(await service.create(req.user, createBody.parse(req.body ?? {}), key));
 });
 router.get('/stations/:id', { access: access('stations:read') }, async (req, res) => {

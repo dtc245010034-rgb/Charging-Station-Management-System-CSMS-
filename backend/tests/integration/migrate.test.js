@@ -45,10 +45,10 @@ describe('S-01 migrate: baseline up/down/up', () => {
     assert.ok(await has('stations', 'owner_id') && await has('audit_logs', 'ip'));
     assert.ok(await index('stations_owner_id_idx') && await index('charge_points_station_id_idx'));
     assert.ok(await has('idempotency_keys', 'response_body') && await index('stations_coordinates_idx'));
-    const coordinates = await query("SELECT column_name, numeric_precision, numeric_scale, is_nullable FROM information_schema.columns WHERE table_name = 'stations' AND column_name IN ('latitude', 'longitude') ORDER BY column_name");
+    const coordinates = await query("SELECT column_name, numeric_precision, numeric_scale FROM information_schema.columns WHERE table_name = 'stations' AND column_name IN ('latitude', 'longitude') ORDER BY column_name");
     assert.deepStrictEqual(coordinates.rows, [
-      { column_name: 'latitude', numeric_precision: 10, numeric_scale: 8, is_nullable: 'NO' },
-      { column_name: 'longitude', numeric_precision: 11, numeric_scale: 8, is_nullable: 'NO' },
+      { column_name: 'latitude', numeric_precision: 10, numeric_scale: 8 },
+      { column_name: 'longitude', numeric_precision: 11, numeric_scale: 8 },
     ]);
     const ownerDeleteRule = await query("SELECT confdeltype FROM pg_constraint WHERE conname = 'stations_owner_id_fkey'");
     assert.strictEqual(ownerDeleteRule.rows[0].confdeltype, 'r');

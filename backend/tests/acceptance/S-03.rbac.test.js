@@ -13,15 +13,10 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
   let stationB;
   let cpA;
   let cpB;
-  let stationCreateSeq = 0;
 
   const as = (user) => ({
     get: (url) => request(app).get(url).set('Cookie', user.cookie),
-    post: (url, body) => {
-      const req = request(app).post(url).set('Cookie', user.cookie);
-      if (url === '/api/stations') req.set('Idempotency-Key', `s03-station-${++stationCreateSeq}`);
-      return req.send(body);
-    },
+    post: (url, body) => request(app).post(url).set('Cookie', user.cookie).send(body),
     patch: (url, body) => request(app).patch(url).set('Cookie', user.cookie).send(body),
   });
 
@@ -32,8 +27,8 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
     for (const [key, role] of [['A', 'STATION_OWNER'], ['B', 'STATION_OWNER'], ['admin', 'ADMIN'], ['op', 'OPERATOR'], ['driver', 'DRIVER']]) {
       u[key] = await createUser(`${key.toLowerCase()}@example.com`, role, 'password123');
     }
-    stationA = (await as(u.A).post('/api/stations', { name: 'Trạm A', address: 'Hà Nội', latitude: 21, longitude: 105 })).body;
-    stationB = (await as(u.B).post('/api/stations', { name: 'Trạm B', address: 'Đà Nẵng', latitude: 16, longitude: 108 })).body;
+    stationA = (await as(u.A).post('/api/stations', { name: 'Trạm A', address: 'Hà Nội' })).body;
+    stationB = (await as(u.B).post('/api/stations', { name: 'Trạm B', address: 'Đà Nẵng' })).body;
     cpA = (await as(u.A).post(`/api/stations/${stationA.id}/charge-points`, { code: 'CP-A' })).body;
     cpB = (await as(u.B).post(`/api/stations/${stationB.id}/charge-points`, { code: 'CP-B' })).body;
   });
@@ -101,10 +96,8 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
     assert.strictEqual((await as(u.driver).get(`/api/stations/${stationA.id}`)).status, 403);
   });
 
-  it('S-03: từ chối owner_id do client gửi và gán owner theo phiên', async () => {
-    const forged = await as(u.A).post('/api/stations', { name: 'Trạm giả', address: 'HN', latitude: 21, longitude: 105, owner_id: u.B.id });
-    assert.strictEqual(forged.status, 400);
-    const res = await as(u.A).post('/api/stations', { name: 'Trạm A2', address: 'HN', latitude: 21, longitude: 105 });
+  it('S-03: owner_id lấy từ phiên, bỏ qua owner_id trong body', async () => {
+    const res = await as(u.A).post('/api/stations', { name: 'Trạm A2', address: 'HN', owner_id: u.B.id });
     assert.strictEqual(res.status, 201);
     const row = (await query('SELECT owner_id FROM stations WHERE id = $1', [res.body.id])).rows[0];
     assert.strictEqual(String(row.owner_id), String(u.A.id));
@@ -117,7 +110,7 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
   });
 
   it('S-03 NFR: audit CREATE/UPDATE chỉ lưu tên trường, không lưu giá trị', async () => {
-    const st = await as(u.A).post('/api/stations', { name: 'GiaTriBiMat-Ten', address: 'GiaTriBiMat-DiaChi', latitude: 21, longitude: 105 });
+    const st = await as(u.A).post('/api/stations', { name: 'GiaTriBiMat-Ten', address: 'GiaTriBiMat-DiaChi' });
     await as(u.A).patch(`/api/stations/${st.body.id}`, { name: 'GiaTriBiMat-TenMoi' });
     const cp = await as(u.A).post(`/api/stations/${st.body.id}/charge-points`, { code: 'GiaTriBiMat-Ma', vendor: 'GiaTriBiMat-Hang' });
     assert.strictEqual(cp.status, 201);

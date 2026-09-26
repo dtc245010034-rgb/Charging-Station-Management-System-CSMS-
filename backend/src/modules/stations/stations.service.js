@@ -25,34 +25,35 @@ async function get(actor, id) {
 }
 
 async function create(actor, data, idempotencyKey) {
-  const requestBody = { ...data, status: 'INACTIVE' };
-  const requestHash = createHash('sha256').update(JSON.stringify(requestBody)).digest('hex');
-  const result = await withTransaction(async (client) => {
-    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`station-create:${actor.id}:${idempotencyKey}`]);
-    const existing = await client.query(
-      'SELECT request_hash, response_body FROM idempotency_keys WHERE user_id = $1 AND key = $2',
-      [actor.id, idempotencyKey]
-    );
-    if (existing.rowCount) {
-      if (existing.rows[0].request_hash !== requestHash) throw new ConflictError('Idempotency-Key đã được dùng cho dữ liệu khác');
-      return { station: existing.rows[0].response_body, created: false };
-    }
-    const station = await repo.insertForIdempotency(client, actor, requestBody);
-    await client.query(
-      'INSERT INTO idempotency_keys (user_id, key, request_hash, response_body) VALUES ($1, $2, $3, $4::jsonb)',
-      [actor.id, idempotencyKey, requestHash, JSON.stringify(station)]
-    );
-    return { station, created: true };
-  });
-  if (result.created) await audit.record(actor.id, 'CREATE', 'station', result.station.id, { fields: Object.keys(data) });
-  return result.station;
+  if (idempotencyKey) {
+    const requestHash = createHash('sha256').update(JSON.stringify(data)).digest('hex');
+    const result = await withTransaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`station-create:${actor.id}:${idempotencyKey}`]);
+      const existing = await client.query(
+        'SELECT request_hash, response_body FROM idempotency_keys WHERE user_id = $1 AND key = $2',
+        [actor.id, idempotencyKey]
+      );
+      if (existing.rowCount) {
+        if (existing.rows[0].request_hash !== requestHash) throw new ConflictError('Idempotency-Key đã được dùng cho dữ liệu khác');
+        return { station: existing.rows[0].response_body, created: false };
+      }
+      const station = await repo.insertForIdempotency(client, actor, data);
+      await client.query(
+        'INSERT INTO idempotency_keys (user_id, key, request_hash, response_body) VALUES ($1, $2, $3, $4::jsonb)',
+        [actor.id, idempotencyKey, requestHash, JSON.stringify(station)]
+      );
+      return { station, created: true };
+    });
+    if (result.created) await audit.record(actor.id, 'CREATE', 'station', result.station.id, { fields: Object.keys(data) });
+    return result.station;
+  }
+  const result = await repo.insert(actor, data);
+  await audit.record(actor.id, 'CREATE', 'station', result.lastInsertRowid, { fields: Object.keys(data) });
+  return repo.findById(actor, result.lastInsertRowid);
 }
 
 async function update(actor, id, data) {
   if (!repo.UPDATABLE.some((key) => data[key] !== undefined)) throw new BadRequestError('Không có trường cần cập nhật');
-  if ((actor.roles || [actor.role]).includes('STATION_OWNER') && data.status !== undefined) {
-    throw new BadRequestError('Chủ trạm không được thay đổi trạng thái trạm');
-  }
   const station = await find(actor, id);
   const changingCoordinates = data.latitude !== undefined || data.longitude !== undefined;
   if (station.status === 'ACTIVE' && changingCoordinates) {

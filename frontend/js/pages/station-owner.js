@@ -180,12 +180,14 @@ function openStationDialog(station = null) {
   get('stationDialogTitle').textContent = station ? 'Sửa thông tin trạm' : 'Thêm trạm sạc';
   get('saveStationButton').textContent = station ? 'Lưu thay đổi' : 'Lưu trạm';
   get('stationFormError').hidden = true;
-  get('stationLatitude').required = true;
-  get('stationLongitude').required = true;
+  get('stationStatusWrap').hidden = !station;
+  get('stationLatitude').required = !station;
+  get('stationLongitude').required = !station;
   get('stationName').value = station?.name || '';
   get('stationAddress').value = station?.address || '';
   get('stationLatitude').value = station?.latitude ?? '';
   get('stationLongitude').value = station?.longitude ?? '';
+  get('stationStatus').value = station?.status || 'INACTIVE';
   const coordinatesLocked = station?.status === 'ACTIVE';
   get('stationLatitude').disabled = coordinatesLocked;
   get('stationLongitude').disabled = coordinatesLocked;
@@ -212,7 +214,7 @@ function validateStationForm() {
   if (latitudeSet !== longitudeSet) {
     latitudeError = 'Cần nhập cả vĩ độ và kinh độ';
     longitudeError = 'Cần nhập cả vĩ độ và kinh độ';
-  } else if (!latitudeSet) {
+  } else if (!state.editing && !latitudeSet) {
     latitudeError = 'Vĩ độ và kinh độ là bắt buộc';
     longitudeError = 'Vĩ độ và kinh độ là bắt buộc';
   } else if (latitudeSet && (!latitudeInput.validity.valid || Number(latitudeInput.value) < -90 || Number(latitudeInput.value) > 90)) {
@@ -239,6 +241,7 @@ async function saveStation(event) {
     payload.latitude = get('stationLatitude').value.trim() || null;
     payload.longitude = get('stationLongitude').value.trim() || null;
   }
+  if (state.editing) payload.status = get('stationStatus').value;
   button.disabled = true;
   button.textContent = 'Đang lưu...';
   get('stationFormError').hidden = true;
