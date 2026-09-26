@@ -5,6 +5,7 @@ const { run, resetSchema, truncateAll } = require('../helpers/db');
 const { app, closePool } = require('../helpers/app');
 const { pool } = require('../../src/db/pool');
 const { createUser } = require('../helpers/auth');
+const { stationBody, postStation } = require('../helpers/station');
 
 describe('S-01 baseline: khung dự án an toàn', () => {
   let owner;
@@ -55,7 +56,7 @@ describe('S-01 baseline: khung dự án an toàn', () => {
   });
 
   it('S-01: trùng mã trụ → 409, không sập', async () => {
-    const st = await request(app).post('/api/stations').set('Cookie', owner.cookie).send({ name: 'A', address: 'HN' });
+    const st = await postStation(owner, stationBody({ name: 'A' }));
     assert.strictEqual(st.status, 201);
     const url = `/api/stations/${st.body.id}/charge-points`;
     assert.strictEqual((await request(app).post(url).set('Cookie', owner.cookie).send({ code: 'CP-1' })).status, 201);
