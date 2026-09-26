@@ -17,10 +17,10 @@ export const chargePointService = {
 
     const points = await this.list();
     const normalized = clean.toLowerCase();
+
     return points.some((point) => {
       const sameCode = point.code && String(point.code).trim().toLowerCase() === normalized;
-      if (!sameCode) return false;
-      return stationId === null || Number(point.station_id) !== Number(stationId);
+      return sameCode;
     });
   },
 

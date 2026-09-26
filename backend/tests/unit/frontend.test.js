@@ -169,4 +169,18 @@ describe('S-04 frontend: station management services', () => {
     assert.strictEqual(await chargePointService.checkCodeAvailability('CP001', 2), true);
     assert.strictEqual(await chargePointService.checkCodeAvailability('CP999', 2), false);
   });
+
+  it('chargePointService.checkCodeAvailability cũng bắt trùng mã trong cùng trạm', async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => [
+        { code: 'CP001', station_id: 2 },
+        { code: 'CP005', station_id: 2 },
+      ],
+    });
+
+    const { chargePointService } = await load('services/chargePointService.js');
+    assert.strictEqual(await chargePointService.checkCodeAvailability('CP001', 2), true);
+  });
 });
