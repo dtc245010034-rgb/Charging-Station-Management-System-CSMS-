@@ -33,14 +33,24 @@ async function create(actor, stationId, data) {
 }
 
 async function update(actor, id, data) {
-  if (!await repo.findById(actor, id)) await denyOrNotFound(actor, 'charge_point', id, repo.existsById, 'Không tìm thấy trụ sạc');
+  const current = await repo.findById(actor, id);
+  if (!current) await denyOrNotFound(actor, 'charge_point', id, repo.existsById, 'Không tìm thấy trụ sạc');
   if (!repo.UPDATABLE.some((key) => data[key] !== undefined)) throw new BadRequestError('Không có trường cần cập nhật');
   try {
     await repo.update(id, data);
   } catch (error) {
     throw duplicateCode(error);
   }
+  await audit.record(actor.id, 'UPDATE', 'charge_point', id, { fields: repo.UPDATABLE.filter((key) => data[key] !== undefined) });
   return repo.findById(actor, id);
 }
 
-module.exports = { list, get, create, update };
+async function remove(actor, id) {
+  const current = await repo.findById(actor, id);
+  if (!current) await denyOrNotFound(actor, 'charge_point', id, repo.existsById, 'Không tìm thấy trụ sạc');
+  await repo.remove(id);
+  await audit.record(actor.id, 'DELETE', 'charge_point', id, { fields: ['id'] });
+  return { ok: true };
+}
+
+module.exports = { list, get, create, update, remove };

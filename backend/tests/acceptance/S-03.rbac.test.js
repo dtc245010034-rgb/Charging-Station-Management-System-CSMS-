@@ -96,11 +96,10 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
     assert.strictEqual((await as(u.driver).get(`/api/stations/${stationA.id}`)).status, 403);
   });
 
-  it('S-03: owner_id lấy từ phiên, bỏ qua owner_id trong body', async () => {
+  it('S-03: owner_id khác session của chủ trạm bị từ chối', async () => {
     const res = await as(u.A).post('/api/stations', { name: 'Trạm A2', address: 'HN', owner_id: u.B.id });
-    assert.strictEqual(res.status, 201);
-    const row = (await query('SELECT owner_id FROM stations WHERE id = $1', [res.body.id])).rows[0];
-    assert.strictEqual(String(row.owner_id), String(u.A.id));
+    assert.strictEqual(res.status, 403);
+    assert.strictEqual((await query("SELECT 1 FROM stations WHERE name = 'Trạm A2'")).rowCount, 0);
     assert.deepStrictEqual((await as(u.B).get('/api/stations')).body.map((s) => s.name), ['Trạm B']);
   });
 
@@ -144,5 +143,26 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
     assert.ok(!JSON.stringify(rows).includes('GiaTriBiMat'), 'metadata không được chứa giá trị nhập vào');
     assert.deepStrictEqual(rows[1].metadata.fields, ['name']);
     assert.ok(rows[0].metadata.fields.includes('name') && rows[0].metadata.fields.includes('address'));
+  });
+
+  it('S-03: chủ trạm CRUD trụ của mình và audit không lưu giá trị nhập', async () => {
+    const created = await as(u.A).post(`/api/stations/${stationA.id}/charge-points`, { code: 'CP-CRUD', power_kw: 22 });
+    assert.strictEqual(created.status, 201);
+
+    const updated = await as(u.A).patch(`/api/charge-points/${created.body.id}`, { vendor: 'Vendor-CRUD', power_kw: 30 });
+    assert.strictEqual(updated.status, 200);
+    assert.strictEqual(Number(updated.body.power_kw), 30);
+
+    const denied = await as(u.B).patch(`/api/charge-points/${created.body.id}`, { vendor: 'B- cannot-own' });
+    assert.strictEqual(denied.status, 403);
+
+    const deleted = await request(app).delete(`/api/charge-points/${created.body.id}`).set('Cookie', u.A.cookie);
+    assert.strictEqual(deleted.status, 200);
+    assert.strictEqual((await request(app).get(`/api/charge-points/${created.body.id}`).set('Cookie', u.A.cookie)).status, 404);
+
+    const auditRows = (await query("SELECT action, entity, metadata FROM audit_logs WHERE entity = 'charge_point' ORDER BY id")).rows;
+    assert.ok(auditRows.some((row) => row.action === 'UPDATE' && row.metadata.fields.includes('vendor')));
+    assert.ok(auditRows.some((row) => row.action === 'DELETE'));
+    assert.ok(!JSON.stringify(auditRows).includes('Vendor-CRUD'));
   });
 });

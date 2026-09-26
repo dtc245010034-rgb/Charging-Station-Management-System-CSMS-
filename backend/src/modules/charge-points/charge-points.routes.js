@@ -18,5 +18,9 @@ router.patch('/charge-points/:id', { access: access('charge-points:write') }, as
   const { id } = idParam.parse(req.params);
   res.json(await service.update(req.user, id, updateBody.parse(req.body ?? {})));
 });
+router.delete('/charge-points/:id', { access: access('charge-points:write') }, async (req, res) => {
+  const { id } = idParam.parse(req.params);
+  res.json(await service.remove(req.user, id));
+});
 
 module.exports = router;

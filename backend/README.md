@@ -12,9 +12,7 @@ Tạo file `.env` ở thư mục gốc project với `POSTGRES_PASSWORD` và `JW
 docker compose up --build
 ```
 
-**Baseline reset (một lần, Sprint 1):** migration đã được gộp thành `001_baseline`. Mọi thành viên có DB cũ phải chạy `docker compose down -v` để xoá volume rồi khởi động lại.
-
-**Migration `003_stations_owner` (S-03):** `stations.owner_id` là `NOT NULL`, nên DB dev đã có trạm sẽ báo lỗi khi `migrate`. Chạy lại `docker compose down -v` một lần (dữ liệu dev không có chủ nên không thể tự gán). DB mới hoàn toàn thì không cần.
+Migration chạy theo lineage `001_baseline` → `003_stations_owner` (chuẩn bị owner) → `004_stations_owner_restrict_and_coords` (kiểm tra dữ liệu, ép owner bắt buộc, FK `ON DELETE RESTRICT`, tọa độ và trigger trạng thái). Không tự gán station cũ cho Admin. Nếu migration 004 báo station thiếu owner, lập mapping owner rồi chạy lại; chỉ reset volume dev khi chắc chắn dữ liệu không cần giữ.
 
 Ứng dụng chạy tại `http://localhost:3000`, PostgreSQL chạy tại `localhost:5432`. Container app tự chạy migration trước khi mở cổng.
 
@@ -51,16 +49,17 @@ Phiên là JWT trong cookie `httpOnly` (SameSite=Lax, Secure khi production); AP
 - Sai 5 lần (trong cửa sổ 15 phút) với cùng một email → khoá 15 phút, lần đăng nhập tiếp theo trả 429 kể cả khi nhập đúng.
 - Sai `LOGIN_IP_MAX_FAILURES` lần (mặc định 20) từ cùng một IP → khoá IP 15 phút.
 - Bộ đếm lưu ở bảng `login_throttle` (khoá `email:<sha256>` / `ip:<ip>`), nên khởi động lại vẫn còn khoá. Đếm cả email không tồn tại để không lộ email nào có tài khoản.
-- IP lấy từ `req.ip`; nếu chạy sau reverse proxy cần cấu hình `trust proxy` (chưa có).
+- IP lấy từ `req.ip`; nếu chạy sau reverse proxy đặt `TRUST_PROXY` bằng số proxy tin cậy.
 
 ## API chính
 
 - `POST /api/auth/register` (công khai, luôn tạo tài khoản DRIVER; gửi kèm `role` → 400), `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
 - `POST /api/admin/users` (chỉ ADMIN): tạo tài khoản với bất kỳ vai trò nào trong 5 vai trò; không tự đăng nhập tài khoản mới
+- `GET /api/admin/station-owners` (chỉ ADMIN): danh sách tài khoản có role `STATION_OWNER`
 - `GET/POST /api/stations`, `GET/PATCH /api/stations/:id`
-- `GET /api/charge-points`, `GET /api/charge-points/:id`
+- `GET /api/charge-points`, `GET /api/charge-points/:id`, `DELETE /api/charge-points/:id`
 - `POST /api/stations/:stationId/charge-points`, `PATCH /api/charge-points/:id`
-- Frontend hiện dùng trực tiếp các route auth ở trên; các route trạm và trụ sạc sẵn sàng cho dashboard mở rộng.
+- Admin và Station Owner có UI quản lý station/trụ tại `/pages/admin.html` và `/pages/station-owner.html`; Operator chỉ đọc.
 
 ## Phân quyền và bảo mật request
 

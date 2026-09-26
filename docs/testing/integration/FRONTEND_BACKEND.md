@@ -72,14 +72,14 @@ Kiểm thử giao tiếp thực tế và hợp đồng tích hợp giữa các t
 - **Test ID**: `TC-FB-03`
 - **Jira / Flow**: `FB-03 — End-to-End Login Flow`
 - **Requirement**: Toàn bộ luồng đăng nhập từ UI: input credentials -> frontend validation -> POST /api/auth/login -> Argon2id verification -> JWT token -> Set-Cookie -> Frontend nhận response -> Redirect dashboard theo role.
-- **Preconditions**: `frontend/pages/login.js`, `backend/src/modules/auth/`.
+- **Preconditions**: `frontend/js/pages/login.js`, `frontend/js/auth.js`, `backend/src/modules/auth/`.
 - **Steps**:
   1. Người dùng nhập email & password trên form `frontend/index.html`.
   2. `frontend/js/validate.js` kiểm tra định dạng email và mật khẩu không rỗng.
   3. `frontend/js/auth.js` gọi `POST /api/auth/login` với body `{ email, password }`.
   4. Backend xác thực hash Argon2id (`auth.service.js`), tạo JWT và set cookie `token` (`httpOnly: true, sameSite: 'lax'`).
-  5. Backend trả response `{ user: { id, email, fullName, role } }`.
-  6. Frontend lưu thông tin user trong memory, gọi `navigateDashboard(role)` để chuyển trang tương ứng (`/dashboard-admin.html`, `/dashboard-operator.html`, `/dashboard-owner.html`).
+  5. Backend trả response `{ user: { id, email, name, role } }`.
+  6. Frontend giữ phiên qua cookie và router chuyển tới `/pages/admin.html`, `/pages/operator.html` hoặc `/pages/station-owner.html` theo role.
 - **Expected**: Đăng nhập trơn tru từ UI, nhận cookie bảo mật, redirect đúng dashboard theo role.
 - **Actual**: Logic frontend và backend khớp hoàn toàn trong code và unit test. Live E2E bị chặn do server backend không boot được (`BUG-03`) và database chưa khởi động (`BUG-02`).
 - **HTTP status**: HTTP 200 khi thành công.
@@ -135,10 +135,10 @@ Kiểm thử giao tiếp thực tế và hợp đồng tích hợp giữa các t
   1. Kiểm tra mapping router: `roleDashboardMap` trong `router.js`.
   2. Kiểm tra phân quyền API tương ứng các role trong `permissions.js`.
 - **Expected**:
-  - `ADMIN` -> `/dashboard-admin.html` (truy cập full API).
-  - `STATION_OWNER` -> `/dashboard-owner.html` (chỉ truy cập trạm của mình).
-  - `OPERATOR` -> `/dashboard-operator.html` (chỉ thao tác vận hành trạm/trụ).
-  - `DRIVER` -> `/dashboard-driver.html` (bị 403 khi gọi API quản lý trạm).
+  - `ADMIN` -> `/pages/admin.html` (truy cập station/charge-point trong phạm vi quyền).
+  - `STATION_OWNER` -> `/pages/station-owner.html` (chỉ truy cập trạm và trụ của mình).
+  - `OPERATOR` -> `/pages/operator.html` (chỉ đọc station/charge-point trong Sprint 1).
+  - `DRIVER` -> `/pages/driver.html` (bị 403 khi gọi API quản lý trạm).
 - **Actual**: Mã nguồn router định tuyến chính xác. Tệp HTML dashboard admin/operator/owner đã có khung giao diện. Backend cấu hình RBAC matrix chuẩn.
 - **HTTP status**: HTTP 403 Forbidden đối với vai trò không được cấp quyền.
 - **Request/response evidence**: `frontend.test.js` test case `navigateDashboard` PASS 4/4 vai trò.

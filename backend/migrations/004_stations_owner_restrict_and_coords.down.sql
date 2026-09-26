@@ -1,4 +1,7 @@
 -- Restore the pre-004 state while leaving 003-owned columns in place.
+DROP TRIGGER IF EXISTS stations_status_is_active_sync ON stations;
+DROP FUNCTION IF EXISTS sync_station_is_active();
+
 DO $$
 DECLARE
   constraint_name TEXT;

@@ -48,16 +48,39 @@
             <form class="station-form" id="stationForm" hidden>
               <h4 id="stationFormTitle">Tạo trạm</h4>
               <div class="station-form-grid">
-                <label>Tên trạm<input id="stationName" name="name" required /></label>
-                <label>Địa chỉ<input id="stationAddress" name="address" required /></label>
-                <label>Vĩ độ<input id="stationLatitude" name="latitude" type="number" step="any" min="-90" max="90" /></label>
-                <label>Kinh độ<input id="stationLongitude" name="longitude" type="number" step="any" min="-180" max="180" /></label>
-                <label>Trạng thái<select id="stationStatus" name="status"><option value="ACTIVE">ACTIVE</option><option value="MAINTENANCE">MAINTENANCE</option><option value="INACTIVE">INACTIVE</option></select></label>
-                <label id="stationOwnerField">Chủ trạm<select id="stationOwner" name="owner_id" required></select></label>
+                <label>Tên trạm<input id="stationName" name="name" required aria-describedby="error_stationName" /><span class="field-error" id="error_stationName" role="alert" hidden></span></label>
+                <label>Địa chỉ<input id="stationAddress" name="address" required aria-describedby="error_stationAddress" /><span class="field-error" id="error_stationAddress" role="alert" hidden></span></label>
+                <label>Vĩ độ<input id="stationLatitude" name="latitude" type="number" step="any" min="-90" max="90" aria-describedby="error_stationLatitude" /><span class="field-error" id="error_stationLatitude" role="alert" hidden></span></label>
+                <label>Kinh độ<input id="stationLongitude" name="longitude" type="number" step="any" min="-180" max="180" aria-describedby="error_stationLongitude" /><span class="field-error" id="error_stationLongitude" role="alert" hidden></span></label>
+                <label>Trạng thái<select id="stationStatus" name="status" aria-describedby="error_stationStatus"><option value="ACTIVE">ACTIVE</option><option value="MAINTENANCE">MAINTENANCE</option><option value="INACTIVE">INACTIVE</option></select><span class="field-error" id="error_stationStatus" role="alert" hidden></span></label>
+                <label id="stationOwnerField">Chủ trạm<select id="stationOwner" name="owner_id" required aria-describedby="error_stationOwner"></select><span class="field-error" id="error_stationOwner" role="alert" hidden></span></label>
               </div>
               <div class="workspace-actions">
                 <button class="action-btn" id="cancelStationBtn" type="button">Hủy</button>
-                <button class="primary-btn" type="submit">Lưu trạm</button>
+                <button class="primary-btn" id="saveStationBtn" type="submit">Lưu trạm</button>
+              </div>
+            </form>
+          </section>
+          <section class="station-workspace" id="chargePointWorkspace">
+            <div class="workspace-heading">
+              <div><p class="eyebrow">Hardware</p><h3>Trụ sạc</h3></div>
+              <button class="primary-btn" id="createChargePointBtn" type="button">Tạo trụ</button>
+            </div>
+            <p class="workspace-message" id="chargePointMessage" role="status"></p>
+            <div class="station-list" id="chargePointList"></div>
+            <form class="station-form" id="chargePointForm" hidden>
+              <h4 id="chargePointFormTitle">Tạo trụ sạc</h4>
+              <div class="station-form-grid">
+                <label>Trạm<select id="chargePointStation" required></select></label>
+                <label>Mã trụ<input id="chargePointCode" required /></label>
+                <label>Model<input id="chargePointModel" /></label>
+                <label>Nhà cung cấp<input id="chargePointVendor" /></label>
+                <label>Trạng thái<input id="chargePointStatus" value="UNKNOWN" /></label>
+                <label>Công suất (kW)<input id="chargePointPower" type="number" min="0" step="any" value="0" /></label>
+              </div>
+              <div class="workspace-actions">
+                <button class="action-btn" id="cancelChargePointBtn" type="button">Hủy</button>
+                <button class="primary-btn" type="submit">Lưu trụ</button>
               </div>
             </form>
           </section>

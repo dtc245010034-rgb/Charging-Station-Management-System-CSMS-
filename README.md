@@ -21,7 +21,7 @@
 | Đăng ký công khai (luôn là tài khoản Tài xế); Quản trị tạo tài khoản các vai trò khác | S-02 | Tạo qua API, chưa có giao diện quản trị |
 | 5 vai trò, mỗi vai trò có trang chủ riêng sau đăng nhập | S-02, S-03 | Trang chủ hiện mới có lời chào |
 | Phân quyền: route chưa khai quyền bị chặn mặc định; chủ trạm chỉ thấy trạm của mình; truy cập trái phép trả 403 và ghi nhật ký | S-03 | |
-| API trạm, trụ sạc (tạo, sửa, xem) có lọc theo chủ sở hữu | S-04, S-05 | Chỉ có API, **chưa đạt đủ AC** (xem dưới) |
+| Station và charge point CRUD có lọc theo chủ sở hữu | S-04, S-05 | Admin/Station Owner có UI; connector UI để sprint sau |
 
 ### Đang làm trong Sprint 1 (demo Thứ 4, 30/9)
 
@@ -100,12 +100,12 @@ npm run dev                  # tự khởi động lại khi sửa code
 | Vai trò | Mã | Trang chủ sau đăng nhập | Làm được gì lúc này |
 |---|---|---|---|
 | Quản trị | `ADMIN` | `/pages/admin.html` | Tạo tài khoản mọi vai trò (qua API), xem và sửa mọi trạm, trụ |
-| Chủ trạm | `STATION_OWNER` | `/pages/station-owner.html` | Tạo, sửa, xem **trạm và trụ của mình** (qua API; giao diện đang làm) |
+| Chủ trạm | `STATION_OWNER` | `/pages/station-owner.html` | Tạo, sửa, xem trạm và CRUD **trụ của mình** theo quyền |
 | Vận hành viên | `OPERATOR` | `/pages/operator.html` | Xem mọi trạm, trụ; không sửa được |
 | Kế toán | `ACCOUNTANT` | `/pages/accountant.html` | Chưa có chức năng (từ sprint tính tiền) |
 | Tài xế | `DRIVER` | `/pages/driver.html` | Tự đăng ký, đăng nhập; chưa có chức năng sạc |
 
-### Kịch bản dùng thử nhanh (thay cho giao diện chưa có)
+### Kịch bản dùng thử nhanh qua API
 
 Dùng `curl` (Windows PowerShell gõ `curl.exe`, không gõ `curl`). Cookie đăng nhập được lưu vào file `admin.cookie`, `owner.cookie` (đã có trong `.gitignore`, vì chứa phiên đăng nhập: **không commit, không gửi cho người khác**).
 
@@ -160,7 +160,7 @@ Test xoá sạch database `csms_test` mỗi lần chạy, **không đụng dữ 
 | Hiện tượng | Nguyên nhân và cách xử lý |
 |---|---|
 | App thoát ngay, báo thiếu `JWT_SECRET` hoặc `DATABASE_URL` | Chưa tạo hoặc điền thiếu file `.env` tương ứng (mục 2). `JWT_SECRET` phải ≥ 32 ký tự |
-| `migrate` lỗi ở `003_stations_owner` hoặc `001_baseline` | Database cũ từ trước baseline. Chạy `docker compose down -v` **một lần** (xoá dữ liệu dev) rồi chạy lại |
+| `migrate` lỗi ở migration 004 vì station thiếu owner | Lập mapping station → tài khoản `STATION_OWNER`, chạy lại migration; chỉ xoá volume nếu dữ liệu dev chắc chắn không cần giữ |
 | Cổng 5432 hoặc 3000 đã bị dùng | Tắt Postgres/ứng dụng khác, hoặc đổi `POSTGRES_PORT` / `APP_PORT` trong `.env` gốc |
 | Đổi cổng app xong thì mọi thao tác ghi bị 403 "Origin không hợp lệ" | Đặt `APP_ORIGIN` khớp địa chỉ đang mở, ví dụ `http://localhost:8080` |
 | Đăng nhập bị 429 kể cả khi đúng mật khẩu | Đang bị khoá 15 phút do sai quá 5 lần; đợi hết thời gian khoá |

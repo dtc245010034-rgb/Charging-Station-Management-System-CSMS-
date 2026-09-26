@@ -115,4 +115,12 @@ describe('S-02 frontend: kiểm tra form phía client (validate.js)', () => {
     assert.match(validateRegister({ name: 'A', email: 'a@b.co', password: '1234567' }).password, /8/);
     assert.deepStrictEqual(validateRegister({ name: 'A', email: 'a@b.co', password: '12345678' }), {});
   });
+
+  it('station: lỗi theo field, giới hạn tọa độ và owner bắt buộc với Admin', async () => {
+    const { validateStation } = await load('validate.js');
+    const errors = validateStation({ name: '', address: '', latitude: '91', longitude: '-181', status: 'BROKEN', owner_id: '' }, true);
+    assert.deepStrictEqual(Object.keys(errors).sort(), ['address', 'latitude', 'longitude', 'name', 'owner_id', 'status']);
+    assert.deepStrictEqual(validateStation({ name: 'A', address: 'HN', latitude: '10.5', longitude: '106.7', status: 'MAINTENANCE', owner_id: '7' }, true), {});
+    assert.deepStrictEqual(validateStation({ name: 'A', address: 'HN', latitude: '', longitude: '', status: 'ACTIVE', owner_id: '' }, false), {});
+  });
 });

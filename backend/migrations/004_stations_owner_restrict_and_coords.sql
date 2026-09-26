@@ -37,6 +37,22 @@ CREATE INDEX IF NOT EXISTS stations_owner_id_idx ON stations(owner_id);
 UPDATE stations
 SET is_active = status IN ('ACTIVE', 'MAINTENANCE');
 
+CREATE OR REPLACE FUNCTION sync_station_is_active()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.is_active := NEW.status IN ('ACTIVE', 'MAINTENANCE');
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS stations_status_is_active_sync ON stations;
+CREATE TRIGGER stations_status_is_active_sync
+  BEFORE INSERT OR UPDATE OF status, is_active ON stations
+  FOR EACH ROW
+  EXECUTE FUNCTION sync_station_is_active();
+
 -- Convert latitude/longitude to REAL if the columns exist. Use safe check and cast.
 DO $$
 BEGIN

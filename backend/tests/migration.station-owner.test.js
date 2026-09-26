@@ -33,6 +33,14 @@ async function run() {
 
   assert.ok(stationId, 'station insert should succeed when owner exists');
 
+  await pool.query("UPDATE stations SET status = 'INACTIVE', is_active = true WHERE id = $1", [stationId]);
+  const inactive = (await pool.query('SELECT status, is_active FROM stations WHERE id = $1', [stationId])).rows[0];
+  assert.strictEqual(inactive.is_active, false, 'INACTIVE station should always be inactive');
+
+  await pool.query("UPDATE stations SET status = 'MAINTENANCE', is_active = false WHERE id = $1", [stationId]);
+  const maintenance = (await pool.query('SELECT status, is_active FROM stations WHERE id = $1', [stationId])).rows[0];
+  assert.strictEqual(maintenance.is_active, true, 'MAINTENANCE station should remain active');
+
   await assert.rejects(
     () => pool.query('DELETE FROM users WHERE id = $1', [userId]),
     /foreign key|fk_stations_owner|violat/i,

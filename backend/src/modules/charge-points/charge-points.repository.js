@@ -38,5 +38,6 @@ const update = (id, fields) => {
   return prepare(`UPDATE charge_points SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
     .run(...keys.map((key) => fields[key]), id);
 };
+  const remove = (id) => prepare('DELETE FROM charge_points WHERE id = ?').run(id);
 
-module.exports = { list, findDetailById, findById, connectorsOf, stationInScope, existsById, stationExists, insert, insertConnector, update, UPDATABLE };
+  module.exports = { list, findDetailById, findById, connectorsOf, stationInScope, existsById, stationExists, insert, insertConnector, update, remove, UPDATABLE };
