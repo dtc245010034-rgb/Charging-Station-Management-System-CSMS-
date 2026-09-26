@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CSMS | Chủ trạm</title>
+    <title>CSMS | Quản lý trạm sạc</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body data-role="STATION_OWNER" hidden>
     <div class="page-shell">
-      <div class="dashboard-layout" style="display: flex;">
+      <div class="dashboard-layout station-layout">
         <header class="dashboard-header">
           <div class="brand-header">
             <div class="brand-mark">CS</div>
@@ -27,14 +27,178 @@
             <button class="logout-btn" id="logoutBtn" type="button">Đăng xuất</button>
           </div>
         </header>
-        <main class="dashboard-content">
-          <div class="dashboard-banner">
-            <h3>Chào mừng, <span id="userName"></span>!</h3>
-            <p>Bạn đã đăng nhập với vai trò Chủ trạm.</p>
-          </div>
+
+        <main class="station-manager-shell">
+          <section class="station-manager-page">
+            <div class="station-toolbar">
+              <div>
+                <p class="eyebrow">Quản lý trạm</p>
+                <h3>Danh sách trạm của tôi</h3>
+              </div>
+              <div class="toolbar-actions">
+                <button class="secondary-btn" id="refreshStationsBtn" type="button">Làm mới</button>
+                <button class="primary-btn" id="openAddStationBtn" type="button">+ Thêm trạm</button>
+              </div>
+            </div>
+
+            <div id="stationAlert" class="auth-alert" role="alert" hidden></div>
+
+            <div class="station-content-grid">
+              <div class="station-list-panel panel-card">
+                <div class="list-header">
+                  <h4>Trạm</h4>
+                  <span id="stationCountBadge" class="count-badge">0</span>
+                </div>
+
+                <div id="stationTableWrap" class="station-table-wrap">
+                  <table class="station-table">
+                    <thead>
+                      <tr>
+                        <th>Tên trạm</th>
+                        <th>Địa chỉ</th>
+                        <th>Vĩ độ</th>
+                        <th>Kinh độ</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody id="stationTableBody"></tbody>
+                  </table>
+                </div>
+
+                <div id="stationEmptyState" class="empty-state" hidden>
+                  <h5>Chưa có trạm nào</h5>
+                  <p>Hãy thêm trạm đầu tiên để bắt đầu quản lý.</p>
+                </div>
+              </div>
+
+              <aside class="station-detail-panel panel-card">
+                <div id="stationDetailEmpty" class="detail-empty-state">
+                  <h4>Chưa có trạm được chọn</h4>
+                  <p>Chọn một trạm để xem thông tin và quản lý trụ sạc.</p>
+                </div>
+
+                <div id="stationDetailContent" class="station-detail-content" hidden>
+                  <div class="detail-header-row">
+                    <div>
+                      <p class="eyebrow">Chi tiết trạm</p>
+                      <h4 id="detailStationName">Tên trạm</h4>
+                    </div>
+                    <button class="secondary-btn" id="editSelectedStationBtn" type="button">Sửa trạm</button>
+                  </div>
+
+                  <div class="detail-meta-grid">
+                    <div>
+                      <span class="meta-label">Địa chỉ</span>
+                      <strong id="detailStationAddress">-</strong>
+                    </div>
+                    <div>
+                      <span class="meta-label">Tọa độ</span>
+                      <strong id="detailStationCoords">-</strong>
+                    </div>
+                    <div>
+                      <span class="meta-label">Trạng thái</span>
+                      <strong id="detailStationStatus">-</strong>
+                    </div>
+                  </div>
+
+                  <div class="charge-point-header">
+                    <h5>Quản lý trụ sạc</h5>
+                    <button class="primary-btn small-btn" id="openAddChargePointBtn" type="button">+ Thêm trụ</button>
+                  </div>
+
+                  <div id="chargePointList" class="charge-point-list"></div>
+                  <div id="chargePointEmptyState" class="empty-state compact" hidden>
+                    <p>Trạm này chưa có trụ nào.</p>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
         </main>
       </div>
     </div>
-    <script type="module" src="/js/pages/dashboard.js"></script>
+
+    <div id="stationModal" class="modal-backdrop" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="stationModalTitle">
+        <div class="modal-header">
+          <h4 id="stationModalTitle">Thêm trạm</h4>
+          <button type="button" class="close-modal-btn" data-close-modal="stationModal" aria-label="Đóng">×</button>
+        </div>
+
+        <form id="stationForm" novalidate>
+          <input type="hidden" id="stationId" />
+
+          <div class="field-group">
+            <label class="field">
+              <span>Tên trạm</span>
+              <input id="stationName" name="name" type="text" placeholder="Ví dụ: Tram ICTU" />
+              <p class="field-error" data-error-for="stationName" role="alert" hidden></p>
+            </label>
+          </div>
+
+          <div class="field-group">
+            <label class="field">
+              <span>Địa chỉ</span>
+              <input id="stationAddress" name="address" type="text" placeholder="Ví dụ: Thái Nguyên" />
+              <p class="field-error" data-error-for="stationAddress" role="alert" hidden></p>
+            </label>
+          </div>
+
+          <div class="row two-col">
+            <label class="field">
+              <span>Latitude</span>
+              <input id="stationLatitude" name="latitude" type="number" step="any" placeholder="21.59" />
+              <p class="field-error" data-error-for="stationLatitude" role="alert" hidden></p>
+            </label>
+            <label class="field">
+              <span>Longitude</span>
+              <input id="stationLongitude" name="longitude" type="number" step="any" placeholder="105.84" />
+              <p class="field-error" data-error-for="stationLongitude" role="alert" hidden></p>
+            </label>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="secondary-btn" data-close-modal="stationModal">Hủy</button>
+            <button type="submit" id="stationSubmitBtn" class="primary-btn">Lưu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="chargePointModal" class="modal-backdrop" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="chargePointModalTitle">
+        <div class="modal-header">
+          <h4 id="chargePointModalTitle">Thêm trụ sạc</h4>
+          <button type="button" class="close-modal-btn" data-close-modal="chargePointModal" aria-label="Đóng">×</button>
+        </div>
+
+        <form id="chargePointForm" novalidate>
+          <div class="field-group">
+            <label class="field">
+              <span>Mã trụ</span>
+              <input id="chargePointCode" name="code" type="text" placeholder="CP001" />
+              <p class="field-error" data-error-for="chargePointCode" role="alert" hidden></p>
+              <p id="chargePointCodeStatus" class="code-status" hidden></p>
+            </label>
+          </div>
+
+          <div class="field-group">
+            <label class="field">
+              <span>Số đầu nối</span>
+              <input id="chargePointConnectorCount" name="connectorCount" type="number" min="1" max="4" step="1" placeholder="4" />
+              <p class="field-error" data-error-for="chargePointConnectorCount" role="alert" hidden></p>
+            </label>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="secondary-btn" data-close-modal="chargePointModal">Hủy</button>
+            <button type="submit" id="chargePointSubmitBtn" class="primary-btn">Lưu trụ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script type="module" src="/js/pages/station-owner.js"></script>
   </body>
 </html>
