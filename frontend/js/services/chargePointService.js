@@ -11,7 +11,7 @@ export const chargePointService = {
     return api('/api/charge-points');
   },
 
-  async checkCodeAvailability(code, stationId = null) {
+  async checkCodeAvailability(code) {
     const clean = String(code ?? '').trim();
     if (!clean) return false;
 
