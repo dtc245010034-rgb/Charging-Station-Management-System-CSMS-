@@ -8,7 +8,7 @@ const createBody = z.object({
   address: z.string({ message: REQUIRED }).min(1, REQUIRED),
   latitude: z.unknown().optional(),
   longitude: z.unknown().optional(),
-  status: status.default('ACTIVE'),
+  status: status.default('INACTIVE'),
 }, { message: REQUIRED });
 
 const updateBody = z.object({

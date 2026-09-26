@@ -8,7 +8,11 @@ try {
   process.exit(1);
 }
 
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
+const requiredEnvKeys = ['DATABASE_URL', 'JWT_SECRET', 'APP_ORIGIN'];
+const hasExplicitEnv = requiredEnvKeys.some((key) => process.env[key] !== undefined);
+if (!hasExplicitEnv) {
+  require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
+}
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

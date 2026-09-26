@@ -1,4 +1,4 @@
-const { describe, it, afterEach } = require('node:test');
+const { describe, it, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -114,5 +114,59 @@ describe('S-02 frontend: kiểm tra form phía client (validate.js)', () => {
     assert.deepStrictEqual(Object.keys(validateRegister({ name: ' ', email: 'a', password: 'short' })).sort(), ['email', 'name', 'password']);
     assert.match(validateRegister({ name: 'A', email: 'a@b.co', password: '1234567' }).password, /8/);
     assert.deepStrictEqual(validateRegister({ name: 'A', email: 'a@b.co', password: '12345678' }), {});
+  });
+});
+
+describe('S-04 frontend: station management services', () => {
+  let originalFetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    if (originalFetch) globalThis.fetch = originalFetch;
+    else delete globalThis.fetch;
+  });
+
+  it('stationService.create chuẩn hoá dữ liệu và gửi đúng endpoint', async () => {
+    const calls = [];
+    globalThis.fetch = async (url, options) => {
+      calls.push({ url, options });
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({ id: 42, name: 'Trạm A', address: 'Hà Nội', latitude: 21.59, longitude: 105.84, status: 'INACTIVE' }),
+      };
+    };
+
+    const { stationService } = await load('services/stationService.js');
+    const result = await stationService.create({ name: '  Trạm A  ', address: '  Hà Nội  ', latitude: '21.59', longitude: '105.84' });
+
+    assert.strictEqual(calls[0].url, '/api/stations');
+    assert.strictEqual(calls[0].options.method, 'POST');
+    assert.deepStrictEqual(JSON.parse(calls[0].options.body), {
+      name: 'Trạm A',
+      address: 'Hà Nội',
+      latitude: 21.59,
+      longitude: 105.84,
+      status: 'INACTIVE',
+    });
+    assert.strictEqual(result.id, 42);
+  });
+
+  it('chargePointService.checkCodeAvailability phát hiện mã trùng và mã mới', async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => [
+        { code: 'CP001', station_id: 1 },
+        { code: 'CP005', station_id: 2 },
+      ],
+    });
+
+    const { chargePointService } = await load('services/chargePointService.js');
+    assert.strictEqual(await chargePointService.checkCodeAvailability('CP001', 2), true);
+    assert.strictEqual(await chargePointService.checkCodeAvailability('CP999', 2), false);
   });
 });
