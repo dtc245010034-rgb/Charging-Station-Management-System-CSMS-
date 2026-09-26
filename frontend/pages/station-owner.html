@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CSMS | Chủ trạm</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
   </head>
   <body data-role="STATION_OWNER" hidden>
     <div class="page-shell">
@@ -19,6 +21,7 @@
           </div>
           <div class="user-profile-menu">
             <span class="user-badge" id="userBadge">STATION_OWNER</span>
+            <strong id="userName"></strong>
             <span class="user-email" id="userEmail"></span>
             <button class="theme-toggle" id="themeToggle" type="button" aria-label="Chuyển đổi giao diện sáng/tối">
               <span class="theme-icon">☀️</span>
@@ -28,13 +31,81 @@
           </div>
         </header>
         <main class="dashboard-content">
-          <div class="dashboard-banner">
-            <h3>Chào mừng, <span id="userName"></span>!</h3>
-            <p>Bạn đã đăng nhập với vai trò Chủ trạm.</p>
-          </div>
+          <section class="station-management" aria-labelledby="stationPageTitle">
+            <header class="station-page-heading">
+              <div>
+                <p class="eyebrow">QUẢN LÝ VẬN HÀNH</p>
+                <h1 id="stationPageTitle">Trạm sạc của tôi</h1>
+                <p id="stationSummary">Đang tải danh sách trạm...</p>
+              </div>
+              <button class="primary-btn station-add-button" id="addStationButton" type="button">+ Thêm trạm</button>
+            </header>
+            <div class="station-workspace">
+              <section class="station-list-panel" aria-labelledby="stationListTitle">
+                <div class="station-section-heading">
+                  <h2 id="stationListTitle">Danh sách trạm</h2>
+                  <span id="stationCount" class="station-count">0</span>
+                </div>
+                <div id="stationList" class="station-list" aria-live="polite"></div>
+              </section>
+              <section id="stationDetail" class="station-detail" aria-live="polite">
+                <div class="station-empty-state">
+                  <span class="empty-mark" aria-hidden="true">+</span>
+                  <h2>Chọn một trạm</h2>
+                  <p>Thông tin vị trí và thiết bị của trạm sẽ xuất hiện tại đây.</p>
+                </div>
+              </section>
+            </div>
+          </section>
         </main>
       </div>
     </div>
+    <dialog id="stationDialog" class="station-dialog">
+      <form id="stationForm" novalidate>
+        <div class="station-dialog-heading">
+          <div>
+            <p class="eyebrow">THÔNG TIN ĐỊA ĐIỂM</p>
+            <h2 id="stationDialogTitle">Thêm trạm sạc</h2>
+          </div>
+          <button class="icon-close" id="closeStationDialog" type="button" aria-label="Đóng">×</button>
+        </div>
+        <label class="station-field">Tên trạm
+          <input id="stationName" name="name" maxlength="255" required autocomplete="organization" />
+          <span class="field-error" data-error-for="name"></span>
+        </label>
+        <label class="station-field">Địa chỉ
+          <input id="stationAddress" name="address" maxlength="500" required autocomplete="street-address" />
+          <span class="field-error" data-error-for="address"></span>
+        </label>
+        <div class="station-coordinate-heading">
+          <div><strong>Vị trí</strong><span>Chọn trên bản đồ hoặc nhập tọa độ</span></div>
+          <label id="stationStatusWrap" class="station-field compact-field" hidden>Trạng thái
+            <select id="stationStatus" name="status">
+              <option value="INACTIVE">Chưa hoạt động</option>
+              <option value="ACTIVE">Đang hoạt động</option>
+              <option value="MAINTENANCE">Bảo trì</option>
+            </select>
+          </label>
+        </div>
+        <div id="stationMap" class="station-map" aria-label="Bản đồ chọn vị trí"></div>
+        <p id="mapFallback" class="map-fallback" hidden>Bản đồ chưa tải được. Bạn vẫn có thể nhập tọa độ bên dưới.</p>
+        <div class="station-coordinate-grid">
+          <label class="station-field">Vĩ độ
+            <input id="stationLatitude" name="latitude" type="number" min="-90" max="90" step="any" inputmode="decimal" required />
+            <span class="field-error" data-error-for="latitude"></span>
+          </label>
+          <label class="station-field">Kinh độ
+            <input id="stationLongitude" name="longitude" type="number" min="-180" max="180" step="any" inputmode="decimal" required />
+            <span class="field-error" data-error-for="longitude"></span>
+          </label>
+        </div>
+        <p id="stationFormError" class="auth-alert error" role="alert" hidden></p>
+        <div class="station-dialog-actions">
+          <button class="action-btn" id="cancelStationDialog" type="button">Hủy</button>
+          <button class="primary-btn" id="saveStationButton" type="submit">Lưu trạm</button>
+        </div>
+      </form>
+    </dialog>
     <script type="module" src="/js/pages/dashboard.js"></script>
   </body>
 </html>

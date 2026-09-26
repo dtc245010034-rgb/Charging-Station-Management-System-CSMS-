@@ -9,6 +9,7 @@ me().then((user) => {
   document.getElementById('userEmail').textContent = user.email;
   document.getElementById('userBadge').textContent = user.role;
   document.body.hidden = false;
+  if (user.role === 'STATION_OWNER') import('./station-owner.js').then(({ init }) => init());
 }, () => { document.body.hidden = false; });
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
