@@ -64,7 +64,7 @@ describe('S-04/S-05 quản lý trạm, trụ và đầu nối', () => {
     assert.strictEqual((await patch(`/api/stations/${station.id}`, { status: 'ACTIVE' })).status, 400);
     assert.strictEqual((await request(app).patch(`/api/stations/${station.id}`).set('Cookie', admin.cookie).send({ status: 'ACTIVE' })).status, 200);
     assert.strictEqual((await patch(`/api/stations/${station.id}`, { latitude: 22, longitude: 106 })).status, 400);
-    assert.strictEqual((await patch(`/api/stations/${station.id}`, { status: 'INACTIVE' })).status, 200);
+    assert.strictEqual((await request(app).patch(`/api/stations/${station.id}`).set('Cookie', admin.cookie).send({ status: 'INACTIVE' })).status, 200);
     assert.strictEqual((await patch(`/api/stations/${station.id}`, { latitude: 22, longitude: 106 })).status, 200);
 
     const point = (await request(app).get(`/api/stations/${station.id}`).set('Cookie', owner.cookie)).body.charge_points[0];
