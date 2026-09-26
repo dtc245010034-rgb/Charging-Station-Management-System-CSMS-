@@ -60,9 +60,10 @@ Tài liệu này là **VERIFIED TEST INDEX** (Chỉ mục danh mục kiểm th�
 | **S-01 & T-01** | Khung ứng dụng, Docker container & PostgreSQL baseline | 17 | 17 | 0 | 0 | 0 | 0 | 0 | 100% (17/17) |
 | **S-02 & T-04, T-05** | Xác thực đăng nhập, Argon2id, Cookie session, Lockout 15p | 23 | 23 | 0 | 0 | 0 | 0 | 0 | 100% (23/23) |
 | **S-03 & T-06, T-07** | Phân quyền RBAC, Route Guard Default Deny, Ownership scope | 21 | 18 | 0 | 0 | 3 | 0 | 0 | 85.7% (18/21) |
+| **S-04 & T-08, T-09** | Chủ trạm tạo và sửa trạm, dải tọa độ, idempotency, UI form | 13 | 13 | 0 | 0 | 0 | 0 | 0 | 100% (13/13) |
 | **FB-01 .. FB-11** | Tích hợp toàn trình Frontend Client ↔ Backend API | 11 | 11 | 0 | 0 | 0 | 0 | 0 | 100% (11/11) |
-| **Roadmap Gaps** | Giao diện UI quản lý trạm sạc & trụ sạc (Sprint 1 backlog) | 2 | 0 | 0 | 0 | 0 | 2 | 0 | 0% (0/2) |
-| **TỔNG CỘNG** | **Toàn bộ hệ thống CSMS** | **74** | **69** | **0** | **0** | **3** | **2** | **0** | **93.2% (69/74)** |
+| **Roadmap Gaps** | Giao diện UI quản lý trụ sạc (Sprint 1 backlog K-01/S-05) | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0% (0/1) |
+| **TỔNG CỘNG** | **Toàn bộ hệ thống CSMS** | **86** | **82** | **0** | **0** | **3** | **1** | **0** | **95.3% (82/86)** |
 
 ---
 
@@ -144,7 +145,19 @@ Bảng danh mục chi tiết toàn bộ các ca kiểm thử trong hệ thống 
 | **TC-FB-09** | FB-09 | FB-09 | Client Logic Unit Tests | `frontend/js/` | Unit | Automated | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L202-L215`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
 | **TC-FB-10** | FB-10 | FB-10 | Database Persistence SQL | `backend/src/modules/` | Data Integrity | Static / Code | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L217-L231`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
 | **TC-FB-11** | FB-11 | FB-11 | OWASP Defense XSS/SQLi | `backend/src/middlewares/requireJson.js`, `login.js` | Security | Static / Code | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L233-L253`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **UI-STN-01** | Roadmap | S-03 | Form tạo/sửa trạm sạc | `frontend/pages/station-owner.html` | UI Component | Manual | **NOT FOUND** | REQUIREMENT_LINK | `TEST_REPORT.md` (Roadmap Sprint 1) | **VERIFIED** |
+| **TC-S04-01** | S-04 | T-08 | `S04-AC-01` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L48-L69`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-02** | S-04 | S-04 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L71-L94`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-03** | S-04 | S-04 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L96-L108`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-04** | S-04 | T-09 | `S04-AC-03` | `backend/src/modules/stations/stations.service.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L110-L130`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-05** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L132-L154`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-06** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Security | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L156-L167`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-07** | S-04 | T-08 | `S04-NFR-01`| `backend/migrations/004_station_management.sql` | Data Integrity | Automated / DB | **PASS** | COMBINED | [`stories/S-04.md#L169-L182`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T08-01** | T-08 | T-08 | `T08-01` | `backend/migrations/004_station_management.sql` | Integration | Automated / DB | **PASS** | COMBINED | [`stories/S-04.md#L184-L203`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T08-02** | T-08 | T-08 | `T08-01` | `backend/migrations/004_station_management.sql` | Security | Automated / DB | **PASS** | COMBINED | [`stories/S-04.md#L205-L219`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T08-03** | T-08 | T-08 | `T08-NFR-01`| `backend/migrations/004_station_management.sql` | Architecture | Automated / DB | **PASS** | COMBINED | [`stories/S-04.md#L221-L235`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T09-01** | T-09 | T-09 | `T09-01` | `frontend/js/pages/station-owner.js` | UI Validation | Static Inspection | **PASS** | SOURCE_LINK | [`stories/S-04.md#L237-L248`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T09-02** | T-09 | T-09 | `T09-01` | `frontend/js/pages/station-owner.js` | UI Flow | Static Inspection | **PASS** | SOURCE_LINK | [`stories/S-04.md#L250-L260`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T09-03** | T-09 | T-09 | `T09-NFR-01`| `frontend/js/pages/station-owner.js` | UI Defense | Static Inspection | **PASS** | SOURCE_LINK | [`stories/S-04.md#L262-L273`](./stories/S-04.md) | **VERIFIED** |
 | **UI-CP-01** | Roadmap | S-03 | Form quản lý trụ sạc | `frontend/pages/operator.html` | UI Component | Manual | **NOT FOUND** | REQUIREMENT_LINK | `TEST_REPORT.md` (Roadmap Sprint 1) | **VERIFIED** |
 
 ---
@@ -175,8 +188,7 @@ Danh mục các yêu cầu nghiệp vụ / tính năng nằm trong kế hoạch 
 
 | Hạng mục thiếu hụt | Story / Task liên quan | Mô tả khoảng trống | Trạng thái hiện tại | Kế hoạch kiểm thử dự kiến |
 |:---|:---:|:---|:---:|:---|
-| **UI Quản lý Trạm Sạc** (`UI-STN-01`) | Story S-03 / Task T-07 | Chưa có form UI giao diện trực quan cho phép Station Owner tạo mới hoặc cập nhật thông tin trạm sạc trên `frontend/pages/station-owner.html`. Hiện tại chỉ xác minh được qua API Backend. | **NOT FOUND** | Thiết kế kiểm thử E2E UI khi Frontend hoàn thiện form trong Sprint 2. |
-| **UI Quản lý Trụ Sạc** (`UI-CP-01`) | Story S-03 / Task T-06 | Chưa có bảng điều khiển và biểu mẫu CRUD trụ sạc (Charge Points) trên giao diện `frontend/pages/operator.html`. | **NOT FOUND** | Thiết kế kiểm thử E2E UI khi module giao diện Operator hoàn thành. |
+| **UI Quản lý Trụ Sạc** (`UI-CP-01`) | Story S-05 / Task T-06 | Chưa có bảng điều khiển và biểu mẫu CRUD trụ sạc (Charge Points) trên giao diện `frontend/pages/operator.html`. | **NOT FOUND** | Thiết kế kiểm thử E2E UI khi module giao diện Operator hoàn thành. |
 
 ---
 
@@ -217,7 +229,7 @@ Bảng ma trận truy vết hồi quy này tuân thủ cấu trúc 4 tầng phâ
 
 ## 9. Inventory Verification Metadata
 
-- **Current Repository Snapshot**: Commit `45de7c685f48c28b96f797b1f55965d4125d44e9` (nhánh `feature/update-csms-docs`).
+- **Current Repository Snapshot**: Commit `68d877799eb407b0421ca44a82514f9f4c639193` (nhánh `main`).
 - **Baseline Test Snapshot**: Commit `4bc5758` (24/09/2026).
 - **Test Inventory Verification Date**: 26/09/2026.
 - **Documents Inspected & Cross-Checked**:
@@ -226,6 +238,7 @@ Bảng ma trận truy vết hồi quy này tuân thủ cấu trúc 4 tầng phâ
   - [`docs/testing/stories/S-01.md`](./stories/S-01.md)
   - [`docs/testing/stories/S-02.md`](./stories/S-02.md)
   - [`docs/testing/stories/S-03.md`](./stories/S-03.md)
+  - [`docs/testing/stories/S-04.md`](./stories/S-04.md)
   - [`docs/testing/integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md)
   - [`docs/testing/TEST_REPORT.md`](./TEST_REPORT.md)
   - [`docs/testing/REGRESSION_REPORT.md`](./REGRESSION_REPORT.md)
