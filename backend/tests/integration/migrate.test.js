@@ -29,7 +29,7 @@ describe('S-01 migrate: baseline up/down/up', () => {
   });
 
   it('down về rỗng, rồi up lại sạch', async () => {
-    for (let i = 0; i < 4; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       const down = run('src/db/migrate.js', ['down']);
       assert.strictEqual(down.status, 0, down.stderr);
     }
@@ -42,6 +42,8 @@ describe('S-01 migrate: baseline up/down/up', () => {
   it('004: tọa độ chính xác, index, idempotency và rollback; 003 vẫn rollback độc lập', async () => {
     const has = async (table, column) => (await query('SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2', [table, column])).rowCount === 1;
     const index = async (name) => (await query('SELECT 1 FROM pg_indexes WHERE indexname = $1', [name])).rowCount === 1;
+    // Bỏ 005 (chuẩn hoá mã trụ) trước để cách ly các khẳng định dưới đây với 004.
+    assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0);
     assert.ok(await has('stations', 'owner_id') && await has('audit_logs', 'ip'));
     assert.ok(await index('stations_owner_id_idx') && await index('charge_points_station_id_idx'));
     assert.ok(await has('idempotency_keys', 'response_body') && await index('stations_coordinates_idx'));
@@ -56,8 +58,9 @@ describe('S-01 migrate: baseline up/down/up', () => {
     assert.strictEqual(down.status, 0, down.stderr);
     assert.ok(!await has('idempotency_keys', 'response_body') && !await index('stations_coordinates_idx'));
     assert.ok(await has('stations', 'owner_id') && await has('audit_logs', 'ip'));
-    assert.strictEqual(run('src/db/migrate.js').status, 0);
-    assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0);
+    assert.strictEqual(run('src/db/migrate.js').status, 0); // up áp lại cả 004 và 005
+    assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0); // bỏ 005
+    assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0); // bỏ 004
     const downOwner = run('src/db/migrate.js', ['down']);
     assert.strictEqual(downOwner.status, 0, downOwner.stderr);
     assert.ok(!await has('stations', 'owner_id') && !await has('audit_logs', 'ip'));
