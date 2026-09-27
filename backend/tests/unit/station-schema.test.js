@@ -14,6 +14,12 @@ describe('S-04/S-05 input validation', () => {
     assert.strictEqual(createStation.safeParse({ name: 'A', address: 'B', latitude: 20 }).success, false);
   });
 
+  it('trims station names and rejects blank-only strings', () => {
+    assert.strictEqual(createStation.safeParse({ name: '   ', address: 'B' }).success, false);
+    assert.strictEqual(createStation.parse({ name: '  A  ', address: ' B ' }).name, 'A');
+    assert.strictEqual(createStation.parse({ name: '  A  ', address: ' B ' }).address, 'B');
+  });
+
   it('requires both coordinates when a partial station update changes location', () => {
     const { updateBody } = require('../../src/modules/stations/stations.schema');
     assert.strictEqual(updateBody.safeParse({ latitude: 21 }).success, false);

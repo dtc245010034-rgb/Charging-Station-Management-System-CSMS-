@@ -25,31 +25,35 @@ async function get(actor, id) {
 }
 
 async function create(actor, data, idempotencyKey) {
-  if (idempotencyKey) {
-    const requestHash = createHash('sha256').update(JSON.stringify(data)).digest('hex');
-    const result = await withTransaction(async (client) => {
-      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`station-create:${actor.id}:${idempotencyKey}`]);
-      const existing = await client.query(
-        'SELECT request_hash, response_body FROM idempotency_keys WHERE user_id = $1 AND key = $2',
-        [actor.id, idempotencyKey]
-      );
-      if (existing.rowCount) {
-        if (existing.rows[0].request_hash !== requestHash) throw new ConflictError('Idempotency-Key đã được dùng cho dữ liệu khác');
-        return { station: existing.rows[0].response_body, created: false };
-      }
-      const station = await repo.insertForIdempotency(client, actor, data);
-      await client.query(
-        'INSERT INTO idempotency_keys (user_id, key, request_hash, response_body) VALUES ($1, $2, $3, $4::jsonb)',
-        [actor.id, idempotencyKey, requestHash, JSON.stringify(station)]
-      );
-      return { station, created: true };
-    });
-    if (result.created) await audit.record(actor.id, 'CREATE', 'station', result.station.id, { fields: Object.keys(data) });
-    return result.station;
-  }
-  const result = await repo.insert(actor, data);
-  await audit.record(actor.id, 'CREATE', 'station', result.lastInsertRowid, { fields: Object.keys(data) });
-  return repo.findById(actor, result.lastInsertRowid);
+  const normalizedData = {
+    ...data,
+    name: typeof data.name === 'string' ? data.name.trim() : data.name,
+    address: typeof data.address === 'string' ? data.address.trim() : data.address,
+    status: data.status ?? 'INACTIVE',
+  };
+  const requestHash = createHash('sha256').update(JSON.stringify(normalizedData)).digest('hex');
+  const key = idempotencyKey || `station:${actor.id}:${requestHash}`;
+
+  const result = await withTransaction(async (client) => {
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`station-create:${actor.id}:${key}`]);
+    const existing = await client.query(
+      'SELECT request_hash, response_body FROM idempotency_keys WHERE user_id = $1 AND key = $2',
+      [actor.id, key]
+    );
+    if (existing.rowCount) {
+      if (existing.rows[0].request_hash !== requestHash) throw new ConflictError('Idempotency-Key đã được dùng cho dữ liệu khác');
+      return { station: existing.rows[0].response_body, created: false };
+    }
+    const station = await repo.insertForIdempotency(client, actor, normalizedData);
+    await client.query(
+      'INSERT INTO idempotency_keys (user_id, key, request_hash, response_body) VALUES ($1, $2, $3, $4::jsonb)',
+      [actor.id, key, requestHash, JSON.stringify(station)]
+    );
+    return { station, created: true };
+  });
+
+  if (result.created) await audit.record(actor.id, 'CREATE', 'station', result.station.id, { fields: Object.keys(normalizedData) });
+  return result.station;
 }
 
 async function update(actor, id, data) {

@@ -2,6 +2,7 @@ const { z } = require('zod');
 
 const REQUIRED = 'name và address là bắt buộc';
 const status = z.enum(['ACTIVE', 'INACTIVE', 'MAINTENANCE'], { message: 'status không hợp lệ' });
+const trimmedString = (label) => z.preprocess((value) => (typeof value === 'string' ? value.trim() : value), z.string({ message: `${label} là bắt buộc` }).min(1, `${label} là bắt buộc`));
 const coordinate = (label, min, max) => z.union([
   z.number().finite(),
   z.string().trim().regex(/^-?\d+(?:\.\d{1,8})?$/, `${label} phải có tối đa 8 chữ số thập phân`),
@@ -13,16 +14,16 @@ const validateCoordinatePair = (data, context) => {
 };
 
 const createBody = z.object({
-  name: z.string({ message: REQUIRED }).min(1, REQUIRED),
-  address: z.string({ message: REQUIRED }).min(1, REQUIRED),
+  name: trimmedString('Tên trạm'),
+  address: trimmedString('Địa chỉ'),
   latitude: coordinate('Vĩ độ', -90, 90).nullish(),
   longitude: coordinate('Kinh độ', -180, 180).nullish(),
   status: status.default('INACTIVE'),
 }, { message: REQUIRED }).superRefine(validateCoordinatePair);
 
 const updateBody = z.object({
-  name: z.string().min(1).optional(),
-  address: z.string().min(1).optional(),
+  name: trimmedString('Tên trạm').optional(),
+  address: trimmedString('Địa chỉ').optional(),
   latitude: coordinate('Vĩ độ', -90, 90).nullish(),
   longitude: coordinate('Kinh độ', -180, 180).nullish(),
   status: status.optional(),
