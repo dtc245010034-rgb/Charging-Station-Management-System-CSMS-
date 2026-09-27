@@ -5,7 +5,6 @@ const { denyOrNotFound } = require('../../lib/ownership');
 const { BadRequestError, ConflictError } = require('../../lib/errors');
 const connections = require('./connection-registry');
 
-const numeric = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const duplicateCode = (error) => (error.code === '23505' ? new ConflictError('Mã trụ đã tồn tại') : error);
 
 const list = (actor) => repo.list(actor);
@@ -23,7 +22,7 @@ async function create(actor, stationId, data) {
   let id;
   try {
     id = await withTransaction(async (client) => {
-      const cpId = await repo.insert(client, stationId, { ...data, power_kw: numeric(data.power_kw) });
+      const cpId = await repo.insert(client, stationId, data);
       for (let connectorNo = 1; connectorNo <= data.connector_count; connectorNo += 1) await repo.insertConnector(client, cpId, connectorNo);
       return cpId;
     });
