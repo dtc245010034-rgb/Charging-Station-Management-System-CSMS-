@@ -1,0 +1,136 @@
+[
+  {
+    "t": "2026-09-27T16:23:36.576Z",
+    "direction": "> gửi",
+    "message": [
+      2,
+      "sim-1",
+      "BootNotification",
+      {
+        "chargePointVendor": "SpikeSim",
+        "chargePointModel": "K-01-Virtual"
+      }
+    ]
+  },
+  {
+    "t": "2026-09-27T16:23:36.579Z",
+    "direction": "< nhận",
+    "message": [
+      3,
+      "welcome-1790526216574",
+      {
+        "chargePoint": "K01-SIM-01",
+        "status": "Connected"
+      }
+    ]
+  },
+  {
+    "t": "2026-09-27T16:23:36.579Z",
+    "direction": "> gửi",
+    "message": [
+      2,
+      "sim-2",
+      "Heartbeat",
+      {}
+    ]
+  },
+  {
+    "t": "2026-09-27T16:23:36.579Z",
+    "direction": "< nhận",
+    "message": [
+      3,
+      "sim-1",
+      {
+        "status": "Accepted",
+        "currentTime": "2026-09-27T16:23:36.579Z",
+        "interval": 60
+      }
+    ]
+  },
+  {
+    "t": "2026-09-27T16:23:36.579Z",
+    "direction": "> gửi",
+    "message": [
+      2,
+      "sim-3",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Available",
+        "errorCode": "NoError"
+      }
+    ]
+  },
+  {
+    "t": "2026-09-27T16:23:36.580Z",
+    "direction": "< nhận",
+    "message": [
+      3,
+      "sim-2",
+      {
+        "currentTime": "2026-09-27T16:23:36.579Z"
+      }
+    ]
+  },
+  {
+    "t": "2026-09-27T16:23:36.580Z",
+    "direction": "> gửi",
+    "message": [
+      2,
+      "sim-4",
+      "Authorize",
+      {
+        "idTag": "DEMO-TAG-001"
+      }
+    ]
+  },
+  {
+    "t": "2026-09-27T16:23:36.580Z",
+    "direction": "< nhận",
+    "message": [
+      3,
+      "sim-3",
+      {
+        "status": "Accepted"
+      }
+    ]
+  },
+  {
+    "t": "2026-09-27T16:23:36.581Z",
+    "direction": "> gửi",
+    "message": [
+      2,
+      "sim-5",
+      "StartTransaction",
+      {
+        "connectorId": 1,
+        "idTag": "DEMO-TAG-001",
+        "meterStart": 0,
+        "timestamp": "2026-09-27T16:23:36.581Z"
+      }
+    ]
+  },
+  {
+    "t": "2026-09-27T16:23:36.581Z",
+    "direction": "< nhận",
+    "message": [
+      3,
+      "sim-4",
+      {
+        "idTagInfo": {
+          "status": "Accepted"
+        }
+      }
+    ]
+  },
+  {
+    "t": "2026-09-27T16:23:36.581Z",
+    "direction": "< nhận",
+    "message": [
+      4,
+      "sim-5",
+      "NotSupported",
+      {}
+    ]
+  }
+]
