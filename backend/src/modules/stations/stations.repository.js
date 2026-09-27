@@ -13,12 +13,10 @@ const findById = (actor, id) => {
 const existsById = async (id) => Boolean(await prepare('SELECT 1 FROM stations WHERE id = ?').get(id));
 const chargePointsOf = (stationId) => prepare('SELECT * FROM charge_points WHERE station_id = ? ORDER BY id').all(stationId);
 const connectorsOf = (chargePointId) => prepare('SELECT * FROM connectors WHERE charge_point_id = ? ORDER BY connector_no').all(chargePointId);
-const insert = (actor, s) => prepare('INSERT INTO stations (name, address, latitude, longitude, status, owner_id) VALUES (?, ?, ?, ?, ?, ?)')
-  .run(s.name, s.address, s.latitude ?? null, s.longitude ?? null, s.status, actor.id);
 const insertForIdempotency = async (client, actor, station) => {
   const result = await client.query(
-    'INSERT INTO stations (name, address, latitude, longitude, status, owner_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [station.name, station.address, station.latitude ?? null, station.longitude ?? null, station.status, actor.id]
+    'INSERT INTO stations (name, address, latitude, longitude, owner_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+    [station.name, station.address, station.latitude, station.longitude, actor.id]
   );
   return result.rows[0];
 };
@@ -30,4 +28,4 @@ const update = (id, fields) => {
     .run(...keys.map((key) => fields[key]), id);
 };
 
-module.exports = { list, findById, existsById, chargePointsOf, connectorsOf, insert, insertForIdempotency, update, UPDATABLE };
+module.exports = { list, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, UPDATABLE };

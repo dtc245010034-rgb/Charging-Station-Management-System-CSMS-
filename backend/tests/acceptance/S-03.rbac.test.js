@@ -4,6 +4,7 @@ const request = require('supertest');
 const { run, query, resetSchema, truncateAll } = require('../helpers/db');
 const { app, closePool } = require('../helpers/app');
 const { createUser } = require('../helpers/auth');
+const { stationBody, postStation } = require('../helpers/station');
 
 const denials = async () => (await query("SELECT * FROM audit_logs WHERE action = 'ACCESS_DENIED' ORDER BY id")).rows;
 
@@ -27,8 +28,8 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
     for (const [key, role] of [['A', 'STATION_OWNER'], ['B', 'STATION_OWNER'], ['admin', 'ADMIN'], ['op', 'OPERATOR'], ['driver', 'DRIVER']]) {
       u[key] = await createUser(`${key.toLowerCase()}@example.com`, role, 'password123');
     }
-    stationA = (await as(u.A).post('/api/stations', { name: 'Trạm A', address: 'Hà Nội' })).body;
-    stationB = (await as(u.B).post('/api/stations', { name: 'Trạm B', address: 'Đà Nẵng' })).body;
+    stationA = (await postStation(u.A, stationBody({ name: 'Trạm A' }))).body;
+    stationB = (await postStation(u.B, stationBody({ name: 'Trạm B', address: 'Đà Nẵng' }))).body;
     cpA = (await as(u.A).post(`/api/stations/${stationA.id}/charge-points`, { code: 'CP-A' })).body;
     cpB = (await as(u.B).post(`/api/stations/${stationB.id}/charge-points`, { code: 'CP-B' })).body;
   });
@@ -97,7 +98,7 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
   });
 
   it('S-03: owner_id lấy từ phiên, bỏ qua owner_id trong body', async () => {
-    const res = await as(u.A).post('/api/stations', { name: 'Trạm A2', address: 'HN', owner_id: u.B.id });
+    const res = await postStation(u.A, stationBody({ name: 'Trạm A2', owner_id: u.B.id }));
     assert.strictEqual(res.status, 201);
     const row = (await query('SELECT owner_id FROM stations WHERE id = $1', [res.body.id])).rows[0];
     assert.strictEqual(String(row.owner_id), String(u.A.id));
@@ -110,7 +111,7 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
   });
 
   it('S-03 NFR: audit CREATE/UPDATE chỉ lưu tên trường, không lưu giá trị', async () => {
-    const st = await as(u.A).post('/api/stations', { name: 'GiaTriBiMat-Ten', address: 'GiaTriBiMat-DiaChi' });
+    const st = await postStation(u.A, stationBody({ name: 'GiaTriBiMat-Ten', address: 'GiaTriBiMat-DiaChi' }));
     await as(u.A).patch(`/api/stations/${st.body.id}`, { name: 'GiaTriBiMat-TenMoi' });
     const cp = await as(u.A).post(`/api/stations/${st.body.id}/charge-points`, { code: 'GiaTriBiMat-Ma', vendor: 'GiaTriBiMat-Hang' });
     assert.strictEqual(cp.status, 201);

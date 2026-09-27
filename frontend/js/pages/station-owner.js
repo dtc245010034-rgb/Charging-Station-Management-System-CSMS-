@@ -237,9 +237,12 @@ async function saveStation(event) {
     name: get('stationName').value.trim(),
     address: get('stationAddress').value.trim(),
   };
-  if (!state.editing || state.editing.status !== 'ACTIVE') {
-    payload.latitude = get('stationLatitude').value.trim() || null;
-    payload.longitude = get('stationLongitude').value.trim() || null;
+  const latitude = get('stationLatitude').value.trim();
+  const longitude = get('stationLongitude').value.trim();
+  // Trạm cũ chưa có toạ độ: sửa tên/địa chỉ thì không gửi toạ độ (API không nhận null).
+  if ((!state.editing || state.editing.status !== 'ACTIVE') && latitude && longitude) {
+    payload.latitude = latitude;
+    payload.longitude = longitude;
   }
   if (state.editing) payload.status = get('stationStatus').value;
   button.disabled = true;
