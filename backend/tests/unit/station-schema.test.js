@@ -25,4 +25,16 @@ describe('S-04/S-05 input validation', () => {
     assert.strictEqual(createChargePoint.parse({ code: 'CP-1' }).connector_count, 4);
     assert.strictEqual(createChargePoint.safeParse({ code: 'CP-2', connector_count: 5 }).success, false);
   });
+
+  it('trims whitespace and normalizes OCPP-style codes and station status', () => {
+    const station = createStation.parse({ name: '   Trạm A   ', address: '   Hà Nội   ', status: ' active ' });
+    const cp = createChargePoint.parse({ code: '  cp-n1  ' });
+
+    assert.strictEqual(station.name, 'Trạm A');
+    assert.strictEqual(station.address, 'Hà Nội');
+    assert.strictEqual(station.status, 'ACTIVE');
+    assert.strictEqual(cp.code, 'CP-N1');
+    assert.strictEqual(createStation.safeParse({ name: '   ', address: 'A' }).success, false);
+    assert.strictEqual(createChargePoint.safeParse({ code: '   ' }).success, false);
+  });
 });
