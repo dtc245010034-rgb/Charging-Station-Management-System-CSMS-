@@ -2,10 +2,11 @@
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
 > **Người thực hiện**: TESTER / QA ANALYST  
-> **Snapshot Date**: 26/09/2026  
-> **Git Commit**: `45de7c685f48c28b96f797b1f55965d4125d44e9` (nhánh `feature/update-csms-docs`)  
-> **Tài liệu quy chuẩn**: [`docs/testing/README.md`](./README.md) (AI TESTER OPERATING MANUAL)  
-> **Bản đồ tham chiếu**: [`docs/testing/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) (VERIFIED PROJECT MAP)  
+> **Snapshot Date**: 27/09/2026  
+> **Git Commit**: `4ab9f0f11f3b037f6e991984002243a0d80884d0` (nhánh `main`)  
+> **Entry Point / Router**: [`docs/README.md`](./README.md)  
+> **Tài liệu quy chuẩn**: [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md) (BỘ QUY CHUẨN TESTER TRUNG TÂM)  
+> **Bản đồ tham chiếu**: [`docs/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) (VERIFIED PROJECT MAP)  
 
 ---
 
@@ -15,41 +16,22 @@ Tài liệu này là **VERIFIED TEST INDEX** (Chỉ mục danh mục kiểm th�
 - Đóng vai trò là nguồn sự thật trung tâm quản lý danh mục kiểm thử, ánh xạ giữa ca kiểm thử (Test Case), yêu cầu nghiệp vụ (AC/NFR), nhiệm vụ kỹ thuật (Task), câu chuyện người dùng (Story) và thành phần mã nguồn (Source Component).
 - Lưu giữ và bảo toàn toàn bộ các bài kiểm thử lịch sử (Historical Tests) phục vụ cơ chế truy vết hai chiều (Bidirectional Traceability) và phân tích ảnh hưởng khi kiểm thử hồi quy (Regression Analysis).
 - Không chứa nội dung chi tiết kịch bản kiểm thử (nội dung kịch bản được lưu trữ độc lập tại `stories/*.md` và `integration/*.md`).
+- **Phân lập với General Review**: Tài liệu này **CHỈ THEO DÕI VÀ LƯU TRỮ KẾT QUẢ CỦA LUỒNG REQUIREMENT TESTING**. Mọi quan sát kỹ thuật từ luồng **General Review** được quản lý độc lập tại Khu vực B của hồ sơ Story hoặc báo cáo review riêng, tuyệt đối không tự ý đưa vào bảng này làm biến đổi Test Status của hệ thống.
 
 ---
 
-## 2. Inventory Rules & Canonical Traceability Logic
+## 2. Test Inventory Alignment & Traceability Standards
 
-1. **Nguyên tắc định danh thực tế**: Tuyệt đối không tự bịa đặt hoặc suy diễn Test ID. Chỉ ghi nhận các Test ID thực sự tồn tại trong tài liệu kiểm định hoặc bằng chứng thực thi. Nếu chưa tìm thấy test cụ thể, bắt buộc ghi `Historical Test ID = NONE`.
-2. **Mô hình 4 Tầng Bắt Buộc (4 Mandatory Layers)**:
+Tài liệu này chỉ lưu trữ **SỰ THẬT KIỂM THỬ (TEST FACTS)** đã được xác minh thực tế trên hệ thống. Mọi quy chuẩn vận hành, định nghĩa và luật bất biến được quản lý tập trung tại [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md):
 
-| Tầng | Câu hỏi nghiệp vụ cần trả lời | Field tương ứng | Tập giá trị chuẩn (Canonical Enums) |
-|:---:|---|---|---|
-| **1** | Source thay đổi thuộc kiểu cơ chế ảnh hưởng kiến trúc nào? | **`Impact Type`** | `DIRECT`, `DEPENDENCY`, `SHARED_COMPONENT`, `POTENTIAL_IMPACT`, `NOT VERIFIED` |
-| **2** | Trong quá trình điều tra, quan hệ nhân quả hiện đang ở mức nào? | **`Investigation Label`** | `RELATED`, `AFFECTED`, `REGRESSION CANDIDATE`, `CONFIRMED ROOT CAUSE` |
-| **3** | Historical Test nào cần xem xét chạy lại trong chu trình hồi quy? | **`Regression State`** | `REGRESSION CANDIDATE`, `PASS`, `FAIL`, `BLOCKED`, `NOT VERIFIED` |
-| **4** | Test thực tế khi thực thi đã cho kết quả gì? | **`Test Status`** | `PASS`, `FAIL`, `BLOCKED`, `NOT VERIFIED`, `NOT FOUND`, `NOT RUN` |
-| **Độc lập** | Bằng chứng thực tế (Evidence) đã đủ căn cứ xác minh hay chưa? | **`Verification`** | `VERIFIED`, `NOT VERIFIED` |
-
-3. **Quy tắc cấm tuyệt đối (Forbidden Substitutions)**:
-   - CẤM dùng `RELATED`, `AFFECTED`, `REGRESSION CANDIDATE`, `CONFIRMED ROOT CAUSE` làm `Impact Type`.
-   - CẤM dùng `SHARED_COMPONENT`, `DIRECT`, `DEPENDENCY` làm `Investigation Label`.
-   - CẤM tạo enum tự chế: `PENDING_VERIFICATION`, `SUSPECTED_SHARED_COMPONENT`, `SUSPECTED_REGRESSION`, `REGRESSION_CONFIRMED`.
-   - CẤM gộp hoặc dùng `Test Status` thay cho `Verification` và ngược lại.
-4. **Phân biệt độc lập giữa Status và Verification**:
+1. **Tuân thủ Canonical Enums**: Mọi giá trị gán cho `Impact Type`, `Investigation Label`, `Regression State`, `Test Status`, `Verification`, `Evidence Basis` và `Defect Classification` đều tuân thủ nghiêm ngặt theo chuẩn mực tại [`TESTER_STANDARD.md` Mục 8](./TESTER_STANDARD.md#8-hệ-thống-giá-trị-chuẩn-canonical-enums--quy-tắc-bảo-toàn).
+2. **Quy tắc bảo tồn bài test lịch sử**: 100% các Test Case từ Story cũ (`S-01`, `S-02`, `S-03`) và Story hiện tại (`S-04`) đều được duy trì nguyên vẹn để phục vụ phân tích tác động và chọn lọc ứng viên kiểm thử hồi quy (Regression Candidates).
+3. **Phân biệt độc lập giữa Status và Verification**:
    - `Status`: Kết quả thực thi thực tế của bài test (`PASS`, `FAIL`, `BLOCKED`, `NOT VERIFIED`, `NOT FOUND`, `NOT RUN`).
    - `Verification`: Trạng thái kiểm thực của bằng chứng và mapping (`VERIFIED`, `NOT VERIFIED`).
-   - Một Historical Test có thể có `Status = PASS` nhưng `Verification = NOT VERIFIED` (khi impact hiện tại chưa xác minh). Không được đổi `Status = PASS` thành `Status = NOT VERIFIED` chỉ vì impact chưa xác minh.
-5. **Phân loại nguồn bằng chứng (Evidence Basis)**:
-   - Chỉ được sử dụng: `STORY_DOC`, `TEST_INVENTORY`, `TEST_REPORT`, `SOURCE_LINK`, `REQUIREMENT_LINK`, `GIT_DIFF`, `DEPENDENCY`, `COMBINED`, `NONE`.
-   - CẤM tự tạo enum: `CODE_REVIEWED`, `LOG_FOUND`, `MANUAL_CONFIRMATION`, `SHARED_LOGIC`.
-6. **Bảo tồn bài test lịch sử**: Không xóa các bài test thuộc Story cũ (S-01, S-02, S-03). Chúng là cơ sở bắt buộc để bảo vệ hệ thống trước nguy cơ hồi quy (Regression Candidate).
-7. **Phân biệt rõ ràng**:
-   - `NOT RUN`: Test đã thiết kế nhưng chưa đến lượt chạy.
-   - `NOT VERIFIED`: Chưa đủ evidence để xác minh kết luận.
-   - `BLOCKED`: Bị chặn do rào cản môi trường/cấu hình.
-   - `FAIL`: Đã chạy và hành vi sai lệch yêu cầu.
-   - `PASS`: Đã chạy và có bằng chứng đạt 100%.
+   - Tuyệt đối không hoán đổi hoặc suy đoán kết quả khi chưa có bằng chứng thực tế đo được.
+4. **Không định nghĩa luật tại đây**: Mọi thắc mắc về tiêu chí chấp nhận trạng thái, chu trình chuyển trạng thái 4 tầng và nguyên tắc điều tra lỗi, tham chiếu trực tiếp tại [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md).
+5. **Ranh giới bất khả xâm phạm**: Không biến General Review Observation thành Defect/Bug hay làm đổi `Status` trong bảng này nếu chưa có bằng chứng vi phạm AC/NFR.
 
 ---
 
@@ -146,8 +128,8 @@ Bảng danh mục chi tiết toàn bộ các ca kiểm thử trong hệ thống 
 | **TC-FB-10** | FB-10 | FB-10 | Database Persistence SQL | `backend/src/modules/` | Data Integrity | Static / Code | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L217-L231`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
 | **TC-FB-11** | FB-11 | FB-11 | OWASP Defense XSS/SQLi | `backend/src/middlewares/requireJson.js`, `login.js` | Security | Static / Code | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L233-L253`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
 | **TC-S04-01** | S-04 | T-08 | `S04-AC-01` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L48-L69`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-02** | S-04 | S-04 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L71-L94`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-03** | S-04 | S-04 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L96-L108`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-02** | S-04 | T-08 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L71-L94`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-03** | S-04 | T-08 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L96-L108`](./stories/S-04.md) | **VERIFIED** |
 | **TC-S04-04** | S-04 | T-09 | `S04-AC-03` | `backend/src/modules/stations/stations.service.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L110-L130`](./stories/S-04.md) | **VERIFIED** |
 | **TC-S04-05** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L132-L154`](./stories/S-04.md) | **VERIFIED** |
 | **TC-S04-06** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Security | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L156-L167`](./stories/S-04.md) | **VERIFIED** |
@@ -198,7 +180,7 @@ Danh sách các bài kiểm thử lịch sử được xác định là **Regres
 
 ### 8.1. Bảng ma trận ánh xạ kiểm thử hồi quy (Canonical Regression Mapping Matrix)
 
-Bảng ma trận truy vết hồi quy này tuân thủ cấu trúc 4 tầng phân tách độc lập và bộ Canonical Enums chuẩn hóa quy định tại [README.md](./README.md#14-mô-hình-chuỗi-truy-vết-qa-chuẩn-hóa-canonical-qa-traceability-model):
+Bảng ma trận truy vết hồi quy này tuân thủ cấu trúc 4 tầng phân tách độc lập và bộ Canonical Enums chuẩn hóa quy định tại [`TESTER_STANDARD.md` Mục 7](./TESTER_STANDARD.md#7-mô-hình-truy-vết-chuẩn-và-hai-luồng-phân-tích-độc-lập-canonical-traceability--dual-stream-model):
 
 | Source Change | Historical Test | Impact Type | Investigation Label | Regression State | Evidence Basis | Verification |
 |:---|:---|:---:|:---:|:---:|:---:|:---:|
@@ -229,19 +211,20 @@ Bảng ma trận truy vết hồi quy này tuân thủ cấu trúc 4 tầng phâ
 
 ## 9. Inventory Verification Metadata
 
-- **Current Repository Snapshot**: Commit `68d877799eb407b0421ca44a82514f9f4c639193` (nhánh `main`).
+- **Current Repository Snapshot**: Commit `4ab9f0f11f3b037f6e991984002243a0d80884d0` (nhánh `main`).
 - **Baseline Test Snapshot**: Commit `4bc5758` (24/09/2026).
-- **Test Inventory Verification Date**: 26/09/2026.
+- **Test Inventory Verification Date**: 27/09/2026.
 - **Documents Inspected & Cross-Checked**:
-  - [`docs/testing/README.md`](./README.md) (AI Tester Operating Manual)
-  - [`docs/testing/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) (Verified Project Map)
-  - [`docs/testing/stories/S-01.md`](./stories/S-01.md)
-  - [`docs/testing/stories/S-02.md`](./stories/S-02.md)
-  - [`docs/testing/stories/S-03.md`](./stories/S-03.md)
-  - [`docs/testing/stories/S-04.md`](./stories/S-04.md)
-  - [`docs/testing/integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md)
-  - [`docs/testing/TEST_REPORT.md`](./TEST_REPORT.md)
-  - [`docs/testing/REGRESSION_REPORT.md`](./REGRESSION_REPORT.md)
-  - [`docs/testing/BUG_REPORT.md`](./BUG_REPORT.md)
-  - [`docs/testing/TEST_PLAN.md`](./TEST_PLAN.md)
+  - [`docs/README.md`](./README.md) (AI Tester Entry Point & Router)
+  - [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md) (Bộ quy chuẩn Tester trung tâm)
+  - [`docs/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) (Verified Project Map)
+  - [`docs/stories/S-01.md`](./stories/S-01.md)
+  - [`docs/stories/S-02.md`](./stories/S-02.md)
+  - [`docs/stories/S-03.md`](./stories/S-03.md)
+  - [`docs/stories/S-04.md`](./stories/S-04.md)
+  - [`docs/integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md)
+  - [`docs/testing/TEST_REPORT.md`](./testing/TEST_REPORT.md)
+  - [`docs/testing/REGRESSION_REPORT.md`](./testing/REGRESSION_REPORT.md)
+  - [`docs/testing/BUG_REPORT.md`](./testing/BUG_REPORT.md)
+  - [`docs/testing/TEST_PLAN.md`](./testing/TEST_PLAN.md)
 - **Inventory Verification Status**: **VERIFIED** (100% Test Case có bằng chứng thực tế, không có Test Case mồ côi hoặc suy đoán).
