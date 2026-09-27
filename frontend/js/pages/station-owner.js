@@ -21,6 +21,19 @@ function showError(field, message) {
   if (error) error.textContent = message || '';
 }
 
+function applyFieldErrors(details = []) {
+  const fields = new Set();
+  for (const detail of details) {
+    const field = typeof detail.field === 'string' ? detail.field.split('.').at(-1) : '';
+    if (!['name', 'address', 'latitude', 'longitude', 'status'].includes(field)) continue;
+    showError(field, detail.message || '');
+    fields.add(field);
+  }
+  for (const field of ['name', 'address', 'latitude', 'longitude']) {
+    if (!fields.has(field)) showError(field, '');
+  }
+}
+
 function setMapMarker(latitude, longitude, pan = false) {
   if (!state.map || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
   const position = [latitude, longitude];
@@ -230,8 +243,9 @@ function validateStationForm() {
 
 async function saveStation(event) {
   event.preventDefault();
-  if (!validateStationForm()) return;
   const button = get('saveStationButton');
+  if (button.disabled) return;
+  if (!validateStationForm()) return;
   const form = get('stationForm');
   const payload = {
     name: get('stationName').value.trim(),
@@ -259,8 +273,13 @@ async function saveStation(event) {
     get('stationDialog').close();
     await loadStations();
   } catch (error) {
-    get('stationFormError').textContent = error.message;
-    get('stationFormError').hidden = false;
+    if (Array.isArray(error.details) && error.details.length) {
+      applyFieldErrors(error.details);
+      get('stationFormError').hidden = true;
+    } else {
+      get('stationFormError').textContent = error.message;
+      get('stationFormError').hidden = false;
+    }
   } finally {
     button.disabled = false;
     button.textContent = state.editing ? 'Lưu thay đổi' : 'Lưu trạm';
@@ -301,6 +320,8 @@ function wireChargePointForm(station) {
   });
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const button = get('addChargePointButton');
+    if (button.disabled) return;
     const code = codeInput.value.trim();
     const error = get('chargePointFormError');
     if (!code) {
@@ -310,7 +331,6 @@ function wireChargePointForm(station) {
       return;
     }
     if (codeAvailable === false) return;
-    const button = get('addChargePointButton');
     button.disabled = true;
     button.textContent = 'Đang thêm...';
     error.hidden = true;
