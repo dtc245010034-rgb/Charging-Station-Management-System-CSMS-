@@ -10,7 +10,7 @@
 
 ## 1. Hệ thống đang làm được đến đâu
 
-*Cập nhật: 24/9/2026, đang ở Sprint 1. Trạng thái Done chính thức theo Jira (bảng GYM) và Definition of Done.*
+*Cập nhật: 27/9/2026, đang ở Sprint 1. Trạng thái Done chính thức theo Jira (bảng GYM) và Definition of Done.*
 
 ### Đã có trên `main`
 
@@ -21,13 +21,12 @@
 | Đăng ký công khai (luôn là tài khoản Tài xế); Quản trị tạo tài khoản các vai trò khác | S-02 | Tạo qua API, chưa có giao diện quản trị |
 | 5 vai trò, mỗi vai trò có trang chủ riêng sau đăng nhập | S-02, S-03 | Trang chủ hiện mới có lời chào |
 | Phân quyền: route chưa khai quyền bị chặn mặc định; chủ trạm chỉ thấy trạm của mình; truy cập trái phép trả 403 và ghi nhật ký | S-03 | |
-| API trạm, trụ sạc (tạo, sửa, xem) có lọc theo chủ sở hữu | S-04, S-05 | Chỉ có API, **chưa đạt đủ AC** (xem dưới) |
+| API trạm, trụ sạc (tạo, sửa, xem) có lọc theo chủ sở hữu; toạ độ + tên/địa chỉ bắt buộc và được kiểm; chống bấm lưu hai lần qua `Idempotency-Key` bắt buộc; mã trụ luôn lưu chữ hoa (khớp OCPP); `power_kw`/`status` của trụ được kiểm, `status` do hệ thống quản lý | S-04, S-05 | S-04 đạt đủ AC. S-05 đạt AC1, AC2; **AC3 (chặn đổi mã khi có phiên sạc) hoãn sang Sprint 3** — chưa có bảng phiên sạc, xem `docs/spikes/S-05-AC3-ghi-nhan-cho-PO.md` |
+| Spike K-01: trụ sạc ảo nối OCPP 1.6J qua WebSocket, bản ghi chuỗi tin nhắn thật | K-01 | Xem `docs/spikes/K-01-ocpp-simulator.md`; máy chủ mới hỗ trợ 4/7 loại bản tin (`StartTransaction`/`MeterValues`/`StopTransaction` thuộc Sprint 3); WebSocket chưa xác thực mã trụ (thuộc S-06) |
 
 ### Đang làm trong Sprint 1 (demo Thứ 4, 30/9)
 
-- **S-04:** kiểm tra dải toạ độ, trạm mới ở trạng thái chưa hoạt động, bấm lưu hai lần chỉ tạo một trạm, **màn hình quản lý trạm**.
-- **S-05:** khai báo số đầu nối từ 1 đến 4 cho mỗi trụ, **màn hình trụ và đầu nối**.
-- **K-01:** trụ sạc ảo nối được vào máy chủ WebSocket tối giản.
+- **S-04, S-05:** màn hình quản lý trạm, trụ và đầu nối (giao diện — chưa kiểm lại trên trình duyệt sau khi API đổi hợp đồng ở trên).
 
 ### Chưa có (theo lộ trình backlog)
 
