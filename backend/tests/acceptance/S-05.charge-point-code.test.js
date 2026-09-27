@@ -4,6 +4,7 @@ const request = require('supertest');
 const { run, query, resetSchema, truncateAll } = require('../helpers/db');
 const { app, closePool } = require('../helpers/app');
 const { createUser } = require('../helpers/auth');
+const { stationBody, postStation } = require('../helpers/station');
 
 describe('S-05: mã trụ chuẩn hoá chữ hoa, power_kw và status', () => {
   let owner;
@@ -21,8 +22,8 @@ describe('S-05: mã trụ chuẩn hoá chữ hoa, power_kw và status', () => {
     await truncateAll();
     owner = await createUser('cp-owner@example.com', 'STATION_OWNER');
     otherOwner = await createUser('cp-other@example.com', 'STATION_OWNER');
-    stationA = (await post('/api/stations', { name: 'Trạm A', address: 'HN' })).body;
-    stationB = (await post('/api/stations', { name: 'Trạm B', address: 'HN' }, otherOwner)).body;
+    stationA = (await postStation(owner, stationBody({ name: 'Trạm A' }))).body;
+    stationB = (await postStation(otherOwner, stationBody({ name: 'Trạm B' }))).body;
   });
   after(async () => { await resetSchema(); await closePool(); });
 
