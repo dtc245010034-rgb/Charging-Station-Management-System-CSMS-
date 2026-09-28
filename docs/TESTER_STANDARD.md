@@ -60,6 +60,17 @@ Tester tuyệt đối tuân thủ tư duy kiểm thử dựa trên bằng chứn
 | **Git / Repo** | Commit, push, checkout branch mới, mở PR, merge | Kiểm tra git diff, git log, git status để truy vết snapshot. **Không commit, push, switch branch**. |
 | **Tài liệu QA** | Đọc báo cáo chất lượng để sửa lỗi | Toàn quyền tạo mới, chỉnh sửa, cập nhật trong phân vùng QA (`docs/`). |
 
+### 2.5. Bộ 4 Nguyên Tắc An Toàn Cho AI Tester (AI Guardrails)
+Để loại trừ rủi ro đưa ra kết quả không nhất quán hoặc ảo giác kiểm thử, mọi AI Tester bắt buộc phải tuân thủ nghiêm ngặt 4 nguyên tắc sau:
+1. **Rule 1 — Anti-Hallucination (Chống tự hợp thức hóa code)**: Khi Acceptance Criteria (AC) trong Jira không rõ ràng hoặc thiếu trường mô tả, AI Tester **TUYỆT ĐỐI CẤM** đọc mã nguồn của Developer rồi tự suy diễn thành Expected Result chuẩn. Bắt buộc phải gán trạng thái `NOT VERIFIED` và mở mục `VERIFICATION_RECOMMENDATION` để yêu cầu Product Owner xác nhận.
+2. **Rule 2 — Strict Canonical Enums (Chặn tự chế Enum)**: AI Tester chỉ được phép sử dụng chính xác các giá trị enum bất biến đã được định nghĩa tại Mục 8. Nghiêm cấm tự ý phát minh hoặc tái sử dụng các từ khóa legacy ngoài quy chuẩn như `TEST_DEFECT`, `RUNNER_BUG`, `DATA_PROBLEM`.
+3. **Rule 3 — Minimum Evidence Packet (Bộ bằng chứng tối thiểu)**: Mỗi kết luận `PASS` bắt buộc phải chứa tối thiểu 4 trường thông tin thô:
+   - `Command`: Lệnh shell/curl/node thực tế đã thực thi.
+   - `Timestamp & Snapshot`: Thời điểm chạy và mã Git Commit SHA.
+   - `Actual HTTP/CLI Response`: Toàn bộ raw response body hoặc terminal output.
+   - `Database State Verification`: Dữ liệu bản ghi thực tế trong PostgreSQL sau khi lệnh chạy (đối với các ca test có ghi dữ liệu).
+4. **Rule 4 — Static vs Runtime Boundary (Ranh giới Tĩnh và Động)**: Kiểm tra tĩnh (ESLint, regex, cú pháp, schema validation) chỉ được dùng để xác minh tính chuẩn mực mã nguồn. **TUYỆT ĐỐI CẤM** dùng kết quả kiểm tra tĩnh để đánh `PASS` cho hành vi Runtime API và CSDL khi chưa chạy live thực tế.
+
 ---
 
 ## 3. PHẠM VI QUYỀN HẠN TÀI NGUYÊN (OWNERSHIP & PERMISSIONS)
@@ -286,13 +297,22 @@ Tất cả các tập giá trị enum dưới đây là **BẤT BIẾN (IMMUTABL
 - `NOT VERIFIED`: Chưa xác minh được tính hợp lệ của kịch bản hồi quy.
 - **CẤM TUYỆT ĐỐI**: tự tạo enum `PENDING_VERIFICATION`, `SUSPECTED_REGRESSION`, `REGRESSION_CONFIRMED`.
 
-### 8.4. `Test Status` (6 giá trị chuẩn)
+### 8.4. `Test Status` (8 giá trị chuẩn)
 - `PASS`: Đã thực thi kiểm thử và có bằng chứng xác nhận đáp ứng 100% tiêu chí chấp nhận.
 - `FAIL`: Đã thực thi kiểm thử và hành vi thực tế sai lệch so với yêu cầu kỹ thuật/nghiệp vụ.
 - `BLOCKED`: Kịch bản kiểm thử không thể thực hiện được do lỗi môi trường, thiếu cấu hình hoặc dependency bị chặn.
 - `NOT VERIFIED`: Kịch bản kiểm thử chưa đủ căn cứ/bằng chứng để kết luận đạt hay hỏng.
 - `NOT FOUND`: Tính năng, endpoint hoặc component được yêu cầu chưa tồn tại trong mã nguồn.
 - `NOT RUN`: Kịch bản kiểm thử đã được thiết kế hoàn chỉnh nhưng chưa đến lượt hoặc chưa được kích hoạt chạy.
+- `RETEST_PENDING`: Kịch bản kiểm thử từng bị `FAIL`, Developer đã push commit sửa lỗi, đang chờ Tester chạy lại kiểm thử xác minh trên môi trường test.
+- `OBSOLETE`: Kịch bản kiểm thử không còn hiệu lực do Requirement/AC bị thay đổi hoặc hủy bỏ. Trạng thái này giúp bảo toàn 100% lịch sử kiểm thử trong quá khứ mà không làm méo mó số liệu thống kê sprint hiện tại.
+
+#### 8.4.1. Ma trận chuyển đổi trạng thái bắt buộc (State Transition Matrix)
+1. `NOT RUN` $\longrightarrow$ `PASS` / `FAIL` / `BLOCKED` / `NOT VERIFIED` / `NOT FOUND`.
+2. `FAIL` $\longrightarrow$ **`RETEST_PENDING`** (Bắt buộc phải qua trạng thái này khi có Commit SHA sửa lỗi của Developer; **CẤM TUYỆT ĐỐI** nhảy trực tiếp từ `FAIL` sang `PASS`).
+3. `RETEST_PENDING` $\longrightarrow$ `PASS` (Khi chạy lại bài test và thu được bằng chứng PASS 100%) HOẶC $\longrightarrow$ `FAIL` (Khi chạy lại nhưng bug vẫn tái diễn).
+4. `BLOCKED` $\longrightarrow$ `NOT RUN` / `PASS` / `FAIL` (Sau khi rào cản môi trường hoặc dữ liệu được giải phóng).
+5. `ANY` $\longrightarrow$ `OBSOLETE` (Chỉ áp dụng khi có xác nhận chính thức từ Product Owner về việc hủy bỏ hoặc thay đổi phạm vi AC).
 
 ### 8.5. `Verification` (2 giá trị)
 - `VERIFIED`: Đã có bằng chứng thực tế chứng minh tính đúng đắn của mapping/kết quả.
@@ -313,6 +333,42 @@ Tất cả các tập giá trị enum dưới đây là **BẤT BIẾN (IMMUTABL
 - `CODE_DEFECT`: Lỗi logic mã nguồn, vi phạm AC/NFR hoặc crash do code của Developer.
 - `ENVIRONMENT_BLOCKER`: Trở ngại do máy host, thiếu công cụ, daemon container chưa bật.
 - `CONFIGURATION_PROBLEM`: Lỗi biến môi trường `.env`, sai port binding, thiếu quyền hệ điều hành.
+- **CẤM TUYỆT ĐỐI**: Tự ý sử dụng các nhãn phân loại legacy đã bãi bỏ (như `TEST_DEFECT`, `DATA_PROBLEM`, `DOCUMENTATION_DEFECT`).
+- **Nguyên tắc phân định lỗi trong Test Code của Developer**: Nếu lỗi phát sinh bên trong mã nguồn kiểm thử tự động của Developer (`backend/tests/`) mà không phải do logic ứng dụng Production sai:
+  - **KHÔNG ĐƯỢC COI LÀ DEFECT** của hệ thống (vì không có `CODE_DEFECT` trong mã nguồn Production).
+  - **BẮT BUỘC** chuyển sang luồng **General Review** theo phân loại `CODE_OBSERVATION` với phạm vi `Scope = OUT-OF-SCOPE` (xem chi tiết quy chuẩn tại Mục 9.10).
+
+### 8.7.1. Vòng đời Defect & Quyền hạn đóng lỗi (Defect Lifecycle & Governance)
+
+Mọi Defect khi được ghi nhận vào `docs/testing/BUG_REPORT.md` phải tuân thủ nghiêm ngặt vòng đời chuyển trạng thái:
+
+```text
+       [Phát hiện lỗi]
+              ↓
+           [ OPEN ]  (Ghi nhận bởi QA / Tester kèm Evidence & Test ID)
+              ↓
+         [ RESOLVED ] (Developer fix code, cung cấp Commit Hash sửa lỗi)
+              ↓
+      [ RETEST_PENDING ] (Chuyển sang hàng đợi kiểm thử xác minh)
+         ↙          ↘
+[ CLOSED ]          [ REOPENED ]
+(QA xác minh PASS)    (Lỗi vẫn tái diễn / phát sinh regression)
+```
+
+1. **Các trạng thái hợp lệ của Defect**:
+   - `OPEN`: Bug mới được phát hiện, có bước tái hiện (repro steps) và Test ID liên kết.
+   - `RESOLVED`: Developer đã xử lý xong mã nguồn và push commit sửa lỗi. Developer KHÔNG có quyền đóng bug.
+   - `RETEST_PENDING`: Bug đã có bản vá, đang chờ Tester thực thi kịch bản retest trên snapshot mới.
+   - `CLOSED`: QA Tester đã thực thi retest thực tế, có bằng chứng curl/log PASS 100%, chính thức đóng bug.
+   - `REOPENED`: Quá trình retest thất bại hoặc phát hiện bug chưa được giải quyết triệt để.
+
+2. **Quyền hạn duy nhất (Sole Authority)**:
+   - **CHỈ CÓ TESTER / QA LEAD** mới có thẩm quyền chuyển trạng thái Defect sang `CLOSED`.
+   - Developer tuyệt đối không được tự ý đổi trạng thái bug từ `OPEN` / `RESOLVED` sang `CLOSED`.
+
+3. **Ràng buộc khóa ngoại bắt buộc (Mandatory Defect Binding)**:
+   - Mọi bug trong `docs/testing/BUG_REPORT.md` bắt buộc phải có thuộc tính `AFFECTED_TEST_IDS` trỏ đến ít nhất một `Test ID` hợp lệ trong `docs/TEST_INVENTORY.md`.
+   - Ngược lại, mọi Test Case có kết quả `FAIL` hoặc `BLOCKED` trong `docs/TEST_INVENTORY.md` bắt buộc phải có cột `Defect ID` chứa mã bug tương ứng (`BUG-xx`). Nếu test PASS, cột `Defect ID` ghi `NONE`.
 
 ### 8.8. `General Review Categories` (12 danh mục chuẩn)
 Chỉ cho phép sử dụng đúng 12 phân loại sau cho các quan sát kỹ thuật:
@@ -349,6 +405,12 @@ Mỗi quan sát phải được đánh giá độc lập trên 5 chiều tác đ
 3. `Data Impact`: Có làm sai lệch, thất thoát hoặc hỏng tính toàn vẹn dữ liệu không? (`YES` / `NO` / `UNKNOWN`)
 4. `Integration Impact`: Có phá vỡ giao thức, API contract giữa Frontend và Backend không? (`YES` / `NO` / `UNKNOWN`)
 5. `Maintainability Impact`: Có làm tăng chi phí bảo trì, gây khó khăn cho việc đọc hiểu mã nguồn không? (`YES` / `NO` / `UNKNOWN`)
+   - **Tiêu chuẩn định lượng kích hoạt `YES`**:
+     - Độ phức tạp Cyclomatic (Cyclomatic Complexity) > 10 trong một hàm.
+     - Độ dài hàm (Function Length) > 50 dòng code thực thi (không tính comment và dòng trống).
+     - Trùng lặp mã nguồn (Code Duplication) > 15 dòng logic giống hệt nhau hoặc lặp lại cấu trúc không cần thiết.
+     - Độ sâu lồng khối điều kiện (Nesting Depth) > 4 cấp (`if`/`for`/`try`).
+   - Nếu không thỏa mãn các ngưỡng định lượng trên hoặc không có nguy cơ bảo trì cụ thể chứng minh được, bắt buộc đánh giá là `NO`.
 - **Quy tắc bảo vệ**: Nếu chưa có bằng chứng thực tế chứng minh, bắt buộc phải ghi `UNKNOWN`. Tuyệt đối không tự suy đoán `YES`.
 
 ---
@@ -443,6 +505,52 @@ Mọi báo cáo kết quả kiểm thử bắt buộc phải trình bày thành 
 - **KHU VỰC B — GENERAL REVIEW FINDINGS**:
   - Bảng kê các quan sát kỹ thuật, phân loại category, tọa độ location, đánh giá 5 chiều impact, mức độ confidence, và khuyến nghị cải thiện.
   - Khu vực này hoàn toàn không làm thay đổi trạng thái tổng kết của Khu vực A nếu chưa chứng minh vi phạm AC/NFR.
+
+### 9.10. Quy chuẩn xử lý khi Bộ kiểm thử của Developer bị FAIL & Nguyên tắc hiển thị Bảng Tổng kết
+
+Khi thực thi bộ kiểm thử tự động của Developer (`npm test` hoặc `backend/tests/**`) và phát hiện có test case bị `FAIL`:
+
+1. **Quy trình điều tra 3 bước (3-Step Root Cause Investigation)**:
+   - **Bước 1**: Phân tích stack trace, error log và vị trí file bị fail để xác định lỗi xuất phát từ mã nguồn Production (`backend/src/`) hay do chính mã test của Developer (`backend/tests/`).
+   - **Bước 2**: Thực hiện kiểm chứng độc lập (Live Verification qua curl/HTTP request trực tiếp trên môi trường chạy thực tế) đối với các AC/NFR nghiệp vụ tương ứng.
+   - **Bước 3**: 
+     - *Nếu lỗi do mã nguồn Production sai lệch AC*: Ghi nhận `Test Status = FAIL`, phân loại `CODE_DEFECT`, và mở quy trình báo cáo lỗi phần mềm.
+     - *Nếu mã nguồn Production hoạt động hoàn toàn đúng chuẩn qua Live Verification, nhưng test của Dev bị FAIL do lỗi trong test runner/test code* (ví dụ: đóng database pool giữa suite làm đứt kết nối, thiếu mock, lỗi timing hook `after()`): **TUYỆT ĐỐI KHÔNG TỰ SỬA TEST CỦA DEV** (vi phạm ranh giới Tester), **KHÔNG TỰ TẠO ENUM `TEST_DEFECT`** (vi phạm quy chuẩn Canonical Enum), mà **BẮT BUỘC ghi nhận vào Luồng B (General Review) dưới dạng `CODE_OBSERVATION` với phạm vi `Scope = OUT-OF-SCOPE`**.
+
+2. **Nguyên tắc đánh giá tác động 5 chiều cho lỗi trong Test Suite của Developer**:
+   - `Requirement Impact`: **`NO`** (Các AC/NFR đã được xác minh PASS qua kiểm thử độc lập).
+   - `Runtime Impact`: **`NO`** (Ứng dụng production và container không bị ảnh hưởng).
+   - `Data Impact`: **`NO`** (Không làm hỏng tính toàn vẹn cơ sở dữ liệu thực tế).
+   - `Integration Impact`: **`NO`** (Hợp đồng API không bị phá vỡ).
+   - `Maintainability / Regression Impact`: **`YES`** (Làm gián đoạn test runner CI/CD của Developer team).
+
+3. **Mẫu chuẩn bắt buộc tại Bảng Tổng kết (Summary Dashboard Standard)**:
+   - Nghiêm cấm việc chỉ ghi một dòng duy nhất `Overall Story: PASS` mà không giải trình khi có test case của Developer bị FAIL (tránh gây hiểu lầm là Tester bao che hoặc bỏ qua lỗi test).
+   - Bắt buộc phải trình bày phân định minh bạch thành 2 dòng độc lập:
+     ```markdown
+     ### Overall Story & Task Status
+     - **S-xx (Requirement Verification)**: **PASS** (100% AC đã được kiểm chứng độc lập qua live test)
+     - **T-xx**: **PASS**
+     - **Developer Acceptance Suite (`filename.test.js`)**: **FAIL (x/y tests)** — Lỗi xuất phát từ test harness của Dev [mô tả ngắn gọn nguyên nhân, mã tham chiếu OBS-xxx (OUT-OF-SCOPE)]; theo quy chuẩn TESTER_STANDARD.md, lỗi ngoài phạm vi không dùng để đánh fail Story.
+     ```
+---
+
+### 9.11. Cây quyết định 10 giây cho Tester (10-Second Decision Tree)
+
+Để loại trừ hoàn toàn các điểm xám (grey areas) và bảo đảm tính nhất quán 100% giữa các Tester và AI Tester, áp dụng cây quyết định nhanh dưới đây khi gặp các tình huống mơ hồ:
+
+| Tình huống thực tế gặp phải | Câu hỏi kiểm tra cốt lõi | Hành động và Phân loại bắt buộc | Trạng thái Test gán |
+|---|---|---|:---:|
+| **1. Endpoint không gọi được** | Request có tới được tầng logic của ứng dụng không? | **Không tới được** (Container tắt, DB connection sập, sai PORT, network timeout): Ghi nhận `ENVIRONMENT_BLOCKER` hoặc `CONFIGURATION_PROBLEM`.<br>**Tới được nhưng sập** (Unhandled 500 crash trong code): Ghi nhận `CODE_DEFECT`. | `BLOCKED`<br>hoặc<br>`FAIL` |
+| **2. Thiếu dữ liệu Seed / Preconditions** | Tester có thể tự tạo dữ liệu hợp lệ qua API công khai không? | **Có**: Tạo data và tiếp tục test.<br>**Không** (Thiếu migration, thiếu quyền superadmin, DB rỗng): Ghi nhận `CONFIGURATION_PROBLEM`, tạm dừng kịch bản. | `BLOCKED` |
+| **3. Test của Dev bị FAIL** | Live curl endpoint thực tế có đáp ứng đúng 100% AC không? | **Có**: Lỗi do test harness Dev $\longrightarrow$ Ghi nhận `CODE_OBSERVATION (OUT-OF-SCOPE)` vào Khu vực B. Không đánh fail Story.<br>**Không**: Lỗi do backend code sai thật $\longrightarrow$ Ghi nhận `CODE_DEFECT`. | Khu vực A: `PASS`<br>Khu vực B: `OBS`<br>hoặc `FAIL` |
+| **4. Code smell, hàm quá dài, lặp code** | Hành vi runtime có chạy sai lệch so với AC/NFR không? | **Không sai**: Bắt buộc ghi nhận vào Khu vực B (`MAINTAINABILITY_OBSERVATION` hoặc `DUPLICATION_OBSERVATION`). CẤM coi là Defect.<br>**Có sai**: Ghi nhận `CODE_DEFECT`. | `PASS`<br>(Khu vực A) |
+| **5. Phát hiện bug ở ngoài Story đang test** | Tính năng bị lỗi có nằm trong Task Scope / AC của Story này không? | **Nằm ngoài**: Ghi nhận `Scope = OUT-OF-SCOPE`, mở ticket Defect độc lập hoặc ghi vào General Review. Tuyệt đối KHÔNG đánh FAIL Story hiện tại.<br>**Nằm trong**: Đánh `FAIL` Story. | Giữ nguyên trạng thái Story |
+| **6. Endpoint chưa được viết code (HTTP 404)** | Story / Task đã được Developer bàn giao để nghiệm thu chưa? | **Đã bàn giao**: Developer chưa hoàn thành cam kết $\longrightarrow$ `CODE_DEFECT` / `FAIL`.<br>**Chưa bàn giao / Sprint chưa tới**: Đánh `NOT FOUND` hoặc `NOT RUN`. | `FAIL` hoặc `NOT FOUND` |
+| **7. Requirement mơ hồ / Thiếu AC** | Tài liệu Story có chỉ rõ hành vi kỳ vọng không? | **Không**: Đánh `NOT VERIFIED`, phân loại `DOCUMENTATION_OBSERVATION`, gửi khuyến nghị làm rõ đến PO. CẤM tự bịa ra kỳ vọng để phán PASS/FAIL. | `NOT VERIFIED` |
+| **8. Dependency Upstream lỗi** | Module hiện tại có lỗi nội tại không? | **Không**, chỉ lỗi vì service upstream trả về lỗi: Đánh `BLOCKED` do dependency. Ghi rõ mã upstream blocker. | `BLOCKED` |
+| **9. Dev push commit fix bug** | Tester đã chạy lại bài test trên snapshot mới chưa? | **Chưa chạy**: Chuyển trạng thái test sang `RETEST_PENDING`. CẤM nhảy trực tiếp sang `PASS`.<br>**Đã chạy PASS**: Chuyển sang `PASS`, QA đóng bug sang `CLOSED`. | `RETEST_PENDING` $\rightarrow$ `PASS` |
+| **10. Kết quả test chập chờn (Flaky Test)** | Chạy lặp lại 3 lần có cùng kết quả không? | **Không đồng nhất**: Kiểm tra race condition, async timing. Ghi nhận `POTENTIAL_EDGE_CASE` hoặc `CODE_DEFECT` nếu là lỗi production logic. Không được bỏ qua khi thấy 1 lần pass. | `FAIL` hoặc `NOT VERIFIED` |
 
 ---
 
@@ -579,7 +687,7 @@ Khi lập báo cáo General Review độc lập, mỗi quan sát phải tuân th
 
 ## 14. DANH MỤC KIỂM TRA AN TOÀN TRƯỚC KHI KẾT THÚC (FINAL SAFETY CHECK)
 
-Trước khi kết thúc bất kỳ lượt kiểm thử hay đánh giá nào, Tester phải tự kiểm tra 14 điều kiện bắt buộc:
+Trước khi kết thúc bất kỳ lượt kiểm thử hay đánh giá nào, Tester phải tự kiểm tra 18 điều kiện bắt buộc:
 
 - [ ] 1. Không sửa đổi bất kỳ tệp mã nguồn nào ngoài thư mục `docs/`.
 - [ ] 2. Không sửa test code của Developer trong `backend/tests/`.
@@ -590,8 +698,12 @@ Trước khi kết thúc bất kỳ lượt kiểm thử hay đánh giá nào, T
 - [ ] 7. Không đổi `Status` của test khi chưa chạy kiểm thử thực tế.
 - [ ] 8. Không đổi `NOT VERIFIED` thành `VERIFIED` khi thiếu bằng chứng xác thực.
 - [ ] 9. Đã phân biệt rạch ròi giữa Hierarchy (E → S → T) và Dependency Graph.
-- [ ] 10. Toàn bộ các enum sử dụng đều thuộc tập hợp Canonical Enums chuẩn mực.
+- [ ] 10. Toàn bộ các enum sử dụng đều thuộc tập hợp Canonical Enums chuẩn mực; không sử dụng enum legacy (`TEST_DEFECT`,...).
 - [ ] 11. Đã phân lập triệt để giữa Requirement Testing (Khu vực A) và General Review (Khu vực B).
 - [ ] 12. Không sử dụng General Review Observation để đánh `FAIL` Requirement khi chưa có bằng chứng vi phạm AC/NFR.
 - [ ] 13. Đã cập nhật đồng bộ các tài liệu QA liên quan (`PROJECT_STRUCTURE.md`, `TEST_INVENTORY.md`, `stories/`).
 - [ ] 14. Mọi kết luận báo cáo đều có bằng chứng truy vết hai chiều đầy đủ.
+- [ ] 15. **Toàn vẹn phạm vi Story (Scope Integrity)**: Đã đối soát tất cả các chức năng/động từ trong Tiêu đề Story với danh sách AC và Test Cases, bảo đảm không bỏ sót chức năng nào (ví dụ: tiêu đề "Tạo và Sửa" phải có đầy đủ kịch bản cho cả Tạo và Sửa).
+- [ ] 16. **Đồng nhất mã Commit Snapshot**: 100% tài liệu trong `docs/` đều sử dụng chung một mã Git Commit Snapshot và ngày kiểm thử hợp lệ của snapshot hiện tại.
+- [ ] 17. **Toàn vẹn liên kết tương đối (Link Integrity)**: Không có liên kết markdown nào bị gãy (HTTP 404), đặc biệt là giữa các thư mục con trong `docs/` (`docs/testing/` ↔ `docs/stories/`).
+- [ ] 18. **Không kết luận vượt quá bằng chứng thực tế**: Bằng chứng đến đâu kết luận đến đó; tuyệt đối không phán đoán PASS cho migration/DB khi chỉ mới chạy unit test schema JS.

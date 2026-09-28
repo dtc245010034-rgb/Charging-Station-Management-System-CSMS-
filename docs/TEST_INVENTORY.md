@@ -2,8 +2,8 @@
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
 > **Người thực hiện**: TESTER / QA ANALYST  
-> **Snapshot Date**: 27/09/2026  
-> **Git Commit**: `4ab9f0f11f3b037f6e991984002243a0d80884d0` (nhánh `main`)  
+> **Snapshot Date**: 28/09/2026  
+> **Git Commit**: `86769949c03381429fd4931f3b364341ac618f8f` (nhánh `main`)  
 > **Entry Point / Router**: [`docs/README.md`](./README.md)  
 > **Tài liệu quy chuẩn**: [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md) (BỘ QUY CHUẨN TESTER TRUNG TÂM)  
 > **Bản đồ tham chiếu**: [`docs/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) (VERIFIED PROJECT MAP)  
@@ -42,10 +42,10 @@ Tài liệu này chỉ lưu trữ **SỰ THẬT KIỂM THỬ (TEST FACTS)** đã
 | **S-01 & T-01** | Khung ứng dụng, Docker container & PostgreSQL baseline | 17 | 17 | 0 | 0 | 0 | 0 | 0 | 100% (17/17) |
 | **S-02 & T-04, T-05** | Xác thực đăng nhập, Argon2id, Cookie session, Lockout 15p | 23 | 23 | 0 | 0 | 0 | 0 | 0 | 100% (23/23) |
 | **S-03 & T-06, T-07** | Phân quyền RBAC, Route Guard Default Deny, Ownership scope | 21 | 18 | 0 | 0 | 3 | 0 | 0 | 85.7% (18/21) |
-| **S-04 & T-08, T-09** | Chủ trạm tạo và sửa trạm, dải tọa độ, idempotency, UI form | 13 | 13 | 0 | 0 | 0 | 0 | 0 | 100% (13/13) |
+| **S-04 & T-08, T-09** | Chủ trạm tạo và sửa trạm, dải tọa độ, idempotency, UI form | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 100% (14/14) |
 | **FB-01 .. FB-11** | Tích hợp toàn trình Frontend Client ↔ Backend API | 11 | 11 | 0 | 0 | 0 | 0 | 0 | 100% (11/11) |
 | **Roadmap Gaps** | Giao diện UI quản lý trụ sạc (Sprint 1 backlog K-01/S-05) | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0% (0/1) |
-| **TỔNG CỘNG** | **Toàn bộ hệ thống CSMS** | **86** | **82** | **0** | **0** | **3** | **1** | **0** | **95.3% (82/86)** |
+| **TỔNG CỘNG** | **Toàn bộ hệ thống CSMS** | **87** | **83** | **0** | **0** | **3** | **1** | **0** | **95.4% (83/87)** |
 
 ---
 
@@ -53,94 +53,95 @@ Tài liệu này chỉ lưu trữ **SỰ THẬT KIỂM THỬ (TEST FACTS)** đã
 
 Bảng danh mục chi tiết toàn bộ các ca kiểm thử trong hệ thống CSMS:
 
-| Test ID | Story | Task | Requirement | Source Component | Type | Execution | Status | Evidence Basis | Evidence Location | Verification |
-|:---|:---:|:---:|:---|:---|:---|:---:|:---:|:---:|:---|:---:|
-| **TC-S01-01** | S-01 | T-01 | `S01-AC-01` | `docker-compose.yml`, `backend/Dockerfile`, `frontend/index.html` | Acceptance | Manual | **PASS** | COMBINED | [`stories/S-01.md#L37-L60`](./stories/S-01.md) | **VERIFIED** |
-| **TC-S01-02** | S-01 | T-01 | `S01-NFR-01` | `backend/src/config/env.js`, `backend/tests/unit/no-backdoor.test.js` | Unit | Automated | **PASS** | COMBINED | [`stories/S-01.md#L62-L91`](./stories/S-01.md) | **VERIFIED** |
-| **TC-S01-03** | S-01 | T-01 | `S01-NFR-02` | `backend/src/config/env.js`, `backend/src/db/pool.js` | Unit | Automated | **PASS** | COMBINED | [`stories/S-01.md#L93-L109`](./stories/S-01.md) | **VERIFIED** |
-| **TC-T01-01** | S-01 | T-01 | `T01-01`, `T01-02` | `docker-compose.yml`, `backend/src/modules/health/health.routes.js` | Integration | Automated | **PASS** | COMBINED | [`stories/S-01.md#L111-L125`](./stories/S-01.md) | **VERIFIED** |
-| **TC-T01-02** | S-01 | T-01 | `T01-03` | `backend/migrations/*.sql`, `backend/src/db/migrate.js` | Integration | Automated | **PASS** | COMBINED | [`stories/S-01.md#L127-L141`](./stories/S-01.md) | **VERIFIED** |
-| **TC-T01-03** | S-01 | T-01 | `T01-04` | `backend/migrations/*.down.sql`, `backend/src/db/migrate.js` | Integration | Automated | **PASS** | COMBINED | [`stories/S-01.md#L143-L166`](./stories/S-01.md) | **VERIFIED** |
-| **TC-T01-04** | S-01 | T-01 | `T01-05` | `backend/migrations/001_baseline.sql` | Static Inspection | Manual | **PASS** | COMBINED | [`stories/S-01.md#L168-L178`](./stories/S-01.md) | **VERIFIED** |
-| **TC-T01-05** | S-01 | T-01 | `T01-NFR-01` | `docker-compose.yml`, `backend/src/db/pool.js` | Static Inspection | Manual | **PASS** | COMBINED | [`stories/S-01.md#L180-L191`](./stories/S-01.md) | **VERIFIED** |
-| **UT-NODE-01** | S-01 | T-01 | Node >= 22.7 | `backend/src/config/nodeVersion.js` | Unit | Automated | **PASS** | TEST_INVENTORY | `backend/tests/unit/nodeVersion.test.js` | **VERIFIED** |
-| **UT-BACKDOOR-01**| S-01 | T-01 | `S01-NFR-01` | `backend/tests/unit/no-backdoor.test.js` | Unit | Automated | **PASS** | TEST_INVENTORY | `backend/tests/unit/no-backdoor.test.js` | **VERIFIED** |
-| **UT-ENV-01** | S-01 | T-01 | `S01-NFR-01` | `backend/src/config/env.js` | Unit | Automated | **PASS** | TEST_INVENTORY | `backend/tests/unit/env.test.js` | **VERIFIED** |
-| **UT-ERR-01** | S-01 | T-01 | Error Handler | `backend/src/middlewares/errorHandler.js` | Unit | Automated | **PASS** | TEST_INVENTORY | `backend/tests/unit/errorHandler.test.js` | **VERIFIED** |
-| **IT-MIGRATE-01** | S-01 | T-01 | `T01-03`, `T01-04` | `backend/src/db/migrate.js` | Integration | Automated | **PASS** | TEST_INVENTORY | `backend/tests/integration/migrate.test.js` | **VERIFIED** |
-| **IT-ADMIN-01** | S-01 | T-01 | Seed Admin CLI | `backend/scripts/create-admin.js` | Integration | Automated | **PASS** | TEST_INVENTORY | `backend/tests/integration/create-admin.test.js` | **VERIFIED** |
-| **ACC-S01-01** | S-01 | T-01 | `S01-AC-01` | `docker-compose.yml` | Acceptance | Automated | **PASS** | TEST_INVENTORY | `backend/tests/acceptance/S-01.baseline.test.js` | **VERIFIED** |
-| **MAN-S01-01** | S-01 | T-01 | Container Up | `docker-compose.yml` | Runtime | Manual | **PASS** | STORY_DOC | [`stories/S-01.md#L48-L60`](./stories/S-01.md) | **VERIFIED** |
-| **MAN-S01-02** | S-01 | T-01 | Health API 200 | `backend/src/modules/health/health.routes.js` | Runtime | Manual | **PASS** | STORY_DOC | [`stories/S-01.md#L119-L125`](./stories/S-01.md) | **VERIFIED** |
-| **TC-S02-01** | S-02 | T-05 | `S02-AC-01` | `backend/src/modules/auth/auth.service.js`, `authenticate.js` | Acceptance | Manual / Live | **PASS** | COMBINED | [`stories/S-02.md#L49-L66`](./stories/S-02.md) | **VERIFIED** |
-| **TC-S02-02** | S-02 | T-05 | `S02-AC-02` | `backend/src/modules/auth/auth.service.js` | Security | Static / Code | **PASS** | COMBINED | [`stories/S-02.md#L68-L88`](./stories/S-02.md) | **VERIFIED** |
-| **TC-S02-03** | S-02 | T-05 | `S02-AC-03` | `backend/src/modules/auth/login-throttle.repository.js` | Functional | Manual / Live | **PASS** | COMBINED | [`stories/S-02.md#L90-L121`](./stories/S-02.md) | **VERIFIED** |
-| **TC-S02-04** | S-02 | T-05 | `S02-AC-04` | `frontend/js/api.js`, `frontend/js/router.js` | Client Routing | Automated | **PASS** | COMBINED | [`stories/S-02.md#L123-L142`](./stories/S-02.md) | **VERIFIED** |
-| **TC-S02-05** | S-02 | T-04 | `S02-NFR-01` | `backend/src/lib/password.js` | Security | Automated | **PASS** | COMBINED | [`stories/S-02.md#L144-L162`](./stories/S-02.md) | **VERIFIED** |
-| **TC-S02-06** | S-02 | T-05 | `S02-NFR-02` | `backend/src/modules/auth/login-throttle.repository.js` | Security | Static / Code | **PASS** | COMBINED | [`stories/S-02.md#L164-L188`](./stories/S-02.md) | **VERIFIED** |
-| **TC-T04-01** | S-02 | T-04 | `T04-01`, `T04-02` | `backend/migrations/001_baseline.sql` | Schema Check | Manual | **PASS** | COMBINED | [`stories/S-02.md#L190-L208`](./stories/S-02.md) | **VERIFIED** |
-| **TC-T04-02** | S-02 | T-04 | `T04-03` | `backend/migrations/001_baseline.sql` | Schema Check | Manual | **PASS** | COMBINED | [`stories/S-02.md#L210-L224`](./stories/S-02.md) | **VERIFIED** |
-| **TC-T04-03** | S-02 | T-04 | `T04-04` | `backend/src/lib/roles.js` | Schema Check | Manual | **PASS** | COMBINED | [`stories/S-02.md#L226-L241`](./stories/S-02.md) | **VERIFIED** |
-| **TC-T04-04** | S-02 | T-04 | `T04-NFR` | `backend/migrations/001_baseline.sql` | Schema Check | Manual | **PASS** | COMBINED | [`stories/S-02.md#L243-L255`](./stories/S-02.md) | **VERIFIED** |
-| **TC-T05-01** | S-02 | T-05 | `T05-01` | `frontend/js/pages/login.js`, `frontend/pages/` | UI Component | Automated | **PASS** | COMBINED | [`stories/S-02.md#L257-L268`](./stories/S-02.md) | **VERIFIED** |
-| **TC-T05-02** | S-02 | T-05 | `T05-02`, `T05-03` | `backend/src/modules/auth/login-throttle.repository.js` | Functional | Manual / Live | **PASS** | COMBINED | [`stories/S-02.md#L270-L279`](./stories/S-02.md) | **VERIFIED** |
-| **TC-T05-03** | S-02 | T-05 | `T05-NFR-01` | `backend/src/middlewares/authenticate.js` | Security | Automated | **PASS** | COMBINED | [`stories/S-02.md#L281-L292`](./stories/S-02.md) | **VERIFIED** |
-| **TC-T05-04** | S-02 | T-05 | `T05-NFR-02` | `backend/src/modules/auth/login-throttle.repository.js` | Functional | Static / Code | **PASS** | COMBINED | [`stories/S-02.md#L294-L304`](./stories/S-02.md) | **VERIFIED** |
-| **TC-T05-05** | S-02 | T-05 | `T05-NFR-03` | `backend/src/modules/auth/auth.service.js` | Security | Static / Code | **PASS** | COMBINED | [`stories/S-02.md#L306-L316`](./stories/S-02.md) | **VERIFIED** |
-| **UT-FRONTEND-01**| S-02 | T-05 | Client Auth Router | `frontend/js/auth.js`, `frontend/js/router.js` | Unit | Automated | **PASS** | TEST_INVENTORY | `backend/tests/unit/frontend.test.js` | **VERIFIED** |
-| **IT-AUTH-01** | S-02 | T-05 | Auth Regression | `backend/src/modules/auth/` | Integration | Automated | **PASS** | TEST_INVENTORY | `backend/tests/integration/auth.regression.test.js` | **VERIFIED** |
-| **ACC-S02-01** | S-02 | T-05 | `S02-AC-01` | `backend/tests/acceptance/S-02.login.test.js` | Acceptance | Automated | **PASS** | TEST_INVENTORY | `backend/tests/acceptance/S-02.login.test.js` | **VERIFIED** |
-| **ACC-S02-02** | S-02 | T-05 | `S02-NFR-02` | `backend/tests/acceptance/S-02.login-ip.test.js` | Acceptance | Automated | **PASS** | TEST_INVENTORY | `backend/tests/acceptance/S-02.login-ip.test.js` | **VERIFIED** |
-| **ACC-S02-03** | S-02 | T-05 | Frontend Auth Flow | `backend/tests/acceptance/S-02.frontend.test.js` | Acceptance | Automated | **PASS** | TEST_INVENTORY | `backend/tests/acceptance/S-02.frontend.test.js` | **VERIFIED** |
-| **MAN-S02-01** | S-02 | T-05 | Live API Login 200 | `backend/src/modules/auth/auth.routes.js` | Runtime | Manual | **PASS** | STORY_DOC | [`stories/S-02.md#L54-L66`](./stories/S-02.md) | **VERIFIED** |
-| **MAN-S02-02** | S-02 | T-05 | Live Lockout 429 | `backend/src/modules/auth/login-throttle.repository.js` | Runtime | Manual | **PASS** | STORY_DOC | [`stories/S-02.md#L94-L121`](./stories/S-02.md) | **VERIFIED** |
-| **MAN-S02-03** | S-02 | T-05 | Restart Persistence | `backend/src/modules/auth/login-throttle.repository.js` | Runtime | Manual | **PASS** | STORY_DOC | [`stories/S-02.md#L274-L279`](./stories/S-02.md) | **VERIFIED** |
-| **TC-S03-01** | S-03 | T-07 | `S03-AC-01` | `backend/src/db/scope.js`, `backend/src/modules/stations/` | Data Isolation | Manual / Live | **PASS** | COMBINED | [`stories/S-03.md#L42-L61`](./stories/S-03.md) | **VERIFIED** |
-| **TC-S03-02** | S-03 | T-07 | `S03-AC-02` | `backend/src/modules/stations/`, `audit.repository.js` | Security | Manual / Live | **PASS** | COMBINED | [`stories/S-03.md#L63-L84`](./stories/S-03.md) | **VERIFIED** |
-| **TC-S03-03** | S-03 | T-06 | `S03-AC-03` | `backend/src/security/routeGuard.js`, `permissions.js` | Authorization | Manual / Live | **PASS** | COMBINED | [`stories/S-03.md#L86-L109`](./stories/S-03.md) | **VERIFIED** |
-| **TC-S03-04** | S-03 | T-06 | `S03-AC-04` | `backend/src/security/routeGuard.js` | Security | Static / Code | **NOT VERIFIED** | COMBINED | [`stories/S-03.md#L111-L127`](./stories/S-03.md) | **NOT VERIFIED** |
-| **TC-S03-05** | S-03 | T-07 | `S03-NFR-01` | `backend/src/db/scope.js` | Data Isolation | Static / Code | **PASS** | COMBINED | [`stories/S-03.md#L129-L141`](./stories/S-03.md) | **VERIFIED** |
-| **TC-T06-01** | S-03 | T-06 | `T06-01` | `backend/src/security/routeGuard.js` | Security | Static / Code | **NOT VERIFIED** | COMBINED | [`stories/S-03.md#L143-L157`](./stories/S-03.md) | **NOT VERIFIED** |
-| **TC-T06-02** | S-03 | T-06 | `T06-02` | `backend/src/security/routeGuard.js` | Authorization | Automated | **PASS** | COMBINED | [`stories/S-03.md#L159-L170`](./stories/S-03.md) | **VERIFIED** |
-| **TC-T07-01** | S-03 | T-07 | `T07-01` | `backend/src/db/scope.js`, `backend/src/modules/stations/` | Data Isolation | Manual / Live | **PASS** | COMBINED | [`stories/S-03.md#L172-L182`](./stories/S-03.md) | **VERIFIED** |
-| **TC-T07-02** | S-03 | T-07 | `T07-02` | `backend/src/modules/audit/audit.repository.js` | Security | Manual / SQL | **PASS** | COMBINED | [`stories/S-03.md#L184-L194`](./stories/S-03.md) | **VERIFIED** |
-| **TC-T07-03** | S-03 | T-07 | `T07-03` | `backend/tests/acceptance/S-03.rbac.test.js` | Acceptance | Automated | **PASS** | COMBINED | [`stories/S-03.md#L196-L207`](./stories/S-03.md) | **VERIFIED** |
-| **TC-T07-04** | S-03 | T-07 | `T07-NFR` | `backend/src/db/scope.js` | Architecture | Automated | **PASS** | COMBINED | [`stories/S-03.md#L209-L220`](./stories/S-03.md) | **VERIFIED** |
-| **UT-SCOPE-01** | S-03 | T-07 | `S03-NFR-01` | `backend/src/db/scope.js` | Unit | Automated | **PASS** | TEST_INVENTORY | `backend/tests/unit/scope.test.js` | **VERIFIED** |
-| **UT-LINT-01** | S-03 | T-06 | Code Style & Policy | `eslint.config.js` | Unit | Automated | **PASS** | TEST_INVENTORY | `backend/tests/unit/eslint-guard.test.js` | **VERIFIED** |
-| **ACC-S03-01** | S-03 | T-06 | `S03-AC-03` (Accounts) | `backend/tests/acceptance/S-03.accounts.test.js` | Acceptance | Automated | **PASS** | TEST_INVENTORY | `backend/tests/acceptance/S-03.accounts.test.js` | **VERIFIED** |
-| **ACC-S03-02** | S-03 | T-06 | CSRF Defense | `backend/tests/acceptance/S-03.csrf.test.js` | Acceptance | Automated | **PASS** | TEST_INVENTORY | `backend/tests/acceptance/S-03.csrf.test.js` | **VERIFIED** |
-| **ACC-S03-03** | S-03 | T-06 | RBAC Matrix | `backend/tests/acceptance/S-03.rbac-matrix.test.js` | Acceptance | Automated | **PASS** | TEST_INVENTORY | `backend/tests/acceptance/S-03.rbac-matrix.test.js` | **VERIFIED** |
-| **ACC-S03-04** | S-03 | T-07 | Ownership Isolation | `backend/tests/acceptance/S-03.rbac.test.js` | Acceptance | Automated | **PASS** | TEST_INVENTORY | `backend/tests/acceptance/S-03.rbac.test.js` | **VERIFIED** |
-| **ACC-S03-05** | S-03 | T-06 | Route Guard Guarding | `backend/tests/acceptance/S-03.route-guard.test.js` | Acceptance | Automated | **PASS** | TEST_INVENTORY | `backend/tests/acceptance/S-03.route-guard.test.js` | **VERIFIED** |
-| **ACC-S03-06** | S-03 | T-06 | Trust Proxy | `backend/tests/acceptance/S-03.trust-proxy.test.js` | Acceptance | Automated | **PASS** | TEST_INVENTORY | `backend/tests/acceptance/S-03.trust-proxy.test.js` | **VERIFIED** |
-| **MAN-S03-01** | S-03 | T-07 | Live Curl Owner Isolation | `backend/src/db/scope.js` | Security | Manual | **PASS** | STORY_DOC | [`stories/S-03.md#L48-L61`](./stories/S-03.md) | **VERIFIED** |
-| **MAN-S03-02** | S-03 | T-06 | Live Default Deny 403 | `backend/src/security/routeGuard.js` | Security | Manual | **NOT VERIFIED** | STORY_DOC | [`stories/S-03.md#L111-L127`](./stories/S-03.md) | **NOT VERIFIED** |
-| **TC-FB-01** | FB-01 | FB-01 | Client Fetcher API | `frontend/js/api.js` | Integration Contract | Automated / Code | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L30-L50`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-FB-02** | FB-02 | FB-02 | Middleware Chain / Host | `backend/src/app.js`, `middlewares/` | Integration Contract | Static / Code | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L52-L72`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-FB-03** | FB-03 | FB-03 | E2E Login & Auth Flow | `frontend/js/auth.js`, `backend/src/modules/auth/` | E2E Integration | UI Flow / API | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L74-L95`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-FB-04** | FB-04 | FB-04 | Error Handling Envelope | `backend/src/middlewares/errorHandler.js` | Client / Parser | UI Component | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L97-L118`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-FB-05** | FB-05 | FB-05 | Cookie Session / 401 | `frontend/js/auth.js`, `authenticate.js` | Security / Protocol | Automated / Unit | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L120-L140`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-FB-06** | FB-06 | FB-06 | RBAC UI Route Mapping | `frontend/js/router.js`, `frontend/pages/` | Authorization | UI Routing | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L142-L162`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-FB-07** | FB-07 | FB-07 | Ownership Data Scope UI | `frontend/pages/station-owner.html`, `scope.js` | Data Isolation | Automated / Code | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L164-L184`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-FB-08** | FB-08 | FB-08 | Error Envelope Match | `backend/src/middlewares/errorHandler.js` | API Contract | Schema Match | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L186-L200`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-FB-09** | FB-09 | FB-09 | Client Logic Unit Tests | `frontend/js/` | Unit | Automated | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L202-L215`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-FB-10** | FB-10 | FB-10 | Database Persistence SQL | `backend/src/modules/` | Data Integrity | Static / Code | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L217-L231`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-FB-11** | FB-11 | FB-11 | OWASP Defense XSS/SQLi | `backend/src/middlewares/requireJson.js`, `login.js` | Security | Static / Code | **PASS** | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L233-L253`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-S04-01** | S-04 | T-08 | `S04-AC-01` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L48-L69`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-02** | S-04 | T-08 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L71-L94`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-03** | S-04 | T-08 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L96-L108`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-04** | S-04 | T-09 | `S04-AC-03` | `backend/src/modules/stations/stations.service.js` | Functional | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L110-L130`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-05** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L132-L154`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-06** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Security | Automated / Live | **PASS** | COMBINED | [`stories/S-04.md#L156-L167`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-07** | S-04 | T-08 | `S04-NFR-01`| `backend/migrations/004_station_management.sql` | Data Integrity | Automated / DB | **PASS** | COMBINED | [`stories/S-04.md#L169-L182`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T08-01** | T-08 | T-08 | `T08-01` | `backend/migrations/004_station_management.sql` | Integration | Automated / DB | **PASS** | COMBINED | [`stories/S-04.md#L184-L203`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T08-02** | T-08 | T-08 | `T08-01` | `backend/migrations/004_station_management.sql` | Security | Automated / DB | **PASS** | COMBINED | [`stories/S-04.md#L205-L219`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T08-03** | T-08 | T-08 | `T08-NFR-01`| `backend/migrations/004_station_management.sql` | Architecture | Automated / DB | **PASS** | COMBINED | [`stories/S-04.md#L221-L235`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T09-01** | T-09 | T-09 | `T09-01` | `frontend/js/pages/station-owner.js` | UI Validation | Static Inspection | **PASS** | SOURCE_LINK | [`stories/S-04.md#L237-L248`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T09-02** | T-09 | T-09 | `T09-01` | `frontend/js/pages/station-owner.js` | UI Flow | Static Inspection | **PASS** | SOURCE_LINK | [`stories/S-04.md#L250-L260`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T09-03** | T-09 | T-09 | `T09-NFR-01`| `frontend/js/pages/station-owner.js` | UI Defense | Static Inspection | **PASS** | SOURCE_LINK | [`stories/S-04.md#L262-L273`](./stories/S-04.md) | **VERIFIED** |
-| **UI-CP-01** | Roadmap | S-03 | Form quản lý trụ sạc | `frontend/pages/operator.html` | UI Component | Manual | **NOT FOUND** | REQUIREMENT_LINK | `TEST_REPORT.md` (Roadmap Sprint 1) | **VERIFIED** |
+| Test ID | Story | Task | Requirement | Source Component | Type | Execution | Status | Defect ID | Evidence Basis | Evidence Location | Verification |
+|:---|:---:|:---:|:---|:---|:---|:---:|:---:|:---:|:---:|:---|:---:|
+| **TC-S01-01** | S-01 | T-01 | `S01-AC-01` | `docker-compose.yml`, `backend/Dockerfile`, `frontend/index.html` | Acceptance | Manual | **PASS** | `BUG-01, BUG-03 (CLOSED)` | COMBINED | [`stories/S-01.md#L37-L60`](./stories/S-01.md) | **VERIFIED** |
+| **TC-S01-02** | S-01 | T-01 | `S01-NFR-01` | `backend/src/config/env.js`, `backend/tests/unit/no-backdoor.test.js` | Unit | Automated | **PASS** | `BUG-04 (CLOSED)` | COMBINED | [`stories/S-01.md#L62-L91`](./stories/S-01.md) | **VERIFIED** |
+| **TC-S01-03** | S-01 | T-01 | `S01-NFR-02` | `backend/src/config/env.js`, `backend/src/db/pool.js` | Unit | Automated | **PASS** | `BUG-04 (CLOSED)` | COMBINED | [`stories/S-01.md#L93-L109`](./stories/S-01.md) | **VERIFIED** |
+| **TC-T01-01** | S-01 | T-01 | `T01-01`, `T01-02` | `docker-compose.yml`, `backend/src/modules/health/health.routes.js` | Integration | Automated | **PASS** | `BUG-02, BUG-03 (CLOSED)` | COMBINED | [`stories/S-01.md#L111-L125`](./stories/S-01.md) | **VERIFIED** |
+| **TC-T01-02** | S-01 | T-01 | `T01-03` | `backend/migrations/*.sql`, `backend/src/db/migrate.js` | Integration | Automated | **PASS** | `BUG-02, BUG-03 (CLOSED)` | COMBINED | [`stories/S-01.md#L127-L141`](./stories/S-01.md) | **VERIFIED** |
+| **TC-T01-03** | S-01 | T-01 | `T01-04` | `backend/migrations/*.down.sql`, `backend/src/db/migrate.js` | Integration | Automated | **PASS** | `NONE` | COMBINED | [`stories/S-01.md#L143-L166`](./stories/S-01.md) | **VERIFIED** |
+| **TC-T01-04** | S-01 | T-01 | `T01-05` | `backend/migrations/001_baseline.sql` | Static Inspection | Manual | **PASS** | `NONE` | COMBINED | [`stories/S-01.md#L168-L178`](./stories/S-01.md) | **VERIFIED** |
+| **TC-T01-05** | S-01 | T-01 | `T01-NFR-01` | `docker-compose.yml`, `backend/src/db/pool.js` | Static Inspection | Manual | **PASS** | `NONE` | COMBINED | [`stories/S-01.md#L180-L191`](./stories/S-01.md) | **VERIFIED** |
+| **UT-NODE-01** | S-01 | T-01 | Node >= 22.7 | `backend/src/config/nodeVersion.js` | Unit | Automated | **PASS** | `NONE` | TEST_INVENTORY | `backend/tests/unit/nodeVersion.test.js` | **VERIFIED** |
+| **UT-BACKDOOR-01**| S-01 | T-01 | `S01-NFR-01` | `backend/tests/unit/no-backdoor.test.js` | Unit | Automated | **PASS** | `NONE` | TEST_INVENTORY | `backend/tests/unit/no-backdoor.test.js` | **VERIFIED** |
+| **UT-ENV-01** | S-01 | T-01 | `S01-NFR-01` | `backend/src/config/env.js` | Unit | Automated | **PASS** | `BUG-03, BUG-04 (CLOSED)` | TEST_INVENTORY | `backend/tests/unit/env.test.js` | **VERIFIED** |
+| **UT-ERR-01** | S-01 | T-01 | Error Handler | `backend/src/middlewares/errorHandler.js` | Unit | Automated | **PASS** | `BUG-03 (CLOSED)` | TEST_INVENTORY | `backend/tests/unit/errorHandler.test.js` | **VERIFIED** |
+| **IT-MIGRATE-01** | S-01 | T-01 | `T01-03`, `T01-04` | `backend/src/db/migrate.js` | Integration | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/integration/migrate.test.js` | **VERIFIED** |
+| **IT-ADMIN-01** | S-01 | T-01 | Seed Admin CLI | `backend/scripts/create-admin.js` | Integration | Automated | **PASS** | `BUG-03 (CLOSED)` | TEST_INVENTORY | `backend/tests/integration/create-admin.test.js` | **VERIFIED** |
+| **ACC-S01-01** | S-01 | T-01 | `S01-AC-01` | `docker-compose.yml` | Acceptance | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/acceptance/S-01.baseline.test.js` | **VERIFIED** |
+| **MAN-S01-01** | S-01 | T-01 | Container Up | `docker-compose.yml` | Runtime | Manual | **PASS** | `BUG-01 (CLOSED)` | STORY_DOC | [`stories/S-01.md#L48-L60`](./stories/S-01.md) | **VERIFIED** |
+| **MAN-S01-02** | S-01 | T-01 | Health API 200 | `backend/src/modules/health/health.routes.js` | Runtime | Manual | **PASS** | `NONE` | STORY_DOC | [`stories/S-01.md#L119-L125`](./stories/S-01.md) | **VERIFIED** |
+| **TC-S02-01** | S-02 | T-05 | `S02-AC-01` | `backend/src/modules/auth/auth.service.js`, `authenticate.js` | Acceptance | Manual / Live | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L49-L66`](./stories/S-02.md) | **VERIFIED** |
+| **TC-S02-02** | S-02 | T-05 | `S02-AC-02` | `backend/src/modules/auth/auth.service.js` | Security | Static / Code | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L68-L88`](./stories/S-02.md) | **VERIFIED** |
+| **TC-S02-03** | S-02 | T-05 | `S02-AC-03` | `backend/src/modules/auth/login-throttle.repository.js` | Functional | Manual / Live | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L90-L121`](./stories/S-02.md) | **VERIFIED** |
+| **TC-S02-04** | S-02 | T-05 | `S02-AC-04` | `frontend/js/api.js`, `frontend/js/router.js` | Client Routing | Automated | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L123-L142`](./stories/S-02.md) | **VERIFIED** |
+| **TC-S02-05** | S-02 | T-04 | `S02-NFR-01` | `backend/src/lib/password.js` | Security | Automated | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L144-L162`](./stories/S-02.md) | **VERIFIED** |
+| **TC-S02-06** | S-02 | T-05 | `S02-NFR-02` | `backend/src/modules/auth/login-throttle.repository.js` | Security | Static / Code | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L164-L188`](./stories/S-02.md) | **VERIFIED** |
+| **TC-T04-01** | S-02 | T-04 | `T04-01`, `T04-02` | `backend/migrations/001_baseline.sql` | Schema Check | Manual | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L190-L208`](./stories/S-02.md) | **VERIFIED** |
+| **TC-T04-02** | S-02 | T-04 | `T04-03` | `backend/migrations/001_baseline.sql` | Schema Check | Manual | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L210-L224`](./stories/S-02.md) | **VERIFIED** |
+| **TC-T04-03** | S-02 | T-04 | `T04-04` | `backend/src/lib/roles.js` | Schema Check | Manual | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L226-L241`](./stories/S-02.md) | **VERIFIED** |
+| **TC-T04-04** | S-02 | T-04 | `T04-NFR` | `backend/migrations/001_baseline.sql` | Schema Check | Manual | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L243-L255`](./stories/S-02.md) | **VERIFIED** |
+| **TC-T05-01** | S-02 | T-05 | `T05-01` | `frontend/js/pages/login.js`, `frontend/pages/` | UI Component | Automated | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L257-L268`](./stories/S-02.md) | **VERIFIED** |
+| **TC-T05-02** | S-02 | T-05 | `T05-02`, `T05-03` | `backend/src/modules/auth/login-throttle.repository.js` | Functional | Manual / Live | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L270-L279`](./stories/S-02.md) | **VERIFIED** |
+| **TC-T05-03** | S-02 | T-05 | `T05-NFR-01` | `backend/src/middlewares/authenticate.js` | Security | Automated | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L281-L292`](./stories/S-02.md) | **VERIFIED** |
+| **TC-T05-04** | S-02 | T-05 | `T05-NFR-02` | `backend/src/modules/auth/login-throttle.repository.js` | Functional | Static / Code | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L294-L304`](./stories/S-02.md) | **VERIFIED** |
+| **TC-T05-05** | S-02 | T-05 | `T05-NFR-03` | `backend/src/modules/auth/auth.service.js` | Security | Static / Code | **PASS** | `NONE` | COMBINED | [`stories/S-02.md#L306-L316`](./stories/S-02.md) | **VERIFIED** |
+| **UT-FRONTEND-01**| S-02 | T-05 | Client Auth Router | `frontend/js/auth.js`, `frontend/js/router.js` | Unit | Automated | **PASS** | `NONE` | TEST_INVENTORY | `backend/tests/unit/frontend.test.js` | **VERIFIED** |
+| **IT-AUTH-01** | S-02 | T-05 | Auth Regression | `backend/src/modules/auth/` | Integration | Automated | **PASS** | `NONE` | TEST_INVENTORY | `backend/tests/integration/auth.regression.test.js` | **VERIFIED** |
+| **ACC-S02-01** | S-02 | T-05 | `S02-AC-01` | `backend/tests/acceptance/S-02.login.test.js` | Acceptance | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/acceptance/S-02.login.test.js` | **VERIFIED** |
+| **ACC-S02-02** | S-02 | T-05 | `S02-NFR-02` | `backend/tests/acceptance/S-02.login-ip.test.js` | Acceptance | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/acceptance/S-02.login-ip.test.js` | **VERIFIED** |
+| **ACC-S02-03** | S-02 | T-05 | Frontend Auth Flow | `backend/tests/acceptance/S-02.frontend.test.js` | Acceptance | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/acceptance/S-02.frontend.test.js` | **VERIFIED** |
+| **MAN-S02-01** | S-02 | T-05 | Live API Login 200 | `backend/src/modules/auth/auth.routes.js` | Runtime | Manual | **PASS** | `NONE` | STORY_DOC | [`stories/S-02.md#L54-L66`](./stories/S-02.md) | **VERIFIED** |
+| **MAN-S02-02** | S-02 | T-05 | Live Lockout 429 | `backend/src/modules/auth/login-throttle.repository.js` | Runtime | Manual | **PASS** | `NONE` | STORY_DOC | [`stories/S-02.md#L94-L121`](./stories/S-02.md) | **VERIFIED** |
+| **MAN-S02-03** | S-02 | T-05 | Restart Persistence | `backend/src/modules/auth/login-throttle.repository.js` | Runtime | Manual | **PASS** | `NONE` | STORY_DOC | [`stories/S-02.md#L274-L279`](./stories/S-02.md) | **VERIFIED** |
+| **TC-S03-01** | S-03 | T-07 | `S03-AC-01` | `backend/src/db/scope.js`, `backend/src/modules/stations/` | Data Isolation | Manual / Live | **PASS** | `NONE` | COMBINED | [`stories/S-03.md#L42-L61`](./stories/S-03.md) | **VERIFIED** |
+| **TC-S03-02** | S-03 | T-07 | `S03-AC-02` | `backend/src/modules/stations/`, `audit.repository.js` | Security | Manual / Live | **PASS** | `NONE` | COMBINED | [`stories/S-03.md#L63-L84`](./stories/S-03.md) | **VERIFIED** |
+| **TC-S03-03** | S-03 | T-06 | `S03-AC-03` | `backend/src/security/routeGuard.js`, `permissions.js` | Authorization | Manual / Live | **PASS** | `NONE` | COMBINED | [`stories/S-03.md#L86-L109`](./stories/S-03.md) | **VERIFIED** |
+| **TC-S03-04** | S-03 | T-06 | `S03-AC-04` | `backend/src/security/routeGuard.js` | Security | Static / Code | **NOT VERIFIED** | `NONE` | COMBINED | [`stories/S-03.md#L111-L127`](./stories/S-03.md) | **NOT VERIFIED** |
+| **TC-S03-05** | S-03 | T-07 | `S03-NFR-01` | `backend/src/db/scope.js` | Data Isolation | Static / Code | **PASS** | `NONE` | COMBINED | [`stories/S-03.md#L129-L141`](./stories/S-03.md) | **VERIFIED** |
+| **TC-T06-01** | S-03 | T-06 | `T06-01` | `backend/src/security/routeGuard.js` | Security | Static / Code | **NOT VERIFIED** | `NONE` | COMBINED | [`stories/S-03.md#L143-L157`](./stories/S-03.md) | **NOT VERIFIED** |
+| **TC-T06-02** | S-03 | T-06 | `T06-02` | `backend/src/security/routeGuard.js` | Authorization | Automated | **PASS** | `NONE` | COMBINED | [`stories/S-03.md#L159-L170`](./stories/S-03.md) | **VERIFIED** |
+| **TC-T07-01** | S-03 | T-07 | `T07-01` | `backend/src/db/scope.js`, `backend/src/modules/stations/` | Data Isolation | Manual / Live | **PASS** | `NONE` | COMBINED | [`stories/S-03.md#L172-L182`](./stories/S-03.md) | **VERIFIED** |
+| **TC-T07-02** | S-03 | T-07 | `T07-02` | `backend/src/modules/audit/audit.repository.js` | Security | Manual / SQL | **PASS** | `NONE` | COMBINED | [`stories/S-03.md#L184-L194`](./stories/S-03.md) | **VERIFIED** |
+| **TC-T07-03** | S-03 | T-07 | `T07-03` | `backend/tests/acceptance/S-03.rbac.test.js` | Acceptance | Automated | **PASS** | `NONE` | COMBINED | [`stories/S-03.md#L196-L207`](./stories/S-03.md) | **VERIFIED** |
+| **TC-T07-04** | S-03 | T-07 | `T07-NFR` | `backend/src/db/scope.js` | Architecture | Automated | **PASS** | `NONE` | COMBINED | [`stories/S-03.md#L209-L220`](./stories/S-03.md) | **VERIFIED** |
+| **UT-SCOPE-01** | S-03 | T-07 | `S03-NFR-01` | `backend/src/db/scope.js` | Unit | Automated | **PASS** | `NONE` | TEST_INVENTORY | `backend/tests/unit/scope.test.js` | **VERIFIED** |
+| **UT-LINT-01** | S-03 | T-06 | Code Style & Policy | `eslint.config.js` | Unit | Automated | **PASS** | `BUG-05 (CLOSED)` | TEST_INVENTORY | `backend/tests/unit/eslint-guard.test.js` | **VERIFIED** |
+| **ACC-S03-01** | S-03 | T-06 | `S03-AC-03` (Accounts) | `backend/tests/acceptance/S-03.accounts.test.js` | Acceptance | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/acceptance/S-03.accounts.test.js` | **VERIFIED** |
+| **ACC-S03-02** | S-03 | T-06 | CSRF Defense | `backend/tests/acceptance/S-03.csrf.test.js` | Acceptance | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/acceptance/S-03.csrf.test.js` | **VERIFIED** |
+| **ACC-S03-03** | S-03 | T-06 | RBAC Matrix | `backend/tests/acceptance/S-03.rbac-matrix.test.js` | Acceptance | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/acceptance/S-03.rbac-matrix.test.js` | **VERIFIED** |
+| **ACC-S03-04** | S-03 | T-07 | Ownership Isolation | `backend/tests/acceptance/S-03.rbac.test.js` | Acceptance | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/acceptance/S-03.rbac.test.js` | **VERIFIED** |
+| **ACC-S03-05** | S-03 | T-06 | Route Guard Guarding | `backend/tests/acceptance/S-03.route-guard.test.js` | Acceptance | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/acceptance/S-03.route-guard.test.js` | **VERIFIED** |
+| **ACC-S03-06** | S-03 | T-06 | Trust Proxy | `backend/tests/acceptance/S-03.trust-proxy.test.js` | Acceptance | Automated | **PASS** | `BUG-02 (CLOSED)` | TEST_INVENTORY | `backend/tests/acceptance/S-03.trust-proxy.test.js` | **VERIFIED** |
+| **MAN-S03-01** | S-03 | T-07 | Live Curl Owner Isolation | `backend/src/db/scope.js` | Security | Manual | **PASS** | `NONE` | STORY_DOC | [`stories/S-03.md#L48-L61`](./stories/S-03.md) | **VERIFIED** |
+| **MAN-S03-02** | S-03 | T-06 | Live Default Deny 403 | `backend/src/security/routeGuard.js` | Security | Manual | **NOT VERIFIED** | `NONE` | STORY_DOC | [`stories/S-03.md#L111-L127`](./stories/S-03.md) | **NOT VERIFIED** |
+| **TC-FB-01** | FB-01 | FB-01 | Client Fetcher API | `frontend/js/api.js` | Integration Contract | Automated / Code | **PASS** | `BUG-01, BUG-03 (CLOSED)` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L30-L50`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-FB-02** | FB-02 | FB-02 | Middleware Chain / Host | `backend/src/app.js`, `middlewares/` | Integration Contract | Static / Code | **PASS** | `BUG-01, BUG-03 (CLOSED)` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L52-L72`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-FB-03** | FB-03 | FB-03 | E2E Login & Auth Flow | `frontend/js/auth.js`, `backend/src/modules/auth/` | E2E Integration | UI Flow / API | **PASS** | `BUG-01, BUG-03 (CLOSED)` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L74-L95`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-FB-04** | FB-04 | FB-04 | Error Handling Envelope | `backend/src/middlewares/errorHandler.js` | Client / Parser | UI Component | **PASS** | `BUG-03 (CLOSED)` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L97-L118`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-FB-05** | FB-05 | FB-05 | Cookie Session / 401 | `frontend/js/auth.js`, `authenticate.js` | Security / Protocol | Automated / Unit | **PASS** | `BUG-03 (CLOSED)` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L120-L140`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-FB-06** | FB-06 | FB-06 | RBAC UI Route Mapping | `frontend/js/router.js`, `frontend/pages/` | Authorization | UI Routing | **PASS** | `BUG-03 (CLOSED)` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L142-L162`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-FB-07** | FB-07 | FB-07 | Ownership Data Scope UI | `frontend/pages/station-owner.html`, `scope.js` | Data Isolation | Automated / Code | **PASS** | `BUG-03 (CLOSED)` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L164-L184`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-FB-08** | FB-08 | FB-08 | Error Envelope Match | `backend/src/middlewares/errorHandler.js` | API Contract | Schema Match | **PASS** | `NONE` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L186-L200`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-FB-09** | FB-09 | FB-09 | Client Logic Unit Tests | `frontend/js/` | Unit | Automated | **PASS** | `NONE` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L202-L215`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-FB-10** | FB-10 | FB-10 | Database Persistence SQL | `backend/src/modules/` | Data Integrity | Static / Code | **PASS** | `BUG-02 (CLOSED)` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L217-L231`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-FB-11** | FB-11 | FB-11 | OWASP Defense XSS/SQLi | `backend/src/middlewares/requireJson.js`, `login.js` | Security | Static / Code | **PASS** | `NONE` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L233-L253`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
+| **TC-S04-01** | S-04 | T-08 | `S04-AC-01` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L48-L69`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-02** | S-04 | T-08 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L71-L94`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-03** | S-04 | T-08 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L96-L108`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-04** | S-04 | T-09 | `S04-AC-03` | `backend/src/modules/stations/stations.service.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L110-L130`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-05** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L132-L154`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-06** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Security | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L156-L167`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-07** | S-04 | T-08 | `S04-NFR-01`| `backend/migrations/004_station_management.sql` | Data Integrity | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L169-L182`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-08** | S-04 | T-09 | `S04-AC-05` | `backend/src/modules/stations/stations.service.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#TC-S04-04`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T08-01** | T-08 | T-08 | `T08-01` | `backend/migrations/004_station_management.sql` | Integration | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L184-L203`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T08-02** | T-08 | T-08 | `T08-01` | `backend/migrations/004_station_management.sql` | Security | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L205-L219`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T08-03** | T-08 | T-08 | `T08-NFR-01`| `backend/migrations/004_station_management.sql` | Architecture | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L221-L235`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T09-01** | T-09 | T-09 | `T09-01` | `frontend/js/pages/station-owner.js` | UI Validation | Static Inspection | **PASS** | `NONE` | SOURCE_LINK | [`stories/S-04.md#L237-L248`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T09-02** | T-09 | T-09 | `T09-01` | `frontend/js/pages/station-owner.js` | UI Flow | Static Inspection | **PASS** | `NONE` | SOURCE_LINK | [`stories/S-04.md#L250-L260`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T09-03** | T-09 | T-09 | `T09-NFR-01`| `frontend/js/pages/station-owner.js` | UI Defense | Static Inspection | **PASS** | `NONE` | SOURCE_LINK | [`stories/S-04.md#L262-L273`](./stories/S-04.md) | **VERIFIED** |
+| **UI-CP-01** | Roadmap | S-03 | Form quản lý trụ sạc | `frontend/pages/operator.html` | UI Component | Manual | **NOT FOUND** | `NONE` | REQUIREMENT_LINK | `TEST_REPORT.md` (Roadmap Sprint 1) | **VERIFIED** |
 
 ---
 

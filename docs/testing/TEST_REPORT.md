@@ -1,10 +1,10 @@
 # Current Test Report
 
-Date: 26/09/2026
+Date: 28/09/2026
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
 > **Người thực hiện**: TESTER / QA ANALYST  
-> **Commit snapshot**: `68d877799eb407b0421ca44a82514f9f4c639193` (Nhánh `main`)  
+> **Commit snapshot**: `86769949c03381429fd4931f3b364341ac618f8f` (Nhánh `main`)  
 > **Môi trường thực thi**: Windows 11 x64, Node.js v24.19.0, npm 11.17.0, Docker Desktop  
 
 ---
@@ -29,13 +29,13 @@ Date: 26/09/2026
 
 ## Test Statistics
 
-- **PASS**: 82 (Toàn bộ live container, live HTTP API curl, database migration 001-004, automated unit/acceptance tests và client JS)
+- **PASS**: 83 (Toàn bộ live container, live HTTP API curl, database migration 001-004, automated unit/acceptance tests và client JS)
 - **FAIL**: 0 (Không phát hiện lỗi sai lệch logic nghiệp vụ trong mã nguồn)
 - **BLOCKED**: 0 (Đã giải phóng toàn bộ blocker môi trường nhờ Docker Desktop và Postgres test container)
 - **NOT VERIFIED**: 3 (`S03-AC-04`, `TC-T06-01`, `MAN-S03-02`: tuân thủ quy tắc không tự thêm route chưa khai quyền vào mã nguồn)
 - **NOT FOUND**: 1 (`UI-CP-01`: giao diện UI quản lý trụ sạc thuộc phạm vi Sprint 1 backlog K-01/S-05)
 - **NOT RUN**: 0
-- **TỔNG CỘNG**: 86
+- **TỔNG CỘNG**: 87
 
 ---
 
@@ -72,11 +72,11 @@ Date: 26/09/2026
 ## Detailed Results
 
 Vui lòng tham khảo tài liệu chi tiết tại các liên kết độc lập sau:
-- Chi tiết Story S-01 (Khung ứng dụng & Database): [`stories/S-01.md`](./stories/S-01.md)
-- Chi tiết Story S-02 (Authentication & Lockout): [`stories/S-02.md`](./stories/S-02.md)
-- Chi tiết Story S-03 (RBAC & Ownership Isolation): [`stories/S-03.md`](./stories/S-03.md)
-- Chi tiết Story S-04 (Quản lý trạm sạc & Idempotency): [`stories/S-04.md`](./stories/S-04.md)
-- Chi tiết Kiểm thử Tích hợp (FB-01 đến FB-11): [`integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md)
+- Chi tiết Story S-01 (Khung ứng dụng & Database): [`stories/S-01.md`](../stories/S-01.md)
+- Chi tiết Story S-02 (Authentication & Lockout): [`stories/S-02.md`](../stories/S-02.md)
+- Chi tiết Story S-03 (RBAC & Ownership Isolation): [`stories/S-03.md`](../stories/S-03.md)
+- Chi tiết Story S-04 (Quản lý trạm sạc & Idempotency): [`stories/S-04.md`](../stories/S-04.md)
+- Chi tiết Kiểm thử Tích hợp (FB-01 đến FB-11): [`integration/FRONTEND_BACKEND.md`](../integration/FRONTEND_BACKEND.md)
 - Chi tiết Hồ sơ Lỗi và Rào cản Môi trường: [`BUG_REPORT.md`](./BUG_REPORT.md)
 - Đánh giá Hồi quy Sprint 1: [`REGRESSION_REPORT.md`](./REGRESSION_REPORT.md)
-- Danh mục Kiểm thử Tổng hợp: [`TEST_INVENTORY.md`](./TEST_INVENTORY.md)
+- Danh mục Kiểm thử Tổng hợp: [`TEST_INVENTORY.md`](../TEST_INVENTORY.md)
