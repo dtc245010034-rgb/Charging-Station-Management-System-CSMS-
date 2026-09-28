@@ -49,10 +49,10 @@ describe('S-01 baseline: khung dự án an toàn', () => {
     }
   });
 
-  it('S-01: chỉ phục vụ frontend/ (trang chủ và script.js vẫn tải được)', async () => {
+  it('S-01: chỉ phục vụ frontend/ (trang đăng nhập, module JS và CSS vẫn tải được)', async () => {
     assert.strictEqual((await request(app).get('/index.html')).status, 200);
-    assert.strictEqual((await request(app).get('/js/pages/login.js')).status, 200);
-    assert.strictEqual((await request(app).get('/styles.css')).status, 200);
+    assert.strictEqual((await request(app).get('/pages/auth/login.js')).status, 200);
+    assert.strictEqual((await request(app).get('/styles/tokens.css')).status, 200);
   });
 
   it('S-01: trùng mã trụ → 409, không sập', async () => {

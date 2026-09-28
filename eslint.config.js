@@ -1,4 +1,4 @@
-// Cấu hình đặt ở thư mục gốc để một lần lint phủ cả backend/ và frontend/js.
+// Cấu hình đặt ở thư mục gốc để một lần lint phủ cả backend/ và frontend.
 // Chạy từ backend/: npm run lint (dependency cài trong backend/node_modules).
 const path = require('node:path');
 const { createRequire } = require('node:module');
@@ -8,7 +8,7 @@ const js = requireFromBackend('@eslint/js');
 const globals = requireFromBackend('globals');
 
 module.exports = [
-  { ignores: ['**/node_modules/**'] },
+  { ignores: ['**/node_modules/**', 'frontend/vendor/**'] },
   js.configs.recommended,
   {
     files: ['**/*.js'],
@@ -25,7 +25,7 @@ module.exports = [
     },
   },
   {
-    files: ['frontend/js/**/*.js'],
+    files: ['frontend/**/*.js'],
     languageOptions: { ecmaVersion: 2023, sourceType: 'module', globals: { ...globals.browser } },
   },
 ];

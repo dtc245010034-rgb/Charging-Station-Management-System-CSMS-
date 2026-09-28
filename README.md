@@ -114,13 +114,13 @@ docker compose down -v       # dừng và XOÁ luôn dữ liệu — dùng khi m
 
 ## 2. Dùng thử hệ thống
 
-| Vai trò | Mã | Trang chủ sau đăng nhập | Làm được gì lúc này |
+| Vai trò | Mã | Workspace sau đăng nhập | Làm được gì lúc này |
 |---|---|---|---|
-| Quản trị | `ADMIN` | `/pages/admin.html` | Tạo tài khoản mọi vai trò (qua API), xem và sửa mọi trạm, trụ |
-| Chủ trạm | `STATION_OWNER` | `/pages/station-owner.html` | Tạo, sửa, xem **trạm và trụ của mình** (qua API; giao diện đang làm) |
-| Vận hành viên | `OPERATOR` | `/pages/operator.html` | Xem mọi trạm, trụ; không sửa được |
-| Kế toán | `ACCOUNTANT` | `/pages/accountant.html` | Chưa có chức năng (từ sprint tính tiền) |
-| Tài xế | `DRIVER` | `/pages/driver.html` | Tự đăng ký, đăng nhập; chưa có chức năng sạc |
+| Quản trị | `ADMIN` | `/app.html#/admin` | Tạo tài khoản mọi vai trò (form trong giao diện), xem và sửa mọi trạm, trụ |
+| Chủ trạm | `STATION_OWNER` | `/app.html#/owner` | Tạo, sửa, xem **trạm và trụ của mình** (giao diện đầy đủ: danh sách, bản đồ, thêm trụ) |
+| Vận hành viên | `OPERATOR` | `/app.html#/operator` | Bảng điều khiển vận hành: chỉ số, bản đồ, trạng thái trụ; xem mọi trạm, trụ, không sửa được |
+| Kế toán | `ACCOUNTANT` | `/app.html#/accountant` | Chưa có chức năng (từ sprint tính tiền) |
+| Tài xế | `DRIVER` | `/app.html#/driver` | Tự đăng ký, đăng nhập; giao diện điện thoại; chưa có chức năng sạc |
 
 ### Tạo tài khoản
 
@@ -213,8 +213,8 @@ node --test tests/acceptance/S-04.station-management.test.js
 Test in theo định dạng TAP: mỗi dòng `ok N - <tên test>` là qua, `not ok N - <tên test>` là fail kèm khối `error`/`expected`/`actual` ngay bên dưới. Cuối cùng có tổng kết:
 
 ```
-# tests 127
-# pass 127
+# tests 134
+# pass 134
 # fail 0
 ```
 
@@ -236,7 +236,7 @@ Ca kiểm thử và báo cáo QA: `docs/testing/`, `docs/stories/S-xx.md`.
 | Node báo phiên bản không hợp lệ, hoặc `npm error engine Unsupported` | Cần Node.js ≥ 22.7. Cài bằng nvm, hoặc chạy qua container Docker — xem mục 3, Cách B |
 | `docker compose: unknown command` hoặc `command not found` | Máy chỉ có Docker Compose v1: đổi `docker compose` thành `docker-compose` (xem đầu mục 1) |
 | Chạy Cách B (container Node) trên macOS/Windows: lỗi kết nối Postgres, `ECONNREFUSED` | Bỏ `--network host`, đổi `localhost` thành `host.docker.internal` trong `TEST_DATABASE_URL` (xem mục 3) |
-| `npm test` chạy hết cả 127 test dù chỉ muốn 1 file | `npm test -- <file>` không lọc được vì script cố định chạy cả thư mục `tests/`. Gọi thẳng `node --test <file>` (xem mục 3) |
+| `npm test` chạy hết cả 134 test dù chỉ muốn 1 file | `npm test -- <file>` không lọc được vì script cố định chạy cả thư mục `tests/`. Gọi thẳng `node --test <file>` (xem mục 3) |
 
 ---
 
@@ -285,7 +285,7 @@ backend/
   migrations/             NNN_ten.sql + NNN_ten.down.sql — đã merge thì không sửa, muốn đổi thì thêm file mới
   tests/                  unit/ integration/ acceptance/ (một file cho mỗi story, tên test theo AC)
   scripts/create-admin.js
-frontend/                 HTML/CSS/JS thuần, ES modules; mọi request đi qua js/api.js
+frontend/                 HTML/CSS/JS thuần, ES modules (không build). app/ (router, phiên, quyền, theme), components/, pages/<vai trò>/, services/api.js (mọi request), styles/ (token + theme). Thiết kế: docs/design/
 docs/testing/             kế hoạch, ca kiểm thử, báo cáo lỗi của QA
 docs/stories/             hồ sơ nghiệm thu từng story (S-xx.md), đối chiếu AC với bằng chứng chạy thật
 docs/spikes/              spike Sprint 1 (mã dùng một lần + tài liệu, không phải sản phẩm)
