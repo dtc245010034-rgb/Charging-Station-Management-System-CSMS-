@@ -48,6 +48,12 @@
 
 **Cần có:** Git, Docker Desktop, Node.js **22.7 trở lên** (chỉ cần khi chạy test hoặc chạy app ngoài Docker).
 
+> **Máy chưa có Node 22.7?** Kiểm bằng `node -v`. Nếu thấp hơn (ví dụ Node 18 có sẵn theo mặc định trên nhiều máy), có 2 cách, không cần gỡ bản Node đang dùng cho việc khác:
+> - **Cài thêm bằng nvm** (khuyến nghị, dùng được cho cả chạy app lẫn test): [nvm](https://github.com/nvm-sh/nvm) (macOS/Linux) hoặc [nvm-windows](https://github.com/coreybutler/nvm-windows), sau đó `nvm install 22 && nvm use 22`.
+> - **Không muốn cài gì thêm:** chạy `npm`/`npm test`/`npm run lint` bên trong container Docker có sẵn Node 22 — xem mục 5 (Kiểm thử), cách này cũng dùng được để chạy `npm run migrate`, `npm run create-admin` mà không cần cài Node.
+>
+> **Lệnh `docker compose` báo "unknown command"?** Máy chỉ có Docker Compose bản cũ (v1, lệnh có gạch ngang). Thay mọi `docker compose ...` trong tài liệu này bằng `docker-compose ...` (cùng ý nghĩa, chỉ khác cú pháp). Kiểm bằng `docker compose version` hoặc `docker-compose version`.
+
 ### Cách A — chạy tất cả bằng Docker (khuyến nghị để dùng thử, demo)
 
 1. Clone và vào thư mục dự án:
@@ -92,6 +98,13 @@ npm run dev                  # tự khởi động lại khi sửa code
 
 > ⚠️ Có **hai** file `.env`: `.env` ở gốc cho Docker Compose, `backend/.env` cho app chạy trực tiếp bằng Node. Cả hai đều không được commit.
 
+### Dừng và dọn dẹp
+
+```
+docker compose down          # dừng container, GIỮ dữ liệu (volume postgres_data)
+docker compose down -v       # dừng và XOÁ luôn dữ liệu — dùng khi muốn làm lại từ đầu
+```
+
 ---
 
 ## 3. Hướng dẫn sử dụng theo vai trò
@@ -104,24 +117,44 @@ npm run dev                  # tự khởi động lại khi sửa code
 | Kế toán | `ACCOUNTANT` | `/pages/accountant.html` | Chưa có chức năng (từ sprint tính tiền) |
 | Tài xế | `DRIVER` | `/pages/driver.html` | Tự đăng ký, đăng nhập; chưa có chức năng sạc |
 
-### Kịch bản dùng thử nhanh (thay cho giao diện chưa có)
+### Tạo tài khoản
 
-Dùng `curl` (Windows PowerShell gõ `curl.exe`, không gõ `curl`). Cookie đăng nhập được lưu vào file `admin.cookie`, `owner.cookie` (đã có trong `.gitignore`, vì chứa phiên đăng nhập: **không commit, không gửi cho người khác**).
+Hệ thống **không có tài khoản mặc định** ngoài Quản trị tạo ở bước 5 mục 2. Hai cách tạo tài khoản:
+
+| Ai tạo | Vai trò tạo được | Endpoint | Ghi chú |
+|---|---|---|---|
+| Bất kỳ ai (đăng ký công khai) | Chỉ `DRIVER` | `POST /api/auth/register` | Gửi `role` (kể cả `"DRIVER"`) → 400. Không được chọn vai trò |
+| Quản trị (`ADMIN`, đã đăng nhập) | Cả 5 vai trò | `POST /api/admin/users` | Bắt buộc gửi `role` đúng 1 trong 5 giá trị dưới |
+
+5 giá trị `role` hợp lệ: `ADMIN`, `STATION_OWNER`, `OPERATOR`, `ACCOUNTANT`, `DRIVER`. Mật khẩu tối thiểu **8 ký tự** cho cả hai cách (riêng `ADMIN_PASSWORD` lúc `npm run create-admin` ở bước 5 mục 2 yêu cầu tối thiểu **12 ký tự**, quy định riêng của script đó).
+
+Dùng `curl` (Windows PowerShell gõ `curl.exe`, không gõ `curl`). Cookie đăng nhập được lưu vào file `*.cookie` (đã có trong `.gitignore`, vì chứa phiên đăng nhập: **không commit, không gửi cho người khác**).
 
 ```
-# 1. Quản trị đăng nhập
+# 1. Quản trị đăng nhập (tài khoản đã tạo ở bước 5 mục 2)
 curl -c admin.cookie -X POST http://localhost:3000/api/auth/login -H "content-type: application/json" -d "{\"email\":\"admin@csms.local\",\"password\":\"<mat-khau-admin>\"}"
 
-# 2. Quản trị tạo tài khoản chủ trạm
-curl -b admin.cookie -X POST http://localhost:3000/api/admin/users -H "content-type: application/json" -d "{\"name\":\"Chu tram A\",\"email\":\"a@csms.local\",\"password\":\"MatKhau#12345\",\"role\":\"STATION_OWNER\"}"
+# 2. Quản trị tạo tài khoản cho từng vai trò còn lại — đổi "role" và email cho mỗi lệnh
+curl -b admin.cookie -X POST http://localhost:3000/api/admin/users -H "content-type: application/json" -d "{\"name\":\"Chu tram A\",\"email\":\"owner@csms.local\",\"password\":\"MatKhau#12345\",\"role\":\"STATION_OWNER\"}"
+curl -b admin.cookie -X POST http://localhost:3000/api/admin/users -H "content-type: application/json" -d "{\"name\":\"Van hanh A\",\"email\":\"operator@csms.local\",\"password\":\"MatKhau#12345\",\"role\":\"OPERATOR\"}"
+curl -b admin.cookie -X POST http://localhost:3000/api/admin/users -H "content-type: application/json" -d "{\"name\":\"Ke toan A\",\"email\":\"accountant@csms.local\",\"password\":\"MatKhau#12345\",\"role\":\"ACCOUNTANT\"}"
 
-# 3. Chủ trạm đăng nhập rồi tạo trạm
-curl -c owner.cookie -X POST http://localhost:3000/api/auth/login -H "content-type: application/json" -d "{\"email\":\"a@csms.local\",\"password\":\"MatKhau#12345\"}"
-curl -b owner.cookie -X POST http://localhost:3000/api/stations -H "content-type: application/json" -d "{\"name\":\"Tram ICTU\",\"address\":\"Thai Nguyen\",\"latitude\":21.59,\"longitude\":105.84}"
+# 3. Đăng ký công khai — luôn ra tài khoản Tài xế, không gửi "role"
+curl -c driver.cookie -X POST http://localhost:3000/api/auth/register -H "content-type: application/json" -d "{\"name\":\"Tai xe A\",\"email\":\"driver@csms.local\",\"password\":\"MatKhau#12345\"}"
+```
 
-# 4. Xem danh sách trạm của mình
+### Kịch bản dùng thử nhanh (thay cho giao diện chưa có)
+
+```
+# Chủ trạm đăng nhập rồi tạo trạm
+curl -c owner.cookie -X POST http://localhost:3000/api/auth/login -H "content-type: application/json" -d "{\"email\":\"owner@csms.local\",\"password\":\"MatKhau#12345\"}"
+curl -b owner.cookie -X POST http://localhost:3000/api/stations -H "content-type: application/json" -H "Idempotency-Key: demo-tram-001" -d "{\"name\":\"Tram ICTU\",\"address\":\"Thai Nguyen\",\"latitude\":21.59,\"longitude\":105.84}"
+
+# Xem danh sách trạm của mình
 curl -b owner.cookie http://localhost:3000/api/stations
 ```
+
+> `POST /api/stations` bắt buộc header `Idempotency-Key` (chuỗi 8-128 ký tự, tự đặt, dùng để chống bấm lưu hai lần tạo hai trạm) — thiếu header này bị 400.
 
 Danh sách API đầy đủ và quy tắc bảo mật: xem `backend/README.md`.
 
@@ -144,13 +177,60 @@ docs/testing/             kế hoạch, ca kiểm thử, báo cáo lỗi của Q
 
 ## 5. Kiểm thử
 
+Luôn bật Postgres riêng cho test trước (cổng **5433**, dữ liệu trong RAM, tự mất khi tắt container — không đụng database dev ở cổng 5432):
+
 ```
-docker compose up -d db_test    # Postgres riêng cho test, cổng 5433, dữ liệu trong RAM
+docker compose up -d db_test
+```
+
+### Cách A — máy đã có Node 22.7 trở lên
+
+```
 cd backend
+npm ci              # lần đầu, hoặc khi package-lock.json đổi
 npm run lint
 npm test
 ```
-Test xoá sạch database `csms_test` mỗi lần chạy, **không đụng dữ liệu dev**. Ca kiểm thử và báo cáo: `docs/testing/`.
+
+### Cách B — máy chưa có Node 22.7 (chạy trong container Docker, không cần cài Node)
+
+Chạy từ **thư mục gốc dự án** (không `cd backend` trước, khác Cách A):
+
+```
+docker run --rm --network host --user "$(id -u):$(id -g)" \
+  -e TEST_DATABASE_URL=postgresql://csms:csms_test_only@localhost:5433/csms_test \
+  -v "$PWD":/app -w /app/backend \
+  node:22-bookworm-slim sh -c "npm ci && npm run lint && npm test"
+```
+
+> `--network host` chỉ chạy đúng trên Linux. Trên **macOS/Windows (Docker Desktop)**: bỏ `--network host`, đổi `localhost` thành `host.docker.internal` trong `TEST_DATABASE_URL` (Docker Desktop đã tự trỏ tên này về máy thật, không cần cấu hình gì thêm).
+>
+> `$(id -u):$(id -g)` chạy được trên macOS/Linux/Git Bash. **PowerShell thuần** không hiểu cú pháp này: chạy trong Git Bash, hoặc bỏ hẳn `--user "$(id -u):$(id -g)"` (kém an toàn hơn — file `node_modules` container tạo ra sẽ thuộc quyền `root`, có thể phải `sudo` mới xoá được sau này).
+>
+> Cách này chạy được mọi lệnh `npm run ...` khác của `backend/package.json` (`migrate`, `create-admin`, `dev`...), chỉ cần đổi phần sau `sh -c`.
+
+### Chạy riêng một file test
+
+Gọi thẳng `node --test`, không qua script `npm test` (script đó cố định chạy toàn bộ `tests/**/*.test.js`, thêm tham số vào `npm test -- ...` không lọc bớt được):
+
+```
+node --test tests/acceptance/S-04.station-management.test.js
+# hoặc trong container: thay "npm ci && npm run lint && npm test" ở Cách B bằng "npm ci && node --test tests/acceptance/S-04.station-management.test.js"
+```
+
+### Đọc kết quả
+
+Test in theo định dạng TAP: mỗi dòng `ok N - <tên test>` là qua, `not ok N - <tên test>` là fail kèm khối `error`/`expected`/`actual` ngay bên dưới. Cuối cùng có tổng kết:
+
+```
+# tests 127
+# pass 127
+# fail 0
+```
+
+`# fail 0` là điều kiện để merge — CI trên mỗi Pull Request chạy đúng `npm run lint && npm test`, PR đỏ thì không merge được.
+
+Ca kiểm thử và báo cáo QA: `docs/testing/`, `docs/stories/S-xx.md`.
 
 ---
 
@@ -163,7 +243,10 @@ Test xoá sạch database `csms_test` mỗi lần chạy, **không đụng dữ 
 | Cổng 5432 hoặc 3000 đã bị dùng | Tắt Postgres/ứng dụng khác, hoặc đổi `POSTGRES_PORT` / `APP_PORT` trong `.env` gốc |
 | Đổi cổng app xong thì mọi thao tác ghi bị 403 "Origin không hợp lệ" | Đặt `APP_ORIGIN` khớp địa chỉ đang mở, ví dụ `http://localhost:8080` |
 | Đăng nhập bị 429 kể cả khi đúng mật khẩu | Đang bị khoá 15 phút do sai quá 5 lần; đợi hết thời gian khoá |
-| Node báo phiên bản không hợp lệ | Cần Node.js ≥ 22.7 |
+| Node báo phiên bản không hợp lệ, hoặc `npm error engine Unsupported` | Cần Node.js ≥ 22.7. Cài bằng nvm, hoặc chạy qua container Docker — xem mục 5, Cách B |
+| `docker compose: unknown command` hoặc `command not found` | Máy chỉ có Docker Compose v1: đổi `docker compose` thành `docker-compose` (xem đầu mục 2) |
+| Chạy Cách B (container Node) trên macOS/Windows: lỗi kết nối Postgres, `ECONNREFUSED` | Bỏ `--network host`, đổi `localhost` thành `host.docker.internal` trong `TEST_DATABASE_URL` (xem mục 5) |
+| `npm test` chạy hết cả 127 test dù chỉ muốn 1 file | `npm test -- <file>` không lọc được vì script cố định chạy cả thư mục `tests/`. Gọi thẳng `node --test <file>` (xem mục 5) |
 
 ---
 

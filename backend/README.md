@@ -1,6 +1,6 @@
 # CSMS Backend
 
-Yêu cầu Node.js `22.5+` và PostgreSQL 14+ (hoặc Docker Compose).
+Yêu cầu Node.js `22.7+` và PostgreSQL 14+ (hoặc Docker Compose).
 
 Backend PostgreSQL cho hệ thống quản lý trạm sạc, phục vụ frontend từ thư mục `frontend/` (cùng origin): JWT + httpOnly cookie, RBAC với 5 role, khóa tài khoản sau 5 lần sai, giới hạn đăng nhập theo IP và WebSocket OCPP-style.
 
