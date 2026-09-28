@@ -10,7 +10,7 @@ if (!new URL(BASE).pathname.slice(1).endsWith('_test')) {
 }
 
 function env(extra = {}) {
-  return { PATH: process.env.PATH, DATABASE_URL: BASE, JWT_SECRET: 'z'.repeat(40), APP_ORIGIN: 'http://localhost:3000', ...extra };
+  return { PATH: process.env.PATH, CSMS_SKIP_DOTENV: '1', DATABASE_URL: BASE, JWT_SECRET: 'z'.repeat(40), APP_ORIGIN: 'http://localhost:3000', ...extra };
 }
 
 function run(script, args = [], extra = {}) {

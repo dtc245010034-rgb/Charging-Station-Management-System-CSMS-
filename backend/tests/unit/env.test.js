@@ -10,7 +10,7 @@ const URL_VALUE = 'postgresql://u:supersecretpw@localhost:5432/db';
 function load(env) {
   return spawnSync(process.execPath, ['-e', "const e = require('./src/config/env'); console.log(JSON.stringify(e))"], {
     cwd: root,
-    env: { PATH: process.env.PATH, ...env },
+    env: { PATH: process.env.PATH, CSMS_SKIP_DOTENV: '1', ...env },
     encoding: 'utf8',
   });
 }
