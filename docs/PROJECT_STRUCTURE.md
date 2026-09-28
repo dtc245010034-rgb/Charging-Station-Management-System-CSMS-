@@ -2,8 +2,8 @@
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
 > **Người thực hiện**: TESTER / QA ANALYST  
-> **Snapshot Date**: 27/09/2026  
-> **Git Commit**: `4ab9f0f11f3b037f6e991984002243a0d80884d0` (nhánh `main`)  
+> **Snapshot Date**: 28/09/2026  
+> **Git Commit**: `86769949c03381429fd4931f3b364341ac618f8f` (nhánh `main`)  
 > **Structure Status**: **VERIFIED**  
 > **Entry Point / Router**: [`docs/README.md`](./README.md)  
 > **Bộ quy chuẩn trung tâm**: [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md)  

@@ -10,34 +10,39 @@
 
 ## 1. TỔNG QUAN HỆ THỐNG TÀI LIỆU TESTER (DOCUMENT ARCHITECTURE)
 
-Hệ thống tài liệu kiểm định chất lượng của dự án được phân định rạch ròi thành 4 trụ cột trung tâm:
+Hệ thống tài liệu kiểm định chất lượng của dự án được phân định rạch ròi thành các phân vùng chức năng thống nhất:
 
 ```text
-               docs/README.md
-         (AI Tester Entry Point / Router)
-                       ↓
-            docs/TESTER_STANDARD.md
-        (Bộ quy chuẩn Tester trung tâm - RULES)
-                       ↓
-           docs/PROJECT_STRUCTURE.md
-        (Bản đồ dự án đã xác minh - FACTS)
-                       ↓
-             docs/TEST_INVENTORY.md
-        (Chỉ mục danh mục kiểm thử - TEST FACTS)
-                       ↓
-   ┌───────────────────┼───────────────────┐
-   ↓                   ↓                   ↓
-docs/stories/S-xx.md   docs/integration/   General Review Findings
-(Test theo Story &      FRONTEND_BACKEND.md (Đánh giá kỹ thuật độc lập:
-General Review Mục 11) (Test tích hợp FE/BE) Observation & Recommendation)
+                           docs/README.md
+                  (AI Tester Entry Point / Router)
+                                 ↓
+                      docs/TESTER_STANDARD.md
+              (Bộ quy chuẩn Tester trung tâm - RULES)
+                                 ↓
+                     docs/PROJECT_STRUCTURE.md
+                 (Bản đồ dự án đã xác minh - FACTS)
+                                 ↓
+                       docs/TEST_INVENTORY.md
+              (Chỉ mục danh mục kiểm thử - TEST FACTS)
+                                 ↓
+    ┌────────────────────────────┼────────────────────────────┐
+    ↓                            ↓                            ↓
+docs/stories/S-xx.md    docs/integration/            docs/testing/
+(Kịch bản chấp nhận     FRONTEND_BACKEND.md          (Phân vùng Báo cáo & Lỗi:
+theo Story & Review)    (Kiểm thử tích hợp FE/BE)    TEST_PLAN, TEST_REPORT,
+                                                     BUG_REPORT, REGRESSION)
 ```
 
-| Tệp tài liệu | Vai trò kiến trúc | Trả lời câu hỏi | Thẩm quyền / Quyền hạn |
+| Phân vùng tài liệu | Vai trò kiến trúc | Trách nhiệm chính | Thẩm quyền |
 |:---|:---|:---|:---:|
-| **[`README.md`](./README.md)** (File này) | **Entry Point & Router** | *AI Tester phải đọc gì trước, đi đâu, xử lý nhiệm vụ theo thứ tự nào?* | Tester Quản Trị |
-| **[`TESTER_STANDARD.md`](./TESTER_STANDARD.md)** | **Central Rulebook & Standards** | *Tester PHẢI tuân thủ những nguyên tắc, chính sách, enum và quy trình nào?* | Tester Quản Trị (Nguồn Luật) |
-| **[`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md)** | **Verified Project Map** | *Mã nguồn, thư mục, component và dependency của dự án HIỆN CÓ những gì?* | Tester Quản Trị (Sự Thật Dự Án) |
-| **[`TEST_INVENTORY.md`](./TEST_INVENTORY.md)** | **Verified Test Index** | *Dự án HIỆN CÓ những Test Case nào, trạng thái PASS/FAIL và bằng chứng gì?* | Tester Quản Trị (Sự Thật Kiểm Thử) |
+| **[`README.md`](./README.md)** (File này) | **Entry Point & Router** | Điều hướng kiểm thử, FAQ vận hành và quy trình định tuyến | Tester Quản Trị |
+| **[`TESTER_STANDARD.md`](./TESTER_STANDARD.md)** | **Central Rulebook & Standards** | Nguồn luật bất biến: Enum, Cây quyết định, State Machine, AI Guardrails | Tester Quản Trị (Nguồn Luật) |
+| **[`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md)** | **Verified Project Map** | Bản đồ mã nguồn, components, dependencies đã xác minh | Tester Quản Trị (Sự Thật Dự Án) |
+| **[`TEST_INVENTORY.md`](./TEST_INVENTORY.md)** | **Verified Test Index** | Danh mục 87 Test Cases, trạng thái, Defect binding và liên kết bằng chứng | Tester Quản Trị (Sự Thật Kiểm Thử) |
+| **[`stories/S-xx.md`](./stories/)** | **Story Test Specifications** | Chi tiết kịch bản, bước thực thi và bằng chứng cho từng User Story | Tester Quản Trị |
+| **[`integration/`](./integration/)** | **Integration Specifications** | Kiểm thử tích hợp toàn trình giữa Frontend Client ↔ Backend API | Tester Quản Trị |
+| **[`testing/`](./testing/)** | **Reporting & Defect Tracking** | Báo cáo kiểm thử tổng thể, hồ sơ theo dõi Bug và đánh giá hồi quy | Tester Quản Trị |
+| **`spikes/`** | **Research & Spikes (Isolated)** | Ghi nhận nghiên cứu độc lập (K-01, S-05-AC3); cấm can thiệp | Phân vùng Tham Chiếu Độc Lập |
 
 ---
 
@@ -158,6 +163,13 @@ Toàn bộ mã nguồn và cấu hình ngoài `docs/`:
 
 ### Q17: Khi nào một Observation trong General Review được chuyển thành Defect?
 Chỉ khi và chỉ khi quá trình điều tra tiếp theo thu thập được bằng chứng khách quan chứng minh quan sát đó trực tiếp gây sai lệch hành vi runtime so với Requirement/AC/NFR (`Requirement Impact = YES`). Khi đó quan sát mới được chuyển thành **REQUIREMENT DEFECT** và mở lại luồng Requirement Testing.
+
+### Q18: Khi bộ test tự động của Developer bị FAIL thì Tester xử lý thế nào?
+Áp dụng quy tắc 4 bước theo [Mục 9.10 của `TESTER_STANDARD.md`](./TESTER_STANDARD.md#L450):
+1. **Điều tra nguyên nhân**: Phân định lỗi nằm ở mã nguồn Production (`backend/src/`) hay ở chính mã test của Developer (`backend/tests/`).
+2. **Nếu do Production Code vi phạm AC**: Đánh `Test Status = FAIL`, phân loại `CODE_DEFECT`, mở quy trình báo lỗi.
+3. **Nếu do Test Code của Dev nhưng Live API chạy đúng**: Đánh Requirement Verification là `PASS`, đồng thời ghi nhận vào General Review dưới dạng `CODE_OBSERVATION` với scope `OUT-OF-SCOPE`. Tuyệt đối không tự ý dùng enum cấm `TEST_DEFECT`.
+4. **Trình bày Bảng Tổng kết**: Bắt buộc tách 2 dòng độc lập: `Requirement Verification: PASS` và `Developer Acceptance Suite: FAIL (kèm mã OBS-xxx)` để đảm bảo tính minh bạch, không che giấu lỗi test của Dev.
 
 ---
 

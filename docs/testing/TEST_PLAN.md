@@ -1,7 +1,7 @@
 # KẾ HOẠCH KIỂM THỬ (TEST PLAN) — CSMS
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
-> **Phiên bản snapshot**: 24/09/2026 (Nhánh `main`, commit `4bc5758`)  
+> **Phiên bản snapshot**: 28/09/2026 (Nhánh `main`, commit `86769949c03381429fd4931f3b364341ac618f8f`)  
 > **Người thực hiện**: TESTER / QA ANALYST  
 
 ---
@@ -16,10 +16,11 @@ Kế hoạch kiểm thử tổng thể bao quát toàn bộ chức năng cốt l
 - Tích hợp toàn trình Frontend Client ↔ Backend API ↔ Cơ sở dữ liệu.
 
 *Lưu ý*: Chi tiết từng Story được tách biệt và lưu trữ độc lập tại:
-- [`stories/S-01.md`](./stories/S-01.md)
-- [`stories/S-02.md`](./stories/S-02.md)
-- [`stories/S-03.md`](./stories/S-03.md)
-- [`integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md)
+- [`stories/S-01.md`](../stories/S-01.md)
+- [`stories/S-02.md`](../stories/S-02.md)
+- [`stories/S-03.md`](../stories/S-03.md)
+- [`stories/S-04.md`](../stories/S-04.md)
+- [`integration/FRONTEND_BACKEND.md`](../integration/FRONTEND_BACKEND.md)
 
 ---
 
@@ -89,13 +90,15 @@ S-01 (Khung ứng dụng & Database)
 
 ---
 
-## 9. PASS / FAIL / BLOCKED Rules (Quy tắc đánh giá trạng thái)
+## 9. PASS / FAIL / BLOCKED Rules (Quy tắc đánh giá trạng thái chuẩn 8 giá trị)
 - **PASS**: Hành vi thực tế khớp hoàn toàn với kết quả kỳ vọng, có bằng chứng (terminal log, output test) xác minh.
 - **FAIL**: Hành vi thực tế sai lệch với kỳ vọng do lỗi trong mã nguồn (`CODE_DEFECT`) khi môi trường đã sẵn sàng.
 - **BLOCKED**: Không thể thực thi hoặc hoàn thành kiểm thử do rào cản môi trường máy test, dịch vụ bên ngoài bị tắt, hoặc thiếu dependency (`ENVIRONMENT_BLOCKER`, `CONFIGURATION_PROBLEM`).
 - **NOT VERIFIED**: Chưa đủ căn cứ hoặc bằng chứng xác minh mới nhất tính đến thời điểm snapshot.
 - **NOT FOUND**: Chức năng hoặc giao diện chưa tồn tại trong mã nguồn.
 - **NOT RUN**: Test case đã được thiết kế nhưng chưa đến lượt chạy.
+- **RETEST_PENDING**: Kịch bản kiểm thử từng bị `FAIL`, Developer đã push commit sửa lỗi, đang chờ Tester chạy lại kiểm thử xác minh trên môi trường test.
+- **OBSOLETE**: Kịch bản kiểm thử không còn hiệu lực do Requirement/AC bị thay đổi hoặc hủy bỏ bởi PO.
 
 ---
 

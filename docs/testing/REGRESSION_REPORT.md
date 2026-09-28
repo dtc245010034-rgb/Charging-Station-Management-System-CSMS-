@@ -2,7 +2,7 @@
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
 > **Người thực hiện**: TESTER / QA ANALYST  
-> **Phiên bản snapshot**: 26/09/2026 (Nhánh `main`, commit `68d877799eb407b0421ca44a82514f9f4c639193`)  
+> **Phiên bản snapshot**: 28/09/2026 (Nhánh `main`, commit `86769949c03381429fd4931f3b364341ac618f8f`)  
 > **Phạm vi**: Đánh giá hồi quy chức năng của các Story S-01, S-02, S-03 khi tích hợp tính năng Quản lý trạm sạc S-04 / T-08 / T-09 và Migration 004.  
 
 ---
