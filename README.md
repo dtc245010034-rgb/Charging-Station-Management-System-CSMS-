@@ -98,6 +98,45 @@ npm run dev                  # tự khởi động lại khi sửa code
 
 > ⚠️ Có **hai** file `.env`: `.env` ở gốc cho Docker Compose, `backend/.env` cho app chạy trực tiếp bằng Node. Cả hai đều không được commit.
 
+### Chi tiết file `.env`
+
+Hai file **độc lập, không đọc lẫn nhau** — sửa nhầm file thường là lý do "đổi `.env` mà không thấy tác dụng":
+
+- **`.env` ở thư mục gốc**: chỉ lệnh `docker compose` đọc, để điền vào `${...}` trong `docker-compose.yml`. Container `app` **không** đọc file này trực tiếp — mọi biến nó cần đã được `docker-compose.yml` truyền vào qua khối `environment:`.
+- **`backend/.env`**: chỉ app đọc, và chỉ khi chạy trực tiếp bằng `node`/`npm` (Cách B, hoặc `npm test`). Container Docker (Cách A) không đụng tới file này.
+
+**Biến trong `.env` ở gốc** (theo `docker-compose.yml`):
+
+| Biến | Bắt buộc? | Mặc định nếu bỏ trống | Ghi chú |
+|---|---|---|---|
+| `POSTGRES_PASSWORD` | **Có** | — (Compose từ chối chạy nếu thiếu) | Mật khẩu Postgres, tự đặt |
+| `JWT_SECRET` | **Có** | — (Compose từ chối chạy nếu thiếu) | ≥ 32 ký tự ngẫu nhiên |
+| `POSTGRES_DB` | Không | `csms` | |
+| `POSTGRES_USER` | Không | `csms` | |
+| `POSTGRES_PORT` | Không | `5432` | Đổi khi cổng 5432 máy đã bị chiếm |
+| `APP_PORT` | Không | `3000` | Đổi khi cổng 3000 máy đã bị chiếm |
+| `APP_ORIGIN` | Không | `http://localhost:3000` | Phải khớp địa chỉ đang mở trình duyệt, nếu không mọi request ghi (POST/PATCH) bị 403 |
+| `TRUST_PROXY` | Không | `0` | Chỉ đổi khi có reverse proxy đứng trước app |
+
+> `DATABASE_URL` **không** khai trong `.env` gốc — Compose tự ráp từ `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` ở trên. Khai thêm `DATABASE_URL` vào file này không có tác dụng gì.
+
+**Biến trong `backend/.env`**: xem đủ trong `backend/.env.example` (đã có chú thích từng dòng) — copy file đó rồi điền, đừng gõ tay lại từ đầu.
+
+**Sửa `.env` xong mà không thấy đổi:** container `app` đã đọc biến môi trường **một lần lúc khởi động**, sửa `.env` gốc không tự áp dụng cho container đang chạy. Phải khởi động lại:
+
+```
+docker compose up -d --force-recreate app
+```
+
+Xem trước Compose sẽ nạp giá trị nào (không cần khởi động thật) bằng `docker compose config`.
+
+**Trước khi commit, luôn kiểm lại `.env` không bị đưa vào:**
+
+```
+git status                    # .env không được xuất hiện ở đây
+git check-ignore -v .env      # có dòng in ra = đang bị ignore, đúng
+```
+
 ### Dừng và dọn dẹp
 
 ```
