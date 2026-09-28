@@ -1,0 +1,1078 @@
+[
+  {
+    "t": 6,
+    "note": "A: phiên sạc trọn vẹn (Boot → Heartbeat → Status → Authorize → Start → Meter → Stop)"
+  },
+  {
+    "t": 27,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "34dddc64-9b89-4694-85d1-04b27f199d65",
+      "BootNotification",
+      {
+        "chargePointVendor": "CSMS-Spike",
+        "chargePointModel": "K01-Virtual",
+        "chargePointSerialNumber": "K01-SIM-01",
+        "firmwareVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "t": 30,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "34dddc64-9b89-4694-85d1-04b27f199d65",
+      {
+        "status": "Accepted",
+        "currentTime": "2026-09-28T20:31:27.887Z",
+        "interval": 300
+      }
+    ]
+  },
+  {
+    "t": 32,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "44d8523a-9dc4-43d9-82b0-e4a1a85c0ed8",
+      "Heartbeat",
+      {}
+    ]
+  },
+  {
+    "t": 33,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "44d8523a-9dc4-43d9-82b0-e4a1a85c0ed8",
+      {
+        "currentTime": "2026-09-28T20:31:27.891Z"
+      }
+    ]
+  },
+  {
+    "t": 36,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "373c5244-49e1-4e17-897f-110b2eea2c82",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Available",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:27.892Z"
+      }
+    ]
+  },
+  {
+    "t": 37,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "373c5244-49e1-4e17-897f-110b2eea2c82",
+      {}
+    ]
+  },
+  {
+    "t": 38,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "ce95edc2-60a8-498e-995f-f5cfc1f16fb5",
+      "Authorize",
+      {
+        "idTag": "DEMO-TAG-001"
+      }
+    ]
+  },
+  {
+    "t": 40,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "ce95edc2-60a8-498e-995f-f5cfc1f16fb5",
+      {
+        "idTagInfo": {
+          "status": "Accepted"
+        }
+      }
+    ]
+  },
+  {
+    "t": 41,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "c637635f-14b8-4416-b4ec-7deb91306a3c",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Preparing",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:27.899Z"
+      }
+    ]
+  },
+  {
+    "t": 41,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "c637635f-14b8-4416-b4ec-7deb91306a3c",
+      {}
+    ]
+  },
+  {
+    "t": 43,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "b96b3289-987b-48ca-ad8d-7e1b3ce1681c",
+      "StartTransaction",
+      {
+        "connectorId": 1,
+        "idTag": "DEMO-TAG-001",
+        "meterStart": 0,
+        "timestamp": "2026-09-28T20:31:27.900Z"
+      }
+    ]
+  },
+  {
+    "t": 45,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "b96b3289-987b-48ca-ad8d-7e1b3ce1681c",
+      {
+        "transactionId": 1000,
+        "idTagInfo": {
+          "status": "Accepted"
+        }
+      }
+    ]
+  },
+  {
+    "t": 46,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "c3662b95-b82d-46e9-b660-91398ef30c15",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Charging",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:27.904Z"
+      }
+    ]
+  },
+  {
+    "t": 46,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "c3662b95-b82d-46e9-b660-91398ef30c15",
+      {}
+    ]
+  },
+  {
+    "t": 50,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "e8cdb8e5-6420-4a03-b200-180fb14643f9",
+      "MeterValues",
+      {
+        "connectorId": 1,
+        "transactionId": 1000,
+        "meterValue": [
+          {
+            "timestamp": "2026-09-28T20:31:27.905Z",
+            "sampledValue": [
+              {
+                "value": "61",
+                "context": "Sample.Periodic",
+                "measurand": "Energy.Active.Import.Register",
+                "unit": "Wh"
+              },
+              {
+                "value": "22000",
+                "measurand": "Power.Active.Import",
+                "unit": "W"
+              },
+              {
+                "value": "31.9",
+                "measurand": "Current.Import",
+                "unit": "A"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "t": 51,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "e8cdb8e5-6420-4a03-b200-180fb14643f9",
+      {}
+    ]
+  },
+  {
+    "t": 52,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "3a55a869-0256-43f8-8a6d-23fec673888b",
+      "MeterValues",
+      {
+        "connectorId": 1,
+        "transactionId": 1000,
+        "meterValue": [
+          {
+            "timestamp": "2026-09-28T20:31:27.910Z",
+            "sampledValue": [
+              {
+                "value": "122",
+                "context": "Sample.Periodic",
+                "measurand": "Energy.Active.Import.Register",
+                "unit": "Wh"
+              },
+              {
+                "value": "22000",
+                "measurand": "Power.Active.Import",
+                "unit": "W"
+              },
+              {
+                "value": "31.9",
+                "measurand": "Current.Import",
+                "unit": "A"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "t": 52,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "3a55a869-0256-43f8-8a6d-23fec673888b",
+      {}
+    ]
+  },
+  {
+    "t": 52,
+    "note": "B (R-08): CSMS gửi SetChargingProfile giới hạn 7 kW giữa phiên"
+  },
+  {
+    "t": 58,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "b73b1bf5-32eb-4192-bf6c-474a376eb425",
+      "SetChargingProfile",
+      {
+        "connectorId": 1,
+        "csChargingProfiles": {
+          "chargingProfileId": 1,
+          "stackLevel": 0,
+          "chargingProfilePurpose": "TxProfile",
+          "transactionId": 1000,
+          "chargingProfileKind": "Absolute",
+          "chargingSchedule": {
+            "chargingRateUnit": "W",
+            "chargingSchedulePeriod": [
+              {
+                "startPeriod": 0,
+                "limit": 7000
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "t": 59,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "b73b1bf5-32eb-4192-bf6c-474a376eb425",
+      {
+        "status": "Accepted"
+      }
+    ]
+  },
+  {
+    "t": 60,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "7e4ae4f7-6f38-4f37-b6a8-967a97e3f59d",
+      "MeterValues",
+      {
+        "connectorId": 1,
+        "transactionId": 1000,
+        "meterValue": [
+          {
+            "timestamp": "2026-09-28T20:31:27.919Z",
+            "sampledValue": [
+              {
+                "value": "141",
+                "context": "Sample.Periodic",
+                "measurand": "Energy.Active.Import.Register",
+                "unit": "Wh"
+              },
+              {
+                "value": "7000",
+                "measurand": "Power.Active.Import",
+                "unit": "W"
+              },
+              {
+                "value": "10.1",
+                "measurand": "Current.Import",
+                "unit": "A"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "t": 60,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "7e4ae4f7-6f38-4f37-b6a8-967a97e3f59d",
+      {}
+    ]
+  },
+  {
+    "t": 60,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "5653e977-39ea-4d02-b453-c41c0556e526",
+      "MeterValues",
+      {
+        "connectorId": 1,
+        "transactionId": 1000,
+        "meterValue": [
+          {
+            "timestamp": "2026-09-28T20:31:27.919Z",
+            "sampledValue": [
+              {
+                "value": "160",
+                "context": "Sample.Periodic",
+                "measurand": "Energy.Active.Import.Register",
+                "unit": "Wh"
+              },
+              {
+                "value": "7000",
+                "measurand": "Power.Active.Import",
+                "unit": "W"
+              },
+              {
+                "value": "10.1",
+                "measurand": "Current.Import",
+                "unit": "A"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "t": 60,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "5653e977-39ea-4d02-b453-c41c0556e526",
+      {}
+    ]
+  },
+  {
+    "t": 66,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "21a0f254-1da7-49ff-b872-20235356487b",
+      "StopTransaction",
+      {
+        "transactionId": 1000,
+        "idTag": "DEMO-TAG-001",
+        "meterStop": 160,
+        "timestamp": "2026-09-28T20:31:27.920Z",
+        "reason": "Local"
+      }
+    ]
+  },
+  {
+    "t": 68,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "21a0f254-1da7-49ff-b872-20235356487b",
+      {
+        "idTagInfo": {
+          "status": "Accepted"
+        }
+      }
+    ]
+  },
+  {
+    "t": 68,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "f5d41019-bc91-4257-9a12-c8811050c542",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Finishing",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:27.927Z"
+      }
+    ]
+  },
+  {
+    "t": 69,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "f5d41019-bc91-4257-9a12-c8811050c542",
+      {}
+    ]
+  },
+  {
+    "t": 69,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "1bf19ea6-c6f0-4c56-bac7-1b2f12cf3786",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Available",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:27.928Z"
+      }
+    ]
+  },
+  {
+    "t": 69,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "1bf19ea6-c6f0-4c56-bac7-1b2f12cf3786",
+      {}
+    ]
+  },
+  {
+    "t": 69,
+    "note": "C: CSMS gửi Reset(Soft)"
+  },
+  {
+    "t": 70,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-01",
+    "frame": [
+      2,
+      "c1d1c0a3-d360-4c9f-bb85-6a66e9e79bce",
+      "Reset",
+      {
+        "type": "Soft"
+      }
+    ]
+  },
+  {
+    "t": 71,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-01",
+    "frame": [
+      3,
+      "c1d1c0a3-d360-4c9f-bb85-6a66e9e79bce",
+      {
+        "status": "Accepted"
+      }
+    ]
+  },
+  {
+    "t": 71,
+    "note": "D: rớt kết nối giữa phiên (S-21)"
+  },
+  {
+    "t": 73,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "f36b9667-1673-4826-bd8b-6ab596b53420",
+      "BootNotification",
+      {
+        "chargePointVendor": "CSMS-Spike",
+        "chargePointModel": "K01-Virtual",
+        "chargePointSerialNumber": "K01-SIM-02",
+        "firmwareVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "t": 74,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "f36b9667-1673-4826-bd8b-6ab596b53420",
+      {
+        "status": "Accepted",
+        "currentTime": "2026-09-28T20:31:27.932Z",
+        "interval": 300
+      }
+    ]
+  },
+  {
+    "t": 74,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "c019d2a5-733a-4f21-ac60-1c0bc2c2a820",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Available",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:27.933Z"
+      }
+    ]
+  },
+  {
+    "t": 74,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "c019d2a5-733a-4f21-ac60-1c0bc2c2a820",
+      {}
+    ]
+  },
+  {
+    "t": 74,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "3a6528a7-7536-4ed7-b112-a96b5ec9d740",
+      "Authorize",
+      {
+        "idTag": "DEMO-TAG-001"
+      }
+    ]
+  },
+  {
+    "t": 74,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "3a6528a7-7536-4ed7-b112-a96b5ec9d740",
+      {
+        "idTagInfo": {
+          "status": "Accepted"
+        }
+      }
+    ]
+  },
+  {
+    "t": 74,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "4e43f904-3a38-4720-bc0c-d3c09ec9c09d",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Preparing",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:27.933Z"
+      }
+    ]
+  },
+  {
+    "t": 74,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "4e43f904-3a38-4720-bc0c-d3c09ec9c09d",
+      {}
+    ]
+  },
+  {
+    "t": 75,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "8a6f72d7-4fa1-4c9a-89dd-977cd692f4bd",
+      "StartTransaction",
+      {
+        "connectorId": 1,
+        "idTag": "DEMO-TAG-001",
+        "meterStart": 0,
+        "timestamp": "2026-09-28T20:31:27.934Z"
+      }
+    ]
+  },
+  {
+    "t": 75,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "8a6f72d7-4fa1-4c9a-89dd-977cd692f4bd",
+      {
+        "transactionId": 1001,
+        "idTagInfo": {
+          "status": "Accepted"
+        }
+      }
+    ]
+  },
+  {
+    "t": 75,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "16babbe9-f7fa-4033-a518-9d78ff8dcee9",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Charging",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:27.934Z"
+      }
+    ]
+  },
+  {
+    "t": 75,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "16babbe9-f7fa-4033-a518-9d78ff8dcee9",
+      {}
+    ]
+  },
+  {
+    "t": 75,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "6639b013-01ab-4e4e-9bc4-5faf570dda24",
+      "MeterValues",
+      {
+        "connectorId": 1,
+        "transactionId": 1001,
+        "meterValue": [
+          {
+            "timestamp": "2026-09-28T20:31:27.934Z",
+            "sampledValue": [
+              {
+                "value": "61",
+                "context": "Sample.Periodic",
+                "measurand": "Energy.Active.Import.Register",
+                "unit": "Wh"
+              },
+              {
+                "value": "22000",
+                "measurand": "Power.Active.Import",
+                "unit": "W"
+              },
+              {
+                "value": "31.9",
+                "measurand": "Current.Import",
+                "unit": "A"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "t": 75,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "6639b013-01ab-4e4e-9bc4-5faf570dda24",
+      {}
+    ]
+  },
+  {
+    "t": 177,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "d1fdbfc4-9031-4b33-a9be-5455c7c0bce9",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Charging",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:28.036Z"
+      }
+    ]
+  },
+  {
+    "t": 178,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "d1fdbfc4-9031-4b33-a9be-5455c7c0bce9",
+      {}
+    ]
+  },
+  {
+    "t": 178,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "c4ead686-fc6a-4383-abc7-bf2c1e95e708",
+      "MeterValues",
+      {
+        "connectorId": 1,
+        "transactionId": 1001,
+        "meterValue": [
+          {
+            "timestamp": "2026-09-28T20:31:28.037Z",
+            "sampledValue": [
+              {
+                "value": "122",
+                "context": "Sample.Periodic",
+                "measurand": "Energy.Active.Import.Register",
+                "unit": "Wh"
+              },
+              {
+                "value": "22000",
+                "measurand": "Power.Active.Import",
+                "unit": "W"
+              },
+              {
+                "value": "31.9",
+                "measurand": "Current.Import",
+                "unit": "A"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "t": 178,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "c4ead686-fc6a-4383-abc7-bf2c1e95e708",
+      {}
+    ]
+  },
+  {
+    "t": 178,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "635d2813-f199-4535-8f4d-62ab928d3301",
+      "StopTransaction",
+      {
+        "transactionId": 1001,
+        "idTag": "DEMO-TAG-001",
+        "meterStop": 122,
+        "timestamp": "2026-09-28T20:31:28.037Z",
+        "reason": "Local"
+      }
+    ]
+  },
+  {
+    "t": 178,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "635d2813-f199-4535-8f4d-62ab928d3301",
+      {
+        "idTagInfo": {
+          "status": "Accepted"
+        }
+      }
+    ]
+  },
+  {
+    "t": 178,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "db98c8d0-33ce-4e04-a568-3572ff09e9e3",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Finishing",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:28.037Z"
+      }
+    ]
+  },
+  {
+    "t": 179,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "db98c8d0-33ce-4e04-a568-3572ff09e9e3",
+      {}
+    ]
+  },
+  {
+    "t": 179,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-02",
+    "frame": [
+      2,
+      "deaef367-db10-430f-b154-105c2b74e9b4",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Available",
+        "errorCode": "NoError",
+        "timestamp": "2026-09-28T20:31:28.038Z"
+      }
+    ]
+  },
+  {
+    "t": 179,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-02",
+    "frame": [
+      3,
+      "deaef367-db10-430f-b154-105c2b74e9b4",
+      {}
+    ]
+  },
+  {
+    "t": 179,
+    "note": "E: kiểm tra từ chối"
+  },
+  {
+    "t": 186,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-03",
+    "frame": [
+      2,
+      "f27658ba-3591-4ebf-8de2-b5df79b10e38",
+      "BootNotification",
+      {
+        "chargePointVendor": "CSMS-Spike",
+        "chargePointModel": "K01-Virtual",
+        "chargePointSerialNumber": "K01-SIM-03",
+        "firmwareVersion": "0.1.0"
+      }
+    ]
+  },
+  {
+    "t": 186,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-03",
+    "frame": [
+      3,
+      "f27658ba-3591-4ebf-8de2-b5df79b10e38",
+      {
+        "status": "Accepted",
+        "currentTime": "2026-09-28T20:31:28.045Z",
+        "interval": 300
+      }
+    ]
+  },
+  {
+    "t": 188,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-03",
+    "frame": [
+      2,
+      "bad-1",
+      "StatusNotification",
+      {
+        "connectorId": 1,
+        "status": "Charging"
+      }
+    ]
+  },
+  {
+    "t": 188,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-03",
+    "frame": [
+      4,
+      "bad-1",
+      "OccurrenceConstraintViolation",
+      "data must have required property 'errorCode'",
+      {
+        "errors": [
+          {
+            "instancePath": "",
+            "schemaPath": "#/required",
+            "keyword": "required",
+            "params": {
+              "missingProperty": "errorCode"
+            },
+            "message": "must have required property 'errorCode'"
+          }
+        ],
+        "data": {
+          "connectorId": 1,
+          "status": "Charging"
+        }
+      }
+    ]
+  },
+  {
+    "t": 188,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-03",
+    "frame": [
+      2,
+      "ok-2",
+      "Heartbeat",
+      {}
+    ]
+  },
+  {
+    "t": 188,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-03",
+    "frame": [
+      3,
+      "ok-2",
+      {
+        "currentTime": "2026-09-28T20:31:28.047Z"
+      }
+    ]
+  },
+  {
+    "t": 189,
+    "note": "F: cùng messageId gửi hai lần (S-14)"
+  },
+  {
+    "t": 192,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-03",
+    "frame": [
+      2,
+      "dup-1",
+      "StartTransaction",
+      {
+        "connectorId": 1,
+        "idTag": "DEMO-TAG-001",
+        "meterStart": 0,
+        "timestamp": "2026-09-28T20:31:28.050Z"
+      }
+    ]
+  },
+  {
+    "t": 192,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-03",
+    "frame": [
+      3,
+      "dup-1",
+      {
+        "transactionId": 1002,
+        "idTagInfo": {
+          "status": "Accepted"
+        }
+      }
+    ]
+  },
+  {
+    "t": 343,
+    "direction": "CP→CSMS",
+    "identity": "K01-SIM-03",
+    "frame": [
+      2,
+      "dup-1",
+      "StartTransaction",
+      {
+        "connectorId": 1,
+        "idTag": "DEMO-TAG-001",
+        "meterStart": 0,
+        "timestamp": "2026-09-28T20:31:28.050Z"
+      }
+    ]
+  },
+  {
+    "t": 343,
+    "direction": "CSMS→CP",
+    "identity": "K01-SIM-03",
+    "frame": [
+      3,
+      "dup-1",
+      {
+        "transactionId": 1003,
+        "idTagInfo": {
+          "status": "Accepted"
+        }
+      }
+    ]
+  }
+]

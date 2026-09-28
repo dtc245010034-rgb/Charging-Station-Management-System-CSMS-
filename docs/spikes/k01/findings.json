@@ -1,0 +1,115 @@
+{
+  "boot": {
+    "status": "Accepted",
+    "currentTime": "2026-09-28T20:31:27.887Z",
+    "interval": 300
+  },
+  "start": {
+    "transactionId": 1000,
+    "idTagInfo": {
+      "status": "Accepted"
+    }
+  },
+  "setChargingProfile": {
+    "status": "Accepted"
+  },
+  "r08": {
+    "limitBeforeKw": 22,
+    "limitAfterKw": 7,
+    "powersW": [
+      22000,
+      22000,
+      7000,
+      7000
+    ],
+    "respected": true
+  },
+  "stop": {
+    "idTagInfo": {
+      "status": "Accepted"
+    }
+  },
+  "totalWh": 160,
+  "reset": {
+    "status": "Accepted"
+  },
+  "reconnect": {
+    "sameTransactionId": true,
+    "clientStateAfter": 1,
+    "serverStillKnowsTx": true,
+    "metersAfter": 2
+  },
+  "unknownIdentity": {
+    "opened": false,
+    "status": 404
+  },
+  "wrongSubprotocol": {
+    "opened": false,
+    "status": 400
+  },
+  "noSubprotocol": {
+    "opened": false,
+    "status": 400
+  },
+  "invalidPayload": {
+    "side": "chặn ngay ở phía trụ (strictMode)",
+    "error": "OccurenceConstraintViolation",
+    "message": "data must have required property 'errorCode'"
+  },
+  "rawInvalidToServer": [
+    4,
+    "bad-1",
+    "OccurrenceConstraintViolation",
+    "data must have required property 'errorCode'",
+    {
+      "errors": [
+        {
+          "instancePath": "",
+          "schemaPath": "#/required",
+          "keyword": "required",
+          "params": {
+            "missingProperty": "errorCode"
+          },
+          "message": "must have required property 'errorCode'"
+        }
+      ],
+      "data": {
+        "connectorId": 1,
+        "status": "Charging"
+      }
+    }
+  ],
+  "connectionSurvivesInvalidFrame": true,
+  "duplicateMessageId": {
+    "replies": [
+      [
+        3,
+        "dup-1",
+        {
+          "transactionId": 1002,
+          "idTagInfo": {
+            "status": "Accepted"
+          }
+        }
+      ],
+      [
+        3,
+        "dup-1",
+        {
+          "transactionId": 1003,
+          "idTagInfo": {
+            "status": "Accepted"
+          }
+        }
+      ]
+    ],
+    "distinctTransactionIds": 2
+  },
+  "rejectedByServer": [
+    {
+      "identity": "KHONG-TON-TAI",
+      "ip": "127.0.0.1",
+      "protocols": {}
+    }
+  ]
+}
