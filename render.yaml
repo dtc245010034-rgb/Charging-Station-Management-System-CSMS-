@@ -1,0 +1,47 @@
+# Staging trên Render (Blueprint). Xem README mục "Staging" để biết cách kích hoạt.
+# Cùng Dockerfile với docker-compose, nên staging chạy đúng thứ đang chạy trên máy.
+services:
+  - type: web
+    name: csms-staging
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    # Migrate rồi tạo admin (idempotent) rồi mới mở cổng. Free plan không có shell nên phải làm lúc khởi động.
+    dockerCommand: npm run start:staging
+    branch: main
+    # Chỉ triển khai khi CI của GitHub xanh: test đỏ thì giữ bản cũ.
+    autoDeployTrigger: checksPass
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render đặt PORT tự động, không khai ở đây.
+      - key: TRUST_PROXY
+        value: "2" # Cloudflare + bộ cân bằng tải của Render. Kiểm lại sau lần deploy đầu (README mục Staging).
+      - key: APP_ORIGIN
+        sync: false # điền đúng URL https://<tên-dịch-vụ>.onrender.com khi Render hỏi
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # Dữ liệu demo (GYM-14): chỉ bật trên staging. Đặt ALLOW_DEMO_SEED=1 và DEMO_PASSWORD thì mỗi lần khởi động
+      # sẽ seed tài khoản/trạm/trụ demo (idempotent). Để trống hoặc xoá để tắt.
+      - key: ALLOW_DEMO_SEED
+        sync: false
+      - key: DEMO_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: csms-staging-db
+          property: connectionString
+
+databases:
+  - name: csms-staging-db
+    plan: free
+    region: singapore
+    databaseName: csms
+    user: csms
