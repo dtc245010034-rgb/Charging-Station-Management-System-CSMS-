@@ -4,8 +4,8 @@ Date: 28/09/2026
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
 > **Người thực hiện**: TESTER / QA ANALYST  
-> **Commit snapshot**: `86769949c03381429fd4931f3b364341ac618f8f` (Nhánh `main`)  
 > **Môi trường thực thi**: Windows 11 x64, Node.js v24.19.0, npm 11.17.0, Docker Desktop  
+> **Quy chuẩn chạy lệnh kiểm thử & CI**: Toàn bộ lệnh kiểm thử và linter được thực thi bên trong thư mục `backend/` (`cd backend && npm run lint && npm test`), khớp 100% với cấu hình GitHub Actions CI (`.github/workflows/ci.yml`). Tuyệt đối không chạy tại thư mục gốc vì không chứa `package.json`.
 
 ---
 
@@ -24,18 +24,21 @@ Date: 28/09/2026
 | **S-04** | **PASS** | Chủ trạm tạo trạm mới ở trạng thái `INACTIVE`, kiểm tra dải tọa độ, sửa tên/địa chỉ cập nhật tức thì, chống lưu đúp với `Idempotency-Key` (409 khi đổi payload). |
 | **T-08** | **PASS** | Migration 004 tiến/lùi thành công, khóa ngoại `ON DELETE RESTRICT` chặn xóa chủ trạm khi còn trạm, index tọa độ và owner đầy đủ. |
 | **T-09** | **PASS** | Màn hình Chủ trạm `station-owner.html` và `station-owner.js` hiện lỗi tại từng ô nhập, vô hiệu hóa nút submit khi gửi, nạp lại danh sách trạm ngay sau khi lưu. |
+| **S-05** | **PARTIALLY VERIFIED** | Tạo trụ kèm 1–4 đầu nối (status `UNKNOWN`), chặn mã trùng 409 toàn hệ thống. AC-03 hoãn sang Sprint 3 khi có bảng `charging_sessions`. |
+| **T-10** | **PASS** | Bảng `charge_points`, `connectors`, migration 005 thêm CHECK mã chữ hoa, quan hệ cha–con 2 tầng ON DELETE CASCADE. |
+| **T-11** | **PASS** | Form thêm trụ trên giao diện Chủ trạm, debounce 400ms kiểm tra mã trùng qua API `check-code`, chặn lách submit tại server (409). |
 
 ---
 
 ## Test Statistics
 
-- **PASS**: 83 (Toàn bộ live container, live HTTP API curl, database migration 001-004, automated unit/acceptance tests và client JS)
+- **PASS**: 87 (Toàn bộ live container, live HTTP API curl, database migration 001-005, automated unit/acceptance tests và client JS)
 - **FAIL**: 0 (Không phát hiện lỗi sai lệch logic nghiệp vụ trong mã nguồn)
 - **BLOCKED**: 0 (Đã giải phóng toàn bộ blocker môi trường nhờ Docker Desktop và Postgres test container)
-- **NOT VERIFIED**: 3 (`S03-AC-04`, `TC-T06-01`, `MAN-S03-02`: tuân thủ quy tắc không tự thêm route chưa khai quyền vào mã nguồn)
-- **NOT FOUND**: 1 (`UI-CP-01`: giao diện UI quản lý trụ sạc thuộc phạm vi Sprint 1 backlog K-01/S-05)
+- **NOT VERIFIED**: 4 (`S03-AC-04`, `TC-T06-01`, `MAN-S03-02`, `S05-AC-03`)
+- **NOT FOUND**: 1 (`UI-CP-01`: giao diện UI quản lý trụ sạc thuộc phạm vi Sprint 1 backlog K-01)
 - **NOT RUN**: 0
-- **TỔNG CỘNG**: 87
+- **TỔNG CỘNG**: 92
 
 ---
 
@@ -76,6 +79,7 @@ Vui lòng tham khảo tài liệu chi tiết tại các liên kết độc lập
 - Chi tiết Story S-02 (Authentication & Lockout): [`stories/S-02.md`](../stories/S-02.md)
 - Chi tiết Story S-03 (RBAC & Ownership Isolation): [`stories/S-03.md`](../stories/S-03.md)
 - Chi tiết Story S-04 (Quản lý trạm sạc & Idempotency): [`stories/S-04.md`](../stories/S-04.md)
+- Chi tiết Story S-05 (Thêm trụ & đầu nối, mã trụ duy nhất): [`stories/S-05.md`](../stories/S-05.md)
 - Chi tiết Kiểm thử Tích hợp (FB-01 đến FB-11): [`integration/FRONTEND_BACKEND.md`](../integration/FRONTEND_BACKEND.md)
 - Chi tiết Hồ sơ Lỗi và Rào cản Môi trường: [`BUG_REPORT.md`](./BUG_REPORT.md)
 - Đánh giá Hồi quy Sprint 1: [`REGRESSION_REPORT.md`](./REGRESSION_REPORT.md)

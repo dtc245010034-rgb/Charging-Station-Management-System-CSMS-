@@ -16,7 +16,8 @@ TYPE: ENVIRONMENT_BLOCKER
 TITLE: Thiếu Docker Engine và Docker CLI trong PATH môi trường máy host
 SEVERITY: HIGH
 STATUS: CLOSED
-RESOLVED_IN_COMMIT: 86769949c03381429fd4931f3b364341ac618f8f
+RESOLVED_IN_COMMIT: N/A (HOST_ENVIRONMENT_SETUP)
+RESOLUTION_ACTION: Cài đặt Docker Desktop và khởi động Docker daemon trên máy host
 VERIFIED_IN_COMMIT: 86769949c03381429fd4931f3b364341ac618f8f
 VERIFIED_BY: QA LEAD
 AFFECTED_TEST_IDS: TC-S01-01, MAN-S01-01, TC-FB-01, TC-FB-02, TC-FB-03
@@ -30,7 +31,7 @@ EVIDENCE:
   charging-station-management-system-csms--app-1   running (port 3000)
   charging-station-management-system-csms--db-1    running (port 5432)
 ENVIRONMENT: Windows 11 (x64) host, Docker Desktop
-NOTES: Đã khắc phục và xác minh thành công.
+NOTES: Đã khắc phục qua cấu hình môi trường host và xác minh thành công.
 ```
 
 ---
@@ -44,7 +45,8 @@ TYPE: ENVIRONMENT_BLOCKER
 TITLE: Cổng dịch vụ PostgreSQL 5432 (dev) và 5433 (test) bị đóng, dịch vụ không chạy
 SEVERITY: HIGH
 STATUS: CLOSED
-RESOLVED_IN_COMMIT: 86769949c03381429fd4931f3b364341ac618f8f
+RESOLVED_IN_COMMIT: N/A (HOST_ENVIRONMENT_SETUP)
+RESOLUTION_ACTION: Khởi động container db (5432) và db_test (5433) qua docker compose up -d
 VERIFIED_IN_COMMIT: 86769949c03381429fd4931f3b364341ac618f8f
 VERIFIED_BY: QA LEAD
 AFFECTED_TEST_IDS: TC-T01-01, TC-T01-02, IT-MIGRATE-01, ACC-S01-01, ACC-S02-01, ACC-S02-02, ACC-S02-03, ACC-S03-01, ACC-S03-02, ACC-S03-03, ACC-S03-04, ACC-S03-05, ACC-S03-06, TC-FB-10
@@ -57,7 +59,7 @@ EVIDENCE:
   PS> docker compose run --rm db_test psql ...
   Tất cả 4 migration applied & rollbacked sạch sẽ.
 ENVIRONMENT: Docker containers postgres:16-alpine
-NOTES: Đã giải quyết và xác minh thành công.
+NOTES: Đã giải quyết qua docker compose và xác minh thành công.
 ```
 
 ---
@@ -71,7 +73,8 @@ TYPE: ENVIRONMENT_BLOCKER
 TITLE: Thư mục backend/node_modules thiếu các module bắt buộc (zod, supertest, eslint)
 SEVERITY: CRITICAL
 STATUS: CLOSED
-RESOLVED_IN_COMMIT: 86769949c03381429fd4931f3b364341ac618f8f
+RESOLVED_IN_COMMIT: N/A (HOST_ENVIRONMENT_SETUP)
+RESOLUTION_ACTION: Chạy npm ci bên trong thư mục backend/ trên máy host
 VERIFIED_IN_COMMIT: 86769949c03381429fd4931f3b364341ac618f8f
 VERIFIED_BY: QA LEAD
 AFFECTED_TEST_IDS: TC-S01-01, TC-T01-01, TC-T01-02, UT-ENV-01, UT-ERR-01, IT-ADMIN-01, TC-FB-01, TC-FB-02, TC-FB-03, TC-FB-04, TC-FB-05, TC-FB-06, TC-FB-07
