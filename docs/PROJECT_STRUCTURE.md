@@ -3,7 +3,7 @@
 > **Dự án**: Charging-Station-Management-System-CSMS-  
 > **Người thực hiện**: TESTER / QA ANALYST  
 > **Snapshot Date**: 28/09/2026  
-> **Git Commit**: `86769949c03381429fd4931f3b364341ac618f8f` (nhánh `main`)  
+> **Git Commit**: `86769949c03381429fd4931f3b364341ac618f8f` (nhánh `docs/update-tester-traceability`)  
 > **Structure Status**: **VERIFIED**  
 > **Entry Point / Router**: [`docs/README.md`](./README.md)  
 > **Bộ quy chuẩn trung tâm**: [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md)  
@@ -77,7 +77,9 @@ Charging-Station-Management-System-CSMS-/
 │   │   ├── 003_stations_owner.sql                     # Bổ sung quan hệ sở hữu trạm sạc cho Station Owner
 │   │   ├── 003_stations_owner.down.sql                # Rollback quan hệ sở hữu trạm sạc
 │   │   ├── 004_station_management.sql                 # Mở rộng trạm sạc (status, lat, lng, capacity, price_kwh) và bảng idempotency keys
-│   │   └── 004_station_management.down.sql            # Rollback migration quản lý trạm sạc
+│   │   ├── 004_station_management.down.sql            # Rollback migration quản lý trạm sạc
+│   │   ├── 005_charge_point_code_upper.sql            # Chuẩn hóa mã trụ về chữ hoa và thêm CHECK constraint cho charge_points
+│   │   └── 005_charge_point_code_upper.down.sql       # Rollback migration chuẩn hóa mã trụ chữ hoa
 │   ├── scripts/                                       # Thư mục chứa các script hỗ trợ vận hành và bảo trì CLI
 │   │   └── create-admin.js                            # Script CLI khởi tạo tài khoản quản trị viên tối cao ban đầu
 │   ├── src/                                           # Mã nguồn chính của ứng dụng backend
@@ -142,11 +144,13 @@ Charging-Station-Management-System-CSMS-/
 │       │   ├── S-03.rbac.test.js                      # Kiểm tra tính thực thi phân quyền trên các route
 │       │   ├── S-03.route-guard.test.js               # Kiểm tra cơ chế chặn Default Deny của Route Guard
 │       │   ├── S-03.trust-proxy.test.js               # Kiểm tra xử lý IP phía sau reverse proxy (trust proxy)
-│       │   └── S-04.station-management.test.js        # Kiểm tra chấp nhận quản lý trạm: tạo/sửa trạm, toạ độ, Idempotency-Key
+│       │   ├── S-04.station-management.test.js        # Kiểm tra chấp nhận quản lý trạm: tạo/sửa trạm, toạ độ, Idempotency-Key
+│       │   └── S-05.charge-point-code.test.js         # Kiểm tra chấp nhận quản lý mã trụ: chuẩn hóa chữ hoa, power_kw, status UNKNOWN
 │       ├── helpers/                                   # Tiện ích hỗ trợ thiết lập môi trường test
 │       │   ├── app.js                                 # Helper khởi tạo instance ứng dụng phục vụ test
 │       │   ├── auth.js                                # Helper tạo token/cookie giả lập phiên đăng nhập cho test
-│       │   └── db.js                                  # Helper kết nối, dọn dẹp và reset cơ sở dữ liệu test
+│       │   ├── db.js                                  # Helper kết nối, dọn dẹp và reset cơ sở dữ liệu test
+│       │   └── station.js                             # Helper tạo payload và fixture trạm sạc cho test suite
 │       ├── integration/                               # Kiểm thử tích hợp giữa các thành phần backend
 │       │   ├── auth.regression.test.js                # Kiểm tra hồi quy cơ chế xác thực và bảo mật phiên
 │       │   ├── create-admin.test.js                   # Kiểm tra script tạo tài khoản admin CLI
@@ -183,11 +187,17 @@ Charging-Station-Management-System-CSMS-/
 └── docs/                                              # Thư mục tài liệu dự án thuộc quyền quản lý của Tester/QA
     ├── integration/                                   # Thư mục tài liệu kiểm thử tích hợp giữa các hệ thống
     │   └── FRONTEND_BACKEND.md                        # Kịch bản & bằng chứng kiểm thử tích hợp Frontend ↔ Backend
+    ├── spikes/                                        # Các tài liệu nghiên cứu kỹ thuật và báo cáo gửi PO
+    │   ├── K-01-ocpp-simulator.md                     # Tài liệu spike nghiên cứu simulator OCPP 1.6-J
+    │   ├── k01-session-log.json                       # Nhật ký mẫu phiên kết nối WebSocket OCPP
+    │   ├── k01-simulator.js                           # Script simulator kết nối thử nghiệm OCPP
+    │   └── S-05-AC3-ghi-nhan-cho-PO.md                # Báo cáo gửi PO đề xuất hoãn S-05 AC3 sang Sprint 3
     ├── stories/                                       # Thư mục tài liệu kiểm thử chi tiết theo từng User Story Jira
     │   ├── S-01.md                                    # Chi tiết kiểm thử Story S-01 (Khung ứng dụng & Database T-01)
     │   ├── S-02.md                                    # Chi tiết kiểm thử Story S-02 (Authentication & Lockout T-04, T-05)
     │   ├── S-03.md                                    # Chi tiết kiểm thử Story S-03 (RBAC Matrix & Ownership Isolation T-06, T-07)
-    │   └── S-04.md                                    # Chi tiết kiểm thử Story S-04 (Chủ trạm tạo và sửa thông tin trạm T-08, T-09)
+    │   ├── S-04.md                                    # Chi tiết kiểm thử Story S-04 (Chủ trạm tạo và sửa thông tin trạm T-08, T-09)
+    │   └── S-05.md                                    # Chi tiết kiểm thử Story S-05 (Chủ trạm thêm trụ và đầu nối, mã duy nhất T-10, T-11)
     ├── testing/                                       # Báo cáo và kế hoạch kiểm thử tổng hợp
     │   ├── BUG_REPORT.md                              # Hồ sơ chi tiết các lỗi mã nguồn và rào cản môi trường phát hiện được
     │   ├── REGRESSION_REPORT.md                       # Đánh giá hồi quy chức năng và so sánh hành vi trước - sau refactor
@@ -214,13 +224,13 @@ Charging-Station-Management-System-CSMS-/
 | **Node Compatibility** | `backend/src/config/nodeVersion.js`| Kiểm tra phiên bản Node.js máy host (yêu cầu tối thiểu >= 22.7.0) | Điểm kiểm thử `UT-NODE-01` xác minh tính tương thích môi trường thực thi | Read-Only |
 | **Database Pool & Tx** | `backend/src/db/pool.js`, `tx.js` | Quản lý kết nối PostgreSQL qua `pg.Pool` và hỗ trợ bọc database transaction | Đối tượng kiểm thử `TC-T01-04`: kết nối cơ sở dữ liệu an toàn, giải phóng connection đúng chuẩn | Read-Only |
 | **Ownership Scope** | `backend/src/db/scope.js` | Chứa hàm dùng chung `scopeByOwner` áp đặt điều kiện `WHERE s.owner_id = ?` cho vai trò `STATION_OWNER` | Trọng tâm kiểm thử `S-03 / T-07` và `S03-NFR-01`: cô lập dữ liệu tại tầng truy vấn DB | Read-Only |
-| **Database Migrations** | `backend/migrations/*.sql` | Chứa 4 cặp tệp SQL DDL migration forward/rollback (001 baseline, 002 throttle, 003 stations owner, 004 station management) | Đối tượng kiểm thử `T-01`, `T-04`, `T-07`, `T-08`: migration up/down trên DB test 5433 | Read-Only |
+| **Database Migrations** | `backend/migrations/*.sql` | Chứa 5 cặp tệp SQL DDL migration forward/rollback (001 baseline, 002 throttle, 003 stations owner, 004 station management, 005 charge point code upper) | Đối tượng kiểm thử `T-01`, `T-04`, `T-07`, `T-08`, `T-10`: migration up/down trên DB test 5433 | Read-Only |
 | **Password Security** | `backend/src/lib/password.js` | Cung cấp hàm băm và xác thực mật khẩu sử dụng duy nhất thuật toán **Argon2id** | Trọng tâm kiểm thử `S02-NFR-01`: loại bỏ hoàn toàn bcrypt, băm mật khẩu chuẩn Argon2id | Read-Only |
 | **Role Matrix** | `backend/src/lib/roles.js`, `backend/src/security/permissions.js` | Định nghĩa 5 vai trò hệ thống và ma trận phân quyền chi tiết cho từng vai trò | Đối tượng kiểm thử `T-04-04` (đúng 5 roles) và `S03-AC-03` (phân quyền vai trò) | Read-Only |
 | **Route Guard** | `backend/src/security/routeGuard.js` | Middleware bảo vệ route kiểm tra quyền hạn theo ma trận và cơ chế **Default Deny** (403 cho route chưa khai quyền) | Trọng tâm kiểm thử `S-03 / T-06`: chặn 403 khi thiếu quyền hoặc route chưa đăng ký | Read-Only |
 | **Auth & Throttle** | `backend/src/modules/auth/` | Cung cấp router, service, schema đăng nhập và repository `login-throttle.repository.js` | Trọng tâm kiểm thử `S-02 / T-05`: khóa tạm thời 15 phút sau 5 lần sai, cấp cookie HttpOnly | Read-Only |
 | **Audit Logging** | `backend/src/modules/audit/audit.repository.js` | Ghi nhận nhật ký an ninh vào bảng `audit_logs` khi có sự kiện vi phạm (`ACCESS_DENIED`) | Điểm kiểm thử `S03-AC-02` và `T07-02`: xác minh vết kiểm toán trong database | Read-Only |
-| **Station & Charge Modules**| `backend/src/modules/stations/`, `charge-points/` | Cung cấp API quản lý trạm sạc (CRUD, toạ độ, idempotency), trụ sạc và `connection-registry.js` socket OCPP | Điểm kiểm thử quản lý trạm sạc S-04, phân quyền RBAC và Ownership Isolation giữa các Station Owner | Read-Only |
+| **Station & Charge Modules**| `backend/src/modules/stations/`, `charge-points/` | Cung cấp API quản lý trạm sạc (CRUD, toạ độ, idempotency), trụ sạc (mã duy nhất, 1-4 connectors) và `connection-registry.js` socket OCPP | Điểm kiểm thử quản lý trạm sạc S-04, trụ sạc S-05 (T-10, T-11), phân quyền RBAC và Ownership Isolation | Read-Only |
 | **Error Handling** | `backend/src/middlewares/errorHandler.js` | Bắt lỗi tập trung và chuẩn hóa cấu trúc JSON response `{ error: { code, message, details } }` | Điểm kiểm thử tích hợp `TC-FB-04` và `UT-ERR-01` | Read-Only |
 | **CSRF / Origin Guard** | `backend/src/middlewares/requireJson.js` | Bắt buộc `Content-Type: application/json` và kiểm tra header `Origin` khớp với `APP_ORIGIN` | Điểm kiểm thử tích hợp `TC-FB-11` phòng vệ tấn công CSRF | Read-Only |
 | **Dev Test Suites** | `backend/tests/` | Toàn bộ bộ test tự động của Developer (acceptance, integration, unit) | Nguồn cung cấp bằng chứng tự động (Automated Evidence) khách quan cho Tester | Read-Only |
@@ -239,11 +249,13 @@ Hệ thống tài liệu kiểm định chất lượng của dự án được 
 | **[`README.md`](./README.md)** | **AI Tester Entry Point & Router**: Điểm tiếp nhận nhiệm vụ đầu vào, hướng dẫn thứ tự đọc tài liệu và routing logic cho từng loại lệnh kiểm thử (E, S, T, Integration,...). | Khi có thay đổi về quy trình tiếp nhận nhiệm vụ hoặc bổ sung router mới. | Điều hướng AI Tester tra cứu đúng tài liệu nghiệp vụ; không chứa nội dung luật chi tiết. |
 | **[`TESTER_STANDARD.md`](./TESTER_STANDARD.md)** | **Central Rulebook & Standards**: Bộ quy chuẩn trung tâm chứa toàn bộ nguyên tắc kiểm thử, luồng Requirement Testing vs General Review, mô hình E→S→T, đồ thị phụ thuộc đa cấp, Canonical Enums, 5-layers testing, tiêu chuẩn bằng chứng và an toàn. | Khi có sự thay đổi về chính sách kiểm thử hoặc cập nhật phiên bản quy chuẩn. | Là nguồn luật pháp lý cao nhất chi phối toàn bộ hoạt động của Tester. |
 | **[`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md)** | **Verified Project Map (Project Facts)**: Bản đồ cấu trúc 144 mục trên filesystem đã xác minh, component mapping, đồ thị phụ thuộc thực tế, ánh xạ lịch sử kiểm thử và metadata snapshot. | Trước mỗi task kiểm thử mới (đồng bộ nếu filesystem thay đổi) hoặc khi có file/module mới. | Cung cấp sự thật cấu trúc (Project Facts) cho mọi tác vụ QA. |
-| **[`TEST_INVENTORY.md`](./TEST_INVENTORY.md)** | **Verified Test Index (Test Facts)**: Danh mục toàn bộ 85 Test Case thực tế của dự án, tình trạng PASS/FAIL/BLOCKED, bằng chứng liên kết và mức độ xác minh (Verification). | Bắt buộc cập nhật ngay sau khi thực thi bất kỳ ca kiểm thử nào. | Cung cấp dữ liệu sự thật kiểm thử (Test Facts) cho báo cáo chất lượng. |
+| **[`TEST_INVENTORY.md`](./TEST_INVENTORY.md)** | **Verified Test Index (Test Facts)**: Danh mục toàn bộ 92 Test Case thực tế của dự án, tình trạng PASS/FAIL/BLOCKED, bằng chứng liên kết và mức độ xác minh (Verification). | Bắt buộc cập nhật ngay sau khi thực thi bất kỳ ca kiểm thử nào. | Cung cấp dữ liệu sự thật kiểm thử (Test Facts) cho báo cáo chất lượng. |
 | **[`stories/S-01.md`](./stories/S-01.md)** | **Hồ sơ kiểm thử Story S-01**: Chi tiết AC/NFR, Task T-01, test cases và bằng chứng thực tế cho baseline container & PostgreSQL. | Khi Story S-01 hoặc Task T-01 có sự thay đổi hoặc chạy lại kiểm thử. | Phản ánh chi tiết kết quả cụm bài test baseline vào `TEST_INVENTORY.md`. |
 | **[`stories/S-02.md`](./stories/S-02.md)** | **Hồ sơ kiểm thử Story S-02**: Chi tiết yêu cầu xác thực, Argon2id, lockout 15 phút, phiên cookie HttpOnly, phân rã Task T-04, T-05. | Khi tính năng đăng nhập, cơ chế khóa hoặc bảng users có cập nhật. | Kế thừa trạng thái của S-01; cung cấp cơ sở phiên làm việc cho S-03. |
 | **[`stories/S-03.md`](./stories/S-03.md)** | **Hồ sơ kiểm thử Story S-03**: Chi tiết yêu cầu phân quyền RBAC, Route Guard Default Deny, cô lập dữ liệu theo Station Owner và ghi audit log (T-06, T-07). | Khi ma trận phân quyền, bộ lọc scopeByOwner hoặc API trạm sạc thay đổi. | Kế thừa phiên làm việc của S-02; cung cấp dữ liệu phân quyền cho Integration. |
 | **[`stories/S-04.md`](./stories/S-04.md)** | **Hồ sơ kiểm thử Story S-04**: Chi tiết yêu cầu khai báo/sửa trạm, toạ độ thực dải hợp lệ, trạng thái chưa hoạt động, idempotency key chống double-click (T-08, T-09). | Khi nghiệp vụ quản lý trạm sạc, schema toạ độ hoặc giao diện chủ trạm thay đổi. | Kế thừa phân quyền S-03; cung cấp dữ liệu trạm sạc cho tìm trạm sạc S-47. |
+| **[`stories/S-05.md`](./stories/S-05.md)** | **Hồ sơ kiểm thử Story S-05**: Chi tiết yêu cầu thêm trụ sạc, số đầu nối từ 1 đến 4, chuẩn hóa mã trụ chữ hoa, tính duy nhất toàn hệ thống (T-10, T-11). | Khi tính năng trụ sạc, bảng charge_points, connectors hoặc ràng buộc mã trụ thay đổi. | Kế thừa trạm sạc từ S-04; tiền đề cho quản lý phiên sạc và kết nối OCPP K-01. |
+| **`spikes/`** | **Tài liệu nghiên cứu kỹ thuật & Báo cáo PO**: Thư mục chứa tài liệu spike nghiên cứu simulator OCPP 1.6-J (K-01) và báo cáo gửi PO (đề xuất hoãn AC3 sang Sprint 3). | Khi hoàn thành đợt nghiên cứu spike kỹ thuật hoặc gửi kiến nghị/báo cáo lên PO. | Cung cấp luận cứ kỹ thuật và bối cảnh kiến trúc cho các quyết định nghiệp vụ của PO. |
 | **[`integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md)** | **Hồ sơ kiểm thử tích hợp**: Kịch bản và bằng chứng kiểm thử giao tiếp toàn trình giữa Frontend Client và Backend API từ FB-01 đến FB-11. | Khi hợp đồng API, cấu hình fetch client hoặc chuỗi middleware Express thay đổi. | Tổng hợp kết quả tích hợp đa tầng giữa S-01, S-02 và S-03. |
 | **[`testing/TEST_PLAN.md`](./testing/TEST_PLAN.md)** | **Kế hoạch kiểm thử tổng thể**: Chiến lược kiểm thử đa tầng, môi trường yêu cầu, tiêu chí Entry/Exit và phạm vi các đợt phát hành. | Khi bắt đầu sprint mới hoặc thay đổi phạm vi kiểm thử. | Định nghĩa phạm vi tổng thể cho các tài liệu kiểm thử chi tiết. |
 | **[`testing/TEST_REPORT.md`](./testing/TEST_REPORT.md)** | **Báo cáo kết quả snapshot**: Báo cáo tổng hợp chất lượng tại mốc snapshot hiện tại, tỷ lệ PASS/FAIL, các rào cản môi trường. | Khi hoàn thành chu kỳ kiểm thử snapshot hoặc trước các mốc release. | Tổng hợp số liệu từ `TEST_INVENTORY.md`. |
@@ -264,6 +276,7 @@ Ma trận liên kết từ Yêu cầu nghiệp vụ đến Mã nguồn thực t�
 | **E-02** | **S-03** | **T-06** | `S03-AC-03`<br>`S03-AC-04`<br>`T06-01`<br>`T06-02` | • `backend/src/security/permissions.js`<br>• `backend/src/security/routeGuard.js`<br>• `backend/src/app.js`<br>• `frontend/js/router.js` | • `tests/acceptance/S-03.rbac.test.js`<br>• `tests/acceptance/S-03.rbac-matrix.test.js`<br>• `tests/acceptance/S-03.route-guard.test.js`<br>• `tests/acceptance/S-03.accounts.test.js` | [`stories/S-03.md`](./stories/S-03.md)<br>(`TC-S03-03`, `TC-S03-04`, `TC-T06-01`, `TC-T06-02`) |
 | **E-02** | **S-03** | **T-07** | `S03-AC-01`<br>`S03-AC-02`<br>`S03-NFR-01`<br>`T07-01`..`03`<br>`T07-NFR` | • `backend/src/db/scope.js` (`scopeByOwner`)<br>• `backend/src/modules/stations/`<br>• `backend/src/modules/charge-points/`<br>• `backend/src/modules/audit/audit.repository.js`<br>• `backend/migrations/003_stations_owner.sql`<br>• `frontend/pages/station-owner.html` | • `tests/unit/scope.test.js`<br>• `tests/acceptance/S-03.rbac.test.js`<br>• `tests/acceptance/S-03.accounts.test.js` | [`stories/S-03.md`](./stories/S-03.md)<br>(`TC-S03-01`, `TC-S03-02`, `TC-T07-01`..`03`) |
 | **E-03** | **S-04** | **T-08, T-09** | `S04-AC-01`..`04`<br>`S04-NFR-01`<br>`T08-01`<br>`T08-NFR-01`<br>`T09-01`<br>`T09-NFR-01` | • `backend/migrations/004_station_management.sql`<br>• `backend/src/modules/stations/stations.routes.js`<br>• `backend/src/modules/stations/stations.service.js`<br>• `backend/src/modules/stations/stations.schema.js`<br>• `backend/src/modules/stations/stations.repository.js`<br>• `frontend/pages/station-owner.html`<br>• `frontend/js/pages/station-owner.js` | • `tests/acceptance/S-04.station-management.test.js`<br>• `tests/unit/station-schema.test.js`<br>• `tests/integration/migrate.test.js` | [`stories/S-04.md`](./stories/S-04.md)<br>(`TC-S04-01`..`07`, `TC-T08-01`..`03`, `TC-T09-01`..`03`) |
+| **E-03** | **S-05** | **T-10, T-11** | `S05-AC-01`..`03`<br>`S05-NFR-01`<br>`T10-01`<br>`T11-01` | • `backend/migrations/005_charge_point_code_upper.sql`<br>• `backend/src/modules/charge-points/charge-points.repository.js`<br>• `backend/src/modules/charge-points/charge-points.service.js`<br>• `backend/src/modules/charge-points/charge-points.schema.js`<br>• `backend/src/modules/charge-points/charge-points.routes.js`<br>• `backend/src/modules/charge-points/connection-registry.js`<br>• `frontend/pages/station-owner.html`<br>• `frontend/js/pages/station-owner.js` | • `tests/acceptance/S-05.charge-point-code.test.js`<br>• `tests/unit/connection-registry.test.js`<br>• `tests/integration/migrate.test.js` | [`stories/S-05.md`](./stories/S-05.md)<br>(`TC-S05-01`..`03`, `TC-T10-01`, `TC-T11-01`, `ACC-S05-01`..`02`) |
 | **Cross-Epic** | **Integration** | **FB-01 .. FB-11** | Hợp đồng API, Cookie credentials, Error envelope, CSRF guard | • `frontend/js/api.js`<br>• `frontend/js/auth.js`<br>• `frontend/js/router.js`<br>• `frontend/js/validate.js`<br>• `backend/src/app.js`<br>• `backend/src/middlewares/errorHandler.js`<br>• `backend/src/middlewares/requireJson.js` | • `tests/unit/frontend.test.js`<br>• `tests/acceptance/S-02.frontend.test.js`<br>• `tests/acceptance/S-03.csrf.test.js` | [`integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md)<br>(`TC-FB-01` đến `TC-FB-11`) |
 
 ---
@@ -277,9 +290,10 @@ Ma trận liên kết từ Yêu cầu nghiệp vụ đến Mã nguồn thực t�
 - **`S-02`**: Phụ thuộc trực tiếp vào **`S-01`** (Cần cụm container app + database và migration schema baseline hoạt động để lưu bảng users).
 - **`S-03`**: Phụ thuộc trực tiếp vào **`S-02`** (Cần phiên làm việc và danh tính đã xác thực của người dùng để kiểm tra phân quyền RBAC và quyền sở hữu).
 - **`S-04`**: Phụ thuộc trực tiếp vào **`S-03`** (Cần vai trò `STATION_OWNER` và cơ chế cô lập dữ liệu đã xác thực để tạo và sửa trạm của chính mình).
+- **`S-05`**: Phụ thuộc trực tiếp vào **`S-04`** (Khai báo trụ sạc và đầu nối phụ thuộc vào trạm sạc đã được tạo trước).
 - **`S-47`** *(Downstream)*: Phụ thuộc vào **`S-04`** (Tìm trạm sạc gần phụ thuộc vào toạ độ số thực hợp lệ được lưu trữ tại S-04).
-- **`S-05 / K-01`** *(Downstream)*: Phụ thuộc vào **`S-04`** (Khai báo trụ sạc phụ thuộc vào trạm sạc đã được tạo trước).
-- **`Integration (FB-01..11)`**: Phụ thuộc đồng thời vào **`S-01`**, **`S-02`**, **`S-03`** và **`S-04`** (Đòi hỏi runtime sẵn sàng, xác thực cookie hoạt động, route guard áp dụng và API trạm sạc sẵn sàng).
+- **`K-01`** *(Downstream)*: Phụ thuộc vào **`S-05`** (Kết nối mô phỏng OCPP yêu cầu trụ sạc và mã định danh duy nhất đã được khai báo).
+- **`Integration (FB-01..11)`**: Phụ thuộc đồng thời vào **`S-01`**, **`S-02`**, **`S-03`**, **`S-04`** và **`S-05`** (Đòi hỏi runtime sẵn sàng, xác thực cookie hoạt động, route guard áp dụng, API trạm sạc và trụ sạc sẵn sàng).
 
 ### 8.2. Task → Task Dependency
 - **`T-01`** (Khởi tạo DB & Container) $\longrightarrow$ **Độc lập ban đầu**.
@@ -289,12 +303,15 @@ Ma trận liên kết từ Yêu cầu nghiệp vụ đến Mã nguồn thực t�
 - **`T-07`** (Ownership Scope & Audit Log) $\longrightarrow$ Phụ thuộc vào **`T-06`** (yêu cầu vượt qua bước kiểm tra vai trò tại route guard trước khi áp đặt điều kiện lọc sở hữu `scopeByOwner`).
 - **`T-08`** (Khai báo trạm, toạ độ & schema) $\longrightarrow$ Phụ thuộc vào **`T-07`** (yêu cầu bảng `stations` và cột `owner_id` kết hợp với `scopeByOwner`).
 - **`T-09`** (Sửa trạm, danh sách trạm & chống double-click) $\longrightarrow$ Phụ thuộc vào **`T-08`** (yêu cầu endpoint tạo trạm và bảng `station_idempotency_keys` hoạt động).
+- **`T-10`** (Bảng `charge_points`, `connectors` kèm migration 005 và ràng buộc) $\longrightarrow$ Phụ thuộc vào **`T-08`** (yêu cầu bảng `stations` và khoá ngoại `station_id`).
+- **`T-11`** (API khai báo trụ và đầu nối, kiểm tra mã duy nhất) $\longrightarrow$ Phụ thuộc vào **`T-10`** (yêu cầu schema và ràng buộc cơ sở dữ liệu sẵn sàng).
 
 ### 8.3. Test → Prerequisite Dependency
 - **`TC-S01-01`** $\longrightarrow$ Tiền đề: Docker Desktop đang chạy, cổng 3000 và 5432 chưa bị chiếm dụng.
 - **`TC-S02-01`..`03`** $\longrightarrow$ Tiền đề: Container `app` và `db` ở trạng thái healthy; database đã seed tài khoản test (`admin@csms.local`,...).
 - **`TC-S03-01`..`02`** $\longrightarrow$ Tiền đề: Đã chạy migration 003, đã nạp phiên hợp lệ qua file cookie (`owner_a.cookie`, `owner_b.cookie`).
 - **`TC-S04-01`..`04`** $\longrightarrow$ Tiền đề: Đã chạy migration 004, đăng nhập vai trò `STATION_OWNER`, có header `Idempotency-Key` khi tạo trạm.
+- **`TC-S05-01`..`03`** $\longrightarrow$ Tiền đề: Đã chạy migration 005, đăng nhập vai trò `STATION_OWNER`, đã có trạm sạc thuộc sở hữu của chủ trạm.
 - **`TC-FB-01`..`11`** $\longrightarrow$ Tiền đề: Express server lắng nghe trên port 3000, serve thư mục tĩnh `frontend/`.
 
 ### 8.4. Source → Dependent Component
@@ -303,6 +320,7 @@ Ma trận liên kết từ Yêu cầu nghiệp vụ đến Mã nguồn thực t�
 - `backend/src/middlewares/authenticate.js` $\longrightarrow$ Ảnh hưởng trực tiếp: mọi route được bảo vệ trong `app.js`.
 - `backend/src/db/scope.js` $\longrightarrow$ Ảnh hưởng trực tiếp: `stations.repository.js`, `charge-points.repository.js`.
 - `backend/src/modules/stations/stations.service.js` $\longrightarrow$ Ảnh hưởng trực tiếp: API CRUD trạm sạc, phân quyền owner.
+- `backend/src/modules/charge-points/charge-points.service.js` $\longrightarrow$ Ảnh hưởng trực tiếp: API CRUD trụ sạc, validation mã duy nhất và sinh tự động connectors.
 
 ---
 
@@ -332,6 +350,9 @@ Bảng đối chiếu phục vụ tra cứu nhanh các bài test lịch sử b�
 | `backend/src/modules/stations/stations.schema.js` | `TC-S04-02`<br>`TC-T08-02`<br>`TC-T08-NFR-01` | S-04 | T-08 | `S04-AC-02`<br>`S04-NFR-01` | **PASS** | 27/09/2026 (`4ab9f0f`) |
 | `backend/src/modules/charge-points/connection-registry.js` | `UT-CP-01` | S-05 (Prep) | K-01 | OCPP Socket Registry | **PASS** | 27/09/2026 (`4ab9f0f`) |
 | `frontend/js/pages/station-owner.js` | `TC-S04-03`<br>`TC-S04-04`<br>`TC-T08-03`<br>`TC-T09-02` | S-04 | T-08<br>T-09 | `S04-AC-03`<br>`S04-AC-04` | **PASS** | 27/09/2026 (`4ab9f0f`) |
+| `backend/migrations/005_charge_point_code_upper.sql` | `TC-S05-01`<br>`TC-T10-01`<br>`IT-MIGRATE-01` | S-05 | T-10 | `S05-AC-01`<br>`T10-01` | **PASS** | 28/09/2026 (`8676994`) |
+| `backend/src/modules/charge-points/charge-points.service.js` | `TC-S05-01`..`02`<br>`TC-S05-03` | S-05 | T-10<br>T-11 | `S05-AC-01`..`02`<br>`S05-AC-03` | **PASS**<br>**NOT VERIFIED** | 28/09/2026 (`8676994`) |
+| `backend/src/modules/charge-points/charge-points.schema.js` | `TC-S05-01`<br>`TC-T11-01` | S-05 | T-11 | `S05-AC-01`<br>Connector range 1-4 | **PASS** | 28/09/2026 (`8676994`) |
 
 ---
 
@@ -361,11 +382,13 @@ CSMS-CORE (Khối nền tảng hạ tầng, bảo mật và quản lý trạm s�
     ├── S-04: Chủ trạm tạo và sửa thông tin trạm sạc [Must | 2 SP]
     │   ├── T-08: Bảng stations kèm migration 004 và liên kết chủ sở hữu (toạ độ số thực, index owner_id)
     │   └── T-09: Màn hình tạo, sửa và danh sách trạm của chủ trạm (idempotency key chống double-click)
-    └── S-05: Khai báo số đầu nối từ 1 đến 4 cho mỗi trụ [Sprint 1 Backlog - K-01 / S-05]
+    └── S-05: Chủ trạm thêm trụ và đầu nối vào trạm, mã trụ là duy nhất [Must | 1 SP]
+        ├── T-10: Bảng charge_points, connectors kèm migration 005 và ràng buộc (unique code, upper, connector count 1-4)
+        └── T-11: Form thêm trụ, kiểm tra mã duy nhất và API server
 ```
 
 ### 10.2. Project Traceability Facts (Thực tế liên kết truy vết hai chiều)
-- **Chiều thuận (Forward Traceability)**: Toàn bộ 4 Story (`S-01` đến `S-04`) và 7 Technical Task (`T-01`, `T-04`..`T-09`) đều đã được ánh xạ chính xác đến từng file mã nguồn hiện thực tại [Mục 7 (Requirement → Task → Source Mapping)](#7-requirement--task--source-mapping) và chỉ mục chi tiết 85 Test Case tại [`docs/TEST_INVENTORY.md`](./TEST_INVENTORY.md).
+- **Chiều thuận (Forward Traceability)**: Toàn bộ 5 Story (`S-01` đến `S-05`) và 9 Technical Task (`T-01`, `T-04`..`T-11`) đều đã được ánh xạ chính xác đến từng file mã nguồn hiện thực tại [Mục 7 (Requirement → Task → Source Mapping)](#7-requirement--task--source-mapping) và chỉ mục chi tiết 92 Test Case tại [`docs/TEST_INVENTORY.md`](./TEST_INVENTORY.md).
 - **Chiều nghịch (Reverse Traceability)**: Khi có lỗi phát sinh hoặc mã nguồn thay đổi, Tester tra cứu ngược từ component bị ảnh hưởng tại [Mục 9 (Source → Historical Test Mapping)](#9-source--historical-test-mapping-bản-đồ-ánh-xạ-lịch-sử-kiểm-thử) và [Mục 11 (Impact / Regression Map)](#11-impact--regression-map-bản-đồ-phân-tích-tác-động--hồi-quy) để xác định danh sách bài test lịch sử cần chạy lại.
 
 ---
@@ -381,8 +404,9 @@ Khi một thành phần mã nguồn dùng chung bị sửa đổi, Tester tra c�
 | **`backend/src/middlewares/authenticate.js`** | Giải mã cookie token, nạp `req.user` | S-02, S-03, Integration | `tests/acceptance/S-02.frontend.test.js`<br>`tests/acceptance/S-03.rbac.test.js`<br>`TC-FB-03`, `TC-FB-05` |
 | **`backend/src/security/routeGuard.js`** | Kiểm soát route, chặn 403 Default Deny | S-03 (T-06) | `tests/acceptance/S-03.route-guard.test.js`<br>`tests/acceptance/S-03.rbac-matrix.test.js` |
 | **`backend/src/db/scope.js`** | Lọc dữ liệu `WHERE s.owner_id = ?` cho Owner | S-03 (T-07) | `tests/unit/scope.test.js`<br>`tests/acceptance/S-03.rbac.test.js`<br>Live curl giữa Owner A và Owner B |
-| **`backend/migrations/*.sql`** | Cấu trúc bảng, ràng buộc khóa ngoại, index, bảng idempotency | S-01, S-02, S-03, S-04 | `tests/integration/migrate.test.js`<br>Chạy lại migration up và rollback trên DB test 5433 |
+| **`backend/migrations/*.sql`** | Cấu trúc bảng, ràng buộc khóa ngoại, index, bảng idempotency | S-01, S-02, S-03, S-04, S-05 | `tests/integration/migrate.test.js`<br>Chạy lại migration up và rollback trên DB test 5433 |
 | **`backend/src/modules/stations/stations.service.js`** | Nghiệp vụ trạm sạc, toạ độ, gán owner_id, kiểm tra idempotency | S-03, S-04 (T-08, T-09) | `tests/acceptance/S-04.station-management.test.js`<br>`tests/acceptance/S-03.rbac.test.js` |
+| **`backend/src/modules/charge-points/charge-points.service.js`** | Nghiệp vụ trụ sạc, sinh connector, kiểm tra mã duy nhất UPPERCASE | S-05 (T-10, T-11), K-01 | `tests/acceptance/S-05.charge-point-code.test.js`<br>`tests/unit/connection-registry.test.js` |
 | **`frontend/js/api.js`** | Fetch API wrapper, headers, credentials | Toàn bộ Frontend Integration | `tests/unit/frontend.test.js`<br>`TC-FB-01`, `TC-FB-04`, `TC-FB-11` |
 | **`frontend/js/router.js`** | Điều hướng theo vai trò, redirect 401 | S-02, S-03, Integration | `tests/unit/frontend.test.js`<br>`TC-FB-06`, `TC-S02-04` |
 | **`frontend/js/pages/station-owner.js`** | Form khai báo/sửa trạm, bản đồ Leaflet, Idempotency-Key header | S-04 (T-08, T-09) | `tests/acceptance/S-04.station-management.test.js`<br>Kiểm tra form submit và render danh sách trạm |
@@ -398,21 +422,21 @@ Các thành phần mã nguồn hoặc chức năng hiện tại chưa được h
 1. **`S03-AC-04` / `TC-T06-01` (Route chưa khai báo quyền trả về HTTP 403 cho Admin)**:
    - *Hiện trạng*: Trong mã nguồn hiện tại, 100% các route nghiệp vụ đều đã được khai báo quyền hạn tường minh trong `permissions.js`. Không có route nào bị bỏ quên.
    - *Đánh giá an toàn*: **NOT VERIFIED**. Tuân thủ nghiêm ngặt quy tắc Tester: Không tự ý thêm route rác vào mã nguồn để kiểm thử tính năng này.
-2. **Giao diện UI quản lý trụ sạc trên Frontend (`frontend/pages/operator.html`, `charge-points`)**:
-   - *Hiện trạng*: Giao diện quản lý trạm sạc của Station Owner (`frontend/pages/station-owner.html` và `frontend/js/pages/station-owner.js`) đã được hiện thực và kiểm chứng hoàn chỉnh ở Story S-04. Tuy nhiên, các màn hình cấu hình chi tiết trụ sạc (Charge Points) và kết nối OCPP WebSocket cho Operator chưa được nối giao diện đầy đủ.
-   - *Đánh giá an toàn*: **PARTIALLY IMPLEMENTED / PENDING NEXT SPRINT**. Đã xác minh được API qua repository/service backend và unit test connection-registry, UI quản lý trụ sạc chuyển sang theo dõi cho Sprint tiếp theo (S-05 / K-01).
+2. **Kịch bản chặn sửa mã trụ khi đã phát sinh phiên sạc (`S05-AC-03` / `TC-S05-03`)**:
+   - *Hiện trạng*: Trong Sprint 1, cơ sở dữ liệu chưa có bảng lưu trữ phiên sạc (`charging_sessions`). Cơ chế kiểm tra hiện tại mới dừng ở mức kiểm tra kết nối WebSocket trong RAM qua `connection-registry.js`.
+   - *Đánh giá an toàn*: **NOT VERIFIED / DEFERRED TO SPRINT 3**. Đã lập báo cáo kỹ thuật gửi PO tại [`docs/spikes/S-05-AC3-ghi-nhan-cho-PO.md`](./spikes/S-05-AC3-ghi-nhan-cho-PO.md) đề xuất chính thức hoàn thiện kịch bản này khi có bảng phiên sạc ở Sprint 3.
 3. **Môi trường máy host không có sẵn `supertest` toàn cục**:
    - *Hiện trạng*: `supertest` được khai báo trong `backend/package.json` devDependencies. Một số test case acceptance cần chạy trong môi trường đã `npm install` đầy đủ hoặc bên trong container.
-   - *Đánh giá*: Đã có bằng chứng thực thi thành công từ snapshot ngày 24/09/2026 và 27/09/2026.
+   - *Đánh giá*: Đã có bằng chứng thực thi thành công từ snapshot ngày 24/09/2026, 27/09/2026 và 28/09/2026.
 
 ---
 
 ## 13. Structure Verification Metadata (Thông tin kiểm chứng cấu trúc)
 
 - **Structure Status**: **VERIFIED** (Đã đối chiếu 100% khớp với filesystem thực tế).
-- **Snapshot Date**: 27/09/2026.
-- **Git Commit Hash**: `4ab9f0f11f3b037f6e991984002243a0d80884d0`.
-- **Git Branch**: `main`.
+- **Snapshot Date**: 28/09/2026.
+- **Git Commit Hash**: `86769949c03381429fd4931f3b364341ac618f8f`.
+- **Git Branch**: `docs/update-tester-traceability`.
 - **Operating System Environment**: Windows 11 x64, Node.js v24.19.0, npm 11.17.0.
 - **Container Environment**: Docker Desktop (PostgreSQL 16 alpine trên ports 5432, 5433; App container trên port 3000).
-- **Last Verification Timestamp**: `27/09/2026 17:48:00 +07:00`.
+- **Last Verification Timestamp**: `28/09/2026 14:50:00 +07:00`.

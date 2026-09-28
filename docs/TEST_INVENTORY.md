@@ -43,9 +43,10 @@ Tài liệu này chỉ lưu trữ **SỰ THẬT KIỂM THỬ (TEST FACTS)** đã
 | **S-02 & T-04, T-05** | Xác thực đăng nhập, Argon2id, Cookie session, Lockout 15p | 23 | 23 | 0 | 0 | 0 | 0 | 0 | 100% (23/23) |
 | **S-03 & T-06, T-07** | Phân quyền RBAC, Route Guard Default Deny, Ownership scope | 21 | 18 | 0 | 0 | 3 | 0 | 0 | 85.7% (18/21) |
 | **S-04 & T-08, T-09** | Chủ trạm tạo và sửa trạm, dải tọa độ, idempotency, UI form | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 100% (14/14) |
+| **S-05 & T-10, T-11** | Thêm trụ và đầu nối, mã trụ duy nhất, kiểm tra trùng ô nhập | 5 | 4 | 0 | 0 | 1 | 0 | 0 | 80% (4/5) |
 | **FB-01 .. FB-11** | Tích hợp toàn trình Frontend Client ↔ Backend API | 11 | 11 | 0 | 0 | 0 | 0 | 0 | 100% (11/11) |
 | **Roadmap Gaps** | Giao diện UI quản lý trụ sạc (Sprint 1 backlog K-01/S-05) | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0% (0/1) |
-| **TỔNG CỘNG** | **Toàn bộ hệ thống CSMS** | **87** | **83** | **0** | **0** | **3** | **1** | **0** | **95.4% (83/87)** |
+| **TỔNG CỘNG** | **Toàn bộ hệ thống CSMS** | **92** | **87** | **0** | **0** | **4** | **1** | **0** | **94.6% (87/92)** |
 
 ---
 
@@ -127,20 +128,25 @@ Bảng danh mục chi tiết toàn bộ các ca kiểm thử trong hệ thống 
 | **TC-FB-09** | FB-09 | FB-09 | Client Logic Unit Tests | `frontend/js/` | Unit | Automated | **PASS** | `NONE` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L202-L215`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
 | **TC-FB-10** | FB-10 | FB-10 | Database Persistence SQL | `backend/src/modules/` | Data Integrity | Static / Code | **PASS** | `BUG-02 (CLOSED)` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L217-L231`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
 | **TC-FB-11** | FB-11 | FB-11 | OWASP Defense XSS/SQLi | `backend/src/middlewares/requireJson.js`, `login.js` | Security | Static / Code | **PASS** | `NONE` | STORY_DOC | [`integration/FRONTEND_BACKEND.md#L233-L253`](./integration/FRONTEND_BACKEND.md) | **VERIFIED** |
-| **TC-S04-01** | S-04 | T-08 | `S04-AC-01` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L48-L69`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-02** | S-04 | T-08 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L71-L94`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-03** | S-04 | T-08 | `S04-AC-02` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L96-L108`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-04** | S-04 | T-09 | `S04-AC-03` | `backend/src/modules/stations/stations.service.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L110-L130`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-05** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L132-L154`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-06** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Security | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L156-L167`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-07** | S-04 | T-08 | `S04-NFR-01`| `backend/migrations/004_station_management.sql` | Data Integrity | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L169-L182`](./stories/S-04.md) | **VERIFIED** |
-| **TC-S04-08** | S-04 | T-09 | `S04-AC-05` | `backend/src/modules/stations/stations.service.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#TC-S04-04`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T08-01** | T-08 | T-08 | `T08-01` | `backend/migrations/004_station_management.sql` | Integration | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L184-L203`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T08-02** | T-08 | T-08 | `T08-01` | `backend/migrations/004_station_management.sql` | Security | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L205-L219`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T08-03** | T-08 | T-08 | `T08-NFR-01`| `backend/migrations/004_station_management.sql` | Architecture | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#L221-L235`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T09-01** | T-09 | T-09 | `T09-01` | `frontend/js/pages/station-owner.js` | UI Validation | Static Inspection | **PASS** | `NONE` | SOURCE_LINK | [`stories/S-04.md#L237-L248`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T09-02** | T-09 | T-09 | `T09-01` | `frontend/js/pages/station-owner.js` | UI Flow | Static Inspection | **PASS** | `NONE` | SOURCE_LINK | [`stories/S-04.md#L250-L260`](./stories/S-04.md) | **VERIFIED** |
-| **TC-T09-03** | T-09 | T-09 | `T09-NFR-01`| `frontend/js/pages/station-owner.js` | UI Defense | Static Inspection | **PASS** | `NONE` | SOURCE_LINK | [`stories/S-04.md#L262-L273`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-01** | S-04 | T-08 | `S04-AC-01` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-s04-01`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-02** | S-04 | T-08 | `S04-AC-02` | `backend/src/modules/stations/stations.service.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-s04-02`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-03** | S-04 | T-08 | `S04-AC-03` | `backend/src/modules/stations/stations.schema.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-s04-03`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-04** | S-04 | T-09 | `S04-AC-04` | `backend/src/modules/stations/stations.service.js` | Functional | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-s04-04`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-05** | S-04 | T-09 | `S04-AC-05` | `backend/src/modules/stations/stations.service.js` | Acceptance | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-s04-05`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-06** | S-04 | T-09 | `S04-AC-06` | `backend/src/modules/stations/stations.schema.js` | Security | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-s04-06`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-07** | S-04 | T-09 | `S04-AC-07` | `backend/src/modules/stations/stations.service.js` | Security | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-s04-07`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S04-08** | S-04 | T-08 | `S04-NFR-01`| `backend/migrations/004_station_management.sql` | Data Integrity | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-s04-08`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T08-01** | T-08 | T-08 | `T08-01` | `backend/migrations/004_station_management.sql` | Integration | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-t08-01`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T08-02** | T-08 | T-08 | `T08-01` | `backend/migrations/004_station_management.sql` | Security | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-t08-02`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T08-03** | T-08 | T-08 | `T08-NFR-01`| `backend/migrations/004_station_management.sql` | Architecture | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-04.md#tc-t08-03`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T09-01** | T-09 | T-09 | `T09-01` | `frontend/js/pages/station-owner.js` | UI Validation | Static Inspection | **PASS** | `NONE` | SOURCE_LINK | [`stories/S-04.md#tc-t09-01`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T09-02** | T-09 | T-09 | `T09-01` | `frontend/js/pages/station-owner.js` | UI Flow | Static Inspection | **PASS** | `NONE` | SOURCE_LINK | [`stories/S-04.md#tc-t09-02`](./stories/S-04.md) | **VERIFIED** |
+| **TC-T09-03** | T-09 | T-09 | `T09-NFR-01`| `frontend/js/pages/station-owner.js` | UI Defense | Static Inspection | **PASS** | `NONE` | SOURCE_LINK | [`stories/S-04.md#tc-t09-03`](./stories/S-04.md) | **VERIFIED** |
+| **TC-S05-01** | S-05 | T-10 | `S05-AC-01` | `backend/src/modules/charge-points/charge-points.service.js` | Acceptance | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-05.md#tc-s05-01`](./stories/S-05.md) | **VERIFIED** |
+| **TC-S05-02** | S-05 | T-10 | `S05-AC-02` | `backend/src/modules/charge-points/charge-points.service.js` | Security | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-05.md#tc-s05-02`](./stories/S-05.md) | **VERIFIED** |
+| **TC-S05-03** | S-05 | T-10 | `S05-AC-03` | `backend/src/modules/charge-points/charge-points.service.js` | Functional | Automated / Live | **NOT VERIFIED** | `NONE` | COMBINED | [`stories/S-05.md#tc-s05-03`](./stories/S-05.md) | **NOT VERIFIED** |
+| **TC-T10-01** | T-10 | T-10 | `T10-01` | `backend/migrations/005_charge_point_code_upper.sql` | Data Integrity | Automated / DB | **PASS** | `NONE` | COMBINED | [`stories/S-05.md#tc-t10-01`](./stories/S-05.md) | **VERIFIED** |
+| **TC-T11-01** | T-11 | T-11 | `T11-01` | `frontend/js/pages/station-owner.js` | UI Validation | Automated / Live | **PASS** | `NONE` | COMBINED | [`stories/S-05.md#tc-t11-01`](./stories/S-05.md) | **VERIFIED** |
 | **UI-CP-01** | Roadmap | S-03 | Form quản lý trụ sạc | `frontend/pages/operator.html` | UI Component | Manual | **NOT FOUND** | `NONE` | REQUIREMENT_LINK | `TEST_REPORT.md` (Roadmap Sprint 1) | **VERIFIED** |
 
 ---
@@ -190,6 +196,7 @@ Bảng ma trận truy vết hồi quy này tuân thủ cấu trúc 4 tầng phâ
 | `backend/src/middlewares/authenticate.js` | `TC-S02-01`, `TC-T05-03`, `TC-FB-03`, `TC-FB-05`, `ACC-S02-03`, `ACC-S03-05` | `SHARED_COMPONENT` | `AFFECTED` | `REGRESSION CANDIDATE` | `SOURCE_LINK` | `VERIFIED` |
 | `backend/src/db/scope.js` | `TC-S03-01`, `TC-T07-01`, `TC-T07-04`, `UT-SCOPE-01`, `ACC-S03-04`, `TC-FB-07`, `MAN-S03-01` | `SHARED_COMPONENT` | `AFFECTED` | `REGRESSION CANDIDATE` | `SOURCE_LINK` | `VERIFIED` |
 | `backend/src/security/routeGuard.js`, `backend/src/security/permissions.js` | `TC-S03-03`, `TC-T06-02`, `ACC-S03-01`, `ACC-S03-03`, `ACC-S03-05`, `TC-FB-06` | `SHARED_COMPONENT` | `AFFECTED` | `REGRESSION CANDIDATE` | `SOURCE_LINK` | `VERIFIED` |
+| `backend/src/modules/charge-points/*.js` | `TC-S05-01`, `TC-S05-02`, `TC-T11-01` | `SHARED_COMPONENT` | `AFFECTED` | `REGRESSION CANDIDATE` | `SOURCE_LINK` | `VERIFIED` |
 | `backend/migrations/*.sql` | `TC-T01-02`, `TC-T01-03`, `TC-T04-01`, `IT-MIGRATE-01` | `DEPENDENCY` | `AFFECTED` | `REGRESSION CANDIDATE` | `SOURCE_LINK` | `VERIFIED` |
 | Thành phần nghi ngờ chưa có evidence liên kết bài test | `NONE` | `POTENTIAL_IMPACT` | `RELATED` | `NOT VERIFIED` | `NONE` | `NOT VERIFIED` |
 
@@ -205,6 +212,8 @@ Bảng ma trận truy vết hồi quy này tuân thủ cấu trúc 4 tầng phâ
   - `TC-S03-01`, `TC-T07-01`, `TC-T07-04`, `UT-SCOPE-01`, `ACC-S03-04`, `TC-FB-07`, `MAN-S03-01`.
 - **Khi sửa đổi ma trận phân quyền `backend/src/security/`**:
   - `TC-S03-03`, `TC-T06-02`, `ACC-S03-01`, `ACC-S03-03`, `ACC-S03-05`, `TC-FB-06`.
+- **Khi sửa đổi module quản lý trụ sạc `backend/src/modules/charge-points/`**:
+  - `TC-S05-01`, `TC-S05-02`, `TC-T11-01`.
 - **Khi sửa đổi migration DDL cơ sở dữ liệu `backend/migrations/*.sql`**:
   - `TC-T01-02`, `TC-T01-03`, `TC-T04-01`, `IT-MIGRATE-01`.
 
@@ -212,9 +221,9 @@ Bảng ma trận truy vết hồi quy này tuân thủ cấu trúc 4 tầng phâ
 
 ## 9. Inventory Verification Metadata
 
-- **Current Repository Snapshot**: Commit `4ab9f0f11f3b037f6e991984002243a0d80884d0` (nhánh `main`).
+- **Current Repository Snapshot**: Commit `86769949c03381429fd4931f3b364341ac618f8f` (nhánh `main`).
 - **Baseline Test Snapshot**: Commit `4bc5758` (24/09/2026).
-- **Test Inventory Verification Date**: 27/09/2026.
+- **Test Inventory Verification Date**: 28/09/2026.
 - **Documents Inspected & Cross-Checked**:
   - [`docs/README.md`](./README.md) (AI Tester Entry Point & Router)
   - [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md) (Bộ quy chuẩn Tester trung tâm)
@@ -223,6 +232,7 @@ Bảng ma trận truy vết hồi quy này tuân thủ cấu trúc 4 tầng phâ
   - [`docs/stories/S-02.md`](./stories/S-02.md)
   - [`docs/stories/S-03.md`](./stories/S-03.md)
   - [`docs/stories/S-04.md`](./stories/S-04.md)
+  - [`docs/stories/S-05.md`](./stories/S-05.md)
   - [`docs/integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md)
   - [`docs/testing/TEST_REPORT.md`](./testing/TEST_REPORT.md)
   - [`docs/testing/REGRESSION_REPORT.md`](./testing/REGRESSION_REPORT.md)
