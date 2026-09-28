@@ -1,5 +1,5 @@
 # Kiểm tra tự động cho mọi PR vào main và mọi lần merge vào main.
-# Chỉ KIỂM TRA (lint + test), không triển khai đi đâu. Staging/CD để Sprint 2.
+# Chỉ KIỂM TRA (lint + test + quét phụ thuộc). Triển khai staging do Render đảm nhiệm và chỉ chạy khi job này xanh (render.yaml).
 name: CI
 
 on:
@@ -56,4 +56,5 @@ jobs:
 
       - run: npm ci
       - run: npm run lint
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm test

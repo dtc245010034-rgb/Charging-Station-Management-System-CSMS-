@@ -8,7 +8,8 @@ try {
   process.exit(1);
 }
 
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
+// Test đặt CSMS_SKIP_DOTENV=1 để .env trên máy dev không che các ca "thiếu biến môi trường".
+if (!process.env.CSMS_SKIP_DOTENV) require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

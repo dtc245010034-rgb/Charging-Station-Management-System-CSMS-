@@ -161,6 +161,15 @@ curl -b owner.cookie http://localhost:3000/api/stations
 
 > `POST /api/stations` bắt buộc header `Idempotency-Key` (chuỗi 8-128 ký tự, tự đặt, dùng để chống bấm lưu hai lần tạo hai trạm) — thiếu header này bị 400.
 
+### Dữ liệu demo (GYM-14) — để cả nhóm thử giao diện
+
+Tạo sẵn 6 tài khoản (mỗi vai trò một tài khoản, cộng 1 tài khoản **nhiều vai trò** Vận hành + Chủ trạm), 6 trạm, 12 trụ (mã `DEMO-...`), 24 đầu nối với trạng thái đa dạng để dashboard có dữ liệu. Chạy lại nhiều lần không tạo trùng.
+
+- **Trên staging (Render):** đặt 2 biến `ALLOW_DEMO_SEED=1` và `DEMO_PASSWORD=<mật-khẩu-≥8-ký-tự>` rồi deploy lại; seed chạy tự động lúc khởi động. Xoá biến `ALLOW_DEMO_SEED` để tắt.
+- **Trên máy (Cách B, sau `npm run migrate`):** `ALLOW_DEMO_SEED=1 DEMO_PASSWORD=... npm run seed-demo` (trong `backend/`).
+- Đăng nhập bằng `owner@`, `owner2@`, `operator@`, `accountant@`, `driver@`, `multi@` + `demo.csms.local` (đổi được bằng `DEMO_EMAIL_DOMAIN`), mật khẩu là `DEMO_PASSWORD`. `owner@` chỉ thấy 4 trạm của mình, `owner2@` thấy 2 trạm khác — dùng để thử cô lập dữ liệu.
+- ⚠️ Trạng thái trụ (Đang sạc, Lỗi…) trong seed là **giả lập để trình diễn**, không phải dữ liệu OCPP thật. Chỉ dùng trên staging/máy cá nhân, không chạy trên dữ liệu thật. Script từ chối chạy nếu thiếu `ALLOW_DEMO_SEED=1`.
+
 Danh sách API đầy đủ và quy tắc bảo mật: xem `backend/README.md`.
 
 ---
@@ -224,6 +233,34 @@ Ca kiểm thử và báo cáo QA: `docs/testing/`, `docs/stories/S-xx.md`.
 
 ---
 
+## Staging (môi trường chạy thật, tự cập nhật khi merge)
+
+Staging chạy **cùng Dockerfile** với `docker-compose`, triển khai trên [Render](https://render.com) bằng file `render.yaml` ở thư mục gốc (gói free, không tốn tiền). Đây là môi trường để Product Owner và cả nhóm xem sản phẩm chạy thật; Definition of Done yêu cầu AC pass ở đây.
+
+**Bật một lần (người có quyền admin repo GitHub, khoảng 10 phút):**
+
+1. Đăng ký Render bằng tài khoản GitHub, cho Render quyền đọc repo này.
+2. Dashboard Render: **New → Blueprint** → chọn repo → nhánh `main`. Render đọc `render.yaml` và tạo 1 web service `csms-staging` + 1 database `csms-staging-db`.
+3. Khi Render hỏi 3 biến (`sync: false`):
+   - `APP_ORIGIN`: `https://csms-staging.onrender.com` (đúng URL Render cấp, xem ở đầu trang service; nếu tên bị trùng Render sẽ thêm hậu tố thì dùng URL đó). Sai giá trị này thì mọi thao tác ghi bị 403.
+   - `ADMIN_EMAIL`, `ADMIN_PASSWORD` (≥ 12 ký tự, không dùng ký tự `#`): tài khoản Quản trị đầu tiên, tự tạo lúc khởi động (chạy lại không đổi gì).
+4. Sau lần deploy đầu, mở `<URL>/api/health` phải thấy `"ok":true`, rồi đăng nhập bằng admin ở bước 3.
+
+**Cách nó vận hành**
+
+- Merge vào `main` → Render chờ CI GitHub xanh (`autoDeployTrigger: checksPass`) → build → chạy migration → mở cổng. CI đỏ thì Render **không** triển khai, bản cũ vẫn chạy. Deploy lỗi lúc khởi động cũng giữ bản cũ.
+- Bí mật (`JWT_SECRET`, mật khẩu admin, chuỗi kết nối DB) nằm ở Render, không nằm trong repo.
+- Xem log / khởi động lại: dashboard Render → service `csms-staging`.
+
+**Giới hạn của gói free — biết trước để khỏi bất ngờ**
+
+- Service **ngủ sau 15 phút không có request**, lần đầu mở lại chờ 30–60 giây. **Mở trang staging trước buổi demo 5 phút.**
+- Trụ sạc ảo giữ kết nối WebSocket lâu dài sẽ không chạy tốt khi service ngủ. Trước Sprint 2 (OCPP) cần chuyển sang gói trả phí của Render hoặc một máy chủ riêng chạy `docker compose`.
+- Database free của Render bị **xoá sau 30 ngày** (có thêm 14 ngày chờ). Đủ cho dự án đến 26/10 nhưng **không phải nơi giữ dữ liệu quan trọng**.
+- `TRUST_PROXY=2` trong `render.yaml` là giá trị theo tài liệu, **chưa kiểm chứng trên Render thật**: nếu sai, mọi người dùng bị coi là cùng một IP và khoá đăng nhập theo IP (20 lần sai) sẽ khoá cả nhóm. Kiểm sau deploy đầu: cố ý đăng nhập sai 6 lần bằng một email lạ từ máy A, rồi đăng nhập đúng từ máy B (mạng khác) — phải vào được.
+
+---
+
 ## 4. Gặp lỗi thường gặp
 
 | Hiện tượng | Nguyên nhân và cách xử lý |
@@ -248,7 +285,7 @@ Ca kiểm thử và báo cáo QA: `docs/testing/`, `docs/stories/S-xx.md`.
 
 | Chức năng | Story | Ghi chú |
 |---|---|---|
-| Khung dự án: Docker Compose, PostgreSQL, migration tiến/lùi, test, lint | S-01 | Chạy trên máy cá nhân; CI (GitHub Actions) chạy lint + test cho mọi PR, **chưa có staging** |
+| Khung dự án: Docker Compose, PostgreSQL, migration tiến/lùi, test, lint | S-01 | CI (GitHub Actions) chạy lint + test + quét phụ thuộc cho mọi PR; staging tự triển khai khi CI xanh qua `render.yaml` (xem mục Staging, **cần bật một lần**) |
 | Đăng nhập email + mật khẩu, khoá 15 phút sau 5 lần sai, đếm theo tài khoản và theo IP | S-02 | Không tiết lộ email có tồn tại hay không |
 | Đăng ký công khai (luôn là tài khoản Tài xế); Quản trị tạo tài khoản các vai trò khác | S-02 | Tạo qua API, chưa có giao diện quản trị |
 | 5 vai trò, mỗi vai trò có trang chủ riêng sau đăng nhập | S-02, S-03 | Trang chủ hiện mới có lời chào |
@@ -258,7 +295,7 @@ Ca kiểm thử và báo cáo QA: `docs/testing/`, `docs/stories/S-xx.md`.
 
 ### Đang làm trong Sprint 1 (demo Thứ 4, 30/9)
 
-- **S-04, S-05:** màn hình quản lý trạm, trụ và đầu nối (giao diện — chưa kiểm lại trên trình duyệt sau khi API đổi hợp đồng ở trên).
+- **S-04, S-05:** màn hình quản lý trạm, trụ và đầu nối đã kiểm lại trên trình duyệt (28/9): đăng nhập chủ trạm, tạo trạm, thêm trụ, báo trùng mã, chuyển trạng thái. Chưa kiểm trên trình duyệt thật ngoài Chromium.
 
 ### Chưa có (theo lộ trình backlog)
 
