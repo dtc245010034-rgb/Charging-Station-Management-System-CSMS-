@@ -1,121 +1,91 @@
-# K-01 — Spike: trụ sạc ảo nối vào máy chủ WebSocket OCPP 1.6J
+# K-01 — Spike: trụ sạc ảo nối vào máy chủ WebSocket OCPP 1.6J (bản hoàn thiện)
 
-> **Jira**: `K-01` (2 SP) · **Dự án**: Charging-Station-Management-System-CSMS- · **Ngày chạy**: 27/9/2026
-> **Snapshot**: nhánh `docs/GYM-12-k01-spike`, dựa trên `origin/main` (`3123dbd`)
+> **Jira**: `K-01` (GYM-12) · **Ngày chạy lại**: 28/9/2026 · **Thay thế** bản 27/9 (chỉ có 4 tin nhắn, tự viết bằng `ws` thô, không có phiên sạc trọn vẹn, chưa kiểm R-08).
+> **Mã thử** (vứt đi được, không thuộc `backend/src`): [`k01/`](./k01). **Bản ghi thật**: [`k01/session-log.json`](./k01/session-log.json) (mọi khung, có mốc thời gian, theo chiều Trụ↔CSMS) và [`k01/findings.json`](./k01/findings.json) (kết quả từng kịch bản).
 
-## 0. Mục đích và giới hạn của spike
+## 0. Vì sao phải làm lại
 
-Theo mô tả K-01, tài liệu này chỉ cần trả lời 3 câu hỏi: dùng simulator nào và vì sao, chuỗi tin nhắn của
-một phiên thật trông ra sao, và mỗi loại tin nhắn cần lưu những trường nào. Spike sinh ra **tri thức**,
-không phải sản phẩm — code dùng để chạy thử (`k01-simulator.js`) là mã vứt đi, không thuộc `backend/src`
-và không được lint/test cùng backend.
+Bản 27/9 đạt “văn bản” nhưng **chưa đạt AC của K-01** trong backlog:
 
-**Giới hạn quan trọng phải nói trước:** `backend/src/server.js` hiện tại chỉ xử lý 4 loại bản tin
-(`BootNotification`, `Heartbeat`, `StatusNotification`, `Authorize`). `StartTransaction`, `MeterValues`,
-`StopTransaction` — các bản tin tạo nên "một phiên sạc từ cắm tới rút" — đều trả `[4, id, "NotSupported", {}]`
-vì thuộc phạm vi Sprint 3 (theo `README.md`, roadmap). Vì vậy tài liệu này **không có** bản ghi một phiên
-sạc trọn vẹn có kWh, vì hệ thống chưa làm được việc đó. Phần dưới ghi lại đúng những gì máy chủ hiện tại
-làm được, và liệt kê rõ ràng phần chưa làm được để không ai nhầm là "đã xong".
+| AC / yêu cầu của K-01 | Bản 27/9 | Bản này |
+|---|---|---|
+| Chạy thử một simulator, ghi lại chuỗi tin nhắn của **một phiên hoàn chỉnh** (cắm → sạc → rút) | Không: dừng ở `StartTransaction` bị `NotSupported` | Có: 8 tin nhắn + `SetChargingProfile` + `Reset`, có `transactionId`, `MeterValues`, `StopTransaction` |
+| Danh sách trường của từng tin nhắn | Đề xuất theo trí nhớ | Lấy từ **JSON schema chính thức OCPP 1.6** (thư viện nạp sẵn), đối chiếu bằng khung thật |
+| R-08: simulator có tôn trọng `SetChargingProfile`? | Không kiểm | Đã kiểm (mục 4) |
+| Không tự chấm bài của mình | Mã client và server cùng do nhóm viết bằng `ws` thô → “đúng” theo chính nó | Client là thư viện bên thứ ba, kiểm schema ở **cả hai đầu** |
 
 ## 1. Simulator đã chọn và lý do
 
-**Chọn**: một script Node dùng một lần (`docs/spikes/k01-simulator.js`), viết bằng thư viện `ws` —
-thư viện `server.js` cũng đang dùng để chạy WebSocket server (`backend/package.json`, không thêm phụ thuộc mới).
+**Chọn:** trụ ảo viết trên [`ocpp-rpc`](https://www.npmjs.com/package/ocpp-rpc) 2.2.1 (npm, MIT, Node ≥ 17.3) ở `strictMode: true` — `k01/virtual-charge-point.js`. Máy chủ tham chiếu (`k01/reference-server.js`) dùng cùng thư viện để có một CSMS chuẩn làm đối chứng.
 
-**Lý do không dùng một simulator OCPP có sẵn** (ví dụ SteVe test client, ocpp-eliftech, các simulator OCPP-J công khai):
+Lý do:
+1. **Kiểm schema OCPP 1.6 chính thức ở cả hai đầu.** Khung sai (thiếu `errorCode`…) bị chặn với đúng mã lỗi OCPP (`OccurrenceConstraintViolation`), nên bản ghi không “đúng chỉ vì mã của mình tự thấy đúng”.
+2. Cùng hệ Node/`ws` với backend → đưa vào `docker-compose` cho S-26 (T-55, 20 trụ ảo) không cần thêm runtime.
+3. Có sẵn kết nối lại tự động, keep-alive, đóng kết nối đúng mã — đúng thứ E-04 cần thử.
 
-1. `server.js` gửi một bản tin chào ngoài chuẩn OCPP-J ngay sau khi kết nối
-   (`[3, "welcome-<timestamp>", { chargePoint, status: "Connected" }]` — `server.js:16`). Một simulator
-   tuân thủ chuẩn OCPP thật sự có thể coi đây là `CALLRESULT` không khớp bất kỳ `CALL` nào nó gửi trước đó
-   và từ chối hoặc log lỗi giao thức, làm sai lệch kết quả đo.
-2. `server.js` không hỗ trợ bất kỳ hành động nào ngoài 4 hành động kể trên; một simulator đầy đủ theo
-   chuẩn OCPP 1.6 sẽ tự động thử cả `StartTransaction`, `MeterValues`, `StopTransaction`, `Heartbeat`
-   theo chu kỳ... — nhiều luồng đó không cần thiết cho mục tiêu spike (chỉ cần bản ghi thô của một lượt
-   trao đổi), gây tốn thời gian cấu hình hơn giá trị nó mang lại trong 1 tuần Sprint 1.
-3. Mục tiêu là đo hành vi CHÍNH XÁC của mã hiện tại, không phải kiểm định tuân thủ chuẩn OCPP — script tự
-   viết cho phép kiểm soát chính xác thứ tự gửi và ghi lại timestamp từng chiều, việc mà phải chỉnh sửa
-   simulator có sẵn mới làm được.
-
-Script giữ lại trong repo (`docs/spikes/`) thay vì xoá sau khi chạy, để mentor/người chấm chạy lại kiểm
-chứng bản ghi bên dưới là thật, không phải bịa.
+**Giới hạn phải nói thẳng:**
+- Đây là **thư viện giao thức, không phải simulator “chạy sẵn”**: hành vi của trụ (nối lại rồi làm gì, có tôn trọng profile không) do **chúng ta** viết trong `virtual-charge-point.js`. Nó chứng minh *hợp đồng tin nhắn* đúng, **không** chứng minh một trụ thật sẽ làm y hệt.
+- Chưa thử bất kỳ trụ thật hoặc simulator thương mại nào. Rủi ro “trụ thật khác spec” vẫn còn (xem mục 6).
 
 ## 2. Cách chạy lại
 
 ```bash
-# 1) Postgres test rỗng, migrate
-node -e "require('./tests/helpers/db').resetSchema().then(()=>process.exit(0))"
-node src/db/migrate.js
-
-# 2) Đăng ký một trụ thật qua SQL trực tiếp (nhanh hơn đi qua toàn bộ luồng đăng nhập/API cho việc này)
-#    — trạm "Trạm spike K-01", trụ mã K01-SIM-01
-
-# 3) Chạy server, rồi chạy simulator nhắm vào trụ đã đăng ký
-DATABASE_URL=... JWT_SECRET=... APP_ORIGIN=... PORT=3057 node src/server.js &
-node ../docs/spikes/k01-simulator.js ws://127.0.0.1:3057/ocpp/K01-SIM-01 ../docs/spikes/k01-session-log.json
+cd docs/spikes/k01
+npm install
+node run-all.js     # ghi lại session-log.json + findings.json, in kết quả
 ```
 
-Bản ghi thật của lần chạy 27/9/2026 nằm ở [`k01-session-log.json`](./k01-session-log.json) (11 bản tin,
-có timestamp ISO cho từng chiều gửi/nhận). Mã trụ `K01-SIM-01` là mã đã đăng ký thật qua bảng
-`charge_points` trước khi kết nối, để phản ánh đúng tình huống dùng thật (không lẫn với lỗ hổng ở mục 5).
+## 3. Phiên sạc trọn vẹn đã ghi (trụ `K01-SIM-01`, 22 kW)
 
-## 3. Chuỗi tin nhắn của phiên đã chạy được (Boot → Heartbeat → StatusNotification → Authorize)
-
-| # | Chiều | Loại | Nội dung chính |
+| # | Chiều | Tin nhắn | Điểm cần nhớ |
 |---|---|---|---|
-| 1 | Trụ → CSMS | `CALL BootNotification` | `chargePointVendor: "SpikeSim"`, `chargePointModel: "K-01-Virtual"` |
-| 2 | CSMS → Trụ | *(ngoài chuẩn)* bản tin chào | `{ chargePoint: "K01-SIM-01", status: "Connected" }` — không phải `CALLRESULT` OCPP chuẩn |
-| 3 | Trụ → CSMS | `CALL Heartbeat` | `{}` |
-| 4 | CSMS → Trụ | `CALLRESULT BootNotification` | `{ status: "Accepted", currentTime, interval: 60 }` |
-| 5 | Trụ → CSMS | `CALL StatusNotification` | `connectorId: 1, status: "Available", errorCode: "NoError"` |
-| 6 | CSMS → Trụ | `CALLRESULT Heartbeat` | `{ currentTime }` |
-| 7 | Trụ → CSMS | `CALL Authorize` | `idTag: "DEMO-TAG-001"` |
-| 8 | CSMS → Trụ | `CALLRESULT StatusNotification` | `{}` |
-| 9 | Trụ → CSMS | `CALL StartTransaction` *(thử vượt phạm vi)* | `connectorId: 1, idTag, meterStart: 0, timestamp` |
-| 10 | CSMS → Trụ | `CALLRESULT Authorize` | `{ idTagInfo: { status: "Accepted" } }` |
-| 11 | CSMS → Trụ | `CALLERROR StartTransaction` | `[4, "sim-5", "NotSupported", {}]` — **ranh giới thật của Sprint 1** |
+| 1 | Trụ→CSMS | `BootNotification` | vendor/model/serial/firmware → trả `Accepted`, `interval: 300` |
+| 2 | Trụ→CSMS | `Heartbeat {}` | trả `currentTime` (giờ **máy chủ**) |
+| 3 | Trụ→CSMS | `StatusNotification` `Available` (conn 1) | có `errorCode: NoError`, `timestamp` |
+| 4 | Trụ→CSMS | `Authorize` `idTag` | trả `idTagInfo.status` |
+| 5 | Trụ→CSMS | `StatusNotification` `Preparing` | cắm súng trước khi bắt đầu |
+| 6 | Trụ→CSMS | `StartTransaction` | `meterStart: 0` (Wh) → CSMS cấp **`transactionId` (số nguyên)** |
+| 7 | Trụ→CSMS | `StatusNotification` `Charging` | |
+| 8 | Trụ→CSMS | `MeterValues` ×4 | `Energy.Active.Import.Register` (Wh), `Power.Active.Import` (W), `Current.Import` (A) |
+| 9 | CSMS→Trụ | `SetChargingProfile` (7 kW) | trụ trả `Accepted`; hai mẫu sau đó ≤ 7 000 W |
+| 10 | Trụ→CSMS | `StopTransaction` | `meterStop: 160`, `reason: Local` → kWh = (meterStop − meterStart)/1000 |
+| 11 | Trụ→CSMS | `StatusNotification` `Finishing` → `Available` | |
+| 12 | CSMS→Trụ | `Reset {type: Soft}` | trụ trả `Accepted` |
 
-Ghi chú thứ tự: máy chủ xử lý tuần tự nên phản hồi luôn đến sau khi trụ đã gửi bản tin kế tiếp (không chờ
-round-trip) — đây là cách `server.js` hoạt động thật, không phải lỗi ghi log.
+## 4. Kết quả các kịch bản (`findings.json`)
 
-**Điều đã xác nhận bằng bản ghi thật**: 4 loại bản tin đầu được `Accepted`/phản hồi hợp lệ.
-`StartTransaction` — bản tin đầu tiên của một "phiên sạc" theo đúng nghĩa AC — bị từ chối bằng
-`NotSupported`. Không có bản ghi nào cho `MeterValues`/`StopTransaction` vì không có `transactionId` để
-dùng (StartTransaction chưa từng thành công ở bất kỳ lần chạy nào).
-
-## 4. Trường dữ liệu mỗi loại bản tin cần lưu
-
-**Hiện trạng cần nói rõ trước bảng dưới**: `server.js` hiện **không ghi bất kỳ trường nào vào CSDL** khi
-nhận bản tin — chỉ trả lời tĩnh trong bộ nhớ. Bảng dưới là đề xuất cho việc lưu trữ thật (Sprint 2 trở đi),
-không phải mô tả code hiện tại.
-
-### Đã có bản tin thật để đối chiếu (mục 3)
-
-| Bản tin | Trường | Vì sao cần lưu |
+| Kịch bản | Kết quả | Hệ quả cho story |
 |---|---|---|
-| `BootNotification` | `chargePointVendor`, `chargePointModel`, `chargePointSerialNumber` (nếu có), `firmwareVersion` (nếu có) | Nhận diện phần cứng trụ, phục vụ bảo trì/thống kê thiết bị |
-| `BootNotification` | thời điểm nhận, mã trụ (từ URL kết nối) | Biết trụ nào boot lúc nào — nền cho giám sát trạng thái kết nối |
-| `Heartbeat` | thời điểm nhận | Phát hiện trụ mất kết nối (so với `interval` đã cấp ở BootNotification) |
-| `StatusNotification` | `connectorId`, `status`, `errorCode`, `info` (nếu có), `timestamp` (nếu có, hoặc giờ nhận) | Đây là nguồn duy nhất cập nhật trạng thái đầu nối theo thời gian thực — mục tiêu chính của Sprint 2 |
-| `Authorize` | `idTag`, kết quả `idTagInfo.status`, thời điểm | Vết kiểm tra thẻ để đối chiếu khi có tranh chấp phiên sạc |
+| **R-08** `SetChargingProfile` giữa phiên | Trụ nhận (`Accepted`) và công suất giảm 22 → 7 kW ở mẫu kế tiếp | Với **trụ ảo do nhóm viết**, E-08 kiểm được bằng công suất thật. R-08 hạ từ “không kiểm được” xuống “phải tự cài xử lý profile trong trụ ảo (≈ 10 dòng)”. Không suy ra được cho trụ thật |
+| Mã trụ lạ (`/ocpp/KHONG-TON-TAI`) | Bị từ chối **HTTP 404 ngay lúc bắt tay**, không mở WebSocket; ghi được mã + IP | Đúng AC 2 của S-06 (T-13) |
+| Subprotocol sai (`ocpp2.0.1`) hoặc **không khai** | **Mặc định thư viện vẫn chấp nhận nâng cấp**, chỉ không chọn subprotocol nào. Phải tự chặn trong `auth` (`handshake.protocols`) → HTTP 400 | S-06 AC 3: **bắt buộc code kiểm `ocpp1.6` tường minh**, đừng tin mặc định |
+| Khung sai schema (thiếu `errorCode`) gửi thẳng | Máy chủ trả `CALLERROR OccurrenceConstraintViolation` kèm chi tiết, **không đóng kết nối** | Đúng AC 2 của S-07 |
+| Rớt mạng giữa phiên (terminate socket) | Thư viện **tự nối lại** cùng identity; máy chủ vẫn giữ `transactionId`; phiên tiếp tục với cùng `transactionId` sau khi trụ tự báo lại `Charging` + gửi tiếp `MeterValues` | Chỉ đúng nếu trụ làm thế. **Thư viện không tự khôi phục phiên**, đó là việc của trụ và của S-21: đừng đóng phiên chỉ vì mất kết nối |
+| **Cùng `messageId` gửi hai lần** (`StartTransaction`) | Thư viện **chạy lại handler và cấp `transactionId` thứ hai (1002 rồi 1003)** | **Bằng chứng cho S-14**: không có chống trùng thì gửi lại = hai phiên = tính tiền đôi. Chống trùng phải ở DB (R-03), không trông vào thư viện |
 
-### Chưa chạy được, đề xuất trước cho Sprint 3 (dựa trên chuẩn OCPP 1.6J, không phải đã kiểm chứng bằng bản ghi thật)
+## 5. Trường dữ liệu phải lưu (theo schema OCPP 1.6 đã kiểm bằng khung thật)
 
-| Bản tin | Trường | Vì sao cần lưu |
-|---|---|---|
-| `StartTransaction` | `connectorId`, `idTag`, `meterStart` (Wh), `timestamp`, `reservationId` (nếu có), `transactionId` do CSMS cấp trong phản hồi | `transactionId` là khoá nối toàn bộ phiên; `meterStart` là mốc để tính kWh cuối cùng |
-| `MeterValues` | `connectorId`, `transactionId`, từng `sampledValue`: `value`, `measurand` (vd. `Energy.Active.Import.Register`), `unit`, `timestamp`, `context` | Đây là dữ liệu tính tiền — Product Goal của dự án yêu cầu "tính đúng tiền" nên không được thiếu trường nào trong nhóm này |
-| `StopTransaction` | `transactionId`, `meterStop` (Wh), `timestamp`, `reason` (nếu có), `idTag` (nếu có) | `meterStop - meterStart` là số kWh cuối; `reason` (vd. mất điện, rút thẻ) phục vụ đối soát doanh thu (Product Goal) |
+| Tin nhắn | Bắt buộc | Tuỳ chọn (schema) | Ghi chú thiết kế bảng |
+|---|---|---|---|
+| `BootNotification` req | `chargePointVendor`, `chargePointModel` | `chargePointSerialNumber`, `firmwareVersion`, `iccid`, `imsi`, `meterType`, `meterSerialNumber`, `chargeBoxSerialNumber` | Lưu vendor/model/serial/firmware (T-16). resp: `status`, `currentTime`, `interval` |
+| `Heartbeat` | — | — | resp `currentTime`; cập nhật `last_seen_at` |
+| `StatusNotification` | `connectorId`, `errorCode`, `status` | `info`, `timestamp`, `vendorId`, `vendorErrorCode` | `connectorId` **0 = cả trụ**, ≥ 1 = đầu nối. `timestamp` **có thể vắng** → dùng giờ nhận |
+| `Authorize` | `idTag` (**CiString20: tối đa 20 ký tự**) | — | Cột `id_tags.tag` cần ≥ 20; resp `idTagInfo.status`. Log chỉ 4 ký tự cuối |
+| `StartTransaction` | `connectorId`, `idTag`, `meterStart`, `timestamp` | `reservationId` | resp **`transactionId` do CSMS cấp (int)** + `idTagInfo` |
+| `MeterValues` | `connectorId`, `meterValue[]` | **`transactionId`** | ⚠️ `transactionId` là **tuỳ chọn**: số đo có thể tới không kèm phiên → bảng `orphan_messages` (T-41) là **bắt buộc**, không phải dự phòng. Mỗi `sampledValue`: `value` (chuỗi), `measurand`, `unit`, `context` |
+| `StopTransaction` | `transactionId`, `timestamp`, `meterStop` | `idTag`, `reason`, `transactionData` | Thiếu `idTag` là hợp lệ. `reason` (`Local`, `EVDisconnected`, `PowerLoss`…) để đối soát |
+| `Reset` (CSMS→trụ) | `type` (`Soft`/`Hard`) | — | resp `status` |
+| `SetChargingProfile` (CSMS→trụ) | `connectorId`, `csChargingProfiles` | — | resp `status` |
 
-## 5. Ghi chú lỗ hổng đã biết (không thuộc phạm vi K-01, không khai thác)
+## 6. Điều spike này KHÔNG chứng minh (đừng coi là đã xong)
 
-Xác nhận lại bằng bản ghi thật (không nằm trong log chính, chạy riêng để đối chiếu): kết nối tới
-`ws://.../ocpp/KHONG-TON-TAI` — mã trụ **không tồn tại** trong bảng `charge_points` — vẫn được máy chủ
-chấp nhận và trả lời `welcome`. Đây là lỗ hổng đã ghi nhận trong đánh giá S-04/S-05 trước đó, thuộc phạm
-vi S-06 (xác thực trụ), không phải lỗi của Sprint 1. Nêu lại ở đây để không ai đọc tài liệu K-01 rồi nhầm
-là "kết nối trụ đã có kiểm soát".
+1. Trụ thật/simulator thương mại có thể: gửi `Heartbeat` khác chu kỳ, không gửi `timestamp`, gửi `MeterValues` trước `StartTransaction` trả lời, dùng `transactionData` khi dừng, hoặc **không nối lại y như trụ ảo của mình**. S-21 phải được thử lại với ít nhất một thiết bị/simulator không do nhóm viết.
+2. Chưa đo tải: T-12 yêu cầu ≥ 50 kết nối đồng thời trên staging; spike chỉ chạy 3 trụ.
+3. Chưa thử OCPP Security profile (mật khẩu Basic Auth trong bắt tay) — hiện xác thực trụ chỉ bằng “mã có trong bảng” (đúng phạm vi S-06, nhưng ai biết mã là nối được).
+4. `interval: 300` của `BootNotification` chỉ là gợi ý; chu kỳ thực do trụ quyết định — S-12 phải tính “quá hạn” theo giá trị đã cấp, không hằng số.
 
-## 6. Việc còn lại (đề xuất, không nằm trong AC của K-01)
+## 7. Khuyến nghị cho Sprint 2 (cần trưởng nhóm kỹ thuật quyết)
 
-- S-06 (Sprint 2): trụ phải xác thực được trước khi máy chủ chấp nhận kết nối WebSocket.
-- Sprint 3: cài `StartTransaction`/`MeterValues`/`StopTransaction` thật, cùng bảng lưu phiên sạc (hiện
-  DB chưa có bảng nào cho việc này — xem thêm ghi chú S-05 AC3 trong đánh giá trước, cùng nguyên nhân).
+1. **Cân nhắc dùng `ocpp-rpc` ngay trong backend cho S-06/S-07** thay vì tự viết khung `CALL/CALLRESULT/CALLERROR` (T-14/T-15): có sẵn kiểm schema, mã lỗi chuẩn, khớp `CALLRESULT` theo mã, đóng kết nối đúng chuẩn, nối lại. Đánh đổi: thêm một phụ thuộc (MIT, có bảo trì). Nếu chọn tự viết thì dùng `session-log.json` làm dữ liệu test như backlog đã nêu.
+2. `backend/src/server.js` hiện tại **phải thay hoàn toàn** (bản tin “welcome” ngoài chuẩn, nhận mọi mã trụ, không kiểm subprotocol, registry chỉ đếm). Không vá.
+3. Đưa `k01/virtual-charge-point.js` thành nền của bộ trụ ảo S-26 (T-55) và bổ sung xử lý `RemoteStartTransaction`/`RemoteStopTransaction` khi tới Sprint 3.

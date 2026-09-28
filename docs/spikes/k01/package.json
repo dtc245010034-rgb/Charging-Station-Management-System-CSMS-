@@ -1,0 +1,6 @@
+{
+  "name": "k01-spike",
+  "private": true,
+  "description": "Mã thử vứt đi của spike K-01 — không thuộc sản phẩm, không lint/test cùng backend",
+  "dependencies": { "ocpp-rpc": "^2.2.1" }
+}
