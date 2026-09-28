@@ -11,6 +11,27 @@
 
 ---
 
+## 0. Cập nhật cấu trúc 28/09/2026 (frontend thiết kế lại, staging, demo, K-01)
+
+> **Quan trọng cho QA:** các dòng truy vết ở mục 7, 9, 10, 11 và các hồ sơ `stories/`, `integration/`, `testing/` được xác minh **trước** đợt này nên vẫn ghi đường dẫn cũ `frontend/js/*` và `frontend/pages/*.html`. Đó là bằng chứng lịch sử đúng tại commit đã ghi, **không sửa**. Dùng bảng dưới để tra sang đường dẫn hiện tại; các test cũ liên quan đã được cập nhật theo đường dẫn mới (138/138 pass, lint sạch) nhưng **chưa được QA xác minh lại từng ca**.
+
+| Đường dẫn cũ (đến 27/09) | Đường dẫn hiện tại | Ghi chú |
+|---|---|---|
+| `frontend/js/api.js` | `frontend/services/api.js` | Không đổi hành vi: cùng origin, `credentials: include`, `ApiError` |
+| `frontend/js/auth.js` | `frontend/app/auth.js` | Thêm `toSessionUser` (danh sách `roles`) |
+| `frontend/js/router.js` (`homePathFor`) | `frontend/app/workspace.js` (`homePathFor`) + `frontend/app/router.js` (`parseHash`, nạp trang) | Trang chủ theo vai trò nay là `/app.html#/<workspace>/overview` |
+| `frontend/js/validate.js` | `frontend/app/validate.js` | Không đổi |
+| `frontend/js/theme.js` | `frontend/app/theme.js` + `theme-boot.js` | `localStorage` chỉ còn ở hai file này |
+| `frontend/js/pages/login.js`, `frontend/index.html` | `frontend/pages/auth/login.js`, `frontend/index.html` | Bỏ số liệu giả, nút “Ghi nhớ/Quên mật khẩu” |
+| `frontend/js/pages/dashboard.js`, `frontend/pages/{admin,operator,accountant,driver}.html` | `frontend/main.js` + `frontend/app.html` + `frontend/pages/<vai trò>/` | Một vỏ ứng dụng cho mọi vai trò |
+| `frontend/pages/station-owner.html`, `frontend/js/pages/station-owner.js` | `frontend/pages/shared/{stations,station-drawer,station-form,charge-points}.js` | Cùng chức năng S-04/S-05, dùng chung cho Chủ trạm/Quản trị/Vận hành |
+| `frontend/styles.css` | `frontend/styles/{tokens,themes,reset,layout,components}.css` | Có token sáng/tối |
+| Leaflet từ CDN unpkg | `frontend/vendor/leaflet/` | Không còn tài nguyên ngoài (Google Fonts, CDN) |
+
+Thêm mới: `render.yaml`, `backend/scripts/seed-demo.js`, `backend/tests/integration/seed-demo.test.js`, `backend/tests/unit/frontend-permissions.test.js`, `docs/OPERATIONS.md`, `docs/SPRINT_STATUS.md`, `docs/design/`, `docs/spikes/k01/`. `docs/spikes/k01-simulator.js` và `k01-session-log.json` là bản K-01 cũ (27/9), đã được `docs/spikes/k01/` thay thế.
+
+---
+
 ## 1. Mục đích của tài liệu
 
 Tài liệu này là **VERIFIED PROJECT MAP** (Bản đồ dự án đã qua xác minh thực tế) dành riêng cho AI Tester / QA Analyst:
@@ -81,7 +102,8 @@ Charging-Station-Management-System-CSMS-/
 │   │   ├── 005_charge_point_code_upper.sql            # Chuẩn hóa mã trụ về chữ hoa và thêm CHECK constraint cho charge_points
 │   │   └── 005_charge_point_code_upper.down.sql       # Rollback migration chuẩn hóa mã trụ chữ hoa
 │   ├── scripts/                                       # Thư mục chứa các script hỗ trợ vận hành và bảo trì CLI
-│   │   └── create-admin.js                            # Script CLI khởi tạo tài khoản quản trị viên tối cao ban đầu
+│   │   ├── create-admin.js                            # Script CLI khởi tạo tài khoản quản trị viên tối cao ban đầu
+│   │   └── seed-demo.js                               # Dữ liệu demo GYM-14 (6 tài khoản, 6 trạm, 12 trụ DEMO-*); cần ALLOW_DEMO_SEED=1
 │   ├── src/                                           # Mã nguồn chính của ứng dụng backend
 │   │   ├── app.js                                     # Khởi tạo Express app, gắn middlewares, static frontend, và routes
 │   │   ├── server.js                                  # File bootstrap lắng nghe cổng HTTP và khởi động máy chủ
@@ -154,41 +176,62 @@ Charging-Station-Management-System-CSMS-/
 │       ├── integration/                               # Kiểm thử tích hợp giữa các thành phần backend
 │       │   ├── auth.regression.test.js                # Kiểm tra hồi quy cơ chế xác thực và bảo mật phiên
 │       │   ├── create-admin.test.js                   # Kiểm tra script tạo tài khoản admin CLI
-│       │   └── migrate.test.js                        # Kiểm tra tiến trình chạy migration và rollback cơ sở dữ liệu
+│       │   ├── migrate.test.js                        # Kiểm tra tiến trình chạy migration và rollback cơ sở dữ liệu
+│       │   └── seed-demo.test.js                      # Seed demo: từ chối khi thiếu xác nhận, idempotent, không in mật khẩu
 │       └── unit/                                      # Kiểm thử đơn vị độc lập từng hàm logic
 │           ├── connection-registry.test.js            # Unit test bộ đăng ký và theo dõi kết nối socket trụ sạc
 │           ├── env.test.js                            # Unit test kiểm tra parse và validate biến môi trường
 │           ├── errorHandler.test.js                   # Unit test kiểm tra middleware xử lý lỗi
 │           ├── eslint-guard.test.js                   # Unit test rà soát quy tắc lint và bảo mật tĩnh
-│           ├── frontend.test.js                       # Unit test logic validate form và router client-side
+│           ├── frontend-permissions.test.js           # Bảng quyền frontend phải khớp backend/src/security/permissions.js
+│           ├── frontend.test.js                       # Unit test api/auth/validate, router hash, menu theo quyền, nhóm trạng thái
 │           ├── no-backdoor.test.js                    # Unit test bảo đảm không có backdoor hoặc hardcode secret
 │           ├── nodeVersion.test.js                    # Unit test kiểm tra điều kiện tương thích phiên bản Node
 │           ├── scope.test.js                          # Unit test logic hàm lọc dữ liệu scopeByOwner
 │           └── station-schema.test.js                 # Unit test validate Zod schema trạm sạc (toạ độ lat/lng, tên, địa chỉ)
-├── frontend/                                          # Giao diện người dùng web tĩnh (Static Web App)
-│   ├── index.html                                     # Trang chủ ứng dụng web và vỏ bọc Single Page Application
-│   ├── styles.css                                     # File stylesheet định dạng giao diện toàn bộ ứng dụng
-│   ├── js/                                            # Thư mục mã nguồn JavaScript phía client
-│   │   ├── api.js                                     # Tiện ích gọi API (fetch wrapper) xử lý header và credentials
-│   │   ├── auth.js                                    # Quản lý trạng thái đăng nhập, đăng xuất và kiểm tra phiên client
-│   │   ├── router.js                                  # Bộ điều hướng client-side, bảo vệ trang dựa trên trạng thái phiên
-│   │   ├── theme.js                                   # Tiện ích chuyển đổi giao diện sáng/tối (Dark/Light mode)
-│   │   ├── validate.js                                # Hàm validate tính hợp lệ của dữ liệu form nhập liệu
-│   │   └── pages/                                     # JavaScript điều khiển logic riêng cho từng trang
-│   │       ├── dashboard.js                           # Logic hiển thị thông tin bảng điều khiển chung
-│   │       ├── login.js                               # Logic xử lý sự kiện form đăng nhập và thông báo khóa tạm thời
-│   │       └── station-owner.js                       # Logic giao diện chủ trạm: bản đồ Leaflet, tạo/sửa trạm, Idempotency-Key
-│   └── pages/                                         # Các trang giao diện HTML tương ứng theo vai trò người dùng
-│       ├── accountant.html                            # Giao diện dành cho vai trò Kế toán (Accountant)
-│       ├── admin.html                                 # Giao diện quản trị hệ thống dành cho Admin
-│       ├── driver.html                                # Giao diện dành cho tài xế xe điện (Driver)
-│       ├── operator.html                              # Giao diện dành cho nhân viên vận hành trạm sạc (Operator)
-│       └── station-owner.html                         # Giao diện dành cho chủ đầu tư trạm sạc (Station Owner)
+├── render.yaml                                        # Blueprint staging trên Render (web Docker + Postgres, tự deploy khi CI xanh)
+├── frontend/                                          # Giao diện web tĩnh: HTML/CSS/JS thuần, ES modules, không build
+│   ├── index.html                                     # Trang đăng nhập / đăng ký (tab, kiểm tra lỗi từng ô)
+│   ├── app.html                                       # Vỏ ứng dụng dùng chung cho mọi vai trò (nạp main.js)
+│   ├── main.js                                        # Khởi động: lấy phiên, dựng shell theo workspace, nạp trang theo route
+│   ├── app/                                           # Lõi ứng dụng phía client
+│   │   ├── auth.js                                    # login/register/logout/me và chuẩn hoá danh sách vai trò
+│   │   ├── dom.js                                     # Hàm dựng DOM an toàn (không dùng HTML thô)
+│   │   ├── format.js                                  # Định dạng số, ngày giờ, chữ viết tắt
+│   │   ├── permissions.js                             # Bảng quyền chỉ để ẩn/hiện nút (test khớp backend)
+│   │   ├── router.js                                  # Router theo hash, bảng nạp trang lười, quyền tối thiểu mỗi trang
+│   │   ├── state.js                                   # Store nhỏ và phiên hiện tại
+│   │   ├── status.js                                  # Gom 9 trạng thái OCPP thành nhóm hiển thị (một nơi duy nhất)
+│   │   ├── theme-boot.js                              # Áp giao diện sáng/tối trước khi vẽ (script thường)
+│   │   ├── theme.js                                   # Chuyển sáng/tối, lưu localStorage (chỉ tuỳ chọn giao diện)
+│   │   ├── validate.js                                # Kiểm tra form đăng nhập/đăng ký
+│   │   └── workspace.js                               # Cấu hình 5 workspace, menu theo vai trò (mục chưa có backend bị ẩn)
+│   ├── components/                                    # Thành phần giao diện dùng chung
+│   │   ├── badge.js, empty-state.js, icons.js, kpi-card.js, table.js, toast.js
+│   │   ├── donut.js                                   # Biểu đồ tròn SVG thuần
+│   │   ├── hero.js                                    # Đầu trang: lời chào, ngày giờ, tình trạng hệ thống từ /api/health
+│   │   ├── modal.js                                   # Hộp thoại và ngăn kéo (dialog gốc)
+│   │   ├── palette.js                                 # Tìm kiếm nhanh Ctrl+K
+│   │   ├── sidebar.js, topbar.js                      # Thanh bên, thanh trên (đổi workspace, thông báo, menu người dùng)
+│   │   └── station-map.js                             # Bản đồ Leaflet: giám sát và chọn toạ độ
+│   ├── pages/                                         # Trang theo vai trò
+│   │   ├── auth/login.js                              # Đăng nhập/đăng ký
+│   │   ├── operator/dashboard.js                      # Bảng điều khiển Vận hành viên
+│   │   ├── admin/users.js                             # Quản trị tạo tài khoản mọi vai trò
+│   │   ├── accountant/overview.js, driver/overview.js # Khung Kế toán / Tài xế (mobile)
+│   │   └── shared/                                    # account, charge-points, fleet(-overview), map-page, station-drawer, station-form, stations
+│   ├── services/                                      # api.js (mọi request), csms.js (endpoint), realtime.js (polling → SSE)
+│   ├── styles/                                        # tokens.css, themes.css, reset.css, layout.css, components.css
+│   └── vendor/leaflet/                                # Thư viện bản đồ (MIT) đặt sẵn, không dùng CDN
 └── docs/                                              # Thư mục tài liệu dự án thuộc quyền quản lý của Tester/QA
     ├── integration/                                   # Thư mục tài liệu kiểm thử tích hợp giữa các hệ thống
-    │   └── FRONTEND_BACKEND.md                        # Kịch bản & bằng chứng kiểm thử tích hợp Frontend ↔ Backend
+    │   └── FRONTEND_BACKEND.md                        # Kịch bản & bằng chứng kiểm thử tích hợp Frontend ↔ Backend (đường dẫn lịch sử, xem mục 0)
+    ├── design/                                        # Đặc tả UX Redesign Level 3, ảnh tham chiếu, screenshots/ (30 ảnh), trạng thái triển khai
+    ├── OPERATIONS.md                                  # Sổ tay vận hành: build, chạy, dừng, DB, staging, biến môi trường
+    ├── SPRINT_STATUS.md                               # Tình trạng dự án và sprint đầy đủ
     ├── spikes/                                        # Các tài liệu nghiên cứu kỹ thuật và báo cáo gửi PO
-    │   ├── K-01-ocpp-simulator.md                     # Tài liệu spike nghiên cứu simulator OCPP 1.6-J
+    │   ├── K-01-ocpp-simulator.md                     # Tài liệu spike K-01 (bản hoàn thiện 28/9)
+    │   ├── k01/                                       # Mã thử chạy lại được: ocpp-rpc, CSMS tham chiếu, trụ ảo, session-log.json, findings.json
     │   ├── k01-session-log.json                       # Nhật ký mẫu phiên kết nối WebSocket OCPP
     │   ├── k01-simulator.js                           # Script simulator kết nối thử nghiệm OCPP
     │   └── S-05-AC3-ghi-nhan-cho-PO.md                # Báo cáo gửi PO đề xuất hoãn S-05 AC3 sang Sprint 3
@@ -234,8 +277,8 @@ Charging-Station-Management-System-CSMS-/
 | **Error Handling** | `backend/src/middlewares/errorHandler.js` | Bắt lỗi tập trung và chuẩn hóa cấu trúc JSON response `{ error: { code, message, details } }` | Điểm kiểm thử tích hợp `TC-FB-04` và `UT-ERR-01` | Read-Only |
 | **CSRF / Origin Guard** | `backend/src/middlewares/requireJson.js` | Bắt buộc `Content-Type: application/json` và kiểm tra header `Origin` khớp với `APP_ORIGIN` | Điểm kiểm thử tích hợp `TC-FB-11` phòng vệ tấn công CSRF | Read-Only |
 | **Dev Test Suites** | `backend/tests/` | Toàn bộ bộ test tự động của Developer (acceptance, integration, unit) | Nguồn cung cấp bằng chứng tự động (Automated Evidence) khách quan cho Tester | Read-Only |
-| **Frontend Core JS** | `frontend/js/api.js`, `auth.js`, `router.js`, `validate.js` | Mã nguồn điều hướng client, wrapper gọi fetch API, quản lý phiên cookie và kiểm tra form | Đối tượng kiểm thử tích hợp Frontend ↔ Backend `FB-01` đến `FB-11` | Read-Only |
-| **Frontend Shell & Pages** | `frontend/index.html`, `frontend/pages/*.html`, `frontend/js/pages/*.js` | Trang Single Page Application, giao diện theo vai trò và logic điều khiển client (đăng nhập, dashboard, trạm sạc Leaflet) | Đối tượng kiểm thử giao diện UI, chuyển hướng theo vai trò sau đăng nhập, CRUD trạm và Idempotency-Key | Read-Only |
+| **Frontend Core JS** | `frontend/services/api.js`, `frontend/app/{auth,router,workspace,validate}.js` (trước 28/9: `frontend/js/*`) | Mã nguồn điều hướng client, wrapper gọi fetch API, quản lý phiên cookie và kiểm tra form | Đối tượng kiểm thử tích hợp Frontend ↔ Backend `FB-01` đến `FB-11` | Read-Only |
+| **Frontend Shell & Pages** | `frontend/index.html`, `frontend/app.html`, `frontend/main.js`, `frontend/pages/**` (trước 28/9: `frontend/pages/*.html`, `frontend/js/pages/*.js`) | Trang Single Page Application, giao diện theo vai trò và logic điều khiển client (đăng nhập, dashboard, trạm sạc Leaflet) | Đối tượng kiểm thử giao diện UI, chuyển hướng theo vai trò sau đăng nhập, CRUD trạm và Idempotency-Key | Read-Only |
 | **QA Documentation** | `docs/` | Toàn bộ hệ thống hồ sơ và tài liệu kiểm thử của dự án CSMS | Nơi Tester làm việc, thiết kế test, ghi nhận bằng chứng và báo cáo hiện trạng | **Tester Quản Lý** |
 
 ---
@@ -439,4 +482,5 @@ Các thành phần mã nguồn hoặc chức năng hiện tại chưa được h
 - **Git Branch**: `docs/update-tester-traceability`.
 - **Operating System Environment**: Windows 11 x64, Node.js v24.19.0, npm 11.17.0.
 - **Container Environment**: Docker Desktop (PostgreSQL 16 alpine trên ports 5432, 5433; App container trên port 3000).
-- **Last Verification Timestamp**: `28/09/2026 14:50:00 +07:00`.
+- **Last Verification Timestamp**: `28/09/2026 14:50:00 +07:00` (mục 4–13 tại mốc này).
+- **Cập nhật cấu trúc sau đó (mục 0, cây thư mục frontend, mục 5)**: 28/09/2026, đối chiếu bằng `git ls-files` và chạy `npm run lint` + `npm test` (138/138 pass). Các mục truy vết lịch sử (7, 9, 10, 11) **chưa** được QA xác minh lại.

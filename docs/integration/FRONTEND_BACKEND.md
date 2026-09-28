@@ -8,6 +8,8 @@
 
 ---
 
+> **Ghi chú cập nhật 28/09/2026:** frontend đã được thiết kế lại. Các kịch bản `TC-FB-*` dưới đây ghi bằng chứng tại commit lịch sử nên vẫn dùng đường dẫn cũ (`frontend/js/api.js`, `router.js`, `pages/*.html`). Đường dẫn hiện tại: `frontend/services/api.js`, `frontend/app/{auth,router,workspace,validate}.js`, `frontend/main.js`, `frontend/app.html`, `frontend/pages/**` (bảng đối chiếu đầy đủ ở [`../PROJECT_STRUCTURE.md`](../PROJECT_STRUCTURE.md) mục 0). Hợp đồng tích hợp (cùng origin, cookie httpOnly, `Content-Type: application/json`, envelope lỗi, 401 → về `/index.html`, CSRF theo `Origin`) **không đổi**; test tự động tương ứng đã chuyển sang đường dẫn mới và pass (138/138), nhưng **các kịch bản bên dưới chưa được QA chạy lại** trên giao diện mới. Trang chủ theo vai trò nay là `/app.html#/<workspace>/overview` thay cho `/pages/<vai-trò>.html`.
+
 ## Scope
 Kiểm thử giao tiếp thực tế và hợp đồng tích hợp giữa các thành phần:
 1. Client HTTP Fetcher (`frontend/js/api.js`) ↔ Backend Route Handlers (`backend/src/modules/`).

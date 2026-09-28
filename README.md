@@ -6,7 +6,18 @@
 
 > **Ràng buộc:** thanh toán chỉ chạy môi trường sandbox. Vị trí và lịch sử di chuyển của tài xế là dữ liệu cá nhân theo Nghị định 13/2023/NĐ-CP.
 
-Muốn biết hệ thống đang làm được đến đâu (theo Sprint/Jira) trước khi chạy? Xem mục 5. Muốn đóng góp code? Xem `CONTRIBUTING.md`. Còn không, bắt đầu ngay dưới đây.
+## Trạng thái nhanh (28/9/2026)
+
+| | |
+|---|---|
+| Sprint 1 | **12/12 SP xong** (Jira): khung dự án, đăng nhập, phân quyền, trạm/trụ/đầu nối, spike OCPP. Demo Thứ Tư 30/9 |
+| Sprint 2 | Kế hoạch 20 SP (kết nối OCPP có xác thực, trạng thái trụ), **chưa bắt đầu code** |
+| Chất lượng | Lint sạch · **138/138 test pass** · giao diện mới đã chạy thử trên trình duyệt |
+| Chạy được ngay | Đăng nhập, 5 workspace theo vai trò, quản lý trạm/trụ, bảng điều khiển Vận hành, dữ liệu demo |
+| Chưa có | Phiên sạc thật, tính tiền, ví, phân bổ công suất, đặt chỗ, đối soát (Sprint 2–8) |
+
+Chi tiết: mục 5 (tổng quan), [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md) (từng story, rủi ro, DoD), [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (build, chạy, dừng, dữ liệu, staging).
+Muốn đóng góp code? Xem `CONTRIBUTING.md`. Còn không, bắt đầu ngay dưới đây.
 
 ---
 
@@ -106,9 +117,13 @@ git check-ignore -v .env      # có dòng in ra = đang bị ignore, đúng
 ### Dừng và dọn dẹp
 
 ```
-docker compose down          # dừng container, GIỮ dữ liệu (volume postgres_data)
+docker compose stop          # tạm dừng (bật lại: docker compose start)
+docker compose down          # dừng và gỡ container, GIỮ dữ liệu (volume postgres_data)
 docker compose down -v       # dừng và XOÁ luôn dữ liệu — dùng khi muốn làm lại từ đầu
+docker compose restart app   # khởi động lại app
+docker compose logs -f app   # xem log (Ctrl+C thoát, app vẫn chạy)
 ```
+App chạy bằng Node (Cách B) thì dừng bằng `Ctrl+C`. Sao lưu/khôi phục DB, lùi migration, cổng bị chiếm, quay lại bản staging cũ: xem [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
 ---
 
@@ -148,7 +163,7 @@ curl -b admin.cookie -X POST http://localhost:3000/api/admin/users -H "content-t
 curl -c driver.cookie -X POST http://localhost:3000/api/auth/register -H "content-type: application/json" -d "{\"name\":\"Tai xe A\",\"email\":\"driver@csms.local\",\"password\":\"MatKhau#12345\"}"
 ```
 
-### Kịch bản dùng thử nhanh (thay cho giao diện chưa có)
+### Thử bằng dòng lệnh (không cần giao diện)
 
 ```
 # Chủ trạm đăng nhập rồi tạo trạm
@@ -222,8 +237,8 @@ node --test tests/acceptance/S-04.station-management.test.js
 Test in theo định dạng TAP: mỗi dòng `ok N - <tên test>` là qua, `not ok N - <tên test>` là fail kèm khối `error`/`expected`/`actual` ngay bên dưới. Cuối cùng có tổng kết:
 
 ```
-# tests 134
-# pass 134
+# tests 138
+# pass 138
 # fail 0
 ```
 
@@ -273,43 +288,70 @@ Staging chạy **cùng Dockerfile** với `docker-compose`, triển khai trên [
 | Node báo phiên bản không hợp lệ, hoặc `npm error engine Unsupported` | Cần Node.js ≥ 22.7. Cài bằng nvm, hoặc chạy qua container Docker — xem mục 3, Cách B |
 | `docker compose: unknown command` hoặc `command not found` | Máy chỉ có Docker Compose v1: đổi `docker compose` thành `docker-compose` (xem đầu mục 1) |
 | Chạy Cách B (container Node) trên macOS/Windows: lỗi kết nối Postgres, `ECONNREFUSED` | Bỏ `--network host`, đổi `localhost` thành `host.docker.internal` trong `TEST_DATABASE_URL` (xem mục 3) |
-| `npm test` chạy hết cả 134 test dù chỉ muốn 1 file | `npm test -- <file>` không lọc được vì script cố định chạy cả thư mục `tests/`. Gọi thẳng `node --test <file>` (xem mục 3) |
+| `npm test` chạy hết cả 138 test dù chỉ muốn 1 file | `npm test -- <file>` không lọc được vì script cố định chạy cả thư mục `tests/`. Gọi thẳng `node --test <file>` (xem mục 3) |
 
 ---
 
 ## 5. Tổng quan hệ thống
 
-*Cập nhật: 27/9/2026, đang ở Sprint 1. Trạng thái Done chính thức theo Jira (bảng GYM) và Definition of Done.*
+*Cập nhật: 28/9/2026, cuối Sprint 1. Trạng thái Done chính thức theo Jira (bảng GYM) và Definition of Done; bảng đầy đủ ở [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md).*
 
-### Đã có trên `main`
+### Kiến trúc
 
-| Chức năng | Story | Ghi chú |
+```
+Trình duyệt ──HTTP/JSON (cookie httpOnly)──► Express 5 (backend/src)
+   frontend/ (HTML/CSS/JS thuần, ES modules,          ├─ modules: auth · users · stations · charge-points · health · audit
+   không build; Leaflet đặt sẵn trong repo)           ├─ security: ma trận quyền + chặn route chưa khai quyền
+                                                      └─ PostgreSQL 16 (migration 001–005)
+Trụ sạc ──WebSocket /ocpp/<mã trụ>──► máy chủ OCPP (hiện là mã spike, chỉ trả lời tĩnh)
+```
+
+Công nghệ: Node ≥ 22.7 · Express 5 · PostgreSQL 16 · Zod · argon2id · JWT trong cookie · `ws` · Docker Compose · GitHub Actions · Render (staging).
+
+### Sprint 1 — đã xong (12 SP)
+
+| Jira | Story | Kết quả |
 |---|---|---|
-| Khung dự án: Docker Compose, PostgreSQL, migration tiến/lùi, test, lint | S-01 | CI (GitHub Actions) chạy lint + test + quét phụ thuộc cho mọi PR; staging tự triển khai khi CI xanh qua `render.yaml` (xem mục Staging, **cần bật một lần**) |
-| Đăng nhập email + mật khẩu, khoá 15 phút sau 5 lần sai, đếm theo tài khoản và theo IP | S-02 | Không tiết lộ email có tồn tại hay không |
-| Đăng ký công khai (luôn là tài khoản Tài xế); Quản trị tạo tài khoản các vai trò khác | S-02 | Tạo qua API, chưa có giao diện quản trị |
-| 5 vai trò, mỗi vai trò có trang chủ riêng sau đăng nhập | S-02, S-03 | Trang chủ hiện mới có lời chào |
-| Phân quyền: route chưa khai quyền bị chặn mặc định; chủ trạm chỉ thấy trạm của mình; truy cập trái phép trả 403 và ghi nhật ký | S-03 | |
-| API trạm, trụ sạc (tạo, sửa, xem) có lọc theo chủ sở hữu; toạ độ + tên/địa chỉ bắt buộc và được kiểm; chống bấm lưu hai lần qua `Idempotency-Key` bắt buộc; mã trụ luôn lưu chữ hoa (khớp OCPP); `power_kw`/`status` của trụ được kiểm, `status` do hệ thống quản lý | S-04, S-05 | S-04 đạt đủ AC. S-05 đạt AC1, AC2; **AC3 (chặn đổi mã khi có phiên sạc) hoãn sang Sprint 3** — chưa có bảng phiên sạc, xem `docs/spikes/S-05-AC3-ghi-nhan-cho-PO.md` |
-| Spike K-01: trụ sạc ảo nối OCPP 1.6J qua WebSocket, bản ghi chuỗi tin nhắn thật | K-01 | Xem `docs/spikes/K-01-ocpp-simulator.md`; máy chủ mới hỗ trợ 4/7 loại bản tin (`StartTransaction`/`MeterValues`/`StopTransaction` thuộc Sprint 3); WebSocket chưa xác thực mã trụ (thuộc S-06) |
+| GYM-7 | S-01 Khung ứng dụng | Docker Compose, migration tiến/lùi, test, lint, CI (lint + test + quét phụ thuộc). **Staging cần bật một lần** (mục Staging) |
+| GYM-8 | S-02 Đăng nhập | Email + mật khẩu, khoá 15 phút sau 5 lần sai (theo email và IP), không lộ email tồn tại |
+| GYM-9 | S-03 Phân quyền | 5 vai trò; route chưa khai quyền bị chặn; chủ trạm chỉ thấy trạm của mình; truy cập trái phép trả 403 và ghi nhật ký |
+| GYM-10 | S-04 Tạo/sửa trạm | Toạ độ bắt buộc và được kiểm; chống bấm lưu hai lần bằng `Idempotency-Key`; trạm mới `INACTIVE` |
+| GYM-11 | S-05 Trụ và đầu nối | Mã trụ duy nhất, luôn chữ hoa (khớp OCPP), 1–4 đầu nối |
+| GYM-12 | K-01 Spike OCPP | Phiên sạc trọn vẹn đã ghi, R-08 đã kiểm, bằng chứng cho S-06/S-14/S-21: `docs/spikes/K-01-ocpp-simulator.md` |
+| GYM-13 | SM-01 Quy ước làm việc | `CONTRIBUTING.md` |
+| GYM-14 | SM-02 Chuẩn bị demo | Đang làm: dữ liệu demo, ảnh chụp giao diện, hướng dẫn |
 
-### Đang làm trong Sprint 1 (demo Thứ 4, 30/9)
+### Giao diện — bạn thao tác được ở đâu
 
-- **S-04, S-05:** màn hình quản lý trạm, trụ và đầu nối đã kiểm lại trên trình duyệt (28/9): đăng nhập chủ trạm, tạo trạm, thêm trụ, báo trùng mã, chuyển trạng thái. Chưa kiểm trên trình duyệt thật ngoài Chromium.
+Đăng nhập tại `/` rồi vào workspace theo vai trò (`/app.html#/<workspace>`). Một tài khoản có nhiều vai trò thì đổi workspace ở góc trên bên trái. **Ctrl+K** tìm trạm/trụ/trang; nút mặt trời/trăng đổi sáng/tối.
 
-### Chưa có (theo lộ trình backlog)
+| Workspace | Làm được thật | Chỉ là khung / chưa có |
+|---|---|---|
+| Chủ trạm | Danh sách trạm, **tạo/sửa trạm** (chọn vị trí trên bản đồ), **thêm trụ** (kiểm tra trùng mã), sửa trụ, bản đồ, tổng quan | Doanh thu |
+| Quản trị | Như Chủ trạm cho mọi trạm; **tạo tài khoản mọi vai trò** | Danh sách/khoá tài khoản, nhật ký |
+| Vận hành viên | Bảng điều khiển (chỉ số, bản đồ, biểu đồ trạng thái trụ), xem trạm/trụ, lọc, ngăn kéo chi tiết — **chỉ xem** | Cảnh báo, hiệu suất, phiên sạc, điều khiển từ xa (khối hiển thị “chưa có dữ liệu”) |
+| Kế toán | Đăng nhập, khung tổng quan | Toàn bộ đối soát |
+| Tài xế | Đăng ký/đăng nhập, giao diện điện thoại, trang tài khoản | Tìm trạm, sạc, ví, lịch sử |
 
-| Sprint | Mục tiêu |
-|---|---|
-| 2 | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ kể cả khi kết nối chập chờn |
-| 3 | Một phiên sạc chạy trọn vẹn từ cắm tới rút với số kWh đúng, dù trụ mất kết nối giữa chừng |
-| 4 | Tính tiền đúng theo biểu giá nhiều khung giờ, tài xế đọc được vì sao ra số tiền đó |
-| 5 | Nạp ví (sandbox), tự trừ tiền khi sạc xong, số dư không sai một đồng |
-| 6 | Phân bổ công suất: trạm không bao giờ vượt hạn mức |
-| 7 | Tìm trạm trống và đặt chỗ |
-| 8 | Đối soát doanh thu khớp kWh, chia cho từng đối tác |
+Menu của chức năng chưa có backend được **ẩn** (cấu hình trong `frontend/app/workspace.js`, mỗi mục ghi story sẽ bật nó). Trạng thái “thời gian thực” hiện là tự tải lại mỗi 15 giây vì chưa có trụ nào kết nối thật.
 
-> ⚠️ Backlog có 8 sprint nhưng dự án chỉ có 4 tuần làm việc. Phạm vi thực tế tới 26/10 do PO chốt; bảng trên là lộ trình, không phải cam kết.
+### API hiện có (chi tiết ở `backend/README.md`)
+
+`/api/auth/{register,login,logout,me}` · `/api/admin/users` · `/api/roles` · `/api/stations` (+`/:id`) · `/api/stations/:id/charge-points` · `/api/charge-points` (+`/:id`, `/check-code`) · `/api/health` · WebSocket `/ocpp/<mã>` (spike).
+
+### Đang làm / sắp tới
+
+| Sprint | Mục tiêu | Trạng thái |
+|---|---|---|
+| 2 (28/9–5/10) | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ (S-06…S-16, GYM-32…42, 20 SP) | Chưa bắt đầu code; K-01 đã xong phần nền |
+| 3 | Một phiên sạc trọn vẹn, kWh đúng dù trụ mất kết nối | Chưa |
+| 4 | Tính đúng tiền theo biểu giá nhiều khung giờ | Chưa |
+| 5 | Nạp ví (sandbox), tự trừ tiền | Chưa; **chưa có hồ sơ sandbox thanh toán** |
+| 6 | Phân bổ công suất | Chưa |
+| 7 | Tìm trạm, đặt chỗ | Chưa |
+| 8 | Đối soát, chia doanh thu | Chưa |
+
+> ⚠️ Backlog có 8 sprint nhưng dự án chỉ còn khoảng 5 tuần làm việc (kết thúc 26/10). Phạm vi thực tế do PO chốt; bảng trên là lộ trình, không phải cam kết.
 
 ---
 
@@ -319,21 +361,37 @@ Staging chạy **cùng Dockerfile** với `docker-compose`, triển khai trên [
 backend/
   src/modules/<miền>/     routes (khai quyền, kiểm đầu vào) → service (nghiệp vụ) → repository (SQL)
   src/security/           ma trận quyền (permissions.js), chặn route chưa khai quyền (routeGuard.js)
+  src/server.js           listen + WebSocket OCPP (mã spike, sẽ thay ở Sprint 2)
   migrations/             NNN_ten.sql + NNN_ten.down.sql — đã merge thì không sửa, muốn đổi thì thêm file mới
+  scripts/                create-admin.js, seed-demo.js
   tests/                  unit/ integration/ acceptance/ (một file cho mỗi story, tên test theo AC)
-  scripts/create-admin.js
-frontend/                 HTML/CSS/JS thuần, ES modules (không build). app/ (router, phiên, quyền, theme), components/, pages/<vai trò>/, services/api.js (mọi request), styles/ (token + theme). Thiết kế: docs/design/
-docs/testing/             kế hoạch, ca kiểm thử, báo cáo lỗi của QA
-docs/stories/             hồ sơ nghiệm thu từng story (S-xx.md), đối chiếu AC với bằng chứng chạy thật
-docs/spikes/              spike Sprint 1 (mã dùng một lần + tài liệu, không phải sản phẩm)
+frontend/                 HTML/CSS/JS thuần, ES modules, không build
+  index.html              đăng nhập / đăng ký          app.html   vỏ ứng dụng (mọi workspace)
+  main.js                 khởi động, dựng shell theo vai trò
+  app/                    router (hash), phiên, quyền, workspace (menu), status (nhóm trạng thái), theme
+  components/             sidebar, topbar, palette (Ctrl+K), modal/drawer, bảng, biểu đồ tròn, bản đồ, toast…
+  pages/<vai trò>/        trang theo vai trò; pages/shared/ dùng chung (trạm, trụ, bản đồ, tài khoản)
+  services/               api.js (mọi request), csms.js (endpoint), realtime.js (polling, sẽ đổi sang SSE)
+  styles/                 tokens.css, themes.css (sáng/tối), layout.css, components.css
+  vendor/leaflet/         thư viện bản đồ (MIT), không dùng CDN
+docs/OPERATIONS.md        sổ tay vận hành: build, chạy, dừng, DB, staging
+docs/SPRINT_STATUS.md     tình trạng dự án và sprint đầy đủ
+docs/design/              đặc tả giao diện đã duyệt, ảnh tham chiếu, ảnh chụp hiện có
+docs/spikes/              spike (K-01 có mã chạy lại được trong k01/)
+docs/testing/, docs/stories/, docs/integration/   hồ sơ QA
+render.yaml               blueprint staging trên Render
 ```
 
 ---
 
 ## 7. Tài liệu liên quan
 
-- Đóng góp code (đặt tên nhánh, commit, review, Definition of Done): `CONTRIBUTING.md`.
-- Chi tiết backend (API, phân quyền, khoá đăng nhập): `backend/README.md`.
-- Kiểm thử: `docs/testing/`, `docs/stories/`.
+- **Vận hành** (build, chạy, dừng, sao lưu, staging, biến môi trường): [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+- **Tình trạng dự án và sprint**: [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md).
+- **Đóng góp code** (đặt tên nhánh, commit, review, Definition of Done): [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- **Chi tiết backend** (API, phân quyền, khoá đăng nhập): [`backend/README.md`](backend/README.md).
+- **Thiết kế giao diện**: [`docs/design/`](docs/design/) (đặc tả, ảnh chụp, các quyết định lệch đặc tả).
+- **Spike OCPP**: [`docs/spikes/K-01-ocpp-simulator.md`](docs/spikes/K-01-ocpp-simulator.md).
+- **Kiểm thử/QA**: `docs/README.md` (điểm vào), `docs/testing/`, `docs/stories/`.
 - Backlog dự án: file ghim trong nhóm Zalo của Khối 8 — nguồn sự thật về phạm vi và AC.
 - Jira: bảng **GYM** (Team-CodeGym).
