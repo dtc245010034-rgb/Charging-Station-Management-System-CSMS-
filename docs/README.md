@@ -45,6 +45,8 @@ S-01 đến S-05)      FB-01 đến FB-11)   BUG_REPORT, REG.)   RUNBOOK, RESULT
 | **[`stories/S-xx.md`](./stories/)** | **Story Test Specifications** | Chi tiết kịch bản, bước thực thi và bằng chứng cho từng User Story (S-01 .. S-05) | Tester Quản Trị |
 | **[`integration/`](./integration/)** | **Integration Specifications** | Kiểm thử tích hợp toàn trình giữa Frontend Client ↔ Backend API | Tester Quản Trị |
 | **[`testing/`](./testing/)** | **Reporting & Defect Tracking** | Báo cáo kiểm thử tổng thể, hồ sơ theo dõi Bug và đánh giá hồi quy | Tester Quản Trị |
+| **[`OPERATIONS.md`](./OPERATIONS.md)** | **Sổ tay vận hành** | Build, chạy, dừng, khởi động lại, DB, staging, biến môi trường | Dev / Scrum Master |
+| **[`SPRINT_STATUS.md`](./SPRINT_STATUS.md)** | **Tình trạng dự án & sprint** | Sprint 1 đã xong gì, Sprint 2 kế hoạch, rủi ro, DoD, nhánh Git | Scrum Master |
 | **[`design/`](./design/)** | **Design & UX Specifications** | Hồ sơ thiết kế kiến trúc UX/UI Operator Dashboard Level 3 và ảnh mẫu đối soát | Tham chiếu Thiết Kế |
 | **`spikes/`** | **Research & Spikes (Isolated)** | Ghi nhận nghiên cứu độc lập (K-01 OCPP simulator, S-05-AC3); cấm can thiệp | Phân vùng Tham Chiếu Độc Lập |
 

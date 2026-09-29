@@ -12,6 +12,27 @@
 
 ---
 
+## 0. Cập nhật cấu trúc 28/09/2026 (frontend thiết kế lại, staging, demo, K-01)
+
+> **Quan trọng cho QA:** các dòng truy vết ở mục 7, 9, 10, 11 và các hồ sơ `stories/`, `integration/`, `testing/` được xác minh **trước** đợt này nên vẫn ghi đường dẫn cũ `frontend/js/*` và `frontend/pages/*.html`. Đó là bằng chứng lịch sử đúng tại commit đã ghi, **không sửa**. Dùng bảng dưới để tra sang đường dẫn hiện tại; các test cũ liên quan đã được cập nhật theo đường dẫn mới (138/138 pass, lint sạch) nhưng **chưa được QA xác minh lại từng ca**.
+
+| Đường dẫn cũ (đến 27/09) | Đường dẫn hiện tại | Ghi chú |
+|---|---|---|
+| `frontend/js/api.js` | `frontend/services/api.js` | Không đổi hành vi: cùng origin, `credentials: include`, `ApiError` |
+| `frontend/js/auth.js` | `frontend/app/auth.js` | Thêm `toSessionUser` (danh sách `roles`) |
+| `frontend/js/router.js` (`homePathFor`) | `frontend/app/workspace.js` (`homePathFor`) + `frontend/app/router.js` (`parseHash`, nạp trang) | Trang chủ theo vai trò nay là `/app.html#/<workspace>/overview` |
+| `frontend/js/validate.js` | `frontend/app/validate.js` | Không đổi |
+| `frontend/js/theme.js` | `frontend/app/theme.js` + `theme-boot.js` | `localStorage` chỉ còn ở hai file này |
+| `frontend/js/pages/login.js`, `frontend/index.html` | `frontend/pages/auth/login.js`, `frontend/index.html` | Bỏ số liệu giả, nút “Ghi nhớ/Quên mật khẩu” |
+| `frontend/js/pages/dashboard.js`, `frontend/pages/{admin,operator,accountant,driver}.html` | `frontend/main.js` + `frontend/app.html` + `frontend/pages/<vai trò>/` | Một vỏ ứng dụng cho mọi vai trò |
+| `frontend/pages/station-owner.html`, `frontend/js/pages/station-owner.js` | `frontend/pages/shared/{stations,station-drawer,station-form,charge-points}.js` | Cùng chức năng S-04/S-05, dùng chung cho Chủ trạm/Quản trị/Vận hành |
+| `frontend/styles.css` | `frontend/styles/{tokens,themes,reset,layout,components}.css` | Có token sáng/tối |
+| Leaflet từ CDN unpkg | `frontend/vendor/leaflet/` | Không còn tài nguyên ngoài (Google Fonts, CDN) |
+
+Thêm mới: `render.yaml`, `backend/scripts/seed-demo.js`, `backend/tests/integration/seed-demo.test.js`, `backend/tests/unit/frontend-permissions.test.js`, `docs/OPERATIONS.md`, `docs/SPRINT_STATUS.md`, `docs/design/`, `docs/spikes/k01/`. `docs/spikes/k01-simulator.js` và `k01-session-log.json` là bản K-01 cũ (27/9), đã được `docs/spikes/k01/` thay thế.
+
+---
+
 ## 1. Mục đích của tài liệu
 
 Tài liệu này là **VERIFIED PROJECT MAP** (Bản đồ dự án đã qua xác minh thực tế) dành riêng cho AI Tester / QA Analyst:
@@ -82,10 +103,9 @@ Charging-Station-Management-System-CSMS-/
 │   │   ├── 004_station_management.sql                 # Mở rộng trạm sạc (status, lat, lng số thực) và bảng idempotency_keys
 │   │   ├── 004_station_management.down.sql            # Rollback migration quản lý trạm sạc
 │   │   ├── 005_charge_point_code_upper.sql            # Chuẩn hóa mã trụ về chữ hoa và thêm CHECK constraint cho charge_points
-│   │   └── 005_charge_point_code_upper.down.sql       # Rollback migration chuẩn hóa mã trụ chữ hoa
 │   ├── scripts/                                       # Script hỗ trợ vận hành và quản trị CLI
 │   │   ├── create-admin.js                            # Script CLI khởi tạo tài khoản quản trị viên ADMIN (Argon2id)
-│   │   └── seed-demo.js                               # Script khởi tạo dữ liệu DEMO chuẩn hóa (GYM-14 / Staging) với cờ ALLOW_DEMO_SEED=1
+│   │   └── seed-demo.js                               # Dữ liệu demo GYM-14 (6 tài khoản, 6 trạm, 12 trụ DEMO-*); cần ALLOW_DEMO_SEED=1
 │   ├── src/                                           # Mã nguồn chính của ứng dụng backend
 │   │   ├── app.js                                     # Khởi tạo Express app, gắn middlewares (CORS, requireJson, static), và routes
 │   │   ├── server.js                                  # Bootstrap máy chủ HTTP & WebSocket Server OCPP 1.6 (/ocpp/:code)
@@ -171,7 +191,7 @@ Charging-Station-Management-System-CSMS-/
 │           ├── nodeVersion.test.js                    # Unit test kiểm tra điều kiện tương thích phiên bản Node (>= 22.7)
 │           ├── scope.test.js                          # Unit test logic hàm lọc dữ liệu scopeByOwner (chống SQLi qua alias)
 │           └── station-schema.test.js                 # Unit test validate Zod schema trạm sạc (toạ độ lat/lng, dải số thực)
-│
+├── render.yaml                                        # Blueprint staging trên Render (web Docker + Postgres, tự deploy khi CI xanh)
 ├── frontend/                                          # Ứng dụng Web Single Page Application hiện đại (Modular Vanilla JS)
 │   ├── app.html                                       # Giao diện khung làm việc chính của các vai trò đăng nhập
 │   ├── index.html                                     # Giao diện trang chủ và đăng nhập / đăng ký công khai
@@ -207,44 +227,41 @@ Charging-Station-Management-System-CSMS-/
 │   │   ├── admin/                                     # Các màn hình quản trị hệ thống dành cho Admin (User management, Roles)
 │   │   ├── auth/                                      # Màn hình Đăng nhập (Login) và Đăng ký (Register)
 │   │   ├── driver/                                    # Màn hình dành cho Tài xế xe điện (Driver Workspace: tìm trạm, phiên sạc)
-│   │   ├── operator/                                  # Màn hình Giám sát vận hành trực tiếp dành cho Operator
-│   │   └── shared/                                    # Màn hình dùng chung (Trang hồ sơ cá nhân Profile, Cài đặt)
-│   ├── services/                                      # Tầng giao tiếp dữ liệu và dịch vụ API client
-│   │   ├── api.js                                     # Fetch API wrapper: credentials='include', Content-Type JSON, ném ApiError
-│   │   ├── csms.js                                    # Các hàm gọi API nghiệp vụ trạm sạc, trụ sạc, danh sách roles
-│   │   └── realtime.js                                # Kết nối WebSocket thời gian thực nhận sự kiện cập nhật trạng thái trụ
-│   ├── styles/                                        # Hệ thống định dạng giao diện phân lớp CSS Tokens & BEM
-│   │   ├── components.css                             # Định dạng chi tiết từng thành phần UI (card, table, modal, badge, button)
-│   │   ├── layout.css                                 # Định dạng cấu trúc trang: grid hệ thống, flex container, responsive layout
-│   │   ├── reset.css                                  # Chuẩn hóa CSS Reset cho các trình duyệt hiện đại
-│   │   ├── themes.css                                 # Bảng biến màu sắc hỗ trợ chuyển đổi chủ đề Sáng / Tối
-│   │   └── tokens.css                                 # Định nghĩa design tokens: typography, spacing, radius, z-index, shadow
-│   └── vendor/                                        # Thư viện bên thứ ba tích hợp cục bộ (Offline Vendor Assets)
-│       └── leaflet/                                   # Thư viện bản đồ tương tác Leaflet 1.9.4 (JS, CSS và hình ảnh icon marker)
-│
-└── docs/                                              # Phân vùng quản trị tài liệu QA & Kiểm toán (Thuộc quyền Tester)
-    ├── README.md                                      # AI Tester Entry Point & Navigation Router
-    ├── TESTER_STANDARD.md                             # Bộ quy chuẩn kiểm thử trung tâm (Central Rulebook & Standards)
-    ├── PROJECT_STRUCTURE.md                           # Bản đồ dự án đã xác minh (Tài liệu này)
-    ├── TEST_INVENTORY.md                              # Chỉ mục kiểm thử tập trung (Verified Test Index & Defect Binding)
-    ├── Audit/                                         # KHUNG KIỂM TOÁN AN NINH AI SECURITY AUDIT FRAMEWORK V3.0
-    │   ├── README.md                                  # Nhạc trưởng: Hướng dẫn thực thi quy trình kiểm toán 5 bước chuẩn
-    │   ├── 01_standards/                              # Tiêu chuẩn bảo mật bắt buộc: data schemas, evidence ladder, enums, rules
-    │   ├── 02_runbook/                                # Quy trình thực thi 5 bước: cartographer, hunter, verifier, synthesizer, auditor
-    │   ├── 03_catalogs/                               # Từ điển 21 bài kiểm tra (Auth, Injection, Crypto, Logic, Supply Chain, API)
-    │   ├── 04_templates/                              # Template dữ liệu đầu vào/ra (finding_artifact, audit_report_template)
-    │   ├── 05_references/                             # Ma trận định mức CVSS, mẫu đối soát, failure codes, requirements registry
-    │   └── results/                                   # THƯ MỤC LƯU TRỮ KẾT QUẢ KIỂM TOÁN THỰC TẾ
-    │       └── audit_29_9_2026.md                     # Báo cáo kiểm toán an ninh ngày 29/09/2026 (Quality Gate BLOCK)
-    ├── design/                                        # Hồ sơ thiết kế kiến trúc và giao diện người dùng
-    │   ├── CSMS_UX_Redesign_Level_3_Operator_Dashboard.md # Bản đặc tả thiết kế UX Dashboard màn hình Operator Level 3
-    │   ├── operator-dashboard-baseline.webp           # Ảnh chụp màn hình giao diện chuẩn mẫu Operator Dashboard
+│   │   ├── operator/                                  # Màn hình dành cho Vận hành viên (Operator Dashboard, Alerts, Real-time monitor)
+│   │   └── shared/                                    # Màn hình dùng chung (Account profile, Stations list, Charge points)
+│   ├── services/                                      # Tầng giao tiếp dịch vụ và mạng (Network & Services layer)
+│   │   ├── api.js                                     # API Client xử lý request/response, interceptor gắn cookie và bắt lỗi
+│   │   ├── csms.js                                    # Tầng API nghiệp vụ CSMS (gọi trạm, trụ, phiên sạc, audit logs)
+│   │   └── realtime.js                                # Lắng nghe sự kiện cập nhật thời gian thực (Polling / SSE)
+│   ├── styles/                                        # Hệ thống định dạng giao diện CSS phân tầng
+│   │   ├── components.css                             # Định dạng chi tiết cho các components
+│   │   ├── layout.css                                 # Khung layout tổng thể (grid, flexbox, sidebar, container)
+│   │   ├── reset.css                                  # CSS reset chuẩn hóa hiển thị giữa các trình duyệt
+│   │   ├── themes.css                                 # Biến màu sắc theo chủ đề (Dark / Light themes)
+│   │   └── tokens.css                                 # Design tokens (khoảng cách, font size, border-radius, shadows)
+│   └── vendor/                                        # Thư viện bên thứ ba tự đóng gói (Offline-first, không dùng CDN)
+│       └── leaflet/                                   # Thư viện bản đồ Leaflet v1.9.4 kèm file style CSS và images
+└── docs/                                              # Phân vùng Hồ sơ Kiểm thử & Đảm bảo chất lượng (QA Territory)
+    ├── Audit/                                         # AI Security Audit Framework v3.0 (Khung kiểm toán an ninh nguồn mở)
+    │   ├── README.md                                  # Hướng dẫn quy trình 5 bước kiểm toán bảo mật mã nguồn
+    │   ├── catalogs/                                  # 21 danh mục kiểm tra an ninh (CAT-01 đến CAT-21)
+    │   ├── references/                                # Tài liệu tham chiếu chuẩn OWASP Top 10, CWE, ASVS
+    │   ├── results/                                   # Lưu trữ các báo cáo kiểm toán an ninh định kỳ
+    │   │   └── audit_29_9_2026.md                     # Báo cáo kiểm toán an ninh ngày 29/09/2026 (Phán quyết Quality Gate: BLOCK)
+    │   ├── runbooks/                                  # Kịch bản thực thi chi tiết kiểm toán (Security Runbooks)
+    │   ├── standards/                                 # Bộ tiêu chuẩn chất lượng an ninh và tiêu chí Quality Gate
+    │   └── templates/                                 # Biểu mẫu báo cáo kiểm toán bảo mật chuẩn hóa
+    ├── design/                                        # Thiết kế kiến trúc UX/UI Operator Dashboard Level 3 và ảnh đối soát
     │   ├── README.md                                  # Hướng dẫn đối chiếu và ứng dụng thiết kế
     │   └── screenshots/                               # Thư viện ảnh chụp các thành phần giao diện phục vụ đối soát UI
     ├── integration/                                   # Kịch bản kiểm thử tích hợp đa tầng
     │   └── FRONTEND_BACKEND.md                        # Kịch bản & bằng chứng kiểm thử tích hợp toàn trình Frontend ↔ Backend (FB-01..11)
+    ├── OPERATIONS.md                                  # Sổ tay vận hành: build, chạy, dừng, DB, staging, biến môi trường
+    ├── SPRINT_STATUS.md                               # Tình trạng dự án và sprint đầy đủ
+    ├── SPRINT_2_PLAN.md                               # Kế hoạch chi tiết Sprint 2
     ├── spikes/                                        # Nghiên cứu kỹ thuật độc lập & Kiến nghị PO
     │   ├── K-01-ocpp-simulator.md                     # Báo cáo nghiên cứu mô phỏng kết nối giao thức OCPP 1.6-J
+    │   ├── k01/                                       # Mã thử chạy lại được: ocpp-rpc, CSMS tham chiếu, trụ ảo, session-log.json, findings.json
     │   ├── k01-session-log.json                       # Nhật ký mẫu phiên truyền nhận gói tin WebSocket OCPP
     │   ├── k01-simulator.js                           # Mã nguồn kịch bản giả lập kết nối thiết bị sạc ngoại vi
     │   └── S-05-AC3-ghi-nhan-cho-PO.md                # Báo cáo kiến nghị gửi PO hoãn kịch bản S-05 AC3 sang Sprint 3
@@ -254,11 +271,15 @@ Charging-Station-Management-System-CSMS-/
     │   ├── S-03.md                                    # Story S-03: Phân quyền vai trò RBAC, Route Guard Default Deny, cô lập sở hữu
     │   ├── S-04.md                                    # Story S-04: Chủ trạm tạo và sửa thông tin trạm sạc, toạ độ số thực, idempotency
     │   └── S-05.md                                    # Story S-05: Thêm trụ sạc, đầu nối, chuẩn hóa mã trụ chữ hoa toàn hệ thống
-    └── testing/                                       # Phân vùng Báo cáo & Quản lý kiểm thử tổng thể
-        ├── BUG_REPORT.md                              # Hồ sơ quản lý lỗi mã nguồn (`CODE_DEFECT`) và rào cản môi trường
-        ├── REGRESSION_REPORT.md                       # Báo cáo đánh giá hồi quy sau các đợt refactor và nâng cấp hệ thống
-        ├── TEST_PLAN.md                               # Kế hoạch kiểm thử: mục tiêu, tiêu chí Entry/Exit, ma trận kiểm thử
-        └── TEST_REPORT.md                             # Báo cáo tổng hợp chất lượng hệ thống tại mốc snapshot
+    ├── testing/                                       # Phân vùng Báo cáo & Quản lý kiểm thử tổng thể
+    │   ├── BUG_REPORT.md                              # Hồ sơ quản lý lỗi mã nguồn (`CODE_DEFECT`) và rào cản môi trường
+    │   ├── REGRESSION_REPORT.md                       # Báo cáo đánh giá hồi quy sau các đợt refactor và nâng cấp hệ thống
+    │   ├── TEST_PLAN.md                               # Kế hoạch kiểm thử: mục tiêu, tiêu chí Entry/Exit, ma trận kiểm thử
+    │   └── TEST_REPORT.md                             # Báo cáo tổng hợp chất lượng hệ thống tại mốc snapshot
+    ├── PROJECT_STRUCTURE.md                           # Bản đồ cấu trúc toàn bộ dự án và hệ thống tài liệu QA (file này)
+    ├── README.md                                      # AI Tester Entry Point & Router điều hướng tài liệu kiểm thử
+    ├── TESTER_STANDARD.md                             # Bộ quy chuẩn kiểm thử trung tâm chi phối toàn bộ hoạt động Tester
+    └── TEST_INVENTORY.md                              # Bảng kê tập trung danh mục toàn bộ test case và trạng thái thực thi
 ```
 
 ---
@@ -267,9 +288,13 @@ Charging-Station-Management-System-CSMS-/
 
 | Thành phần | Đường dẫn thực tế | Mục đích thực tế (Actual Purpose) | Sự liên quan của Tester (Tester Relevance) | Quyền hạn |
 |:---|:---|:---|:---|:---:|
-| **Root Compose** | `docker-compose.yml` | Điều phối 3 dịch vụ: `db` (Postgres 16, 5432), `db_test` (Postgres 16, 5433), `app` (Node.js 22, 3000) | Chạy kịch bản nghiệm thu container (`S01-AC-01`, `TC-S01-01`). Kiểm tra healthcheck, isolation | Read-Only |
+| **Root Compose** | `docker-compose.yml` | Điều phối cụm container gồm 3 dịch vụ: `db` (Postgres 16, 5432), `db_test` (Postgres 16, 5433), `app` (Node.js 22, 3000) | Điểm chạy kịch bản nghiệm thu container (`S01-AC-01`, `TC-S01-01`). Kiểm tra healthcheck, network isolation, port binding | Read-Only |
 | **Cloud Blueprint** | `render.yaml` | Cấu hình triển khai hạ tầng Staging tự động trên Render.com, gắn `TRUST_PROXY=2`, cấu hình autoDeploy khi CI xanh | Đối chiếu cấu hình môi trường staging, kiểm tra biến môi trường và thiết lập proxy tin cậy | Read-Only |
 | **Seed Demo CLI** | `backend/scripts/seed-demo.js` | Script seed dữ liệu mẫu staging chuẩn hóa (6 tài khoản đủ 5 vai trò, 6 trạm, 12 trụ, 24 đầu nối) | Dùng để dựng môi trường kiểm thử dữ liệu sống (idempotent, yêu cầu `ALLOW_DEMO_SEED=1`) | Read-Only |
+| **Root README** | `README.md` | Tài liệu giới thiệu dự án, hướng dẫn cài đặt môi trường, ma trận tài khoản seed và lệnh chạy | Nguồn đối chiếu Acceptance Criteria S-01, danh sách tài khoản seed mặc định và ma trận vai trò | Read-Only |
+| **Lint Config** | `eslint.config.js` | Cấu hình ESLint flat config cho backend và frontend JavaScript | Dùng để chạy `npm run lint`, xác minh chuẩn cú pháp và quy tắc an toàn tĩnh | Read-Only |
+| **CI/CD Workflow** | `.github/workflows/ci.yml` | Định nghĩa pipeline GitHub Actions tự động kiểm tra lint, test và build Docker | Giúp Tester đối chiếu môi trường CI với máy host và theo dõi trạng thái build | Read-Only |
+| **Backend Environment** | `backend/src/config/env.js` | Nạp và validate các biến môi trường bằng Zod schema (`PORT`, `DATABASE_URL`, `JWT_SECRET`,...) | Trọng tâm kiểm thử `S01-NFR-01`: secrets nạp từ biến môi trường, fail-fast nếu thiếu | Read-Only |
 | **WebSocket OCPP** | `backend/src/server.js` | Lắng nghe nâng cấp giao thức WebSocket `/ocpp/:code`, bắt tay kết nối trụ sạc và phản hồi OCPP | Điểm kiểm tra an ninh `SEC-WS-001`, đối tượng kiểm thử giao tiếp hai chiều và tải đồng thời | Read-Only |
 | **Connection Registry** | `backend/src/modules/charge-points/connection-registry.js` | Quản lý bản đồ in-memory các trụ sạc đang kết nối socket (`connect`, `disconnect`, `isConnected`) | Điểm kiểm thử `UT-OCPP-CONN-01`, kiểm tra khóa đổi mã trụ khi đang kết nối | Read-Only |
 | **Frontend Core App** | `frontend/app/` | Bộ điều hướng URL hash (`router.js`), quản lý phiên cookie (`auth.js`), DOM an toàn (`dom.js`), workspace (`workspace.js`) | Trọng tâm kiểm thử chức năng giao diện, phân quyền hiển thị theo vai trò và kiểm tra chống XSS | Read-Only |
@@ -277,6 +302,7 @@ Charging-Station-Management-System-CSMS-/
 | **Frontend Services** | `frontend/services/` | Lớp gọi API backend (`api.js`, `csms.js`) và WebSocket client lắng nghe thời gian thực (`realtime.js`) | Điểm kiểm thử tích hợp Frontend ↔ Backend `FB-01` đến `FB-11` | Read-Only |
 | **Dev Test Suites** | `backend/tests/` | Bộ 138 ca kiểm thử tự động của Developer (acceptance, integration, unit) chạy qua Node test runner | Cung cấp bằng chứng tự động (Automated Evidence) khách quan và đo lường độ bao phủ kiểm thử | Read-Only |
 | **Audit Framework** | `docs/Audit/` | Khung kiểm toán an ninh toàn diện 5 bước (Standards, Runbook, Catalogs, Templates, Results) | Công cụ thực hiện và lưu vết các kỳ kiểm toán bảo mật mã nguồn (Security Assurance) | **Tester Quản Lý** |
+| **QA Documentation** | `docs/` | Toàn bộ hệ thống hồ sơ và tài liệu kiểm thử của dự án CSMS | Nơi Tester làm việc, thiết kế test, ghi nhận bằng chứng và báo cáo hiện trạng | **Tester Quản Lý** |
 | **QA Documentation** | `docs/` | Toàn bộ hệ thống hồ sơ và tài liệu kiểm thử của dự án CSMS | Nơi Tester làm việc, thiết kế test, ghi nhận bằng chứng và báo cáo hiện trạng | **Tester Quản Lý** |
 
 ---

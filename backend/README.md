@@ -1,8 +1,19 @@
 # CSMS Backend
 
-Backend PostgreSQL cho hệ thống quản lý trạm sạc, phục vụ frontend từ thư mục `frontend/` (cùng origin): JWT + httpOnly cookie, RBAC với 5 role, khóa tài khoản sau 5 lần sai, giới hạn đăng nhập theo IP và WebSocket OCPP-style.
+Backend PostgreSQL cho hệ thống quản lý trạm sạc, phục vụ frontend từ thư mục `frontend/` (cùng origin, không build): JWT + httpOnly cookie, RBAC với 5 role, khóa tài khoản sau 5 lần sai, giới hạn đăng nhập theo IP và WebSocket OCPP-style (mã spike, sẽ thay ở Sprint 2).
 
-**Cách chạy, cấu hình `.env`, tạo tài khoản, kiểm thử:** xem `README.md` ở thư mục gốc — tài liệu này chỉ mô tả sâu API, bảo mật và các lưu ý riêng của backend.
+**Cách chạy, cấu hình `.env`, tạo tài khoản, kiểm thử:** xem `README.md` ở thư mục gốc. **Build, dừng, khởi động lại, sao lưu, staging:** xem `docs/OPERATIONS.md`. Tài liệu này chỉ mô tả sâu API, bảo mật và các lưu ý riêng của backend.
+
+## Lệnh npm (trong `backend/`)
+
+| Lệnh | Việc |
+|---|---|
+| `npm start` / `npm run dev` | Chạy app (`dev` tự khởi động lại khi sửa code); tự migrate trước khi mở cổng |
+| `npm run migrate` / `migrate:down` | Áp migration còn thiếu / lùi một migration cuối |
+| `npm run create-admin` | Tạo Quản trị đầu tiên (`ADMIN_EMAIL`, `ADMIN_PASSWORD` ≥ 12 ký tự); chạy lại không tạo trùng |
+| `npm run seed-demo` | Dữ liệu demo (cần `ALLOW_DEMO_SEED=1`, `DEMO_PASSWORD`); chỉ cho demo/staging |
+| `npm run start:staging` | Chuỗi khởi động staging: migrate → create-admin → (seed demo nếu bật) → server |
+| `npm run lint` / `npm test` | ESLint cho `backend` + `frontend`; 138 test (cần Postgres test ở cổng 5433 hoặc `TEST_DATABASE_URL`) |
 
 ## Lưu ý khi migrate trên DB dev đã có dữ liệu cũ
 
@@ -29,7 +40,9 @@ Phiên là JWT trong cookie `httpOnly` (SameSite=Lax, Secure khi production); AP
 - `GET/POST /api/stations`, `GET/PATCH /api/stations/:id`
 - `GET /api/charge-points`, `GET /api/charge-points/:id`, `GET /api/charge-points/check-code?code=...`
 - `POST /api/stations/:stationId/charge-points` (nhận `connector_count` từ 1 đến 4; mặc định 4), `PATCH /api/charge-points/:id`
-- Trang Chủ trạm dùng các API trên để tạo/sửa trạm, chọn vị trí trên bản đồ, quản lý trụ/đầu nối và kiểm tra mã trụ.
+- `GET /api/roles` (chỉ ADMIN): danh sách vai trò, dùng cho form tạo tài khoản.
+- `GET /api/health`: công khai, trả `ok`, dùng cho healthcheck Docker/Render và chỉ báo “hệ thống ổn định” trên giao diện.
+- Giao diện (`frontend/`) dùng các API trên: Chủ trạm/Quản trị tạo–sửa trạm, chọn vị trí trên bản đồ, quản lý trụ/đầu nối, kiểm tra mã trụ; Vận hành xem danh sách và trạng thái; Quản trị tạo tài khoản. Danh sách `/api/stations` và `/api/charge-points` không kèm đầu nối (chỉ chi tiết `/:id` có).
 
 Tọa độ lưu bằng `NUMERIC(10,8)` / `NUMERIC(11,8)` và có giới hạn địa lý, **bắt buộc** khi tạo trạm. Trạm mới luôn `INACTIVE` (gửi `status` lúc tạo → 400); tọa độ của trạm `ACTIVE` chỉ sửa được sau khi chuyển trạm về `INACTIVE`. Index B-tree trên cặp tọa độ không thay thế spatial index; tìm trạm theo bán kính cần triển khai PostGIS/GIST trước khi làm S-47.
 
@@ -57,4 +70,5 @@ Vài điểm riêng của backend:
 - Cấu trúc mã: `src/app.js` (Express app), `src/server.js` (listen + WebSocket), `src/modules/<domain>/` (routes → service → repository), `src/db/`, `src/lib/`, `src/middlewares/`.
 - Migration đầu tiên nằm tại `migrations/001_baseline.sql`, rollback tại `migrations/001_baseline.down.sql`. Đây là mẫu quy ước cho các migration sau: tên `snake_case`, khóa chính `id`, và cột `created_at`/`updated_at`.
 - `charge_points.code` có UNIQUE trực tiếp trong PostgreSQL (trên giá trị đã chuẩn hoá chữ hoa); duplicate race được trả về 409. Mỗi trụ tạo số connector theo `connector_count` với trạng thái `UNKNOWN`.
-- WebSocket dùng OCPP-style MVP tại `ws://localhost:3000/ocpp/:chargePointCode`, hỗ trợ `BootNotification`, `Heartbeat`, `StatusNotification` và `Authorize`. `StartTransaction`/`MeterValues`/`StopTransaction` trả `NotSupported` (thuộc Sprint 3). Xem bản ghi chuỗi tin nhắn thật và danh sách trường cần lưu ở `docs/spikes/K-01-ocpp-simulator.md`.
+- WebSocket là **mã spike K-01**, không phải sản phẩm: `ws://localhost:3000/ocpp/:chargePointCode`, trả lời tĩnh `BootNotification`, `Heartbeat`, `StatusNotification`, `Authorize`; các tin khác trả `NotSupported`. Nó **nhận mọi mã trụ, không kiểm subprotocol, không lưu DB, và gửi một tin “welcome” ngoài chuẩn OCPP**. Sprint 2 (S-06…S-16) sẽ thay hoàn toàn. Bản ghi phiên sạc đầy đủ, kết quả các kịch bản và danh sách trường cần lưu (theo schema OCPP 1.6 chính thức): `docs/spikes/K-01-ocpp-simulator.md`.
+- Mã trụ ảo và máy chủ tham chiếu để thử: `docs/spikes/k01/` (không thuộc backend, không lint/test cùng backend).
