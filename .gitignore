@@ -7,3 +7,5 @@ node_modules/
 
 # Kết quả chạy script run.py / test.py
 .run/
+__pycache__/
+*.pyc
