@@ -189,6 +189,9 @@ Charging-Station-Management-System-CSMS-/
 │           ├── nodeVersion.test.js                    # Unit test kiểm tra điều kiện tương thích phiên bản Node
 │           ├── scope.test.js                          # Unit test logic hàm lọc dữ liệu scopeByOwner
 │           └── station-schema.test.js                 # Unit test validate Zod schema trạm sạc (toạ độ lat/lng, tên, địa chỉ)
+├── run.py                                             # Chạy dự án bằng Docker: tạo .env, chọn cổng, build, admin + demo (lệnh: up/down/reset/logs/status/test)
+├── test.py                                            # Lối tắt chạy lint + toàn bộ test trong Docker (= python run.py test)
+├── tools/test_run.py                                  # Test logic thuần của run.py (không cần Docker)
 ├── render.yaml                                        # Blueprint staging trên Render (web Docker + Postgres, tự deploy khi CI xanh)
 ├── frontend/                                          # Giao diện web tĩnh: HTML/CSS/JS thuần, ES modules, không build
 │   ├── index.html                                     # Trang đăng nhập / đăng ký (tab, kiểm tra lỗi từng ô)
