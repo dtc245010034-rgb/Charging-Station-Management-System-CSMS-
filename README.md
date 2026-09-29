@@ -180,6 +180,7 @@ Staging chạy **cùng Dockerfile** với `docker-compose`, triển khai trên [
 |---|---|
 | App thoát ngay, báo thiếu `JWT_SECRET` hoặc `DATABASE_URL` | Chạy `python run.py` (tự tạo `.env`). Nếu tự sửa `.env`, `JWT_SECRET` phải ≥ 32 ký tự; xoá dòng đó để script sinh lại |
 | `migrate` lỗi ở `003_stations_owner` hoặc `001_baseline` | Database cũ từ trước baseline. Chạy `python run.py reset` **một lần** (xoá dữ liệu dev) rồi chạy lại |
+| `invalid argument "...csms-_app" for "-t, --tag": invalid reference format` | Lỗi của `docker-compose` v1 khi thư mục clone kết thúc bằng `-`. Đã sửa bằng `image: csms_app:latest` trong `docker-compose.yml`: cập nhật code (`git pull`) rồi chạy lại. Ngoài ra nên dùng Docker Compose v2 (`docker compose`) |
 | Cổng 5432 hoặc 3000 đã bị dùng | `run.py` tự chọn cổng trống kế tiếp và báo rõ; muốn chọn: `python run.py --port 4000` |
 | Đổi cổng app xong thì mọi thao tác ghi bị 403 "Origin không hợp lệ" | Đặt `APP_ORIGIN` khớp địa chỉ đang mở, ví dụ `http://localhost:8080` |
 | Docker Desktop báo lỗi WSL2 / không chạy được trên Windows | Bật WSL2 theo hướng dẫn của Docker Desktop, khởi động lại máy; đây là cấu hình Windows, không phải lỗi dự án |

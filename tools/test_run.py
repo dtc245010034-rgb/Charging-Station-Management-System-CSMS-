@@ -84,5 +84,13 @@ class Arguments(unittest.TestCase):
         self.assertEqual(parser.parse_args(["test", "--only", "unit"]).only, "unit")
 
 
+class ComposeFile(unittest.TestCase):
+    def test_app_co_ten_image_tuong_minh(self):
+        """docker-compose v1 tự đặt tag '<thư-mục>_app'; thư mục kết thúc bằng '-' làm tag không hợp lệ."""
+        text = (Path(run.ROOT) / "docker-compose.yml").read_text(encoding="utf-8")
+        block = text.split("\n  app:\n", 1)[1].split("\n  tests:", 1)[0]
+        self.assertRegex(block, r"(?m)^    image: [a-z0-9_.-]+(:[\w.-]+)?$")
+
+
 if __name__ == "__main__":
     unittest.main()
