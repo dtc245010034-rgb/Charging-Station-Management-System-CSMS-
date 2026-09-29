@@ -2,12 +2,13 @@
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
 > **Chủ thể**: AI TESTER / QA ANALYST  
-> **Phiên bản quy chuẩn**: 3.0 (Central Operating Standard)  
-> **Hiệu lực**: Áp dụng bắt buộc cho toàn bộ các hoạt động kiểm định chất lượng (QA / Testing)  
+> **Phiên bản quy chuẩn**: 3.5 (Central Operating & Security Audit Standard)  
+> **Hiệu lực**: Áp dụng bắt buộc cho toàn bộ các hoạt động kiểm định chất lượng (QA / Testing) & Kiểm toán An ninh  
 > **Nguyên tắc cốt lõi**: Khách quan — Truy vết hai chiều — Bằng chứng thực tế — Không can thiệp mã nguồn  
 > **Entry Point / Router**: [`docs/README.md`](./README.md)  
 > **Bản đồ dự án (Project Facts)**: [`docs/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md)  
 > **Chỉ mục kiểm thử (Test Facts)**: [`docs/TEST_INVENTORY.md`](./TEST_INVENTORY.md)  
+> **Khung kiểm toán an ninh**: [`docs/Audit/`](./Audit/README.md)  
 
 ---
 
@@ -554,22 +555,54 @@ Khi thực thi bộ kiểm thử tự động của Developer (`npm test` hoặc
 
 ---
 
-## 10. QUY TẮC THIẾT KẾ VÀ THỰC THI KIỂM THỬ (TEST EXECUTION 5-LAYERS)
+## 10. QUY TẮC THIẾT KẾ VÀ THỰC THI KIỂM THỬ (TEST EXECUTION 6-LAYERS)
 
-Mọi kịch bản kiểm thử phải được thực thi theo chiến lược 5 tầng tăng dần:
+Mọi kịch bản kiểm thử phải được thực thi theo chiến lược 6 tầng tăng dần:
 
 1. **Layer 1 — Static Analysis (Kiểm tra tĩnh)**:
-   - Rà soát cú pháp, kiểu dữ liệu, linting (`npm run lint`), quy chuẩn bảo mật (không hardcode secrets, không backdoor, Argon2id, Zod schemas).
+   - Rà soát cú pháp, kiểu dữ liệu, linting (`npm run lint`), quy chuẩn bảo mật (không hardcode secrets, không backdoor, Argon2id, Zod schemas, quy tắc cấm `express.Router()` trực tiếp).
 2. **Layer 2 — Unit Test Verification (Kiểm thử đơn vị)**:
-   - Thực thi các test suite đơn vị độc lập của Developer (`backend/tests/unit/`).
+   - Thực thi các test suite đơn vị độc lập của Developer (`backend/tests/unit/`: `connection-registry`, `frontend-permissions`, `frontend`, `station-schema`, `scope`, `errorHandler`, `env`).
 3. **Layer 3 — Integration Verification (Kiểm thử tích hợp)**:
-   - Kiểm tra tương tác giữa các module: database migrations, transaction, repository, middleware, route guard.
+   - Kiểm tra tương tác giữa các module: database migrations up/down/up sạch, transaction nguyên tử, seed demo (`scripts/seed-demo.js`), create admin CLI, và hợp đồng tích hợp Frontend ↔ Backend (`FB-01..11`).
 4. **Layer 4 — Acceptance Live Test (Kiểm thử nghiệm thu trực tiếp)**:
-   - Gửi HTTP request thực tế qua curl/postman/test suite trên ứng dụng đang chạy thật trên cổng 3000 và DB 5432/5433 để nghiệm thu từng tiêu chí AC.
-5. **Layer 5 — Security & Regression (Kiểm thử an ninh & hồi quy)**:
-   - Xác minh cô lập dữ liệu (Data Isolation), cơ chế Route Guard Default Deny, kiểm tra vết kiểm toán (Audit Logs), và chạy lại các Regression Candidates.
+   - Gửi HTTP request thực tế qua curl/postman/supertest trên ứng dụng đang chạy thật trên cổng 3000 và DB 5432/5433 để nghiệm thu từng tiêu chí AC (S-01 đến S-05).
+5. **Layer 5 — Realtime WebSocket & Concurrency Verification (Kiểm thử WebSocket OCPP & Đồng thời)**:
+   - Kiểm thử kết nối WebSocket hai chiều `/ocpp/:code`, bắt tay HTTP Upgrade, định dạng gói tin JSON-RPC OCPP 1.6-J (`BootNotification`, `Heartbeat`, `StatusNotification`, `Authorize`).
+   - Kiểm tra bộ đăng ký kết nối in-memory `connection-registry.js`, đếm kết nối đồng thời và kiểm chứng cơ chế chặn đổi mã trụ khi trụ đang kết nối (`ConflictError 409`).
+6. **Layer 6 — AI Security Audit & Taint Assurance (Kiểm toán An ninh & Luồng Dữ liệu Source-to-Sink)**:
+   - Vận hành theo Khung kiểm toán an ninh chuẩn tại [`docs/Audit/README.md`](./Audit/README.md) qua Pipeline 5 bước (Cartographer $\rightarrow$ Hunter $\rightarrow$ Verifier $\rightarrow$ Synthesizer $\rightarrow$ Auditor).
+   - Rà soát 21 danh mục kiểm tra an ninh trong `docs/Audit/03_catalogs/` (Auth, IDOR, Session, SQLi, CSRF, CORS, Crypto, Race Conditions, DoS, Supply Chain).
+   - Thiết kế kịch bản xác minh an toàn Canary (non-destructive) và kiểm thử phủ định (Negative Testing).
+   - Tuân thủ thứ bậc Quality Gate: $\text{BLOCK} > \text{UNKNOWN} > \text{HOLD} > \text{PASS\_WITH\_CONDITIONS} > \text{PASS}$ và xuất báo cáo lưu trữ tại `docs/Audit/results/`.
 
 ---
+
+### 10.1. Quy chuẩn kiểm thử Giao diện Frontend Modular SPA
+Khi kiểm định chất lượng ứng dụng web frontend tái cấu trúc (`frontend/`):
+1. **Kiểm tra tính an toàn chống XSS tuyệt đối (Zero innerHTML Rule)**:
+   - Mọi phần tử UI trong `frontend/app/dom.js` bắt buộc phải tạo thông qua hàm `h()` hoặc `svg()`, sử dụng `document.createElement()` và gán giá trị thuần qua `document.createTextNode()` / `textContent`.
+   - **CẤM TUYỆT ĐỐI**: `innerHTML`, `outerHTML`, `document.write` hoặc `eval()` trong toàn bộ mã nguồn ứng dụng phía client.
+2. **Kiểm thử bộ điều hướng URL Hash Routing**:
+   - Kiểm tra router client-side phân tích đúng cấu trúc `#/<workspace>/<page>/<id>?<query>`.
+   - Xác minh bảo vệ quyền truy cập: Khi chưa có phiên hoặc phiên hết hạn (401), tự động chuyển hướng về `#login` / `/index.html`.
+   - Xác minh ẩn/hiện menu điều hướng (`sidebar.js`, `workspace.js`) theo đúng quyền hạn vai trò của user (`frontend/app/permissions.js` khớp 100% với `backend/src/security/permissions.js`).
+3. **Kiểm thử tích hợp bản đồ tương tác Leaflet**:
+   - Đảm bảo tài nguyên Leaflet nạp từ vendor nội bộ (`frontend/vendor/leaflet/`), không phụ thuộc CDN bên ngoài.
+   - Kiểm tra render marker trạm sạc, toạ độ địa lý (vĩ độ -90..90, kinh độ -180..180) và popup thông tin chi tiết.
+
+---
+
+### 10.2. Quy chuẩn kiểm thử Giao thức WebSocket OCPP 1.6
+Khi kiểm thử kết nối cổng sạc ngoại vi:
+1. **Bắt tay kết nối (Handshake Upgrade)**:
+   - Endpoint: `ws://<host>:<port>/ocpp/<charge_point_code>`.
+   - Kiểm tra gói tin phản hồi chào mừng ban đầu: `[3, "<messageId>", {"chargePoint": "...", "status": "Connected"}]`.
+2. **Xử lý gói tin rác (FormatViolation)**:
+   - Gửi payload không đúng JSON hoặc sai định dạng mảng RPC $\rightarrow$ Máy chủ phải phản hồi mã lỗi `[4, null, "FormatViolation", {}]`, không làm sập tiến trình Node.js.
+3. **Xác minh an ninh và quản trị trạng thái**:
+   - Kiểm tra rào cản kết nối ẩn danh (Security Defect `SEC-WS-001`): Kẻ tấn công mở kết nối không chứng thực làm treo trạng thái trụ.
+   - Ngắt kết nối socket $\rightarrow$ Bộ đếm `connections.disconnect(code)` phải giải phóng kết nối tức thì.
 
 ## 11. QUY TẮC BẰNG CHỨNG THỰC TẾ (EVIDENCE RULES)
 

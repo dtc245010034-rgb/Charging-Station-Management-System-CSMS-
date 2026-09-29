@@ -2,8 +2,10 @@
 
 > **Dự án**: Charging-Station-Management-System-CSMS-  
 > **Chủ thể**: AI TESTER / QA ANALYST  
-> **Phiên bản kiến trúc**: 3.0 (Entry Point & Navigation Router)  
-> **Hiệu lực**: Điểm tiếp nhận bắt buộc đầu tiên cho mọi tác vụ kiểm định chất lượng  
+> **Phiên bản kiến trúc**: 3.5 (Entry Point, Security Audit & Navigation Router)  
+> **Snapshot Date**: 29/09/2026  
+> **Git Commit**: `ba61aeaee0f061e1409913cd5c1ea8c5d84e5f98` (nhánh `main`)  
+> **Hiệu lực**: Điểm tiếp nhận bắt buộc đầu tiên cho mọi tác vụ kiểm định chất lượng & kiểm toán an ninh  
 > **Nguyên tắc điều hướng cốt lõi**: Entry Router → Central Standard → Project Facts → Test Facts → Action  
 
 ---
@@ -13,43 +15,44 @@
 Hệ thống tài liệu kiểm định chất lượng của dự án được phân định rạch ròi thành các phân vùng chức năng thống nhất:
 
 ```text
-                           docs/README.md
-                  (AI Tester Entry Point / Router)
-                                 ↓
-                      docs/TESTER_STANDARD.md
-              (Bộ quy chuẩn Tester trung tâm - RULES)
-                                 ↓
-                     docs/PROJECT_STRUCTURE.md
-                 (Bản đồ dự án đã xác minh - FACTS)
-                                 ↓
-                       docs/TEST_INVENTORY.md
-              (Chỉ mục danh mục kiểm thử - TEST FACTS)
-                                 ↓
-    ┌────────────────────────────┼────────────────────────────┐
-    ↓                            ↓                            ↓
-docs/stories/S-xx.md    docs/integration/            docs/testing/
-(Kịch bản chấp nhận     FRONTEND_BACKEND.md          (Phân vùng Báo cáo & Lỗi:
-theo Story & Review)    (Kiểm thử tích hợp FE/BE)    TEST_PLAN, TEST_REPORT,
-                                                     BUG_REPORT, REGRESSION)
+                                  docs/README.md
+                         (AI Tester Entry Point / Router)
+                                        ↓
+                             docs/TESTER_STANDARD.md
+                     (Bộ quy chuẩn Tester trung tâm - RULES)
+                                        ↓
+                            docs/PROJECT_STRUCTURE.md
+                        (Bản đồ dự án đã xác minh - FACTS)
+                                        ↓
+                             docs/TEST_INVENTORY.md
+                     (Chỉ mục danh mục kiểm thử - TEST FACTS)
+                                        ↓
+     ┌───────────────────┬──────────────┼───────────────────┬───────────────────┐
+     ↓                   ↓              ↓                   ↓                   ↓
+docs/stories/       docs/integration/  docs/testing/       docs/Audit/         docs/design/
+(Kịch bản chấp      (Tích hợp toàn     (Báo cáo & Lỗi:     (Khung kiểm toán    (Đặc tả UX & UI
+nhận theo Story:    trình FE/BE:       TEST_PLAN, REPORT,  an ninh 5 bước:     Operator Dashboard
+S-01 đến S-05)      FB-01 đến FB-11)   BUG_REPORT, REG.)   RUNBOOK, RESULTS)   mẫu baseline)
 ```
 
 | Phân vùng tài liệu | Vai trò kiến trúc | Trách nhiệm chính | Thẩm quyền |
 |:---|:---|:---|:---:|
 | **[`README.md`](./README.md)** (File này) | **Entry Point & Router** | Điều hướng kiểm thử, FAQ vận hành và quy trình định tuyến | Tester Quản Trị |
-| **[`TESTER_STANDARD.md`](./TESTER_STANDARD.md)** | **Central Rulebook & Standards** | Nguồn luật bất biến: Enum, Cây quyết định, State Machine, AI Guardrails | Tester Quản Trị (Nguồn Luật) |
-| **[`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md)** | **Verified Project Map** | Bản đồ mã nguồn, components, dependencies đã xác minh | Tester Quản Trị (Sự Thật Dự Án) |
-| **[`TEST_INVENTORY.md`](./TEST_INVENTORY.md)** | **Verified Test Index** | Danh mục 87 Test Cases, trạng thái, Defect binding và liên kết bằng chứng | Tester Quản Trị (Sự Thật Kiểm Thử) |
-| **[`stories/S-xx.md`](./stories/)** | **Story Test Specifications** | Chi tiết kịch bản, bước thực thi và bằng chứng cho từng User Story | Tester Quản Trị |
+| **[`TESTER_STANDARD.md`](./TESTER_STANDARD.md)** | **Central Rulebook & Standards** | Nguồn luật bất biến: Enum, Cây quyết định, State Machine, AI Guardrails, Security Tiers | Tester Quản Trị (Nguồn Luật) |
+| **[`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md)** | **Verified Project Map** | Bản đồ mã nguồn, components, dependencies đã xác minh (138 tests / 29 suites) | Tester Quản Trị (Sự Thật Dự Án) |
+| **[`TEST_INVENTORY.md`](./TEST_INVENTORY.md)** | **Verified Test Index** | Danh mục tập trung các Test Cases, trạng thái, Defect binding, Security Findings | Tester Quản Trị (Sự Thật Kiểm Thử) |
+| **[`Audit/`](./Audit/README.md)** | **AI Security Audit Framework** | Khung kiểm toán an ninh v3.0: 5 bước SOP, 21 Check Catalogs, Báo cáo kết quả | Tester Quản Trị (Kiểm Toán An Ninh) |
+| **[`stories/S-xx.md`](./stories/)** | **Story Test Specifications** | Chi tiết kịch bản, bước thực thi và bằng chứng cho từng User Story (S-01 .. S-05) | Tester Quản Trị |
 | **[`integration/`](./integration/)** | **Integration Specifications** | Kiểm thử tích hợp toàn trình giữa Frontend Client ↔ Backend API | Tester Quản Trị |
 | **[`testing/`](./testing/)** | **Reporting & Defect Tracking** | Báo cáo kiểm thử tổng thể, hồ sơ theo dõi Bug và đánh giá hồi quy | Tester Quản Trị |
 | **[`OPERATIONS.md`](./OPERATIONS.md)** | **Sổ tay vận hành** | Build, chạy, dừng, khởi động lại, DB, staging, biến môi trường | Dev / Scrum Master |
 | **[`SPRINT_STATUS.md`](./SPRINT_STATUS.md)** | **Tình trạng dự án & sprint** | Sprint 1 đã xong gì, Sprint 2 kế hoạch, rủi ro, DoD, nhánh Git | Scrum Master |
-| **[`design/`](./design/)** | **Thiết kế giao diện** | Đặc tả UX Redesign Level 3, ảnh tham chiếu, 30 ảnh chụp giao diện hiện có | Dev / PO |
-| **`spikes/`** | **Research & Spikes (Isolated)** | Ghi nhận nghiên cứu độc lập (K-01, S-05-AC3); cấm can thiệp | Phân vùng Tham Chiếu Độc Lập |
+| **[`design/`](./design/)** | **Design & UX Specifications** | Hồ sơ thiết kế kiến trúc UX/UI Operator Dashboard Level 3 và ảnh mẫu đối soát | Tham chiếu Thiết Kế |
+| **`spikes/`** | **Research & Spikes (Isolated)** | Ghi nhận nghiên cứu độc lập (K-01 OCPP simulator, S-05-AC3); cấm can thiệp | Phân vùng Tham Chiếu Độc Lập |
 
 ---
 
-## 2. 17 CÂU HỎI CỐT LÕI DÀNH CHO AI TESTER (TESTER FAQ)
+## 2. 20 CÂU HỎI CỐT LÕI DÀNH CHO AI TESTER (TESTER FAQ)
 
 ### Q1: AI Tester là gì?
 AI Tester là **Chuyên viên Kiểm định Chất lượng (QA Analyst) độc lập và khách quan**. Nhiệm vụ là phân tích yêu cầu, kiểm tra tĩnh/động, thu thập bằng chứng thực tế khách quan, phân loại lỗi và duy trì truy vết hai chiều. AI Tester **không phải là Developer** và **không làm thay việc của Developer**.
@@ -63,6 +66,7 @@ Thứ tự đọc bắt buộc 4 bước:
 2. Tra cứu **`docs/TESTER_STANDARD.md`** để nắm vững quy chuẩn, enum và điều kiện an toàn.
 3. Tra cứu **`docs/PROJECT_STRUCTURE.md`** để xác định vị trí file source code, mapping và prerequisites.
 4. Tra cứu **`docs/TEST_INVENTORY.md`** để đối chiếu các Test ID và kịch bản kiểm thử sẵn có.
+*(Nếu thực hiện kiểm toán an ninh bảo mật, mở thêm **`docs/Audit/README.md`**)*.
 
 ### Q4: TESTER_STANDARD.md chứa những gì?
 Chứa toàn bộ **QUY CHUẨN TESTER TRUNG TÂM**:
@@ -70,29 +74,29 @@ Chứa toàn bộ **QUY CHUẨN TESTER TRUNG TÂM**:
 - Mô hình nhiệm vụ phân cấp $E \rightarrow S \rightarrow T$.
 - Quy tắc phân biệt Hierarchy và Dependency; Đồ thị phụ thuộc đa cấp.
 - Mô hình truy vết 4 tầng và danh mục Canonical Enums bất biến.
-- Chiến lược thực thi 5 tầng (Static, Unit, Integration, Acceptance Live, Security).
+- Chiến lược thực thi 6 tầng (Static, Unit, Integration, Acceptance Live, Security Audit, Performance/E2E).
 - Tiêu chuẩn bằng chứng thực tế (Evidence Rules) và quy tắc phân loại lỗi (Defect Classification).
 - 4 Case chuyển trạng thái hồi quy (State Transitions) và kiểm thử hồi quy chọn lọc.
 - Schema định dạng chuẩn cho các tài liệu đầu ra.
 
 ### Q5: PROJECT_STRUCTURE.md chứa những gì?
 Chứa toàn bộ **SỰ THẬT CẤU TRÚC (PROJECT FACTS)**:
-- Cây thư mục 144 mục trên filesystem đã xác minh 100% tại snapshot mới nhất.
-- Bảng phân tích công năng các component quan trọng (Backend, Frontend, DB, Config).
-- Bảng ánh xạ Yêu cầu $\longleftrightarrow$ Task $\longleftrightarrow$ Source Component $\longleftrightarrow$ Test.
+- Cây thư mục filesystem đã xác minh 100% tại snapshot mới nhất (29/09/2026, commit `ba61aea`).
+- Cấu trúc Frontend SPA hiện đại dạng Modular ES Modules (`app/`, `components/`, `services/`, `pages/`, `styles/`, `vendor/leaflet/`).
+- Thành phần WebSocket OCPP 1.6 (`backend/src/server.js`) và bộ đếm kết nối `connection-registry.js`.
+- Bảng phân tích công năng các component quan trọng (Backend, Frontend, DB, Render Blueprint, Seed Demo).
+- Bảng ánh xạ Yêu cầu $\longleftrightarrow$ Task $\longleftrightarrow$ Source Component $\longleftrightarrow$ Test (138 tests / 29 suites).
 - Bản đồ phụ thuộc thực tế giữa các Story, Task và điều kiện môi trường.
-- Bản đồ ánh xạ lịch sử kiểm thử (Source $\rightarrow$ Historical Test Mapping).
-- Bản đồ phân tích tác động và hồi quy (Impact / Regression Map).
-- Các khoảng trống cấu trúc hiện tại (Structure Gaps) và Metadata snapshot.
+- Bản đồ ánh xạ lịch sử kiểm thử và phân tích tác động hồi quy.
 
 ### Q6: TEST_INVENTORY.md chứa những gì?
 Chứa toàn bộ **SỰ THẬT KIỂM THỬ (TEST FACTS)**:
-- Chỉ mục tập trung toàn bộ 85 Test Case thực tế của dự án (`TC-Sxx`, `UT-xx`, `IT-xx`, `ACC-xx`, `MAN-xx`).
+- Chỉ mục tập trung toàn bộ các Test Cases thực tế của dự án (`TC-Sxx`, `UT-xx`, `IT-xx`, `ACC-xx`, `MAN-xx`, `SEC-xx`).
 - Mối liên kết giữa Test ID, Story, Task, Requirement (AC/NFR), Source Component, Test Type, Execution Type.
 - Kết quả thực tế đo được (`Status`: PASS / FAIL / BLOCKED / NOT VERIFIED / NOT RUN / NOT FOUND).
 - Căn cứ bằng chứng (`Evidence Basis`) và trích dẫn bằng chứng cụ thể.
 - Mức độ kiểm thực (`Verification`: VERIFIED / NOT VERIFIED).
-- Bảng ma trận ứng viên kiểm thử hồi quy (Regression Reference).
+- Bảng kê các phát hiện an ninh bảo mật từ đợt kiểm toán hệ thống.
 
 ### Q7: Khi nhận nhiệm vụ cấp Epic (E) phải làm gì?
 Thực hiện theo [Routing E](#31-routing-khi-nhận-nhiệm-vụ-cấp-epic-e-xx):
@@ -104,16 +108,16 @@ Thực hiện theo [Routing E](#31-routing-khi-nhận-nhiệm-vụ-cấp-epic-e-
 ### Q8: Khi nhận nhiệm vụ cấp Story (S) phải làm gì?
 Thực hiện theo [Routing S](#32-routing-khi-nhận-nhiệm-vụ-cấp-story-s-xx):
 1. Xác định Epic $E$ cha và các Technical Task $T$ con.
-2. Kiểm tra quan hệ phụ thuộc upstream (Story nào phải sẵn sàng trước) và downstream (Story nào bị ảnh hưởng).
+2. Kiểm tra quan hệ phụ thuộc upstream và downstream.
 3. Đọc kỹ Story Requirement, Acceptance Criteria (`AC`) và `NFR`.
 4. Tra cứu mã nguồn và bộ test Dev tương ứng từ `PROJECT_STRUCTURE.md`.
 5. Tra cứu danh mục Test Case từ `TEST_INVENTORY.md` hoặc tạo hồ sơ `docs/stories/S-xx.md`.
-6. Thực thi kiểm thử 5 tầng, thu thập bằng chứng thực tế và gán trạng thái chuẩn.
+6. Thực thi kiểm thử, thu thập bằng chứng thực tế và gán trạng thái chuẩn.
 
 ### Q9: Khi nhận nhiệm vụ cấp Task (T) phải làm gì?
 Thực hiện theo [Routing T](#33-routing-khi-nhận-nhiệm-vụ-cấp-task-t-xx):
 1. Xác định Story $S$ cha và Epic $E$ tương ứng.
-2. Xác định phạm vi kỹ thuật của Task (Migration SQL, API route, Middleware, Component).
+2. Xác định phạm vi kỹ thuật của Task (Migration SQL, API route, Middleware, Component, WebSocket).
 3. Xác định điều kiện tiên quyết (Prerequisites).
 4. Thực thi kiểm chứng kỹ thuật (Unit test, integration test, curl endpoint).
 5. Ghi nhận bằng chứng vào hồ sơ Story $S$ cha và đồng bộ `TEST_INVENTORY.md`.
@@ -141,110 +145,92 @@ Thực hiện theo [Routing T](#33-routing-khi-nhận-nhiệm-vụ-cấp-task-t-
 4. Nếu do mã nguồn sai lệch AC: Truy vết ngược $Source \rightarrow Requirement \rightarrow Impact Analysis \rightarrow Root Cause$.
 5. Ghi nhận lỗi chi tiết vào `docs/testing/BUG_REPORT.md`.
 
-### Q14: Những file nào Tester ĐƯỢC PHÉP cập nhật?
-Tester toàn quyền quản trị phân vùng tài liệu QA tại **`docs/**`**:
-- `docs/README.md`
-- `docs/TESTER_STANDARD.md`
-- `docs/PROJECT_STRUCTURE.md`
-- `docs/TEST_INVENTORY.md`
-- `docs/stories/*.md`
-- `docs/integration/*.md`
-- `docs/testing/*.md`
+### Q14: Khi chạy kiểm thử toàn bộ dự án thì dùng lệnh gì?
+Chạy lệnh kiểm tra chuẩn trong thư mục `backend/`:
+```bash
+# 1. Kiểm tra tĩnh & cú pháp mã nguồn
+npm run lint
 
-### Q15: Những file nào Tester TUYỆT ĐỐI KHÔNG ĐƯỢC SỬA?
-Toàn bộ mã nguồn và cấu hình ngoài `docs/`:
-- `backend/src/**` (Controllers, Services, Repositories, Middlewares, Models, Schemas, Configs).
-- `backend/tests/**` (Test suites của Developer).
-- `backend/migrations/**` (DDL SQL files).
-- `frontend/**` (HTML, CSS, JS client).
-- `docker-compose.yml`, `Dockerfile`, `.env`, `package.json`, `package-lock.json`, `eslint.config.js`.
+# 2. Quét lỗ hổng bảo mật thư viện phụ thuộc
+npm audit
 
-### Q16: General Review là gì và khác gì với Requirement Testing?
-- **Requirement Testing** tập trung xác minh tính đúng đắn của phần mềm dựa trên AC/NFR chính thức (kết quả đo bằng `Status`: `PASS`, `FAIL`, `BLOCKED`).
-- **General Review** là luồng quan sát kỹ thuật độc lập (kiến trúc, logic, phong cách, khả năng bảo trì, trường hợp biên) đưa ra các **Observation** và **Recommendation** có đánh giá 5 chiều impact và confidence.
-- **Nguyên tắc cốt lõi**: General Review **KHÔNG ĐƯỢC LÀM THAY ĐỔI** kết quả của Requirement Testing nếu chưa có bằng chứng vi phạm AC/NFR.
+# 3. Chạy đơn vị các bài test unit không cần DB
+node --test "tests/unit/**/*.test.js"
 
-### Q17: Khi nào một Observation trong General Review được chuyển thành Defect?
-Chỉ khi và chỉ khi quá trình điều tra tiếp theo thu thập được bằng chứng khách quan chứng minh quan sát đó trực tiếp gây sai lệch hành vi runtime so với Requirement/AC/NFR (`Requirement Impact = YES`). Khi đó quan sát mới được chuyển thành **REQUIREMENT DEFECT** và mở lại luồng Requirement Testing.
+# 4. Khởi động DB test và chạy toàn bộ 138 test cases
+docker compose up -d db_test
+npm test
+```
 
-### Q18: Khi bộ test tự động của Developer bị FAIL thì Tester xử lý thế nào?
-Áp dụng quy tắc 4 bước theo [Mục 9.10 của `TESTER_STANDARD.md`](./TESTER_STANDARD.md#L450):
-1. **Điều tra nguyên nhân**: Phân định lỗi nằm ở mã nguồn Production (`backend/src/`) hay ở chính mã test của Developer (`backend/tests/`).
-2. **Nếu do Production Code vi phạm AC**: Đánh `Test Status = FAIL`, phân loại `CODE_DEFECT`, mở quy trình báo lỗi.
-3. **Nếu do Test Code của Dev nhưng Live API chạy đúng**: Đánh Requirement Verification là `PASS`, đồng thời ghi nhận vào General Review dưới dạng `CODE_OBSERVATION` với scope `OUT-OF-SCOPE`. Tuyệt đối không tự ý dùng enum cấm `TEST_DEFECT`.
-4. **Trình bày Bảng Tổng kết**: Bắt buộc tách 2 dòng độc lập: `Requirement Verification: PASS` và `Developer Acceptance Suite: FAIL (kèm mã OBS-xxx)` để đảm bảo tính minh bạch, không che giấu lỗi test của Dev.
+### Q15: Khi phát hiện bug trong mã nguồn có được sửa không?
+**TUYỆT ĐỐI KHÔNG**. Tester chỉ có quyền ghi nhận bug với đầy đủ bằng chứng vào `docs/testing/BUG_REPORT.md` hoặc báo cáo kiểm toán, việc sửa code thuộc độc quyền của Developer.
+
+### Q16: Tài liệu nào Tester được phép chỉnh sửa?
+Tester **toàn quyền quản trị phân vùng `docs/`**. Mọi tệp tin ngoài `docs/` đều là **READ-ONLY**.
+
+### Q17: Làm sao đảm bảo không bị ảo giác kiểm thử (Anti-Hallucination)?
+Luôn tuân thủ 4 AI Guardrails tại Mục 2.5 của `TESTER_STANDARD.md`: Không tự hợp thức hóa code, tuân thủ Canonical Enums, thu thập bộ bằng chứng tối thiểu 4 thành phần, và phân định rạch ròi ranh giới giữa kiểm tra tĩnh và kiểm tra động (Static vs Runtime).
+
+### Q18: Khi nhận nhiệm vụ Kiểm toán Bảo mật (Security Audit) phải làm gì?
+Thực hiện theo [Routing Security Audit](#36-routing-khi-nhận-nhiệm-vụ-kiểm-toán-bảo-mật-ai-security-audit):
+1. Đọc **`docs/Audit/README.md`** để nạp khung AI Security Audit Framework v3.0.
+2. Tuân thủ tuần tự Pipeline 5 bước (Cartographer $\rightarrow$ Hunter $\rightarrow$ Verifier $\rightarrow$ Synthesizer $\rightarrow$ Auditor).
+3. Tra cứu từ điển 21 bài kiểm tra tại `docs/Audit/03_catalogs/`.
+4. Viết kịch bản xác minh an toàn (Canary test, không dùng lệnh phá hoại).
+5. Áp dụng quy tắc ưu tiên Quality Gate: $\text{BLOCK} > \text{UNKNOWN} > \text{HOLD} > \text{PASS\_WITH\_CONDITIONS} > \text{PASS}$.
+6. Lưu kết quả vào `docs/Audit/results/audit_YYYY_MM_DD.md`.
+
+### Q19: Cách kiểm thử thành phần WebSocket OCPP là gì?
+- Kết nối điểm cuối: `ws://localhost:3000/ocpp/<charge_point_code>`.
+- Gửi các gói tin JSON RPC OCPP 1.6-J chuẩn: `[2, "<id>", "BootNotification", {...}]` hoặc `"Heartbeat"`, `"StatusNotification"`.
+- Kiểm tra tính tương thích và kiểm tra phòng vệ: Kết nối unauthenticated, gửi gói tin rác (FormatViolation), kiểm tra logic chặn đổi mã trụ khi trụ đang kết nối (`connection-registry.js`).
+
+### Q20: Cách kiểm thử ứng dụng Frontend SPA mới là gì?
+- Kiểm tra hash routing: `#/<workspace>/<page>/<id>?<query>` đảm bảo điều hướng đúng trang theo vai trò người dùng (`auth.js`, `router.js`).
+- Kiểm tra cơ chế chống XSS: Xác minh mã nguồn `frontend/app/dom.js` chỉ dùng `document.createElement()` và `document.createTextNode()`, hoàn toàn không có `innerHTML` hay `eval()`.
+- Kiểm tra tích hợp bản đồ Leaflet: Tải tài nguyên offline tại `frontend/vendor/leaflet/`, ghim marker và tương tác popup hiển thị trạm sạc.
 
 ---
 
-## 3. ĐIỀU HƯỚNG THEO LỆNH KIỂM THỬ (ROUTING LOGIC)
+## 3. QUY TRÌNH ĐỊNH TUYẾN NGHIỆP VỤ (ROUTING WORKFLOWS)
 
-```mermaid
-flowchart TD
-    CMD["Lệnh kiểm thử từ Người dùng"] --> PARSE{"Phân loại lệnh"}
-    
-    PARSE -->|"Kiểm thử E-xx"| FLOW_E["Routing Epic (E)"]
-    PARSE -->|"Kiểm thử S-xx"| FLOW_S["Routing Story (S)"]
-    PARSE -->|"Kiểm thử T-xx"| FLOW_T["Routing Task (T)"]
-    PARSE -->|"Integration"| FLOW_INT["Routing Integration"]
-    PARSE -->|"Regression"| FLOW_REG["Routing Regression"]
-    PARSE -->|"Report / Inventory"| FLOW_DOC["Routing Report & Inventory"]
-    PARSE -->|"Full Structure Scan"| FLOW_SCAN["Routing Structure Scan"]
-    PARSE -->|"General Review / Code Review"| FLOW_GR["Routing General Review"]
-
-    FLOW_E --> STEP_E["Phân rã S & T con → Lập ma trận Dependency → Thực thi theo chuỗi"]
-    FLOW_S --> STEP_S["Định vị E cha & T con → Kiểm tra AC/NFR → Chạy 5-layer test → Cập nhật stories/S-xx.md"]
-    FLOW_T --> STEP_T["Định vị S cha → Xác minh Technical Scope → Lấy evidence kỹ thuật → Cập nhật TEST_INVENTORY"]
-    FLOW_INT --> STEP_INT["Kiểm thử hợp đồng FE ↔ BE → Gửi API Live → Cập nhật integration/FRONTEND_BACKEND.md"]
-    FLOW_REG --> STEP_REG["Tra cứu Impact Map → Chọn lọc Regression Candidates → Thực thi kiểm thử chọn lọc"]
-    FLOW_DOC --> STEP_DOC["Đồng bộ số liệu kiểm thử thực tế → Cập nhật TEST_REPORT.md & TEST_INVENTORY.md"]
-    FLOW_SCAN --> STEP_SCAN["Quét 100% filesystem thực tế → Đối chiếu độ lệch → Cập nhật PROJECT_STRUCTURE.md"]
-    FLOW_GR --> STEP_GR["Quan sát độc lập → Ghi nhận Location/Evidence → Đánh giá 5-dim Impact & Confidence → Khuyến nghị"]
-```
-
-### 3.1. Routing khi nhận nhiệm vụ cấp Epic (`E-xx`)
+### 3.1. Routing khi nhận nhiệm vụ cấp Epic (E-xx)
 ```text
-Lệnh: "Kiểm thử E-xx"
+Lệnh: "Kiểm thử Epic E-xx"
   ↓
-1. Tra cứu PROJECT_STRUCTURE.md (Mục 10) để xác định các Story (S-xx) thuộc Epic E-xx.
+1. Phân rã Epic E-xx thành danh sách Story S-xx trực thuộc.
   ↓
-2. Với từng Story S-xx, xác định các Task (T-xx) trực thuộc.
+2. Kiểm tra quan hệ phụ thuộc giữa các Story từ PROJECT_STRUCTURE.md (Mục 8).
   ↓
-3. Tra cứu PROJECT_STRUCTURE.md (Mục 8) lập đồ thị phụ thuộc giữa các Story.
+3. Thiết lập thứ tự kiểm thử từ Story nền tảng (Upstream) đến Story nghiệp vụ (Downstream).
   ↓
-4. Thực thi kiểm thử tuần tự theo thứ tự phụ thuộc (từ Story nền tảng đến Story phụ thuộc).
-  ↓
-5. Tổng hợp kết quả nghiệm thu toàn bộ Epic vào TEST_REPORT.md.
+4. Mở kế hoạch kiểm thử tổng thể docs/testing/TEST_PLAN.md.
 ```
 
-### 3.2. Routing khi nhận nhiệm vụ cấp Story (`S-xx`)
+### 3.2. Routing khi nhận nhiệm vụ cấp Story (S-xx)
 ```text
-Lệnh: "Kiểm thử S-xx"
+Lệnh: "Kiểm thử Story S-xx"
   ↓
-1. Xác định Epic E cha và danh sách Technical Task (T-xx) con.
+1. Xác định Epic E-xx cha và danh sách Task T-xx con.
   ↓
-2. Kiểm tra Dependency Upstream: Các Story tiên quyết đã PASS chưa?
-   - Nếu bị Block: Đánh giá Scope-specific Blocking.
+2. Đọc hồ sơ yêu cầu Story tương ứng tại docs/stories/S-xx.md (hoặc tạo mới nếu chưa có).
   ↓
-3. Đọc kỹ Story Requirement, AC (Sxx-AC-xx) và NFR (Sxx-NFR-xx).
+3. Tra cứu Source Mapping và Dev Test Suites từ PROJECT_STRUCTURE.md (Mục 7).
   ↓
-4. Tra cứu PROJECT_STRUCTURE.md (Mục 7) định vị Source Files và Dev Test Files.
+4. Kiểm tra điều kiện tiên quyết (Prerequisites) đã đạt PASS/VERIFIED chưa.
   ↓
-5. Thực thi 5 tầng kiểm thử: Static Scan → Unit Test → Integration Test → Acceptance Live curl.
+5. Chạy các bài test tương ứng, thu thập Evidence raw output.
   ↓
-6. Thu thập bằng chứng thực tế (Terminal, HTTP status, JSON payload).
-  ↓
-7. Ghi nhận chi tiết vào docs/stories/S-xx.md theo Schema 11 mục chuẩn (tách biệt Khu vực A và Khu vực B).
-  ↓
-8. Đồng bộ kết quả vào docs/TEST_INVENTORY.md và docs/testing/TEST_REPORT.md.
+6. Cập nhật kết quả vào hồ sơ Story và đồng bộ chỉ mục docs/TEST_INVENTORY.md.
 ```
 
-### 3.3. Routing khi nhận nhiệm vụ cấp Task (`T-xx`)
+### 3.3. Routing khi nhận nhiệm vụ cấp Task (T-xx)
 ```text
 Lệnh: "Kiểm thử T-xx"
   ↓
 1. Xác định Story S-xx cha và Epic E liên kết.
   ↓
-2. Xác định phạm vi kỹ thuật: DDL Migration, Service logic, Middleware, Route, hay Form UI.
+2. Xác định phạm vi kỹ thuật: DDL Migration, Service logic, Middleware, Route, WebSocket, hay Form UI.
   ↓
 3. Tra cứu PROJECT_STRUCTURE.md (Mục 8) kiểm tra điều kiện tiên quyết (Prerequisites).
   ↓
@@ -256,7 +242,7 @@ Lệnh: "Kiểm thử T-xx"
 ### 3.4. Routing cho các lệnh chuyên biệt khác
 
 - **Kiểm thử tích hợp (`Tester Integration`)**:
-  - Đối tượng: Toàn trình Frontend Client $\longleftrightarrow$ Backend API (Hợp đồng cookie, CSRF header, Envelope response).
+  - Đối tượng: Toàn trình Frontend Client $\longleftrightarrow$ Backend API (Hợp đồng cookie, CSRF header, Envelope response, Realtime socket).
   - Tài liệu đích: [`docs/integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md).
 - **Kiểm thử hồi quy (`Tester Regression`)**:
   - Đối tượng: Chạy lại có chọn lọc các bài test lịch sử bị tác động bởi thay đổi mã nguồn.
@@ -290,6 +276,23 @@ Lệnh: "Review code / General Review / Rà soát kỹ thuật"
    TUYỆT ĐỐI KHÔNG làm thay đổi Test Status của Requirement Testing.
 ```
 
+### 3.6. Routing khi nhận nhiệm vụ Kiểm toán Bảo mật (AI Security Audit)
+```text
+Lệnh: "Audit an ninh / Kiểm toán bảo mật / Security Audit"
+  ↓
+1. Khởi tạo: Đọc docs/Audit/README.md và nạp cấu hình kiểm toán.
+  ↓
+2. Bước 1 (Cartographer): Quét danh mục tài sản, 17 endpoints, lập bảng phân quyền và nợ kỹ thuật DD-xxx.
+  ↓
+3. Bước 2 (Hunter): Dò quét lỗ hổng theo 21 danh mục bảo mật tại docs/Audit/03_catalogs/, phân tích Source-to-Sink.
+  ↓
+4. Bước 3 (Verifier): Thiết kế kịch bản xác minh an toàn Canary (non-destructive), chạy test động hoặc chứng minh tĩnh.
+  ↓
+5. Bước 4 (Synthesizer): Xâu chuỗi attack chain, gom lỗi cùng nguyên nhân gốc, kiểm tra độ tươi Freshness.
+  ↓
+6. Bước 5 (Auditor): Đánh giá Quality Gate (BLOCK > UNKNOWN > HOLD > PASS), xuất báo cáo vào docs/Audit/results/.
+```
+
 ---
 
 ## 4. BẢNG TRA CỨU ĐIỀU HƯỚNG NHANH (QUICK NAVIGATION MATRIX)
@@ -297,11 +300,12 @@ Lệnh: "Review code / General Review / Rà soát kỹ thuật"
 | Nhu cầu nghiệp vụ | Tài liệu cần mở | Mục cần xem |
 |---|---|---|
 | **Xem quy tắc kiểm thử, điều cấm, enum chuẩn** | [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md) | Mục 3, 7, 8 |
+| **Xem quy chuẩn kiểm toán an ninh bảo mật** | [`docs/Audit/README.md`](./Audit/README.md) | Mục 1, 2, 3 |
+| **Xem báo cáo kiểm toán bảo mật mới nhất** | [`docs/Audit/results/audit_29_9_2026.md`](./Audit/results/audit_29_9_2026.md) | Toàn bộ tệp |
 | **Xem quy chuẩn General Review và 12 categories** | [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md) | Mục 8.8, 9 |
-| **Xem nguyên tắc Observation ≠ Defect & 5-Dim Impact** | [`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md) | Mục 9.1, 9.5 |
-| **Tìm vị trí mã nguồn, API route, controller, service** | [`docs/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) | Mục 4, 5, 7 |
+| **Tìm vị trí mã nguồn, API route, controller, WebSocket** | [`docs/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) | Mục 4, 5, 7 |
 | **Kiểm tra Story này phụ thuộc Story nào** | [`docs/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) | Mục 8 |
-| **Xem danh sách và kết quả 85 Test Case** | [`docs/TEST_INVENTORY.md`](./TEST_INVENTORY.md) | Mục 4 |
+| **Xem danh sách và kết quả toàn bộ Test Cases** | [`docs/TEST_INVENTORY.md`](./TEST_INVENTORY.md) | Mục 3, 4 |
 | **Xem chi tiết kịch bản và bằng chứng Story S-04** | [`docs/stories/S-04.md`](./stories/S-04.md) | Mục 4 & 11 |
 | **Xem kịch bản tích hợp Frontend ↔ Backend (FB-01..11)** | [`docs/integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md) | Mục 3 |
 | **Xem danh sách bug và rào cản môi trường** | [`docs/testing/BUG_REPORT.md`](./testing/BUG_REPORT.md) | Mục 2 |
