@@ -60,7 +60,7 @@ Lần đầu (máy chưa build gì) script tự làm hết, mất vài phút:
 > Đã đổi mật khẩu admin thì chạy lại `python run.py` không đổi lại; quên mật khẩu thì `python run.py reset`.
 
 ### Gặp sự cố khi chạy
-Script in `[LỖI]` kèm cách sửa. Các trường hợp hay gặp: Docker chưa mở (mở Docker Desktop, đợi báo *running*); Linux báo `permission denied` (`sudo usermod -aG docker $USER` rồi đăng nhập lại); có dữ liệu Postgres cũ nhưng mất `.env` (chạy `python run.py reset`). Bảng đầy đủ ở mục 4. Cấu hình thủ công không dùng script (nâng cao): `docs/OPERATIONS.md`.
+Script in `[LỖI]` kèm cách sửa. Các trường hợp hay gặp: Docker chưa mở (mở Docker Desktop, đợi báo *running*); Linux báo `permission denied` (`sudo usermod -aG docker $USER` rồi đăng nhập lại); có dữ liệu Postgres cũ nhưng mất `.env` (chạy lại `python run.py`: script hỏi gõ `xoa` để xoá dữ liệu cũ rồi tạo `.env` mới; thêm `--yes` để bỏ hỏi). Bảng đầy đủ ở mục 4. Cấu hình thủ công không dùng script (nâng cao): `docs/OPERATIONS.md`.
 
 ---
 

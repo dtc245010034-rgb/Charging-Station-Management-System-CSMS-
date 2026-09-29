@@ -24,7 +24,7 @@ $ python run.py           # Windows: python run.py hoặc py run.py   |   Linux:
 ```
 Script (`run.py`, chỉ dùng thư viện chuẩn của Python) làm theo thứ tự, dừng và báo cách sửa nếu bước nào hỏng:
 1. Kiểm tra Docker đã cài, đang chạy, có quyền dùng; nhận Compose v2 (`docker compose`) hoặc v1 (`docker-compose`).
-2. Tạo `.env` gốc với `POSTGRES_PASSWORD`, `JWT_SECRET` ngẫu nhiên nếu chưa có (không ghi đè; chỉ bổ sung khoá còn thiếu). Nếu đã có volume dữ liệu Postgres mà mất `.env` thì **dừng và hỏi**, vì mật khẩu cũ không còn.
+2. Tạo `.env` gốc với `POSTGRES_PASSWORD`, `JWT_SECRET` ngẫu nhiên nếu chưa có (không ghi đè; chỉ bổ sung khoá còn thiếu). Nếu đã có volume dữ liệu Postgres mà mất `.env` thì **hỏi xác nhận** (gõ `xoa`; hoặc `--yes`) rồi xoá volume cũ và tạo `.env` mới, vì mật khẩu cũ không khôi phục được. `down`/`reset`/`logs` vẫn chạy được khi mất `.env` (script tự điền giá trị tạm cho compose).
 3. Chọn cổng: `APP_PORT` (mặc định 3000), `POSTGRES_PORT` (mặc định 5432, tránh 5433 của db test). Bận thì lấy cổng trống kế tiếp và ghi lại `APP_PORT`, `POSTGRES_PORT`, `APP_ORIGIN` vào `.env`. Nếu chính stack này đang chạy thì giữ nguyên cổng.
 4. `docker compose up -d --build db app` (chỉ db + app, không bật db_test); mỗi lần đều build, có cache nên nhanh từ lần hai. `--rebuild` để bỏ cache.
 5. Đợi `/api/health` (tối đa 120 giây); lỗi thì in 40 dòng log cuối.
