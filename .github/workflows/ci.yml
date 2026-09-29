@@ -61,3 +61,40 @@ jobs:
       # Kiểm logic thuần của run.py/test.py (không cần Docker)
       - run: python3 -m unittest discover -s tools -q
         working-directory: .
+
+  # Windows: nhóm dev trên Windows, còn CI/Docker chạy Linux nên lỗi riêng Windows (dấu '\' trong đường dẫn,
+  # CRLF...) lọt qua. Job này chỉ chạy test backend; lint/audit đã có ở job Linux.
+  test-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      TEST_DATABASE_URL: postgresql://csms:csms_test_only@localhost:5433/csms_test
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # Windows runner không chạy được container Postgres: dùng bản PostgreSQL cài sẵn trên máy runner,
+      # tạo cụm dữ liệu riêng ở cổng 5433 (auth trust, chỉ tồn tại trong job này).
+      - name: Khởi động PostgreSQL
+        shell: pwsh
+        working-directory: .
+        run: |
+          $bin = if ($env:PGBIN) { $env:PGBIN } else { (Get-ChildItem "$env:ProgramFiles\PostgreSQL" | Sort-Object Name -Descending | Select-Object -First 1).FullName + "\bin" }
+          $data = Join-Path $env:RUNNER_TEMP "pgdata"
+          & "$bin\initdb.exe" -D $data -U csms --auth=trust -E UTF8
+          & "$bin\pg_ctl.exe" -D $data -o "-p 5433" -l (Join-Path $env:RUNNER_TEMP "pg.log") -w start
+          & "$bin\createdb.exe" -h localhost -p 5433 -U csms csms_test
+
+      - run: npm ci
+      - run: npm test
