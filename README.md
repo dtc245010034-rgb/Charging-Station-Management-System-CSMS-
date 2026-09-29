@@ -12,118 +12,55 @@
 |---|---|
 | Sprint 1 | **12/12 SP xong** (Jira): khung dự án, đăng nhập, phân quyền, trạm/trụ/đầu nối, spike OCPP. Demo Thứ Tư 30/9 |
 | Sprint 2 | Kế hoạch 20 SP (kết nối OCPP có xác thực, trạng thái trụ), **chưa bắt đầu code** |
-| Chất lượng | Lint sạch · **138/138 test pass** · giao diện mới đã chạy thử trên trình duyệt |
+| Chất lượng | Lint sạch · **139/139 test pass** · giao diện mới đã chạy thử trên trình duyệt |
 | Chạy được ngay | Đăng nhập, 5 workspace theo vai trò, quản lý trạm/trụ, bảng điều khiển Vận hành, dữ liệu demo |
 | Chưa có | Phiên sạc thật, tính tiền, ví, phân bổ công suất, đặt chỗ, đối soát (Sprint 2–8) |
 
-Chi tiết: mục 5 (tổng quan), [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md) (từng story, rủi ro, DoD), [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (build, chạy, dừng, dữ liệu, staging).
+Chạy: `python run.py` · Kiểm thử: `python test.py`. Chi tiết: mục 5 (tổng quan), [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md) (từng story, rủi ro, DoD), [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (build, chạy, dừng, dữ liệu, staging).
 Muốn đóng góp code? Xem `CONTRIBUTING.md`. Còn không, bắt đầu ngay dưới đây.
 
 ---
 
-## 1. Chạy dự án lần đầu
+## 1. Chạy dự án (một lệnh)
 
-**Cần có:** Git, Docker Desktop, Node.js **22.7 trở lên** (chỉ cần khi chạy test hoặc chạy app ngoài Docker).
-
-> **Máy chưa có Node 22.7?** Kiểm bằng `node -v`. Nếu thấp hơn (ví dụ Node 18 có sẵn theo mặc định trên nhiều máy), có 2 cách, không cần gỡ bản Node đang dùng cho việc khác:
-> - **Cài thêm bằng nvm** (khuyến nghị, dùng được cho cả chạy app lẫn test): [nvm](https://github.com/nvm-sh/nvm) (macOS/Linux) hoặc [nvm-windows](https://github.com/coreybutler/nvm-windows), sau đó `nvm install 22 && nvm use 22`.
-> - **Không muốn cài gì thêm:** chạy `npm`/`npm test`/`npm run lint` bên trong container Docker có sẵn Node 22 — xem mục 3 (Kiểm thử), cách này cũng dùng được để chạy `npm run migrate`, `npm run create-admin` mà không cần cài Node.
->
-> **Lệnh `docker compose` báo "unknown command"?** Máy chỉ có Docker Compose bản cũ (v1, lệnh có gạch ngang). Thay mọi `docker compose ...` trong tài liệu này bằng `docker-compose ...` (cùng ý nghĩa, chỉ khác cú pháp). Kiểm bằng `docker compose version` hoặc `docker-compose version`.
-
-### Cách A — chạy tất cả bằng Docker (khuyến nghị để dùng thử, demo)
-
-1. Clone và vào thư mục dự án:
-   ```
-   git clone https://github.com/dtc245010034-rgb/Charging-Station-Management-System-CSMS-.git
-   cd Charging-Station-Management-System-CSMS-
-   ```
-2. Tạo file `.env` **ở thư mục gốc** (file này chỉ dùng cho Docker Compose, không commit):
-   ```
-   POSTGRES_PASSWORD=<mat-khau-db-tu-dat>
-   JWT_SECRET=<chuoi-ngau-nhien-it-nhat-32-ky-tu>
-   ```
-   Tạo chuỗi ngẫu nhiên: `openssl rand -hex 32` (Git Bash) hoặc
-   `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
-
-   > ⚠️ Đừng đặt mật khẩu chứa ký tự `#` trong file `.env`: phần sau dấu `#` bị coi là ghi chú và bị cắt mất. Nếu bắt buộc dùng, bọc cả giá trị trong nháy kép, ví dụ `ADMIN_PASSWORD="Mat#Khau12345"`.
-3. Khởi động (app tự chạy migration trước khi mở cổng):
-   ```
-   docker compose up --build app
-   ```
-   Lệnh này chỉ bật `app` và `db`. Đừng bỏ chữ `app`: khi đó Docker bật thêm `db_test` (Postgres dành cho test, cổng 5433) và sẽ báo lỗi nếu cổng 5433 đang bị dùng.
-4. Mở `http://localhost:3000`. Kiểm tra sức khoẻ: `http://localhost:3000/api/health`.
-5. Tạo tài khoản Quản trị đầu tiên (hệ thống **không có tài khoản mặc định**):
-   ```
-   docker compose exec -e ADMIN_EMAIL=admin@csms.local -e ADMIN_PASSWORD=<it-nhat-12-ky-tu> app npm run create-admin
-   ```
-
-### Cách B — app chạy trên máy, database trong Docker (dùng khi code backend)
+**Cần có:** Git, **Docker** (Docker Desktop trên Windows 10/11, Docker Engine trên Linux) và **Python 3.8+**. Không cần cài Node, Postgres hay tự tạo file `.env`.
 
 ```
-docker compose up -d db
-cd backend
-npm ci
-copy .env.example .env      # macOS/Linux: cp .env.example .env
-```
-Điền `backend/.env`: `DATABASE_URL` (mật khẩu trùng `POSTGRES_PASSWORD` ở `.env` gốc), `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (không dùng ký tự `#`, xem cảnh báo ở Cách A). Sau đó:
-```
-npm run migrate
-npm run create-admin
-npm run dev                  # tự khởi động lại khi sửa code
+git clone https://github.com/dtc245010034-rgb/Charging-Station-Management-System-CSMS-.git
+cd Charging-Station-Management-System-CSMS-
+python run.py            # Windows có thể dùng: py run.py   |   Linux: python3 run.py
 ```
 
-> ⚠️ Có **hai** file `.env`: `.env` ở gốc cho Docker Compose, `backend/.env` cho app chạy trực tiếp bằng Node. Cả hai đều không được commit.
+Lần đầu (máy chưa build gì) script tự làm hết, mất vài phút:
+1. Kiểm tra Docker đã cài và đang chạy (báo cách sửa nếu chưa), tự nhận Compose v2 hoặc v1.
+2. **Tạo file `.env`** với mật khẩu và khoá ngẫu nhiên (không commit); chạy lại không ghi đè.
+3. Chọn cổng: mặc định 3000; **nếu bận tự dùng cổng kế tiếp** và ghi vào `.env`.
+4. **Build image và chạy** (mỗi lần chạy đều build lại, nhờ cache nên nhanh từ lần hai), rồi đợi `/api/health` xanh.
+5. **Tạo tài khoản admin** và **dữ liệu demo** (6 tài khoản, 6 trạm, 12 trụ), rồi mở trình duyệt.
 
-### Chi tiết file `.env`
+| Lệnh | Việc |
+|---|---|
+| `python run.py` | Build (nếu cần) + chạy + tài khoản + demo + mở trình duyệt. Tuỳ chọn: `--port 4000`, `--no-open`, `--no-demo`, `--rebuild` |
+| `python run.py down` | Dừng, **giữ dữ liệu** |
+| `python run.py reset` | Dừng và **xoá dữ liệu** (hỏi xác nhận; `--yes` để bỏ hỏi) |
+| `python run.py logs` | Xem log app (`logs db` cho Postgres); `Ctrl+C` để thoát, app vẫn chạy |
+| `python run.py status` | Địa chỉ, sức khoẻ, có dữ liệu hay chưa |
+| `python test.py` | Lint + **toàn bộ test** (unit, integration, acceptance), xem mục 3 |
 
-Hai file **độc lập, không đọc lẫn nhau** — sửa nhầm file thường là lý do "đổi `.env` mà không thấy tác dụng":
+**Quy trình sửa code:** `python run.py down` → sửa → `python run.py`. Container chạy ảnh đã build (giống staging), nên sửa code xong phải chạy lại để build; không có chế độ tự tải lại.
 
-- **`.env` ở thư mục gốc**: chỉ lệnh `docker compose` đọc, để điền vào `${...}` trong `docker-compose.yml`. Container `app` **không** đọc file này trực tiếp — mọi biến nó cần đã được `docker-compose.yml` truyền vào qua khối `environment:`.
-- **`backend/.env`**: chỉ app đọc, và chỉ khi chạy trực tiếp bằng `node`/`npm` (Cách B, hoặc `npm test`). Container Docker (Cách A) không đụng tới file này.
+### Tài khoản có sẵn (chỉ trên máy cá nhân)
 
-**Biến trong `.env` ở gốc** (theo `docker-compose.yml`):
+| Tài khoản | Mật khẩu | Vai trò |
+|---|---|---|
+| `admin@csms.local` | `admin` | Quản trị |
+| `owner@`, `owner2@`, `operator@`, `accountant@`, `driver@`, `multi@` + `demo.csms.local` | `demo12345` | Chủ trạm A, Chủ trạm B, Vận hành, Kế toán, Tài xế, Vận hành + Chủ trạm |
 
-| Biến | Bắt buộc? | Mặc định nếu bỏ trống | Ghi chú |
-|---|---|---|---|
-| `POSTGRES_PASSWORD` | **Có** | — (Compose từ chối chạy nếu thiếu) | Mật khẩu Postgres, tự đặt |
-| `JWT_SECRET` | **Có** | — (Compose từ chối chạy nếu thiếu) | ≥ 32 ký tự ngẫu nhiên |
-| `POSTGRES_DB` | Không | `csms` | |
-| `POSTGRES_USER` | Không | `csms` | |
-| `POSTGRES_PORT` | Không | `5432` | Đổi khi cổng 5432 máy đã bị chiếm |
-| `APP_PORT` | Không | `3000` | Đổi khi cổng 3000 máy đã bị chiếm |
-| `APP_ORIGIN` | Không | `http://localhost:3000` | Phải khớp địa chỉ đang mở trình duyệt, nếu không mọi request ghi (POST/PATCH) bị 403 |
-| `TRUST_PROXY` | Không | `0` | Chỉ đổi khi có reverse proxy đứng trước app |
+> ⚠️ **`admin/admin` và mật khẩu demo chỉ dành cho máy cá nhân.** Chúng chỉ được tạo khi cổng chỉ mở cho `127.0.0.1` (mặc định). Nếu bạn đặt `BIND_HOST=0.0.0.0` (cho máy khác trong mạng truy cập), script tự sinh mật khẩu admin ngẫu nhiên và in ra một lần thay vì dùng `admin`. Mật khẩu yếu bị **từ chối tuyệt đối khi `NODE_ENV=production`** (staging/production). Trên staging Render vẫn **không có tài khoản mặc định**: xem mục Staging.
+> Đã đổi mật khẩu admin thì chạy lại `python run.py` không đổi lại; quên mật khẩu thì `python run.py reset`.
 
-> `DATABASE_URL` **không** khai trong `.env` gốc — Compose tự ráp từ `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` ở trên. Khai thêm `DATABASE_URL` vào file này không có tác dụng gì.
-
-**Biến trong `backend/.env`**: xem đủ trong `backend/.env.example` (đã có chú thích từng dòng) — copy file đó rồi điền, đừng gõ tay lại từ đầu.
-
-**Sửa `.env` xong mà không thấy đổi:** container `app` đã đọc biến môi trường **một lần lúc khởi động**, sửa `.env` gốc không tự áp dụng cho container đang chạy. Phải khởi động lại:
-
-```
-docker compose up -d --force-recreate app
-```
-
-Xem trước Compose sẽ nạp giá trị nào (không cần khởi động thật) bằng `docker compose config`.
-
-**Trước khi commit, luôn kiểm lại `.env` không bị đưa vào:**
-
-```
-git status                    # .env không được xuất hiện ở đây
-git check-ignore -v .env      # có dòng in ra = đang bị ignore, đúng
-```
-
-### Dừng và dọn dẹp
-
-```
-docker compose stop          # tạm dừng (bật lại: docker compose start)
-docker compose down          # dừng và gỡ container, GIỮ dữ liệu (volume postgres_data)
-docker compose down -v       # dừng và XOÁ luôn dữ liệu — dùng khi muốn làm lại từ đầu
-docker compose restart app   # khởi động lại app
-docker compose logs -f app   # xem log (Ctrl+C thoát, app vẫn chạy)
-```
-App chạy bằng Node (Cách B) thì dừng bằng `Ctrl+C`. Sao lưu/khôi phục DB, lùi migration, cổng bị chiếm, quay lại bản staging cũ: xem [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+### Gặp sự cố khi chạy
+Script in `[LỖI]` kèm cách sửa. Các trường hợp hay gặp: Docker chưa mở (mở Docker Desktop, đợi báo *running*); Linux báo `permission denied` (`sudo usermod -aG docker $USER` rồi đăng nhập lại); có dữ liệu Postgres cũ nhưng mất `.env` (chạy `python run.py reset`). Bảng đầy đủ ở mục 4. Cấu hình thủ công không dùng script (nâng cao): `docs/OPERATIONS.md`.
 
 ---
 
@@ -139,14 +76,14 @@ App chạy bằng Node (Cách B) thì dừng bằng `Ctrl+C`. Sao lưu/khôi ph�
 
 ### Tạo tài khoản
 
-Hệ thống **không có tài khoản mặc định** ngoài Quản trị tạo ở bước 5 mục 1. Hai cách tạo tài khoản:
+Trên **staging/production không có tài khoản mặc định** (Quản trị đầu tiên tạo bằng `create-admin`). Trên máy cá nhân, `python run.py` tạo sẵn `admin@csms.local` và tài khoản demo (mục 1). Hai cách tạo thêm tài khoản:
 
 | Ai tạo | Vai trò tạo được | Endpoint | Ghi chú |
 |---|---|---|---|
 | Bất kỳ ai (đăng ký công khai) | Chỉ `DRIVER` | `POST /api/auth/register` | Gửi `role` (kể cả `"DRIVER"`) → 400. Không được chọn vai trò |
 | Quản trị (`ADMIN`, đã đăng nhập) | Cả 5 vai trò | `POST /api/admin/users` | Bắt buộc gửi `role` đúng 1 trong 5 giá trị dưới |
 
-5 giá trị `role` hợp lệ: `ADMIN`, `STATION_OWNER`, `OPERATOR`, `ACCOUNTANT`, `DRIVER`. Mật khẩu tối thiểu **8 ký tự** cho cả hai cách (riêng `ADMIN_PASSWORD` lúc `npm run create-admin` ở bước 5 mục 1 yêu cầu tối thiểu **12 ký tự**, quy định riêng của script đó).
+5 giá trị `role` hợp lệ: `ADMIN`, `STATION_OWNER`, `OPERATOR`, `ACCOUNTANT`, `DRIVER`. Mật khẩu tối thiểu **8 ký tự** cho cả hai cách (riêng `ADMIN_PASSWORD` của `npm run create-admin` yêu cầu tối thiểu **12 ký tự**, trừ khi chạy qua `run.py` trên máy cá nhân).
 
 Dùng `curl` (Windows PowerShell gõ `curl.exe`, không gõ `curl`). Cookie đăng nhập được lưu vào file `*.cookie` (đã có trong `.gitignore`, vì chứa phiên đăng nhập: **không commit, không gửi cho người khác**).
 
@@ -181,7 +118,7 @@ curl -b owner.cookie http://localhost:3000/api/stations
 Tạo sẵn 6 tài khoản (mỗi vai trò một tài khoản, cộng 1 tài khoản **nhiều vai trò** Vận hành + Chủ trạm), 6 trạm, 12 trụ (mã `DEMO-...`), 24 đầu nối với trạng thái đa dạng để dashboard có dữ liệu. Chạy lại nhiều lần không tạo trùng.
 
 - **Trên staging (Render):** đặt 2 biến `ALLOW_DEMO_SEED=1` và `DEMO_PASSWORD=<mật-khẩu-≥8-ký-tự>` rồi deploy lại; seed chạy tự động lúc khởi động. Xoá biến `ALLOW_DEMO_SEED` để tắt.
-- **Trên máy (Cách B, sau `npm run migrate`):** `ALLOW_DEMO_SEED=1 DEMO_PASSWORD=... npm run seed-demo` (trong `backend/`).
+- **Trên máy:** `python run.py` tự seed (mật khẩu `demo12345`); chạy tay: `docker compose exec -e ALLOW_DEMO_SEED=1 -e DEMO_PASSWORD=... app npm run seed-demo`.
 - Đăng nhập bằng `owner@`, `owner2@`, `operator@`, `accountant@`, `driver@`, `multi@` + `demo.csms.local` (đổi được bằng `DEMO_EMAIL_DOMAIN`), mật khẩu là `DEMO_PASSWORD`. `owner@` chỉ thấy 4 trạm của mình, `owner2@` thấy 2 trạm khác — dùng để thử cô lập dữ liệu.
 - ⚠️ Trạng thái trụ (Đang sạc, Lỗi…) trong seed là **giả lập để trình diễn**, không phải dữ liệu OCPP thật. Chỉ dùng trên staging/máy cá nhân, không chạy trên dữ liệu thật. Script từ chối chạy nếu thiếu `ALLOW_DEMO_SEED=1`.
 
@@ -191,60 +128,21 @@ Danh sách API đầy đủ và quy tắc bảo mật: xem `backend/README.md`.
 
 ## 3. Kiểm thử
 
-Luôn bật Postgres riêng cho test trước (cổng **5433**, dữ liệu trong RAM, tự mất khi tắt container — không đụng database dev ở cổng 5432):
+Chỉ cần Docker và Python — không cần cài Node hay bật Postgres tay. Script dựng Postgres test riêng (cổng 5433, dữ liệu trong RAM), cài thư viện trong container (volume riêng, không lẫn với `node_modules` trên máy) rồi chạy.
 
 ```
-docker compose up -d db_test
+python test.py                        # lint + TẤT CẢ test (unit, integration, acceptance) + kiểm tra logic của run.py
+python test.py --only unit            # chỉ một nhóm: unit | integration | acceptance
+python test.py --file tests/acceptance/S-04.station-management.test.js
+python test.py --lint-only
+python test.py --verbose              # in toàn bộ output thay vì bản tóm tắt
 ```
 
-### Cách A — máy đã có Node 22.7 trở lên
-
-```
-cd backend
-npm ci              # lần đầu, hoặc khi package-lock.json đổi
-npm run lint
-npm test
-```
-
-### Cách B — máy chưa có Node 22.7 (chạy trong container Docker, không cần cài Node)
-
-Chạy từ **thư mục gốc dự án** (không `cd backend` trước, khác Cách A):
-
-```
-docker run --rm --network host --user "$(id -u):$(id -g)" \
-  -e TEST_DATABASE_URL=postgresql://csms:csms_test_only@localhost:5433/csms_test \
-  -v "$PWD":/app -w /app/backend \
-  node:22-bookworm-slim sh -c "npm ci && npm run lint && npm test"
-```
-
-> `--network host` chỉ chạy đúng trên Linux. Trên **macOS/Windows (Docker Desktop)**: bỏ `--network host`, đổi `localhost` thành `host.docker.internal` trong `TEST_DATABASE_URL` (Docker Desktop đã tự trỏ tên này về máy thật, không cần cấu hình gì thêm).
->
-> `$(id -u):$(id -g)` chạy được trên macOS/Linux/Git Bash. **PowerShell thuần** không hiểu cú pháp này: chạy trong Git Bash, hoặc bỏ hẳn `--user "$(id -u):$(id -g)"` (kém an toàn hơn — file `node_modules` container tạo ra sẽ thuộc quyền `root`, có thể phải `sudo` mới xoá được sau này).
->
-> Cách này chạy được mọi lệnh `npm run ...` khác của `backend/package.json` (`migrate`, `create-admin`, `dev`...), chỉ cần đổi phần sau `sh -c`.
-
-### Chạy riêng một file test
-
-Gọi thẳng `node --test`, không qua script `npm test` (script đó cố định chạy toàn bộ `tests/**/*.test.js`, thêm tham số vào `npm test -- ...` không lọc bớt được):
-
-```
-node --test tests/acceptance/S-04.station-management.test.js
-# hoặc trong container: thay "npm ci && npm run lint && npm test" ở Cách B bằng "npm ci && node --test tests/acceptance/S-04.station-management.test.js"
-```
-
-### Đọc kết quả
-
-Test in theo định dạng TAP: mỗi dòng `ok N - <tên test>` là qua, `not ok N - <tên test>` là fail kèm khối `error`/`expected`/`actual` ngay bên dưới. Cuối cùng có tổng kết:
-
-```
-# tests 138
-# pass 138
-# fail 0
-```
-
-`# fail 0` là điều kiện để merge — CI trên mỗi Pull Request chạy đúng `npm run lint && npm test`, PR đỏ thì không merge được.
-
-Ca kiểm thử và báo cáo QA: `docs/testing/`, `docs/stories/S-xx.md`.
+- Kết quả cuối: `KẾT QUẢ: ĐẠT (N test pass, 0 fail)` hoặc `KHÔNG ĐẠT` kèm tên các ca lỗi; mã thoát 0 = đạt. Toàn bộ output được lưu ở `.run/test-output.log` (không commit).
+- **`# fail 0` là điều kiện để merge** — CI trên mỗi Pull Request chạy lint + test + quét phụ thuộc.
+- Lần đầu chậm (tải Node 22 và cài thư viện, vài phút); các lần sau nhanh hơn.
+- Muốn chạy bằng Node trên máy (cần Node ≥ 22.7): `docker compose up -d db_test`, rồi trong `backend/`: `npm ci && npm run lint && npm test`; test chỉ chạy trên DB có tên kết thúc `_test`.
+- Ca kiểm thử và báo cáo QA: `docs/testing/`, `docs/stories/S-xx.md`.
 
 ---
 
@@ -280,15 +178,15 @@ Staging chạy **cùng Dockerfile** với `docker-compose`, triển khai trên [
 
 | Hiện tượng | Nguyên nhân và cách xử lý |
 |---|---|
-| App thoát ngay, báo thiếu `JWT_SECRET` hoặc `DATABASE_URL` | Chưa tạo hoặc điền thiếu file `.env` tương ứng (mục 1). `JWT_SECRET` phải ≥ 32 ký tự |
-| `migrate` lỗi ở `003_stations_owner` hoặc `001_baseline` | Database cũ từ trước baseline. Chạy `docker compose down -v` **một lần** (xoá dữ liệu dev) rồi chạy lại |
-| Cổng 5432 hoặc 3000 đã bị dùng | Tắt Postgres/ứng dụng khác, hoặc đổi `POSTGRES_PORT` / `APP_PORT` trong `.env` gốc |
+| App thoát ngay, báo thiếu `JWT_SECRET` hoặc `DATABASE_URL` | Chạy `python run.py` (tự tạo `.env`). Nếu tự sửa `.env`, `JWT_SECRET` phải ≥ 32 ký tự; xoá dòng đó để script sinh lại |
+| `migrate` lỗi ở `003_stations_owner` hoặc `001_baseline` | Database cũ từ trước baseline. Chạy `python run.py reset` **một lần** (xoá dữ liệu dev) rồi chạy lại |
+| Cổng 5432 hoặc 3000 đã bị dùng | `run.py` tự chọn cổng trống kế tiếp và báo rõ; muốn chọn: `python run.py --port 4000` |
 | Đổi cổng app xong thì mọi thao tác ghi bị 403 "Origin không hợp lệ" | Đặt `APP_ORIGIN` khớp địa chỉ đang mở, ví dụ `http://localhost:8080` |
+| Docker Desktop báo lỗi WSL2 / không chạy được trên Windows | Bật WSL2 theo hướng dẫn của Docker Desktop, khởi động lại máy; đây là cấu hình Windows, không phải lỗi dự án |
 | Đăng nhập bị 429 kể cả khi đúng mật khẩu | Đang bị khoá 15 phút do sai quá 5 lần; đợi hết thời gian khoá |
-| Node báo phiên bản không hợp lệ, hoặc `npm error engine Unsupported` | Cần Node.js ≥ 22.7. Cài bằng nvm, hoặc chạy qua container Docker — xem mục 3, Cách B |
-| `docker compose: unknown command` hoặc `command not found` | Máy chỉ có Docker Compose v1: đổi `docker compose` thành `docker-compose` (xem đầu mục 1) |
-| Chạy Cách B (container Node) trên macOS/Windows: lỗi kết nối Postgres, `ECONNREFUSED` | Bỏ `--network host`, đổi `localhost` thành `host.docker.internal` trong `TEST_DATABASE_URL` (xem mục 3) |
-| `npm test` chạy hết cả 138 test dù chỉ muốn 1 file | `npm test -- <file>` không lọc được vì script cố định chạy cả thư mục `tests/`. Gọi thẳng `node --test <file>` (xem mục 3) |
+| Node báo phiên bản không hợp lệ, hoặc `npm error engine Unsupported` | Dùng `python test.py` (chạy trong container Node 22, không cần Node trên máy) |
+| `docker compose: unknown command` hoặc `command not found` | `run.py` tự nhận Compose v1/v2; chỉ gặp khi chạy lệnh `docker compose` tay trên máy chỉ có v1 — đổi thành `docker-compose` |
+| Muốn chạy riêng 1 file test | `python test.py --file tests/.../ten.test.js` (mục 3) |
 
 ---
 
@@ -380,6 +278,7 @@ docs/design/              đặc tả giao diện đã duyệt, ảnh tham chi�
 docs/spikes/              spike (K-01 có mã chạy lại được trong k01/)
 docs/testing/, docs/stories/, docs/integration/   hồ sơ QA
 render.yaml               blueprint staging trên Render
+run.py / test.py          chạy dự án bằng Docker / chạy toàn bộ test (mục 1, 3); tools/ chứa test của chính run.py
 ```
 
 ---

@@ -7,7 +7,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-csms}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?đặt POSTGRES_PASSWORD trong .env}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Mặc định chỉ mở cho máy này (127.0.0.1). Muốn máy khác trong mạng truy cập: đặt BIND_HOST=0.0.0.0 trong .env.
+      - "${BIND_HOST:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,9 +24,14 @@ services:
       POSTGRES_USER: csms
       POSTGRES_PASSWORD: csms_test_only
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     tmpfs:
       - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U csms -d csms_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
   app:
     build:
@@ -39,10 +45,28 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-0}
       DATABASE_URL: postgresql://${POSTGRES_USER:-csms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-csms}
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "${BIND_HOST:-127.0.0.1}:${APP_PORT:-3000}:3000"
     depends_on:
       db:
         condition: service_healthy
 
+  # Chạy lint + toàn bộ test trong container (không cần cài Node trên máy): python test.py
+  # node_modules nằm trong volume riêng nên không lẫn với node_modules của Windows/macOS trên máy.
+  tests:
+    profiles: ["tools"]
+    image: node:22-bookworm-slim
+    working_dir: /app/backend
+    environment:
+      TEST_DATABASE_URL: postgresql://csms:csms_test_only@db_test:5432/csms_test
+      CSMS_SKIP_DOTENV: "1"
+    volumes:
+      - .:/app
+      - tests_node_modules:/app/backend/node_modules
+    depends_on:
+      db_test:
+        condition: service_healthy
+    command: ["sh", "-c", "npm ci --no-audit --no-fund && npm run lint && npm test"]
+
 volumes:
   postgres_data:
+  tests_node_modules:
