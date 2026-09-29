@@ -34,6 +34,9 @@ services:
       retries: 20
 
   app:
+    # Đặt tên image tường minh: nếu để trống, docker-compose v1 tự đặt <tên-thư-mục>_app. Thư mục clone mặc định
+    # tên 'Charging-Station-Management-System-CSMS-' kết thúc bằng '-' → tag '...csms-_app' không hợp lệ (invalid reference format).
+    image: csms_app:latest
     build:
       context: .
       dockerfile: backend/Dockerfile
