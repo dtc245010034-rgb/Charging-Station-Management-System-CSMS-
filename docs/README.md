@@ -42,6 +42,9 @@ theo Story & Review)    (Kiểm thử tích hợp FE/BE)    TEST_PLAN, TEST_REPO
 | **[`stories/S-xx.md`](./stories/)** | **Story Test Specifications** | Chi tiết kịch bản, bước thực thi và bằng chứng cho từng User Story | Tester Quản Trị |
 | **[`integration/`](./integration/)** | **Integration Specifications** | Kiểm thử tích hợp toàn trình giữa Frontend Client ↔ Backend API | Tester Quản Trị |
 | **[`testing/`](./testing/)** | **Reporting & Defect Tracking** | Báo cáo kiểm thử tổng thể, hồ sơ theo dõi Bug và đánh giá hồi quy | Tester Quản Trị |
+| **[`OPERATIONS.md`](./OPERATIONS.md)** | **Sổ tay vận hành** | Build, chạy, dừng, khởi động lại, DB, staging, biến môi trường | Dev / Scrum Master |
+| **[`SPRINT_STATUS.md`](./SPRINT_STATUS.md)** | **Tình trạng dự án & sprint** | Sprint 1 đã xong gì, Sprint 2 kế hoạch, rủi ro, DoD, nhánh Git | Scrum Master |
+| **[`design/`](./design/)** | **Thiết kế giao diện** | Đặc tả UX Redesign Level 3, ảnh tham chiếu, 30 ảnh chụp giao diện hiện có | Dev / PO |
 | **`spikes/`** | **Research & Spikes (Isolated)** | Ghi nhận nghiên cứu độc lập (K-01, S-05-AC3); cấm can thiệp | Phân vùng Tham Chiếu Độc Lập |
 
 ---
