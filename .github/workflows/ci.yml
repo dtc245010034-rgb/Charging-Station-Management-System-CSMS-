@@ -58,3 +58,6 @@ jobs:
       - run: npm run lint
       - run: npm audit --omit=dev --audit-level=high
       - run: npm test
+      # Kiểm logic thuần của run.py/test.py (không cần Docker)
+      - run: python3 -m unittest discover -s tools -q
+        working-directory: .

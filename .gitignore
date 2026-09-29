@@ -4,3 +4,8 @@ node_modules/
 .env
 .env.*
 !.env.example
+
+# Kết quả chạy script run.py / test.py
+.run/
+__pycache__/
+*.pyc

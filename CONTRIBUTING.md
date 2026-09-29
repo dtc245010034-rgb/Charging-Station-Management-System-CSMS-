@@ -106,7 +106,7 @@ Ví dụ sai: `update`, `fix bug`, `done`, `abc`, `sửa nhiều thứ`.
 - Tác giả chọn reviewer, xoay vòng giữa các thành viên, ưu tiên người hiểu phần việc đó. PR đụng tới cấu trúc cơ sở dữ liệu (migration) hoặc phân quyền thì thêm **trưởng dev** làm reviewer.
 - Reviewer phản hồi **trong ngày làm việc**. Ai đang chờ review của ai thì nêu trong Daily, Scrum Master theo dõi.
 - PR phải có check **CI xanh** mới merge được (`main` có ruleset chặn). CI đỏ thì tác giả sửa, không nhờ người có quyền bỏ qua.
-- Reviewer vẫn **tự chạy thử chức năng** theo AC trên máy mình; CI chỉ thay phần chạy `npm run lint && npm test`.
+- Reviewer vẫn **tự chạy thử chức năng** theo AC trên máy mình; CI chỉ thay phần chạy lint + test (`python test.py`).
 - Reviewer kiểm tra: code chạy đúng tiêu chí chấp nhận (AC) của việc trên Jira, không có bí mật, tên nhánh và commit đúng quy ước, code dễ đọc.
 - Góp ý tập trung vào code, không nhắm vào người viết. Nêu rõ, mang tính xây dựng, và phân biệt "cần sửa" với "gợi ý".
 - Không tự merge khi chưa có approve. Xung đột merge do tác giả tự xử lý, cần giúp thì hỏi trên nhóm chat.

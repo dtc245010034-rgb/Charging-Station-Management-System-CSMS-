@@ -26,6 +26,16 @@ describe('S-01 create-admin', () => {
     assert.strictEqual((await query('SELECT count(*)::int AS n FROM users')).rows[0].n, 1);
   });
 
+  it('mật khẩu yếu chỉ được chấp nhận khi ALLOW_WEAK_ADMIN_PASSWORD=1 và KHÔNG ở production', async () => {
+    const weak = { ADMIN_EMAIL: 'weak@example.com', ADMIN_PASSWORD: 'admin' };
+    assert.strictEqual(run('scripts/create-admin.js', [], weak).status, 1);
+    assert.strictEqual(run('scripts/create-admin.js', [], { ...weak, ALLOW_WEAK_ADMIN_PASSWORD: '1', NODE_ENV: 'production' }).status, 1);
+    assert.strictEqual((await query("SELECT count(*)::int AS n FROM users WHERE email = 'weak@example.com'")).rows[0].n, 0);
+    const ok = run('scripts/create-admin.js', [], { ...weak, ALLOW_WEAK_ADMIN_PASSWORD: '1' });
+    assert.strictEqual(ok.status, 0, ok.stderr);
+    assert.match(ok.stderr, /mật khẩu yếu/i);
+  });
+
   it('mật khẩu < 12 ký tự hoặc thiếu env → thoát mã 1', () => {
     assert.strictEqual(run('scripts/create-admin.js', [], { ADMIN_EMAIL: 'a@b.co', ADMIN_PASSWORD: 'short' }).status, 1);
     assert.strictEqual(run('scripts/create-admin.js', [], {}).status, 1);
