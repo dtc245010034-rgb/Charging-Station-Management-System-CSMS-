@@ -45,6 +45,54 @@ class EnvFile(unittest.TestCase):
         self.assertNotIn("#", a["POSTGRES_PASSWORD"])  # ký tự # từng làm hỏng .env
 
 
+class MatEnv(unittest.TestCase):
+    """Ca 'máy đã có volume Postgres nhưng mất .env' (lỗi deadlock reset/down)."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.original = run.ENV_FILE
+        run.ENV_FILE = Path(self.dir.name) / ".env"
+
+    def tearDown(self):
+        run.ENV_FILE = self.original
+        self.dir.cleanup()
+
+    def test_compose_env_dien_gia_tri_tam_khi_mat_env(self):
+        import os
+        saved = {k: os.environ.pop(k, None) for k in ("POSTGRES_PASSWORD", "JWT_SECRET")}
+        try:
+            env = run.compose_env()
+            self.assertTrue(env["POSTGRES_PASSWORD"])
+            self.assertGreaterEqual(len(env["JWT_SECRET"]), 32)
+        finally:
+            for k, v in saved.items():
+                if v is not None:
+                    os.environ[k] = v
+
+    def test_compose_env_khong_de_len_gia_tri_that_trong_env(self):
+        run.ENV_FILE.write_text("POSTGRES_PASSWORD=that\nJWT_SECRET=" + "j" * 40 + "\n", encoding="utf-8")
+        import os
+        for k in ("POSTGRES_PASSWORD", "JWT_SECRET"):
+            os.environ.pop(k, None)
+        # .env đã có giá trị thật: không được chèn giá trị tạm (compose tự đọc .env)
+        self.assertIsNone(run.compose_env().get("POSTGRES_PASSWORD"))
+
+    def test_khong_ban_phim_va_khong_yes_thi_bao_loi_ro_rang(self):
+        class Args: yes = False
+        class D:
+            def c(self, *a, **k): raise AssertionError("không được xoá khi chưa xác nhận")
+        with self.assertRaises(run.Fail):
+            run.wipe_stale_data(D(), Args(), "lý do")
+
+    def test_yes_thi_xoa_va_tiep_tuc(self):
+        calls = []
+        class Args: yes = True
+        class D:
+            def c(self, *a, **k): calls.append(a)
+        run.wipe_stale_data(D(), Args(), "lý do")
+        self.assertIn("-v", calls[0])
+
+
 class Ports(unittest.TestCase):
     def test_chon_cong_ke_tiep_khi_ban(self):
         self.assertEqual(run.pick_port(3000, is_busy=lambda p: p in (3000, 3001)), 3002)

@@ -122,6 +122,7 @@ class Docker:
             raise Fail("Không tìm thấy 'docker compose' (v2) hoặc 'docker-compose' (v1). Hãy cập nhật Docker.")
 
     def c(self, *args, **kwargs):
+        kwargs.setdefault("env", compose_env())
         return run([*self.compose, *args], **kwargs)
 
     def running_services(self):
@@ -145,6 +146,18 @@ def parse_env(text):
         key, _, value = line.partition("=")
         values[key.strip()] = value.strip().strip('"').strip("'")
     return values
+
+
+def compose_env():
+    """Môi trường cho lệnh compose. docker-compose.yml bắt buộc có POSTGRES_PASSWORD/JWT_SECRET
+    (cú pháp ${VAR:?}) ngay cả với down/ps/logs, nên khi .env mất ta điền giá trị tạm để các lệnh
+    dọn dẹp vẫn chạy được (không thể tạo deadlock "không có .env → không reset được")."""
+    env = dict(os.environ)
+    saved = read_env()
+    for key in ("POSTGRES_PASSWORD", "JWT_SECRET"):
+        if not saved.get(key) and not env.get(key):
+            env[key] = "placeholder-only-for-down-" + "x" * 32
+    return env
 
 
 def read_env():
@@ -223,6 +236,19 @@ def wait_healthy(port, timeout=120, interval=2):
 
 
 # ---------------------------------------------------------------- lệnh con
+def wipe_stale_data(docker, args, reason):
+    """Volume Postgres cũ mà không biết mật khẩu thì không dùng lại được: hỏi rồi xoá để chạy tiếp."""
+    warn(reason)
+    warn("Mật khẩu cũ không khôi phục được, nên phải xoá dữ liệu cũ (thường chỉ là dữ liệu demo) để tạo mới.")
+    if not args.yes:
+        if not sys.stdin.isatty():
+            raise Fail("Không có bàn phím để xác nhận. Chạy lại: python run.py --yes   (chấp nhận xoá dữ liệu cũ)")
+        if input("  Gõ 'xoa' để xoá dữ liệu cũ và tiếp tục (Enter = huỷ): ").strip().lower() != "xoa":
+            raise Fail("Đã huỷ, không xoá gì. Nếu cần giữ dữ liệu: tạo .env với đúng POSTGRES_PASSWORD/JWT_SECRET cũ.")
+    docker.c("--profile", "tools", "down", "-v", "--remove-orphans")
+    ok("Đã xoá dữ liệu cũ")
+
+
 def cmd_up(docker, args):
     step("Kiểm tra Docker")
     docker.ensure_ready()
@@ -235,18 +261,14 @@ def cmd_up(docker, args):
     updates = {}
     if not ENV_FILE.exists():
         if docker.volume_exists():
-            raise Fail(
-                "Đã có dữ liệu Postgres từ lần chạy trước nhưng không có file .env (mật khẩu cũ không còn).\n"
-                "  Nếu dữ liệu đó không cần: python run.py reset  (xoá dữ liệu) rồi chạy lại.\n"
-                "  Nếu cần giữ: tạo .env với POSTGRES_PASSWORD và JWT_SECRET cũ."
-            )
+            wipe_stale_data(docker, args, "Có dữ liệu Postgres từ lần chạy trước nhưng không còn file .env (mất mật khẩu cũ).")
         updates.update(new_secrets())
         ok("Đã tạo .env mới với mật khẩu/khoá ngẫu nhiên (file này không được commit)")
     else:
         for key, value in new_secrets().items():
             if not env.get(key):
                 if key == "POSTGRES_PASSWORD" and docker.volume_exists():
-                    raise Fail("Thiếu POSTGRES_PASSWORD trong .env nhưng đã có dữ liệu cũ. Thêm đúng mật khẩu cũ, hoặc: python run.py reset")
+                    wipe_stale_data(docker, args, "Thiếu POSTGRES_PASSWORD trong .env nhưng đã có dữ liệu Postgres cũ.")
                 updates[key] = value
                 ok(f"Bổ sung {key} còn thiếu")
     if len(env.get("JWT_SECRET", "x" * 32)) < 32:
@@ -470,6 +492,7 @@ def build_parser():
     up.add_argument("--port", type=int, help="cổng web mong muốn (mặc định 3000; bận thì tự chọn cổng khác)")
     up.add_argument("--no-open", action="store_true", help="không tự mở trình duyệt")
     up.add_argument("--no-demo", action="store_true", help="không tạo dữ liệu demo")
+    up.add_argument("--yes", action="store_true", help="đồng ý xoá dữ liệu cũ nếu mất .env (không hỏi)")
     up.add_argument("--rebuild", action="store_true", help="build lại từ đầu, bỏ cache")
 
     sub.add_parser("down", help="dừng, giữ dữ liệu")
