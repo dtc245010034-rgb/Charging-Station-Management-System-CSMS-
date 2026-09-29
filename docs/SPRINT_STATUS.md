@@ -66,6 +66,8 @@ Tất cả đang **To Do**, chưa gán người (Jira 28/9). Phụ thuộc và m
 | GYM-41 | S-15 Xác thực thẻ qua `Authorize` | 2 | **Must** | S-08 | `idTag` ≤ 20 ký tự; log chỉ 4 ký tự cuối; Sprint 3 (S-17) dùng lại |
 | GYM-42 | S-16 Reset từ xa | 1 | **Should** | S-11 | Chỉ Should duy nhất; cần hàm gửi lệnh từ máy chủ xuống trụ |
 
+> **Quyết định (29/9):** trưởng nhóm kỹ thuật chốt dùng **`ocpp-rpc`** trong backend; PO chọn **phương án A — cam kết đủ 20 SP**. Kế hoạch chi tiết từng story và lịch theo nửa ngày: [`SPRINT_2_PLAN.md`](./SPRINT_2_PLAN.md).
+
 ### Phân tích
 
 - **Chuỗi tuần tự 12 SP:** `S-06 → S-07 → S-08 → S-09 → S-10 → S-11` (2+2+2+1+2+3). Nhánh rẽ: S-12 từ S-09; S-13 từ S-06; S-14 và S-15 từ S-08; S-16 từ S-11 (nên S-16 nằm cuối chuỗi, 13 SP tuần tự).

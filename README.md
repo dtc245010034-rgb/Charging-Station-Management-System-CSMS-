@@ -343,7 +343,7 @@ Menu của chức năng chưa có backend được **ẩn** (cấu hình trong `
 
 | Sprint | Mục tiêu | Trạng thái |
 |---|---|---|
-| 2 (28/9–5/10) | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ (S-06…S-16, GYM-32…42, 20 SP) | Chưa bắt đầu code; K-01 đã xong phần nền |
+| 2 (28/9–5/10) | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ (S-06…S-16, GYM-32…42, 20 SP, cam kết đủ) | Chưa bắt đầu code; đã chốt dùng `ocpp-rpc`; kế hoạch chi tiết: `docs/SPRINT_2_PLAN.md` |
 | 3 | Một phiên sạc trọn vẹn, kWh đúng dù trụ mất kết nối | Chưa |
 | 4 | Tính đúng tiền theo biểu giá nhiều khung giờ | Chưa |
 | 5 | Nạp ví (sandbox), tự trừ tiền | Chưa; **chưa có hồ sơ sandbox thanh toán** |
