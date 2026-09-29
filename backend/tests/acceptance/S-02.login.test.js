@@ -1,6 +1,7 @@
 const { describe, it, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert');
 const jwt = require('jsonwebtoken');
+const path = require('node:path');
 const argon2 = require('argon2');
 const request = require('supertest');
 const { run, query, resetSchema, truncateAll, BASE } = require('../helpers/db');
@@ -105,7 +106,8 @@ describe('S-02 đăng nhập và khoá tạm', () => {
 
   it('S-02 AC3: khoá được lưu trong DB nên còn sau khi khởi động lại (dựng lại app)', async () => {
     for (let i = 0; i < 5; i += 1) await login(EMAIL, 'wrong-password');
-    for (const key of Object.keys(require.cache)) if (key.includes('/backend/src/')) delete require.cache[key];
+    const srcDir = path.resolve(__dirname, '../../src') + path.sep; // so sánh theo đường dẫn thật: Windows dùng '\\' nên chuỗi '/backend/src/' không khớp
+    for (const key of Object.keys(require.cache)) if (key.startsWith(srcDir)) delete require.cache[key];
     const fresh = require('../../src/app');
     const res = await request(fresh).post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });
     assert.strictEqual(res.status, 429);

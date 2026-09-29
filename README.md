@@ -85,7 +85,7 @@ Trên **staging/production không có tài khoản mặc định** (Quản trị
 
 5 giá trị `role` hợp lệ: `ADMIN`, `STATION_OWNER`, `OPERATOR`, `ACCOUNTANT`, `DRIVER`. Mật khẩu tối thiểu **8 ký tự** cho cả hai cách (riêng `ADMIN_PASSWORD` của `npm run create-admin` yêu cầu tối thiểu **12 ký tự**, trừ khi chạy qua `run.py` trên máy cá nhân).
 
-Dùng `curl` (Windows PowerShell gõ `curl.exe`, không gõ `curl`). Cookie đăng nhập được lưu vào file `*.cookie` (đã có trong `.gitignore`, vì chứa phiên đăng nhập: **không commit, không gửi cho người khác**).
+Dùng `curl` (Windows PowerShell gõ `curl.exe`, không gõ `curl`). **PowerShell không hiểu `\"` trong chuỗi ngoặc kép** nên JSON bị hỏng (lỗi 400): trên PowerShell đặt JSON trong **ngoặc đơn** và giữ `\"` bên trong, ví dụ `-d '{\"email\":\"admin@csms.local\",\"password\":\"admin\"}'`; hoặc ghi JSON ra file rồi dùng `-d "@login.json"` (chạy được ở mọi shell). Các lệnh mẫu dưới đây viết cho bash/cmd. Cookie đăng nhập được lưu vào file `*.cookie` (đã có trong `.gitignore`, vì chứa phiên đăng nhập: **không commit, không gửi cho người khác**).
 
 ```
 # 1. Quản trị đăng nhập (tài khoản đã tạo ở bước 5 mục 1)

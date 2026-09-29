@@ -6,6 +6,8 @@ Backend PostgreSQL cho hệ thống quản lý trạm sạc, phục vụ fronten
 
 ## Lệnh npm (trong `backend/`)
 
+> **Điều kiện để chạy các lệnh này trực tiếp trên máy (không qua Docker):** có Postgres đang chạy và file `backend/.env` (sao từ `backend/.env.example`, điền `DATABASE_URL`, `JWT_SECRET` ≥ 32 ký tự, `APP_ORIGIN`). `.env` ở thư mục gốc là của Docker Compose và **không** được backend đọc: đó là hai file độc lập, vì `DATABASE_URL` chỉ có ở `backend/.env`. Thiếu file này sẽ báo `Cấu hình môi trường không hợp lệ hoặc thiếu: DATABASE_URL, …`. Cách nhanh nhất và là cách chuẩn của nhóm: `python run.py` và `python test.py` (Node 22 trong container, không phụ thuộc Node trên máy).
+
 | Lệnh | Việc |
 |---|---|
 | `npm start` / `npm run dev` | Chạy app (`dev` tự khởi động lại khi sửa code); tự migrate trước khi mở cổng |
