@@ -179,25 +179,34 @@ Thứ tự cắt (đã thống nhất ở phương án A): **S-16 → S-15 → S
 - **Q2 — nhịp tim:** `OCPP_HEARTBEAT_INTERVAL` mặc định **60 giây** (không phải 300 như đề xuất ban đầu), test đặt 5. Lý do: ngoại tuyến suy ra khi `last_seen_at` quá 2 × interval (S-12); 300 giây thì trụ rớt 10 phút mới hiện ngoại tuyến, quá chậm cho demo; 60 giây là 2 phút, tải 20 trụ chỉ ~20 tin/phút. Lưu theo từng trụ; mọi tin nhắn đều cập nhật `last_seen_at` (S-09 AC2) để trụ thật phớt lờ `interval` không bị báo ngoại tuyến nhầm (thử lại ở S-21 với thiết bị không do nhóm viết). Chỉ là biến môi trường nên đổi được không cần sửa code.
 - **Q3 — S-11:** dùng **SSE** (AC ≤ 1 giây, polling hiện 15 giây tại `frontend/services/realtime.js`). Chi tiết kỹ thuật ở T-25. Bộ phát sự kiện trong bộ nhớ đúng khi chạy **một tiến trình**: ghi vào README, giữ một instance.
 
-**Q4 — nơi đặt staging và ai giữ biến môi trường (đề xuất, chờ Phúc + trưởng nhóm kỹ thuật chốt):**
+**Q4 — nơi đặt staging và ai giữ biến môi trường (đã chọn hướng: laptop homelab + ngrok; Render giữ dự phòng):**
 
-| | Render (gói miễn phí) | Homelab (laptop cũ Linux chạy 24/7) |
+| | Render (gói miễn phí) | Homelab + ngrok (gói miễn phí) |
 |---|---|---|
-| Ngủ khi rảnh | Có, sau 15 phút không có yêu cầu; WebSocket của trụ bị ngắt, khởi động lại ~1 phút | Không |
-| Database | Postgres miễn phí **hết hạn sau 30 ngày** (+14 ngày ân hạn) | Volume Docker, không hết hạn; cần tự sao lưu |
-| Chi phí | 0 (gói trả phí mới ổn định) | 0 (điện + mạng nhà) |
-| Đường ra Internet | Có sẵn HTTPS/WSS | Cần cấu hình (xem dưới) |
-| Rủi ro | Mất DB sau 30 ngày; demo OCPP không ổn định | Mất điện/mạng nhà, phụ thuộc một người, an ninh do nhóm tự lo |
+| Ngủ khi rảnh | Có, sau 15 phút không có yêu cầu; WebSocket của trụ bị ngắt | Không |
+| Database | Postgres miễn phí **hết hạn sau 30 ngày** | Volume Docker, không hết hạn; cần tự sao lưu |
+| Địa chỉ cố định | Có | Có: mỗi tài khoản ngrok được **một tên miền cố định miễn phí** (`tên.ngrok-free.app`), có HTTPS/WSS |
+| Giới hạn | — | **~20.000 yêu cầu HTTP/tháng và 1 GB băng thông/tháng**, tối đa 3 endpoint; trang cảnh báo ngrok hiện cho lưu lượng HTML từ trình duyệt (bấm “Visit” một lần, nhớ 7 ngày) |
+| Rủi ro | Mất DB sau 30 ngày; demo OCPP không ổn định | Mất điện/mạng nhà; phụ thuộc một người; hết hạn mức thì tunnel bị hạn chế |
 
-**Khuyến nghị:** homelab làm staging chính cho Sprint 2 (S-13 yêu cầu ≥ 50 kết nối giữ ≥ 10 phút — gói Render miễn phí không đảm bảo được), Render giữ làm phương án dự phòng/demo công khai. Điều kiện bắt buộc trước khi mở ra Internet:
+Nguồn số liệu ngrok: trang *Free Plan Limits* và blog *Static dev domains* của ngrok (tra ngày 30/9/2026). Ngrok không nêu rõ chuyện gì xảy ra khi vượt hạn mức; theo dõi ở bảng điều khiển của ngrok.
 
-1. **Không mở cổng Postgres.** Chỉ để lộ ứng dụng (cổng 3000) qua tunnel HTTPS/WSS (ví dụ Cloudflare Tunnel, không cần mở cổng router và tránh được CGNAT của nhà mạng; **cần thử** WebSocket qua tunnel trước T3 chiều). `run.py` mặc định gắn `127.0.0.1`, đúng ý; tunnel chạy trên cùng máy.
-2. **`run.py` hiện chưa dùng được cho staging công khai** (đã kiểm tra mã): (a) mỗi lần chạy ghi đè `APP_ORIGIN` thành `http://localhost:<cổng>` (`run.py:294`), làm mọi thao tác ghi bị 403 khi truy cập bằng tên miền công khai; (b) `is_local_only` chỉ nhìn `BIND_HOST`, nên qua tunnel máy vẫn bị coi là “cục bộ” và có thể tạo tài khoản yếu `admin`/`admin` trên máy đang công khai; (c) cookie chỉ có `Secure` khi `NODE_ENV=production` (`auth.routes.js:12`), Compose chưa đặt. **Việc thêm cho L7 (~0,5 ngày, trước khi mở Internet):** chế độ `python run.py --public-url https://…` (giữ `APP_ORIGIN` đúng, luôn mật khẩu admin ngẫu nhiên, `NODE_ENV=production`, không bật `ALLOW_WEAK_ADMIN_PASSWORD`). Chưa làm trong phạm vi tài liệu này.
-3. **Bí mật:** `ADMIN_PASSWORD`, `DEMO_PASSWORD`, `JWT_SECRET` chỉ nằm trong `.env` trên máy chủ (không vào Git, chat nhóm, ảnh chụp màn hình). `ALLOW_DEMO_SEED=1` chỉ trên staging.
-4. **Vận hành máy chủ:** tường lửa chỉ cho SSH từ IP tin cậy (khoá SSH, tắt đăng nhập mật khẩu), bật cập nhật bảo mật tự động, sao lưu `pg_dump` định kỳ ra ổ khác, `restart: unless-stopped` để tự dậy sau mất điện, ghi ai là người giữ máy khi Phúc vắng.
-5. **Triển khai:** ban đầu thủ công (`git pull` rồi `python run.py`); tự động hoá (runner tự host của GitHub Actions) chỉ cân nhắc sau, vì runner trên máy nhà chạy mã của PR nên chỉ bật với repo riêng tư và nhánh `main`.
+**Cách dùng để không chạm trần hạn mức:**
+- **Trụ ảo và toàn bộ kiểm thử tự động (S-06 ≥ 50 kết nối/10 phút, S-11 đo ≤ 1 giây, S-12 ba lần xanh) chạy ngay trên laptop, gọi `localhost`**, không đi qua ngrok. Tin OCPP rất nhỏ nên băng thông không đáng kể; vấn đề là yêu cầu HTTP.
+- Ngrok chỉ dành cho PO/mentor và người ở xa xem giao diện. Người cùng mạng dùng địa chỉ LAN.
+- Frontend đang polling 15 giây (~5.760 yêu cầu/ngày cho một tab mở suốt): **đừng để tab dashboard mở cả ngày qua ngrok cho đến khi S-11 (SSE) xong.**
+- Báo trước cho PO/mentor về trang cảnh báo của ngrok ở lần vào đầu tiên.
 
-Người giữ tài khoản/quyền staging (Render hoặc homelab): **Phúc**, trưởng nhóm kỹ thuật làm dự phòng. Hạn chót chốt phương án: **17:00 hôm nay**; không có staging thì S-06…S-12 không thể “AC pass trên staging”.
+**Chạy staging công khai bằng `run.py` (đã có chế độ riêng, xem `docs/OPERATIONS.md`):**
+`python run.py --public-url https://<tên>.ngrok-free.app`, rồi chạy ngrok trên cùng máy trỏ vào cổng 3000. Chế độ này giữ `APP_ORIGIN` đúng địa chỉ công khai, luôn dùng mật khẩu ngẫu nhiên (không bao giờ `admin`/`admin`), đặt `NODE_ENV=production` (cookie `Secure`), `TRUST_PROXY=1` (giới hạn đăng nhập theo IP thật, không dồn về IP của tunnel), khoá `BIND_HOST=127.0.0.1` (Postgres không lộ ra mạng) và **từ chối chạy nếu DB còn tài khoản mật khẩu mặc định** từ các lần chạy local trước.
+
+**Việc còn lại trước khi mở Internet:**
+1. **Bí mật:** token ngrok, `ADMIN_PASSWORD`, `DEMO_PASSWORD`, `JWT_SECRET` chỉ nằm trên máy chủ (không vào Git, chat nhóm, ảnh chụp màn hình).
+2. **Vận hành máy chủ:** SSH bằng khoá (tắt mật khẩu), bật cập nhật bảo mật tự động, `pg_dump` định kỳ ra ổ khác, container `restart: unless-stopped` để tự dậy sau mất điện; ghi ai giữ máy khi Phúc vắng.
+3. **Triển khai:** thủ công (`git pull` rồi `python run.py`) và **chỉ từ `main` sau khi CI xanh**; Render tự chờ CI xanh còn homelab thì không, nên đây là quy ước của nhóm.
+4. Thử một lần: WebSocket của trụ ảo ở máy khác đi qua tunnel ngrok (chưa kiểm chứng).
+
+Người giữ tài khoản ngrok/Render và biến môi trường: **Phúc**, trưởng nhóm kỹ thuật làm dự phòng. Hạn chót chốt: **17:00 30/9**; không có staging thì S-06…S-12 không thể “AC pass trên staging”.
 
 - **Q5:** Ai phụ trách từng làn? (điền vào bảng mục 2 sau họp). **Lịch chi tiết do Scrum Master điều phối**: các mốc ngày trong tài liệu là đề xuất, không phải hạn cứng của tài liệu này.
 
