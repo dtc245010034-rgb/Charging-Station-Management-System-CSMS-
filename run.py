@@ -16,6 +16,7 @@ An toàn: tài khoản admin/admin và mật khẩu demo chỉ dành cho MÁY C�
 """
 import argparse
 import http.client
+import json
 import os
 import re
 import secrets
@@ -24,6 +25,7 @@ import subprocess
 import sys
 import time
 import webbrowser
+from urllib.parse import urlsplit
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -235,6 +237,74 @@ def wait_healthy(port, timeout=120, interval=2):
     return False
 
 
+# ---------------------------------------------------------------- chế độ công khai (ngrok…)
+def normalize_public_url(value):
+    """Chỉ nhận địa chỉ gốc https (vd https://ten.ngrok-free.app); trả về 'https://host[:port]'."""
+    parsed = urlsplit((value or "").strip())
+    if parsed.scheme != "https":
+        raise Fail("--public-url phải bắt đầu bằng https:// (cookie đăng nhập chỉ an toàn qua HTTPS). Ví dụ: https://ten.ngrok-free.app")
+    if not parsed.hostname or parsed.username or parsed.password or ":" in parsed.hostname:
+        raise Fail("--public-url không hợp lệ. Ví dụ đúng: https://ten.ngrok-free.app")
+    if parsed.path not in ("", "/") or parsed.query or parsed.fragment:
+        raise Fail("--public-url chỉ ghi địa chỉ gốc, không kèm đường dẫn hay tham số.")
+    if parsed.hostname.lower() in LOCAL_HOSTS:
+        raise Fail("--public-url không được là localhost. Muốn chạy máy này thì dùng: python run.py --local")
+    try:
+        port = parsed.port
+    except ValueError:
+        raise Fail("--public-url có cổng không hợp lệ.")
+    return f"https://{parsed.hostname.lower()}" + (f":{port}" if port and port != 443 else "")
+
+
+def find_weak_logins(post, pairs):
+    """post(email, mật_khẩu) -> mã HTTP hoặc None. Trả (đăng nhập được, không kiểm tra được)."""
+    weak, unknown = [], []
+    for email, password in pairs:
+        status = post(email, password)
+        if status == 200:
+            weak.append(email)
+        elif status != 401:
+            unknown.append(f"{email} (HTTP {status})" if status else f"{email} (không kết nối được)")
+    return weak, unknown
+
+
+def http_login_poster(port, origin):
+    def post(email, password):
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+            body = json.dumps({"email": email, "password": password})
+            conn.request("POST", "/api/auth/login", body, {"Content-Type": "application/json", "Origin": origin})
+            status = conn.getresponse().status
+            conn.close()
+            return status
+        except OSError:
+            return None
+    return post
+
+
+def refuse_default_credentials(docker, app_port, origin):
+    """Chế độ công khai: dừng nếu DB còn tài khoản mật khẩu mặc định (admin/admin, demo12345) từ các lần chạy local."""
+    step("Kiểm tra tài khoản mật khẩu mặc định (bắt buộc khi công khai)")
+    pairs = [(LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_PASSWORD)] + [(f"{a}@{DEMO_DOMAIN}", DEMO_PASSWORD) for a in DEMO_ACCOUNTS]
+    weak, unknown = find_weak_logins(http_login_poster(app_port, origin), pairs)
+    if not weak and not unknown:
+        ok("Không có tài khoản nào còn mật khẩu mặc định")
+        return
+    docker.c("stop", "app", check=False)  # không để lại app chạy với mật khẩu yếu
+    if weak:
+        raise Fail(
+            "Database này còn tài khoản dùng mật khẩu mặc định: " + ", ".join(weak) + ".\n"
+            "  Không được công khai như vậy. Đã dừng app. Tắt tunnel (ngrok) nếu đang chạy, rồi:\n"
+            "    python run.py reset --yes      (xoá dữ liệu local)\n"
+            "    python run.py --public-url " + origin
+        )
+    raise Fail(
+        "Không kiểm tra được mật khẩu mặc định: " + ", ".join(unknown) + ".\n"
+        "  (HTTP 429 = đang bị khoá đăng nhập tạm 15 phút; HTTP 403 = APP_ORIGIN chưa khớp; 'không kết nối được' = app chưa lên.)\n"
+        "  Đã dừng app cho an toàn. Sửa nguyên nhân rồi chạy lại, hoặc: python run.py reset --yes"
+    )
+
+
 # ---------------------------------------------------------------- lệnh con
 def wipe_stale_data(docker, args, reason):
     """Volume Postgres cũ mà không biết mật khẩu thì không dùng lại được: hỏi rồi xoá để chạy tiếp."""
@@ -274,8 +344,27 @@ def cmd_up(docker, args):
     if len(env.get("JWT_SECRET", "x" * 32)) < 32:
         raise Fail("JWT_SECRET trong .env ngắn hơn 32 ký tự. Xoá dòng đó để script tự sinh lại.")
 
+    if args.local:
+        public_url = ""
+    elif args.public_url is not None:
+        public_url = normalize_public_url(args.public_url)
+    else:
+        public_url = env.get("PUBLIC_URL", "")
+    if public_url:
+        ok(f"Chế độ CÔNG KHAI: {public_url} (cookie Secure, mật khẩu ngẫu nhiên, cổng chỉ mở cho máy này)")
+        updates.update({"NODE_ENV": "production"})
+        if env.get("TRUST_PROXY", "0") in ("", "0"):
+            updates["TRUST_PROXY"] = "1"  # phía trước có tunnel: lấy IP thật để giới hạn đăng nhập theo IP
+    elif env.get("PUBLIC_URL"):
+        ok("Quay về chế độ máy này (--local)")
+        updates.update({"NODE_ENV": "development", "TRUST_PROXY": "0"})
+
     bind_host = env.get("BIND_HOST", "127.0.0.1")
-    if "BIND_HOST" not in env:
+    if public_url and not is_local_only(bind_host):
+        warn(f"Chế độ công khai: đổi BIND_HOST={bind_host} về 127.0.0.1 (tunnel chạy cùng máy; Postgres không được lộ ra mạng)")
+        bind_host = "127.0.0.1"
+        updates["BIND_HOST"] = bind_host
+    elif "BIND_HOST" not in env:
         updates["BIND_HOST"] = bind_host
 
     # Cổng: giữ nguyên nếu chính stack này đang chạy; nếu không thì chọn cổng trống.
@@ -290,9 +379,10 @@ def cmd_up(docker, args):
             warn(f"Cổng {wanted_app} đang bận, dùng cổng {app_port}")
         if db_port != wanted_db:
             warn(f"Cổng Postgres {wanted_db} đang bận, dùng cổng {db_port}")
-    origin = f"http://localhost:{app_port}"
-    for key, value in (("APP_PORT", str(app_port)), ("POSTGRES_PORT", str(db_port)), ("APP_ORIGIN", origin)):
-        if env.get(key) != value:
+    local_origin = f"http://localhost:{app_port}"
+    origin = public_url or local_origin
+    for key, value in (("APP_PORT", str(app_port)), ("POSTGRES_PORT", str(db_port)), ("APP_ORIGIN", origin), ("PUBLIC_URL", public_url)):
+        if env.get(key, "") != value:
             updates[key] = value
     if updates:
         write_env_updates(updates)
@@ -311,16 +401,18 @@ def cmd_up(docker, args):
         raise Fail("App không lên được. Xem log ở trên, hoặc: python run.py logs")
     ok("App đã sẵn sàng")
 
-    credentials = ensure_accounts(docker, args, bind_host)
-    print_summary(origin, credentials, args)
-    if not args.no_open:
+    if public_url:
+        refuse_default_credentials(docker, app_port, origin)
+    credentials = ensure_accounts(docker, args, bind_host, public=bool(public_url))
+    print_summary(origin, credentials, args, app_port if public_url else None)
+    if not args.no_open and not public_url:
         webbrowser.open(origin)
 
 
-def ensure_accounts(docker, args, bind_host):
+def ensure_accounts(docker, args, bind_host, public=False):
     """Tạo admin + dữ liệu demo (chạy lại an toàn: không tạo trùng)."""
     step("Tài khoản và dữ liệu demo")
-    local = is_local_only(bind_host)
+    local = is_local_only(bind_host) and not public
     admin_password = LOCAL_ADMIN_PASSWORD if local else secrets.token_urlsafe(12)
     exec_env = ["-e", f"ADMIN_EMAIL={LOCAL_ADMIN_EMAIL}", "-e", f"ADMIN_PASSWORD={admin_password}"]
     if local:
@@ -336,12 +428,18 @@ def ensure_accounts(docker, args, bind_host):
     else:
         created = "new"
         ok(f"Đã tạo admin {LOCAL_ADMIN_EMAIL}")
-    if not local:
+    if public:
+        ok("Chế độ công khai: mật khẩu admin và demo là ngẫu nhiên, không dùng 'admin'")
+    elif not local:
         warn(f"BIND_HOST={bind_host} mở ra ngoài máy này: dùng mật khẩu admin ngẫu nhiên, không dùng 'admin'.")
 
     demo = not args.no_demo
+    demo_password = DEMO_PASSWORD
+    if demo and public:
+        demo_password = read_env().get("DEMO_PASSWORD") or secrets.token_urlsafe(9)
+        write_env_updates({"DEMO_PASSWORD": demo_password})  # giữ trong .env (chmod 600) để xem lại được
     if demo:
-        seed = docker.c("exec", "-T", "-e", "ALLOW_DEMO_SEED=1", "-e", f"DEMO_PASSWORD={DEMO_PASSWORD}", "-e", f"DEMO_EMAIL_DOMAIN={DEMO_DOMAIN}",
+        seed = docker.c("exec", "-T", "-e", "ALLOW_DEMO_SEED=1", "-e", f"DEMO_PASSWORD={demo_password}", "-e", f"DEMO_EMAIL_DOMAIN={DEMO_DOMAIN}",
                         "app", "npm", "run", "seed-demo", check=False, capture=True)
         if seed.returncode == 0:
             summary = [line for line in (seed.stdout or "").splitlines() if line.startswith("Seed demo xong")]
@@ -349,21 +447,24 @@ def ensure_accounts(docker, args, bind_host):
         else:
             warn("Không seed được dữ liệu demo:\n" + (seed.stdout or "").strip()[-600:])
             demo = False
-    return {"admin_password": admin_password, "local": local, "created": created, "demo": demo}
+    return {"admin_password": admin_password, "local": local, "created": created, "demo": demo, "demo_password": demo_password}
 
 
-def print_summary(origin, credentials, args):
+def print_summary(origin, credentials, args, public_port=None):
     say("\n" + "=" * 62)
     say(f"  CSMS đang chạy:  {origin}")
+    if public_port:
+        say(f"  CÔNG KHAI: chạy tunnel trên máy này trỏ vào cổng {public_port} (ngrok: xem hướng dẫn hiện hành của ngrok)")
+        say(f"  Máy này (không qua tunnel): http://localhost:{public_port}")
     say("=" * 62)
     if credentials["created"] == "new":
         say(f"  Admin:   {LOCAL_ADMIN_EMAIL}   /   {credentials['admin_password']}")
     else:
-        hint = f"mặc định '{LOCAL_ADMIN_PASSWORD}' nếu bạn chưa đổi" if credentials["local"] else "mật khẩu ngẫu nhiên đã in ở lần chạy đầu"
+        hint = f"mặc định '{LOCAL_ADMIN_PASSWORD}' nếu bạn chưa đổi" if credentials["local"] else "mật khẩu ngẫu nhiên đã in ở lần tạo đầu tiên, không lưu lại"
         say(f"  Admin:   {LOCAL_ADMIN_EMAIL}   ({hint}; quên thì: python run.py reset)")
     if credentials["demo"]:
         say(f"  Demo:    {', '.join(f'{a}@{DEMO_DOMAIN}' for a in DEMO_ACCOUNTS)}")
-        say(f"           mật khẩu chung: {DEMO_PASSWORD}")
+        say(f"           mật khẩu chung: {credentials['demo_password']}")
     say("-" * 62)
     say("  Dừng (giữ dữ liệu):  python run.py down")
     say("  Xem log:             python run.py logs")
@@ -408,6 +509,8 @@ def cmd_status(docker, args):
     docker.c("ps", check=False)
     port = int(env.get("APP_PORT", DEFAULT_APP_PORT))
     healthy = "app" in docker.running_services() and wait_healthy(port, timeout=4, interval=1)
+    if env.get("PUBLIC_URL"):
+        say(f"\n  Công khai: {env['PUBLIC_URL']}  (chế độ --public-url; quay về máy này: python run.py --local)")
     say(f"\n  Địa chỉ:  http://localhost:{port}    Sức khoẻ: {'OK' if healthy else 'KHÔNG chạy / chưa sẵn sàng'}")
     say(f"  .env:     {'có' if ENV_FILE.exists() else 'chưa có (chạy python run.py để tạo)'}")
     say(f"  Dữ liệu:  {'có volume Postgres' if docker.volume_exists() else 'chưa có'}")
@@ -493,6 +596,9 @@ def build_parser():
     up.add_argument("--no-open", action="store_true", help="không tự mở trình duyệt")
     up.add_argument("--no-demo", action="store_true", help="không tạo dữ liệu demo")
     up.add_argument("--yes", action="store_true", help="đồng ý xoá dữ liệu cũ nếu mất .env (không hỏi)")
+    mode = up.add_mutually_exclusive_group()
+    mode.add_argument("--public-url", help="staging công khai qua tunnel, ví dụ https://ten.ngrok-free.app (giữ APP_ORIGIN, mật khẩu ngẫu nhiên, NODE_ENV=production)")
+    mode.add_argument("--local", action="store_true", help="quay về chế độ chạy trên máy này (bỏ --public-url đã lưu)")
     up.add_argument("--rebuild", action="store_true", help="build lại từ đầu, bỏ cache")
 
     sub.add_parser("down", help="dừng, giữ dữ liệu")

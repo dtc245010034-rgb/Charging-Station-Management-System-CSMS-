@@ -12,7 +12,7 @@
 | Thời gian | 21/9 – 26/10/2026, sprint 1 tuần (5 ngày làm việc), đơn vị ước lượng story point |
 | Sprint 1 (21–28/9) | **12/12 SP hoàn thành** trên Jira (trừ việc chuẩn bị demo GYM-14 đang làm). Demo Thứ Tư 30/9 |
 | Sprint 2 (28/9–5/10) | Kế hoạch 20 SP, 11 story (GYM-32…42), **chưa bắt đầu code**; chuỗi tuần tự 12 SP, xem mục 4 |
-| Chất lượng hiện tại | Lint sạch · **139/139 test tự động pass** · giao diện mới đã chạy thử trên trình duyệt (Chromium) |
+| Chất lượng hiện tại | Lint sạch · **140/140 test tự động pass** · giao diện mới đã chạy thử trên trình duyệt (Chromium) |
 | Cảnh báo lịch | Backlog có 8 sprint nhưng chỉ còn khoảng 5 tuần: thực tế tới Sprint 5. Phạm vi cuối do PO chốt |
 
 ## 2. Sprint 1 — “Chủ trạm khai báo được trạm, trụ và đầu nối; cả nhóm chạy được dự án”
@@ -135,7 +135,7 @@ Thứ tự cắt nếu trễ (chốt sớm với PO, ví dụ tối Thứ Tư 30
 | Mục DoD | Trạng thái |
 |---|---|
 | Review bởi người khác | Theo quy ước PR (chưa có PR nào cho ba nhánh mới) |
-| Unit test cho nhánh logic mới | Đạt: 139 test |
+| Unit test cho nhánh logic mới | Đạt: 140 test |
 | CI xanh (build, lint, test) | Đạt trên `main` cũ; nhánh mới đã chạy cục bộ. **Chưa có `typecheck`** (dự án JS thuần) |
 | Quét phụ thuộc sạch | Đạt: `npm audit --omit=dev` = 0 lỗ hổng, đã thêm vào CI |
 | AC pass trên staging với trụ ảo chạy thật | **Chưa đạt** — chưa có staging chạy; trụ ảo mới ở spike |

@@ -12,7 +12,7 @@
 |---|---|
 | Sprint 1 | **12/12 SP xong** (Jira): khung dự án, đăng nhập, phân quyền, trạm/trụ/đầu nối, spike OCPP. Demo Thứ Tư 30/9 |
 | Sprint 2 | Kế hoạch 20 SP (kết nối OCPP có xác thực, trạng thái trụ), **chưa bắt đầu code** |
-| Chất lượng | Lint sạch · **139/139 test pass** · giao diện mới đã chạy thử trên trình duyệt |
+| Chất lượng | Lint sạch · **140/140 test pass** · giao diện mới đã chạy thử trên trình duyệt |
 | Chạy được ngay | Đăng nhập, 5 workspace theo vai trò, quản lý trạm/trụ, bảng điều khiển Vận hành, dữ liệu demo |
 | Chưa có | Phiên sạc thật, tính tiền, ví, phân bổ công suất, đặt chỗ, đối soát (Sprint 2–8) |
 
@@ -40,7 +40,7 @@ Lần đầu (máy chưa build gì) script tự làm hết, mất vài phút:
 
 | Lệnh | Việc |
 |---|---|
-| `python run.py` | Build (nếu cần) + chạy + tài khoản + demo + mở trình duyệt. Tuỳ chọn: `--port 4000`, `--no-open`, `--no-demo`, `--rebuild` |
+| `python run.py` | Build (nếu cần) + chạy + tài khoản + demo + mở trình duyệt. Tuỳ chọn: `--port 4000`, `--no-open`, `--no-demo`, `--rebuild`, `--public-url https://…` (staging công khai qua tunnel, xem `docs/OPERATIONS.md` mục 3), `--local` (quay về chế độ máy này) |
 | `python run.py down` | Dừng, **giữ dữ liệu** |
 | `python run.py reset` | Dừng và **xoá dữ liệu** (hỏi xác nhận; `--yes` để bỏ hỏi) |
 | `python run.py logs` | Xem log app (`logs db` cho Postgres); `Ctrl+C` để thoát, app vẫn chạy |
@@ -85,7 +85,7 @@ Trên **staging/production không có tài khoản mặc định** (Quản trị
 
 5 giá trị `role` hợp lệ: `ADMIN`, `STATION_OWNER`, `OPERATOR`, `ACCOUNTANT`, `DRIVER`. Mật khẩu tối thiểu **8 ký tự** cho cả hai cách (riêng `ADMIN_PASSWORD` của `npm run create-admin` yêu cầu tối thiểu **12 ký tự**, trừ khi chạy qua `run.py` trên máy cá nhân).
 
-Dùng `curl` (Windows PowerShell gõ `curl.exe`, không gõ `curl`). **PowerShell không hiểu `\"` trong chuỗi ngoặc kép** nên JSON bị hỏng (lỗi 400): trên PowerShell đặt JSON trong **ngoặc đơn** và giữ `\"` bên trong, ví dụ `-d '{\"email\":\"admin@csms.local\",\"password\":\"admin\"}'`; hoặc ghi JSON ra file rồi dùng `-d "@login.json"` (chạy được ở mọi shell). Các lệnh mẫu dưới đây viết cho bash/cmd. Cookie đăng nhập được lưu vào file `*.cookie` (đã có trong `.gitignore`, vì chứa phiên đăng nhập: **không commit, không gửi cho người khác**).
+Dùng `curl` (Windows PowerShell gõ `curl.exe`, không gõ `curl`). Các lệnh mẫu dưới đây viết cho bash/cmd. **Trên PowerShell** dấu `\"` và dấu cách trong JSON bị xử lý sai (lỗi 400, hoặc `curl: (3) URL rejected` khi giá trị có dấu cách như `"Thai Nguyen"`); cách sửa: gõ `curl.exe --%` rồi giữ **nguyên phần còn lại của lệnh mẫu**. `--%` bảo PowerShell ngừng xử lý và chuyển nguyên dòng cho `curl.exe`. Ví dụ: `curl.exe --% -c admin.cookie -X POST http://localhost:3000/api/auth/login -H "content-type: application/json" -d "{\"email\":\"admin@csms.local\",\"password\":\"admin\"}"`. Sau `--%` không dùng được biến PowerShell (`$x`). Cách khác chạy ở mọi shell: ghi JSON ra file rồi `-d "@file.json"`.
 
 ```
 # 1. Quản trị đăng nhập (tài khoản đã tạo ở bước 5 mục 1)
