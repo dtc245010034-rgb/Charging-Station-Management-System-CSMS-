@@ -15,7 +15,7 @@ Backend PostgreSQL cho hệ thống quản lý trạm sạc, phục vụ fronten
 | `npm run create-admin` | Tạo Quản trị đầu tiên (`ADMIN_EMAIL`, `ADMIN_PASSWORD` ≥ 12 ký tự); chạy lại không tạo trùng |
 | `npm run seed-demo` | Dữ liệu demo (cần `ALLOW_DEMO_SEED=1`, `DEMO_PASSWORD`); chỉ cho demo/staging |
 | `npm run start:staging` | Chuỗi khởi động staging: migrate → create-admin → (seed demo nếu bật) → server |
-| `npm run lint` / `npm test` | ESLint cho `backend` + `frontend`; 139 test (cần Postgres test ở cổng 5433 hoặc `TEST_DATABASE_URL`) |
+| `npm run lint` / `npm test` | ESLint cho `backend` + `frontend`; 140 test (cần Postgres test ở cổng 5433 hoặc `TEST_DATABASE_URL`) |
 
 ## Lưu ý khi migrate trên DB dev đã có dữ liệu cũ
 

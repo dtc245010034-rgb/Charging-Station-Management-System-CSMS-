@@ -93,6 +93,45 @@ class MatEnv(unittest.TestCase):
         self.assertIn("-v", calls[0])
 
 
+class PublicMode(unittest.TestCase):
+    def test_url_hop_le_duoc_chuan_hoa(self):
+        self.assertEqual(run.normalize_public_url("https://Ten.NGROK-free.app/"), "https://ten.ngrok-free.app")
+        self.assertEqual(run.normalize_public_url("https://x.example.com:8443"), "https://x.example.com:8443")
+        self.assertEqual(run.normalize_public_url("https://x.example.com:443"), "https://x.example.com")
+
+    def test_url_khong_an_toan_bi_tu_choi(self):
+        for bad in ("http://x.ngrok-free.app", "https://localhost", "https://127.0.0.1", "https://x.com/duong-dan",
+                    "https://x.com?a=1", "https://user:pw@x.com", "", "ten.ngrok-free.app", "https://x.com:abc"):
+            with self.assertRaises(run.Fail, msg=bad):
+                run.normalize_public_url(bad)
+
+    def test_phat_hien_tai_khoan_mat_khau_mac_dinh(self):
+        def post(email, password):
+            return 200 if (email, password) == ("admin@csms.local", "admin") else 401
+        weak, unknown = run.find_weak_logins(post, [("admin@csms.local", "admin"), ("owner@demo.csms.local", "demo12345")])
+        self.assertEqual(weak, ["admin@csms.local"])
+        self.assertEqual(unknown, [])
+
+    def test_khong_kiem_tra_duoc_thi_khong_coi_la_an_toan(self):
+        codes = iter([429, None, 403])
+        weak, unknown = run.find_weak_logins(lambda e, p: next(codes), [("a@x", "1"), ("b@x", "1"), ("c@x", "1")])
+        self.assertEqual(weak, [])
+        self.assertEqual(len(unknown), 3)
+
+    def test_che_do_cong_khai_khong_bao_gio_dung_mat_khau_yeu(self):
+        class Args: no_demo = True
+        calls = []
+        class D:
+            def c(self, *a, **k):
+                calls.append(a)
+                class R: returncode = 0; stdout = ""
+                return R()
+        creds = run.ensure_accounts(D(), Args(), "127.0.0.1", public=True)
+        self.assertNotEqual(creds["admin_password"], run.LOCAL_ADMIN_PASSWORD)
+        self.assertFalse(creds["local"])
+        self.assertFalse(any("ALLOW_WEAK_ADMIN_PASSWORD=1" in part for call in calls for part in call))
+
+
 class Ports(unittest.TestCase):
     def test_chon_cong_ke_tiep_khi_ban(self):
         self.assertEqual(run.pick_port(3000, is_busy=lambda p: p in (3000, 3001)), 3002)

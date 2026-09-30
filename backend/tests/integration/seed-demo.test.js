@@ -14,6 +14,15 @@ describe('GYM-14 seed-demo', () => {
     assert.strictEqual(run('scripts/seed-demo.js', [], { ALLOW_DEMO_SEED: '1', DEMO_PASSWORD: 'short' }).status, 1);
   });
 
+  it('seed-demo-if-enabled (dùng trong start:staging, chạy được trên Windows): không có cờ thì bỏ qua và thoát 0', () => {
+    const r = run('scripts/seed-demo-if-enabled.js', [], { ALLOW_DEMO_SEED: '' });
+    assert.strictEqual(r.status, 0, r.stderr);
+    assert.match(r.stdout, /Bỏ qua seed demo/);
+    assert.strictEqual(run('scripts/seed-demo-if-enabled.js', [], { ALLOW_DEMO_SEED: '1' }).status, 1); // bật cờ mà thiếu DEMO_PASSWORD thì vẫn lỗi
+    const script = require('../../package.json').scripts['start:staging'];
+    assert.ok(!script.includes('[ '), 'start:staging không được dùng cú pháp `[ ]` của shell');
+  });
+
   it('tạo tài khoản đủ vai trò (kể cả tài khoản nhiều vai trò), trạm, trụ và đầu nối; không in mật khẩu', async () => {
     const r = run('scripts/seed-demo.js', [], demo);
     assert.strictEqual(r.status, 0, r.stderr);

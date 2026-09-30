@@ -41,6 +41,25 @@ Tuỳ chọn: `--port N`, `--no-open`, `--no-demo`, `--rebuild`. Máy chưa buil
 - Chữ `admin` chỉ nằm trong `run.py`, không nằm trong `backend/`, để giữ test `no-backdoor`.
 - Admin đã tồn tại thì giữ nguyên mật khẩu hiện có. Quên mật khẩu → `python run.py reset` (xoá dữ liệu).
 
+### Staging công khai qua tunnel (ngrok…): `--public-url`
+Dùng cho máy chủ nhóm (laptop chạy 24/7) để PO/mentor/người ở xa truy cập. Tunnel chạy **trên cùng máy**, trỏ vào cổng ứng dụng (mặc định 3000).
+
+```
+python run.py --public-url https://<tên-của-bạn>.ngrok-free.app
+# rồi mở tunnel trỏ vào cổng 3000 (xem hướng dẫn hiện hành của ngrok; tên miền tĩnh miễn phí lấy ở trang quản lý ngrok)
+python run.py --local        # quay về chế độ chạy trên máy này
+```
+Địa chỉ được lưu vào `.env` (`PUBLIC_URL`), nên các lần `python run.py` sau vẫn ở chế độ công khai đến khi dùng `--local`.
+
+Chế độ này tự áp các chốt chặn (đã kiểm chứng bằng docker giả, chưa thử với ngrok thật):
+- `APP_ORIGIN` = địa chỉ công khai (không bị ghi đè về `localhost`). Chỉ nhận `https://` gốc, không nhận `localhost`, đường dẫn hay tài khoản trong URL.
+- **Không bao giờ** dùng mật khẩu `admin`/`admin` hay `demo12345`: mật khẩu admin và demo là ngẫu nhiên (in một lần; mật khẩu demo lưu trong `.env`, chmod 600).
+- **Từ chối chạy** nếu database còn tài khoản mật khẩu mặc định từ lần chạy local trước (đăng nhập thử `admin@csms.local`/`admin` và các tài khoản demo); app bị dừng, rồi chạy `python run.py reset --yes` và chạy lại.
+- `NODE_ENV=production` (cookie đăng nhập có cờ `Secure`; truy cập bằng địa chỉ HTTPS công khai) và `TRUST_PROXY=1` (giới hạn đăng nhập theo IP thật, không dồn về IP của tunnel).
+- `BIND_HOST` bị ép về `127.0.0.1`: cổng ứng dụng và Postgres chỉ mở cho máy này, ra Internet chỉ qua tunnel.
+
+Lưu ý gói ngrok miễn phí: khoảng 20.000 yêu cầu HTTP và 1 GB băng thông mỗi tháng; có trang cảnh báo ở lần vào đầu của trình duyệt. Trụ ảo và kiểm thử tự động nên chạy trên chính máy chủ (gọi `localhost`), không đi qua tunnel. Chi tiết: `docs/SPRINT_2_PLAN.md` mục 6 (Q4).
+
 ## 4. Dừng, khởi động lại
 
 | Muốn | Lệnh | Dữ liệu |
@@ -98,7 +117,7 @@ $ python test.py --verbose
 ```
 (`python run.py test` là cùng một lệnh.) Chạy trong container Node 22 với Postgres test riêng (cổng 5433, trong RAM, dừng lại sau khi xong), `node_modules` nằm trong volume Docker riêng nên không lẫn với máy. Mã thoát 0 = đạt; log đầy đủ ở `.run/test-output.log`.
 
-Trạng thái hiện tại (29/9/2026): **lint sạch, 139/139 test backend pass** + 10 test của `run.py` (`tools/`). Test chỉ chạy trên DB có tên kết thúc `_test`. `backend/.env` không ảnh hưởng (test tự tắt nạp `.env` bằng `CSMS_SKIP_DOTENV=1`). CI chạy lint, quét phụ thuộc, test backend và test của `tools/`.
+Trạng thái hiện tại (29/9/2026): **lint sạch, 140/140 test backend pass** + 20 test của `run.py` (`tools/`). Test chỉ chạy trên DB có tên kết thúc `_test`. `backend/.env` không ảnh hưởng (test tự tắt nạp `.env` bằng `CSMS_SKIP_DOTENV=1`). CI chạy lint, quét phụ thuộc, test backend và test của `tools/`.
 
 ## 9. Staging (Render)
 
