@@ -39,7 +39,7 @@
 | **L4 Thẻ & chống trùng** | 1 | S-15 (T-32 ngay từ T3) → S-14 | Sáng T3 |
 | **L5 Trạng thái đầu nối** | 1 | S-10 (bắt đầu viết ánh xạ trạng thái + bảng lỗi sớm, chạy tích hợp sau S-09) | Chiều T4 |
 | **L6 Giao diện & thời gian thực** | 1–2 | S-11: T-23 (truy vấn cây), T-25 (SSE + client), nút Reset (T-35) | Sáng T3 |
-| **L7 Trụ ảo, staging, E2E** | 1–2 | Bật Render + seed demo, trụ ảo trong test/compose, kịch bản E2E (T-19, T-27), S-16 phần T-34 | Sáng T3 |
+| **L7 Trụ ảo, staging, E2E** | 1–2 | Bật staging (Q4: homelab hoặc Render) + seed demo, trụ ảo trong test/compose, kịch bản E2E (T-19, T-27), S-16 phần T-34 | Sáng T3 |
 | **Điều phối** | Phúc | Họp sáng, gỡ chặn, review sprint, demo Sprint 1 (T4) | — |
 
 Một người có thể đảm nhiều làn nếu nhóm ít hơn; đổi lại thứ tự cắt ở mục 5 đến sớm hơn.
@@ -68,9 +68,18 @@ Migration mới (tên `006…`, tiến/lùi được, không sửa migration cũ
 - `connectors`: `raw_status TEXT` (giữ nguyên giá trị OCPP), `status_updated_at`.
 - `connector_errors` (chỉ ghi thêm): `connector_id, error_code, vendor_error_code, occurred_at`, chỉ mục `(connector_id, occurred_at)`.
 - `ocpp_messages` (S-14): khoá `(charge_point_code, message_id)`, `action`, `response JSONB`, `created_at`.
+- `stations`: `locked_at TIMESTAMPTZ NULL`, `locked_by` (khoá ngoại tới `users`) — **Q1 đã chốt**, xem dưới.
 - `id_tags` (S-15): `tag` (**tối đa 20 ký tự**, unique + chỉ mục), `user_id`, `status`, `expires_at`.
 
-Quyết định thiết kế cần chốt: **“trạm bị khoá bởi quản trị viên”** (S-08 AC2) khác **“trạm tạm ngừng”** của chủ trạm (S-06 AC4, S-15 AC5). Hiện `stations.status` chỉ có `ACTIVE/INACTIVE/MAINTENANCE`, **chưa có khái niệm “khoá”**. Xem câu hỏi Q1, mục 6.
+**Đã chốt (Q1): “trạm bị khoá bởi quản trị viên” là chiều riêng, không phải trạng thái mới.** Thêm `stations.locked_at` (NULL = không khoá); `stations.status` giữ nguyên `ACTIVE/INACTIVE/MAINTENANCE` vì chủ trạm tự đổi được `status`, còn khoá chỉ Quản trị đặt/gỡ được. Bảng quyết định:
+
+| Tình trạng trạm | Kết nối WebSocket | `BootNotification` | `Authorize` (S-15 AC5) |
+|---|---|---|---|
+| `ACTIVE`, không khoá | Nhận | `Accepted` | Theo thẻ |
+| `INACTIVE` / `MAINTENANCE` | Nhận | `Accepted` (S-06 AC4) | `Blocked` |
+| Bị khoá (`locked_at` khác NULL) | Nhận, **giữ socket** (trụ còn thử Boot lại khi mở khoá) | `Rejected` (S-08 AC2); không tính trực tuyến | `Blocked` |
+
+Tin nhắn khác `BootNotification` từ trụ bị khoá → `CALLERROR SecurityError` (giống trụ chưa Boot).
 
 ### S-06 · GYM-32 · 2 SP · Trụ đã đăng ký kết nối được, trụ lạ bị từ chối
 - **Làn:** L1 · **Bắt đầu:** T3 sáng · **Xong:** T3 chiều · **Cổng:** mở khoá S-07 và S-13.
@@ -99,8 +108,9 @@ Quyết định thiết kế cần chốt: **“trạm bị khoá bởi quản t
 ### S-08 · GYM-34 · 2 SP · Trụ khởi động được chấp nhận qua `BootNotification`
 - **Làn:** L3 · **Bắt đầu:** viết từ T3 chiều (trên hợp đồng handler); **ghép & xong:** T4 chiều · **Cổng:** mở khoá S-09, **S-14, S-15** (và cả chuỗi).
 - **Việc:** **T-16** handler lưu vendor/model/serial/firmware (trường thiếu → lưu rỗng, **không từ chối**); đánh dấu trực tuyến, `booted`. **T-17** trả `Accepted` + `currentTime` (UTC) + `interval` từ **cấu hình** (đổi cấu hình rồi khởi động lại là dùng giá trị mới); lớp trung gian `SecurityError` cho tin trước Boot.
-- **AC:** trụ đã đăng ký → lưu thông tin + `Accepted` + giờ máy chủ + nhịp tim + trực tuyến; trạm bị khoá → `Rejected`, không coi là trực tuyến *(cần Q1)*; Boot lần hai cùng kết nối → cập nhật, **không tạo bản ghi mới**; tin khác trước Boot → `CALLERROR SecurityError`.
-- **NFR:** khoảng nhịp tim là tham số cấu hình, không ghi cứng. **DoD:** test gửi hai lần cho kết quả giống một lần.
+- **AC:** trụ đã đăng ký → lưu thông tin + `Accepted` + giờ máy chủ + nhịp tim + trực tuyến; trạm bị khoá (`locked_at`) → `Rejected`, không coi là trực tuyến; Boot lần hai cùng kết nối → cập nhật, **không tạo bản ghi mới**; tin khác trước Boot → `CALLERROR SecurityError`.
+- **Bổ sung theo Q1:** **T-16b** `PATCH /api/admin/stations/:id/lock` (chỉ `ADMIN`, bật/tắt, ghi `locked_by`/`locked_at`, dùng `secureRouter()`) + test Boot bị `Rejected` khi khoá và `Accepted` sau khi mở khoá; khoảng 2 giờ, nằm trong 2 SP của S-08.
+- **NFR:** khoảng nhịp tim là tham số cấu hình (`OCPP_HEARTBEAT_INTERVAL`, **mặc định 60 giây**, test đặt 5 — Q2 đã chốt), không ghi cứng; lưu vào `charge_points.heartbeat_interval` cho từng trụ. **DoD:** test gửi hai lần cho kết quả giống một lần.
 
 ### S-09 · GYM-35 · 1 SP · Nhịp tim và thời điểm liên lạc cuối
 - **Làn:** L3 · **Bắt đầu / Xong:** T5 sáng (nửa ngày) · **Cổng:** mở khoá S-10 và S-12.
@@ -120,7 +130,7 @@ Quyết định thiết kế cần chốt: **“trạm bị khoá bởi quản t
 - **Hiện trạng:** **T-24 (lưới UI) cơ bản có** từ PR #41 (dashboard, bảng, bản đồ, drawer). Còn:
   - **T-23** `GET /api/…` trả **cây trạm–trụ–đầu nối một truy vấn**, lọc quyền bằng `scopeByOwner`, kèm trạng thái đầu nối, `last_seen_at` và cờ ngoại tuyến (suy từ `last_seen_at`, xem S-12); < 200 ms với 50 trụ; **không** lặp truy vấn con.
   - **T-24 phần còn thiếu:** ô theo **đầu nối** và hiện “liên lạc cuối” của trụ ngoại tuyến.
-  - **T-25** SSE: endpoint đẩy sự kiện; lọc theo quyền **từng kết nối** (chủ trạm chỉ nhận trạm của mình); tin nhịp giữ kết nối định kỳ (proxy Render cắt kết nối im lặng); phía trình duyệt: thay polling trong `frontend/services/realtime.js` (giữ cùng hàm `subscribe`), tự nối lại và **tải lại snapshot đầy đủ** sau khi nối lại.
+  - **T-25** SSE: endpoint đẩy sự kiện; lọc theo quyền **từng kết nối** (chủ trạm chỉ nhận trạm của mình); **Q3 đã chốt: dùng SSE** (`EventSource` cùng origin, dùng cookie sẵn có, không thêm thư viện): gửi dòng comment giữ kết nối mỗi ~20 giây (proxy cắt kết nối im lặng), header `Cache-Control: no-cache` + `X-Accel-Buffering: no`, **kiểm tra middleware nén không gom bộ đệm** (nguyên nhân hay gặp làm trễ > 1 giây); giữ polling làm phương án dự phòng khi `EventSource` lỗi liên tục; phía trình duyệt: thay polling trong `frontend/services/realtime.js` (giữ cùng hàm `subscribe`), tự nối lại và **tải lại snapshot đầy đủ** sau khi nối lại.
 - **AC:** 20 trụ hiện đủ < 2 giây; đổi trạng thái → màn hình đổi **≤ 1 giây** không tải lại; trụ ngoại tuyến hiện rõ + liên lạc cuối; chủ trạm chỉ thấy trụ của mình; đứt kết nối đẩy → tự nối lại.
 - **Rủi ro:** SSE với `EventSource` dùng cookie cùng origin OK; nhớ tắt buffering nếu có proxy. Bộ phát sự kiện trong bộ nhớ chấp nhận được (một tiến trình).
 
@@ -152,7 +162,7 @@ Quyết định thiết kế cần chốt: **“trạm bị khoá bởi quản t
 
 | Mốc | Điều kiện đạt | Nếu chưa đạt |
 |---|---|---|
-| **T3 17:00** | S-06 đã merge; staging Render chạy; migration lên `main` | Báo Scrum Master ngay; Phúc gỡ chặn quyền Render/CI |
+| **T3 17:00** | S-06 đã merge; staging chạy (Q4); migration lên `main` | Báo Scrum Master ngay; Phúc gỡ chặn quyền staging/CI |
 | **T4 14:00** | S-07 merge (khung + lỗi) | Chuỗi trễ → **bỏ S-16** khỏi cam kết |
 | **T4 hết ngày** | **S-08 merge** (cổng của 6 story) | Nếu trễ sang T5 sáng: S-09/S-14/S-15/S-10 dồn về T5–T6 → **dời S-15** sang đầu Sprint 3 (xin PO) |
 | **T5 12:00** | S-09 merge, S-10 đã tích hợp, S-12 đang chạy | Nếu S-10 chưa xong: giảm phạm vi S-11 xuống polling nhanh (2 giây) + báo PO; **S-14 dời cuối cùng** |
@@ -163,15 +173,37 @@ Thứ tự cắt (đã thống nhất ở phương án A): **S-16 → S-15 → S
 
 ## 6. Câu hỏi cần trả lời ngay (chặn việc nếu không có đáp án)
 
-- **Q1 (PO/trưởng nhóm):** “Trạm bị khoá bởi quản trị viên” (S-08) là gì? Hiện chỉ có `ACTIVE/INACTIVE/MAINTENANCE`. Đề xuất: coi `INACTIVE` và `MAINTENANCE` **vẫn cho kết nối và Boot `Accepted`** (S-06 AC4) nhưng `Authorize` → `Blocked` (S-15 AC5); “khoá bởi admin” = thêm cột `locked`/trạng thái mới, hoặc bỏ AC này khỏi Sprint 2. *Cần chốt trước khi viết T-16.*
-- **Q2:** Khoảng nhịp tim mặc định lấy giá trị nào (K-01 dùng 300 giây; test dùng 5 giây)? Đề xuất biến `OCPP_HEARTBEAT_INTERVAL` mặc định 300, test 5.
-- **Q3:** SSE hay tiếp tục polling cho S-11? AC yêu cầu ≤ 1 giây → **cần SSE**; xác nhận nhóm chấp nhận (không cần thư viện, dùng chuẩn trình duyệt).
-- **Q4:** Ai giữ quyền đăng ký Render và biến môi trường (`ALLOW_DEMO_SEED`, mật khẩu)? Không có → S-06…S-12 không thể “AC pass trên staging”.
-- **Q5:** Ai phụ trách từng làn? (điền vào bảng mục 2 sau họp).
+**Đã chốt (Scrum Master, 30/9; PO/trưởng nhóm kỹ thuật xác nhận lại ở buổi họp nếu có ý kiến khác):**
+
+- **Q1 — “khoá bởi quản trị viên”:** cột `stations.locked_at` (+ `locked_by`), không thêm trạng thái vào `status`; bảng quyết định ở mục 4.0. Kèm endpoint admin `PATCH /api/admin/stations/:id/lock` (T-16b). Nếu PO từ chối thêm việc thì **bỏ S-08 AC2 khỏi Sprint 2** và ghi sang Sprint 3; không giữ AC mà không có cách đặt trạng thái “khoá”. Migration `locked_at` nằm trong bộ `006…` đầu tiên, phải có trước T-16.
+- **Q2 — nhịp tim:** `OCPP_HEARTBEAT_INTERVAL` mặc định **60 giây** (không phải 300 như đề xuất ban đầu), test đặt 5. Lý do: ngoại tuyến suy ra khi `last_seen_at` quá 2 × interval (S-12); 300 giây thì trụ rớt 10 phút mới hiện ngoại tuyến, quá chậm cho demo; 60 giây là 2 phút, tải 20 trụ chỉ ~20 tin/phút. Lưu theo từng trụ; mọi tin nhắn đều cập nhật `last_seen_at` (S-09 AC2) để trụ thật phớt lờ `interval` không bị báo ngoại tuyến nhầm (thử lại ở S-21 với thiết bị không do nhóm viết). Chỉ là biến môi trường nên đổi được không cần sửa code.
+- **Q3 — S-11:** dùng **SSE** (AC ≤ 1 giây, polling hiện 15 giây tại `frontend/services/realtime.js`). Chi tiết kỹ thuật ở T-25. Bộ phát sự kiện trong bộ nhớ đúng khi chạy **một tiến trình**: ghi vào README, giữ một instance.
+
+**Q4 — nơi đặt staging và ai giữ biến môi trường (đề xuất, chờ Phúc + trưởng nhóm kỹ thuật chốt):**
+
+| | Render (gói miễn phí) | Homelab (laptop cũ Linux chạy 24/7) |
+|---|---|---|
+| Ngủ khi rảnh | Có, sau 15 phút không có yêu cầu; WebSocket của trụ bị ngắt, khởi động lại ~1 phút | Không |
+| Database | Postgres miễn phí **hết hạn sau 30 ngày** (+14 ngày ân hạn) | Volume Docker, không hết hạn; cần tự sao lưu |
+| Chi phí | 0 (gói trả phí mới ổn định) | 0 (điện + mạng nhà) |
+| Đường ra Internet | Có sẵn HTTPS/WSS | Cần cấu hình (xem dưới) |
+| Rủi ro | Mất DB sau 30 ngày; demo OCPP không ổn định | Mất điện/mạng nhà, phụ thuộc một người, an ninh do nhóm tự lo |
+
+**Khuyến nghị:** homelab làm staging chính cho Sprint 2 (S-13 yêu cầu ≥ 50 kết nối giữ ≥ 10 phút — gói Render miễn phí không đảm bảo được), Render giữ làm phương án dự phòng/demo công khai. Điều kiện bắt buộc trước khi mở ra Internet:
+
+1. **Không mở cổng Postgres.** Chỉ để lộ ứng dụng (cổng 3000) qua tunnel HTTPS/WSS (ví dụ Cloudflare Tunnel, không cần mở cổng router và tránh được CGNAT của nhà mạng; **cần thử** WebSocket qua tunnel trước T3 chiều). `run.py` mặc định gắn `127.0.0.1`, đúng ý; tunnel chạy trên cùng máy.
+2. **`run.py` hiện chưa dùng được cho staging công khai** (đã kiểm tra mã): (a) mỗi lần chạy ghi đè `APP_ORIGIN` thành `http://localhost:<cổng>` (`run.py:294`), làm mọi thao tác ghi bị 403 khi truy cập bằng tên miền công khai; (b) `is_local_only` chỉ nhìn `BIND_HOST`, nên qua tunnel máy vẫn bị coi là “cục bộ” và có thể tạo tài khoản yếu `admin`/`admin` trên máy đang công khai; (c) cookie chỉ có `Secure` khi `NODE_ENV=production` (`auth.routes.js:12`), Compose chưa đặt. **Việc thêm cho L7 (~0,5 ngày, trước khi mở Internet):** chế độ `python run.py --public-url https://…` (giữ `APP_ORIGIN` đúng, luôn mật khẩu admin ngẫu nhiên, `NODE_ENV=production`, không bật `ALLOW_WEAK_ADMIN_PASSWORD`). Chưa làm trong phạm vi tài liệu này.
+3. **Bí mật:** `ADMIN_PASSWORD`, `DEMO_PASSWORD`, `JWT_SECRET` chỉ nằm trong `.env` trên máy chủ (không vào Git, chat nhóm, ảnh chụp màn hình). `ALLOW_DEMO_SEED=1` chỉ trên staging.
+4. **Vận hành máy chủ:** tường lửa chỉ cho SSH từ IP tin cậy (khoá SSH, tắt đăng nhập mật khẩu), bật cập nhật bảo mật tự động, sao lưu `pg_dump` định kỳ ra ổ khác, `restart: unless-stopped` để tự dậy sau mất điện, ghi ai là người giữ máy khi Phúc vắng.
+5. **Triển khai:** ban đầu thủ công (`git pull` rồi `python run.py`); tự động hoá (runner tự host của GitHub Actions) chỉ cân nhắc sau, vì runner trên máy nhà chạy mã của PR nên chỉ bật với repo riêng tư và nhánh `main`.
+
+Người giữ tài khoản/quyền staging (Render hoặc homelab): **Phúc**, trưởng nhóm kỹ thuật làm dự phòng. Hạn chót chốt phương án: **17:00 hôm nay**; không có staging thì S-06…S-12 không thể “AC pass trên staging”.
+
+- **Q5:** Ai phụ trách từng làn? (điền vào bảng mục 2 sau họp). **Lịch chi tiết do Scrum Master điều phối**: các mốc ngày trong tài liệu là đề xuất, không phải hạn cứng của tài liệu này.
 
 ## 7. Kiểm tra Definition of Done cuối sprint (mỗi story)
 
 - [ ] Code review bởi người khác · [ ] unit + acceptance theo AC · [ ] test **gửi hai lần = một lần** (mọi story chạm OCPP)
 - [ ] CI xanh (lint, test, quét phụ thuộc) · [ ] **AC pass trên staging với trụ ảo chạy thật**
-- [ ] Không log mã thẻ đầy đủ/định danh cá nhân · [ ] README cập nhật (registry trong bộ nhớ = giới hạn một tiến trình; biến `OCPP_HEARTBEAT_INTERVAL`…)
+- [ ] Không log mã thẻ đầy đủ/định danh cá nhân · [ ] README cập nhật (registry trong bộ nhớ = giới hạn một tiến trình; biến `OCPP_HEARTBEAT_INTERVAL` mặc định 60, ghi rõ ngoại tuyến hiện sau 2 × giá trị này…)
 - [ ] Jira: subtask (T-xx) đóng, story chuyển Done kèm liên kết PR
