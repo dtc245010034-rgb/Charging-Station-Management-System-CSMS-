@@ -3,13 +3,27 @@ const { WebSocketServer } = require('ws');
 const env = require('./config/env');
 const app = require('./app');
 const { migrate } = require('./db/migrate');
+const { pool } = require('./db/pool');
 const connections = require('./modules/charge-points/connection-registry');
+const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
 
 const server = http.createServer(app);
 const now = () => new Date().toISOString();
 
-const wss = new WebSocketServer({ noServer: true });
-server.on('upgrade', (request, socket, head) => { const match = request.url.match(/^\/ocpp\/([^/?]+)/); if (!match) return socket.destroy(); wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, decodeURIComponent(match[1]))); });
+const wss = new WebSocketServer({
+	noServer: true,
+	handleProtocols: (protocols) => protocols.has('ocpp1.6') ? 'ocpp1.6' : false,
+});
+server.on('upgrade', createOcppUpgradeHandler({
+	wss,
+	lookupChargePoint: async (code) => {
+		const result = await pool.query(
+			'SELECT cp.id, cp.code, s.status AS station_status FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.code = $1 LIMIT 1',
+			[code]
+		);
+		return result.rows[0] || null;
+	},
+}));
 wss.on('connection', (ws, code) => {
 	connections.connect(code);
 	ws.on('close', () => connections.disconnect(code));
