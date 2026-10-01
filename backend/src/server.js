@@ -25,8 +25,8 @@ server.on('upgrade', createOcppUpgradeHandler({
 	},
 }));
 wss.on('connection', (ws, code) => {
-	connections.connect(code);
-	ws.on('close', () => connections.disconnect(code));
+	connections.connect(code, ws);
+	ws.on('close', () => connections.disconnect(code, ws));
 	ws.send(JSON.stringify([3, `welcome-${Date.now()}`, { chargePoint: code, status: 'Connected' }]));
 	ws.on('message', (raw) => { try { const [type, id, action, payload] = JSON.parse(raw.toString()); const responses = { BootNotification: { status: 'Accepted', currentTime: now(), interval: 60 }, Heartbeat: { currentTime: now() }, StatusNotification: { status: 'Accepted' }, Authorize: { idTagInfo: { status: payload?.idTag ? 'Accepted' : 'Invalid' } } }; ws.send(JSON.stringify(type === 2 && responses[action] ? [3, id, responses[action]] : [4, id, 'NotSupported', {}])); } catch { ws.send(JSON.stringify([4, null, 'FormatViolation', {}])); } });
 });
