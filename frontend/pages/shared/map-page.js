@@ -17,9 +17,11 @@ export function render(ctx) {
       });
     },
   });
+  map.el.classList.add('map-card--full');
   ctx.root.append(
     h('div', { class: 'page-head' }, h('div', {}, h('h1', { class: 'page-head__title' }, 'Bản đồ'), h('p', { class: 'page-head__sub' }, 'Vị trí và trạng thái các trạm sạc. Bấm vào một trạm để xem chi tiết.'))),
     map.el);
   setTimeout(() => map.invalidate(), 50);
+  setTimeout(() => map.invalidate(), 200);
   return () => { map.destroy(); fleet.stop(); drawer?.close(); };
 }
