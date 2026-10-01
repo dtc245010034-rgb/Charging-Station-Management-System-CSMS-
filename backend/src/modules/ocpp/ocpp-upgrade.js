@@ -1,4 +1,5 @@
 const SUPPORTED_PROTOCOL = 'ocpp1.6';
+const CHARGE_POINT_CODE_PATTERN = /^[A-Z0-9_-]{1,50}$/;
 
 function rejectHandshake(socket, statusCode, statusText) {
 	if (socket.destroyed) return;
@@ -20,7 +21,11 @@ function createOcppUpgradeHandler({ wss, lookupChargePoint, logWarning = console
 		}
 
 		const match = pathname.match(/^\/ocpp\/([^/]+)$/);
-		if (!match) return socket.destroy();
+		if (!match) {
+			if (pathname.startsWith('/ocpp/')) rejectHandshake(socket, 400, 'Bad Request');
+			else socket.destroy();
+			return;
+		}
 
 		let code;
 		try {
@@ -29,7 +34,7 @@ function createOcppUpgradeHandler({ wss, lookupChargePoint, logWarning = console
 			rejectHandshake(socket, 400, 'Bad Request');
 			return;
 		}
-		if (!code || code.includes('/')) {
+		if (!CHARGE_POINT_CODE_PATTERN.test(code)) {
 			rejectHandshake(socket, 400, 'Bad Request');
 			return;
 		}

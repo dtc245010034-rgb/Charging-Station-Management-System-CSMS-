@@ -142,7 +142,7 @@ python test.py --verbose              # in toàn bộ output thay vì bản tóm
 - **`# fail 0` là điều kiện để merge** — CI trên mỗi Pull Request chạy lint + test + quét phụ thuộc.
 - Lần đầu chậm (tải Node 22 và cài thư viện, vài phút); các lần sau nhanh hơn.
 - Muốn chạy bằng Node trên máy (cần Node ≥ 22.7): `docker compose up -d db_test`, rồi trong `backend/`: `npm ci && npm run lint && npm test`; test chỉ chạy trên DB có tên kết thúc `_test`.
-- Ca kiểm thử và báo cáo QA: `docs/testing/`, `docs/stories/S-xx.md`.
+- Ca kiểm thử và báo cáo QA: `docs/testing/`, `docs/testing/stories/S-xx.md`.
 
 ---
 
@@ -277,7 +277,7 @@ docs/OPERATIONS.md        sổ tay vận hành: build, chạy, dừng, DB, stagi
 docs/SPRINT_STATUS.md     tình trạng dự án và sprint đầy đủ
 docs/design/              đặc tả giao diện đã duyệt, ảnh tham chiếu, ảnh chụp hiện có
 docs/spikes/              spike (K-01 có mã chạy lại được trong k01/)
-docs/testing/, docs/stories/, docs/integration/   hồ sơ QA
+docs/testing/, docs/testing/stories/, docs/testing/integration/   hồ sơ QA
 render.yaml               blueprint staging trên Render
 run.py / test.py          chạy dự án bằng Docker / chạy toàn bộ test (mục 1, 3); tools/ chứa test của chính run.py
 ```
@@ -292,6 +292,6 @@ run.py / test.py          chạy dự án bằng Docker / chạy toàn bộ test
 - **Chi tiết backend** (API, phân quyền, khoá đăng nhập): [`backend/README.md`](backend/README.md).
 - **Thiết kế giao diện**: [`docs/design/`](docs/design/) (đặc tả, ảnh chụp, các quyết định lệch đặc tả).
 - **Spike OCPP**: [`docs/spikes/K-01-ocpp-simulator.md`](docs/spikes/K-01-ocpp-simulator.md).
-- **Kiểm thử/QA**: `docs/README.md` (điểm vào), `docs/testing/`, `docs/stories/`.
+- **Kiểm thử/QA**: [`docs/README.md`](docs/README.md) (điểm vào), `docs/testing/`, `docs/testing/stories/`.
 - Backlog dự án: file ghim trong nhóm Zalo của Khối 8 — nguồn sự thật về phạm vi và AC.
 - Jira: bảng **GYM** (Team-CodeGym).

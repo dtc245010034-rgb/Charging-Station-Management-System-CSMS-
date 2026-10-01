@@ -11,12 +11,14 @@ describe('OCPP duplicate charge-point connections', () => {
 	let wss;
 	let url;
 	let chargePointCode;
+	let lookupCalls = 0;
 	const clients = new Set();
 
 	function createSimulator(id) {
 		const ws = new WebSocket(`${url}/ocpp/${encodeURIComponent(chargePointCode)}`, ['ocpp1.6']);
 		const bufferedFrames = [];
 		const waiters = [];
+		const closed = new Promise((resolve) => ws.once('close', (...args) => resolve(args)));
 		clients.add(ws);
 		ws.on('message', (raw) => {
 			const frame = JSON.parse(raw.toString());
@@ -29,6 +31,7 @@ describe('OCPP duplicate charge-point connections', () => {
 		return {
 			id,
 			ws,
+			closed,
 			waitForFrame(predicate) {
 				const frameIndex = bufferedFrames.findIndex(predicate);
 				if (frameIndex !== -1) return Promise.resolve(bufferedFrames.splice(frameIndex, 1)[0]);
@@ -37,16 +40,40 @@ describe('OCPP duplicate charge-point connections', () => {
 		};
 	}
 
-	async function connectSimulator(id) {
-		const connection = once(wss, 'connection');
-		const simulator = createSimulator(id);
-		await new Promise((resolve, reject) => {
-			simulator.ws.once('open', resolve);
-			simulator.ws.once('error', reject);
+	function rejectCode(code) {
+		return new Promise((resolve, reject) => {
+			const ws = new WebSocket(`${url}/ocpp/${encodeURIComponent(code)}`, ['ocpp1.6']);
+			clients.add(ws);
+			ws.once('unexpected-response', (request, response) => {
+				response.resume();
+				resolve({ ws, statusCode: response.statusCode });
+			});
+			ws.once('error', reject);
 		});
-		const [serverSocket] = await connection;
-		await simulator.waitForFrame((frame) => frame[0] === 3 && frame[2]?.status === 'Connected');
-		return { simulator, serverSocket };
+	}
+
+	async function connectSimulators(ids) {
+		const serverSockets = new Promise((resolve) => {
+			const sockets = [];
+			const onConnection = (ws) => {
+				sockets.push(ws);
+				if (sockets.length === ids.length) {
+					wss.off('connection', onConnection);
+					resolve(sockets);
+				}
+			};
+			wss.on('connection', onConnection);
+		});
+		const simulators = ids.map(createSimulator);
+		await Promise.all(simulators.map(({ ws }) => new Promise((resolve, reject) => {
+			ws.once('open', resolve);
+			ws.once('error', reject);
+		})));
+		const acceptedSockets = await serverSockets;
+		await Promise.all(simulators.map((simulator) => simulator.waitForFrame(
+			(frame) => frame[0] === 3 && frame[2]?.status === 'Connected'
+		)));
+		return { simulators, acceptedSockets };
 	}
 
 	async function closeClient(ws) {
@@ -81,9 +108,10 @@ describe('OCPP duplicate charge-point connections', () => {
 		});
 		server.on('upgrade', createOcppUpgradeHandler({
 			wss,
-			lookupChargePoint: async (code) => code === chargePointCode
-				? { id: 1, code, station_status: 'INACTIVE' }
-				: null,
+			lookupChargePoint: async (code) => {
+				lookupCalls += 1;
+				return code === chargePointCode ? { id: 1, code, station_status: 'INACTIVE' } : null;
+			},
 		}));
 		server.listen(0, '127.0.0.1');
 		await once(server, 'listening');
@@ -97,21 +125,32 @@ describe('OCPP duplicate charge-point connections', () => {
 		if (server?.listening) await new Promise((resolve) => server.close(resolve));
 	});
 
-	it('closes the replaced simulator and continues handling messages on the new connection', async (t) => {
-		const first = await connectSimulator('simulator-1');
-		const firstClosed = once(first.simulator.ws, 'close');
-		const second = await connectSimulator('simulator-2');
-		const [closeCode, closeReason] = await firstClosed;
+	it('rejects invalid, null-byte, and overlong codes before charge-point lookup', async () => {
+		const lookupCount = lookupCalls;
+		for (const code of ['CP-DUP.INVALID', 'CP-DUP\0INVALID', 'A'.repeat(51), 'CP-DUP/INVALID']) {
+			const result = await rejectCode(code);
+			assert.strictEqual(result.statusCode, 400, `Expected ${JSON.stringify(code)} to be rejected`);
+		}
+		assert.strictEqual(lookupCalls, lookupCount);
+	});
+
+	it('S-13: replaces one of two near-simultaneous connections and handles messages on the survivor', async (t) => {
+		const { simulators, acceptedSockets } = await connectSimulators(['simulator-1', 'simulator-2']);
+		const closed = await Promise.race(simulators.map((simulator) => simulator.closed.then((event) => ({ simulator, event }))));
+		const survivor = simulators.find((simulator) => simulator !== closed.simulator);
+		const [closeCode, closeReason] = closed.event;
 
 		assert.strictEqual(closeCode, 1000);
 		assert.strictEqual(closeReason.toString(), '');
-		assert.strictEqual(connections.getConnection(chargePointCode), second.serverSocket);
-		assert.notStrictEqual(connections.getConnection(chargePointCode), first.serverSocket);
+		assert.strictEqual(survivor.ws.readyState, WebSocket.OPEN);
+		assert.strictEqual(acceptedSockets.length, 2);
+		assert.strictEqual(connections.getConnection(chargePointCode), acceptedSockets.find((socket) => socket.readyState === WebSocket.OPEN));
 
-		const heartbeatResponse = second.simulator.waitForFrame((frame) => frame[0] === 3 && frame[1] === 'heartbeat-2');
-		second.simulator.ws.send(JSON.stringify([2, 'heartbeat-2', 'Heartbeat', {}]));
+		const heartbeatId = 'heartbeat-survivor';
+		const heartbeatResponse = survivor.waitForFrame((frame) => frame[0] === 3 && frame[1] === heartbeatId);
+		survivor.ws.send(JSON.stringify([2, heartbeatId, 'Heartbeat', {}]));
 		const response = await heartbeatResponse;
 		assert.ok(Number.isFinite(Date.parse(response[2].currentTime)));
-		t.diagnostic(`[T-12] ${chargePointCode}: ${first.simulator.id} replaced by ${second.simulator.id}; old close=${closeCode}/${JSON.stringify(closeReason.toString())}; new heartbeat processed.`);
+		t.diagnostic(`[S-13] ${chargePointCode}: ${closed.simulator.id} closed; ${survivor.id} remains active and processed Heartbeat.`);
 	});
 });
