@@ -597,12 +597,15 @@ Khi kiểm định chất lượng ứng dụng web frontend tái cấu trúc (`
 Khi kiểm thử kết nối cổng sạc ngoại vi:
 1. **Bắt tay kết nối (Handshake Upgrade)**:
    - Endpoint: `ws://<host>:<port>/ocpp/<charge_point_code>`.
-   - Kiểm tra gói tin phản hồi chào mừng ban đầu: `[3, "<messageId>", {"chargePoint": "...", "status": "Connected"}]`.
-2. **Xử lý gói tin rác (FormatViolation)**:
-   - Gửi payload không đúng JSON hoặc sai định dạng mảng RPC $\rightarrow$ Máy chủ phải phản hồi mã lỗi `[4, null, "FormatViolation", {}]`, không làm sập tiến trình Node.js.
+   - Trụ đã đăng ký với subprotocol `ocpp1.6` được chấp nhận; mã chưa đăng ký hoặc subprotocol khác bị từ chối trong HTTP handshake.
+   - Máy chủ không gửi frame chào mừng ngoài chuẩn; chỉ phản hồi sau khi nhận CALL.
+2. **Xử lý frame sai định dạng**:
+   - Gửi JSON sai cú pháp hoặc CALL sai cấu trúc $\rightarrow$ máy chủ trả CALLERROR dạng `[4, "<messageId-or-empty>", "FormationViolation", "<description>", {}]`.
+   - Message type không hỗ trợ trả CALLERROR `ProtocolError`; action chưa đăng ký trả `NotImplemented` và được ghi log.
+   - Socket vẫn mở sau lỗi và phải xử lý được CALL hợp lệ tiếp theo. Frame CALLERROR sai cấu trúc được ghi log nhưng không trả CALLERROR lồng nhau.
 3. **Xác minh an ninh và quản trị trạng thái**:
-   - Kiểm tra rào cản kết nối ẩn danh (Security Defect `SEC-WS-001`): Kẻ tấn công mở kết nối không chứng thực làm treo trạng thái trụ.
-   - Ngắt kết nối socket $\rightarrow$ Bộ đếm `connections.disconnect(code)` phải giải phóng kết nối tức thì.
+   - Mã trụ không đăng ký không được nâng cấp WebSocket; thử kết nối trùng mã phải đóng socket cũ, socket mới tiếp tục hoạt động.
+   - Ngắt socket $\rightarrow$ registry giải phóng kết nối hiện hành mà không xoá nhầm kết nối mới thay thế.
 
 ## 11. QUY TẮC BẰNG CHỨNG THỰC TẾ (EVIDENCE RULES)
 
