@@ -31,9 +31,10 @@ export function render(ctx) {
 
   ctx.root.append(
     hero.el, kpis.el,
-    h('div', { class: 'dash-main' }, map.el,
+    h('div', { class: 'dash-main dash-main--fill' }, map.el,
       h('div', { class: 'stack' }, status.el,
         canWrite && h('a', { class: 'btn btn--primary', href: routeFor(ctx.workspace, 'stations') }, icon('station'), 'Quản lý trạm và trụ sạc'))));
   setTimeout(() => map.invalidate(), 50);
+  setTimeout(() => map.invalidate(), 200);
   return () => { hero.destroy(); kpis.destroy(); status.destroy(); map.destroy(); fleet.stop(); drawer?.close(); };
 }
