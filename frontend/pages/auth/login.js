@@ -1,5 +1,5 @@
 import '../../app/theme.js';
-import { getTheme, toggleTheme, onThemeChange } from '../../app/theme.js';
+import { getTheme, toggleTheme, setTheme, onThemeChange } from '../../app/theme.js';
 import { login, register, me } from '../../app/auth.js';
 import { goHome } from '../../app/workspace.js';
 import { validateLogin, validateRegister } from '../../app/validate.js';
@@ -13,14 +13,23 @@ const panels = document.querySelectorAll('[data-form]');
 for (const slot of document.querySelectorAll('[data-icon]')) slot.replaceChildren(icon(slot.dataset.icon, { size: slot.classList.contains('brand__mark') ? 20 : 18 }));
 
 const themeBtn = get('themeToggle');
+const themeButtons = document.querySelectorAll('.theme button');
 const paintTheme = () => {
   const light = getTheme() === 'light';
-  themeBtn.replaceChildren(icon(light ? 'moon' : 'sun'));
-  themeBtn.setAttribute('aria-label', light ? 'Chuyển sang giao diện tối' : 'Chuyển sang giao diện sáng');
+  if (themeBtn) {
+    themeBtn.replaceChildren(icon(light ? 'moon' : 'sun'));
+    themeBtn.setAttribute('aria-label', light ? 'Chuyển sang giao diện tối' : 'Chuyển sang giao diện sáng');
+  }
+  for (const b of themeButtons) {
+    b.classList.toggle('on', (b.dataset.t === 'light') === light);
+  }
 };
 paintTheme();
 onThemeChange(paintTheme);
-themeBtn.addEventListener('click', toggleTheme);
+if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+for (const b of themeButtons) {
+  b.addEventListener('click', () => setTheme(b.dataset.t));
+}
 
 const showAlert = (message) => { alertBox.textContent = message; alertBox.hidden = false; };
 const hideAlert = () => { alertBox.hidden = true; alertBox.textContent = ''; };
@@ -40,19 +49,39 @@ function showFieldErrors(ids, errors) {
 
 function switchTab(target) {
   hideAlert();
-  for (const tab of tabs) tab.setAttribute('aria-selected', String(tab.dataset.tab === target));
+  for (const tab of tabs) {
+    const isSelected = tab.dataset.tab === target || tab.dataset.go === target;
+    tab.setAttribute('aria-selected', String(isSelected));
+    tab.classList.toggle('on', isSelected);
+  }
   for (const panel of panels) panel.hidden = panel.dataset.form !== target;
 }
-for (const tab of tabs) tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+for (const tab of tabs) {
+  tab.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchTab(tab.dataset.tab || tab.dataset.go);
+  });
+}
+for (const el of document.querySelectorAll('[data-go]')) {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchTab(el.dataset.go);
+  });
+}
 
 for (const toggle of document.querySelectorAll('.password-toggle')) {
-  const input = toggle.previousElementSibling;
-  toggle.textContent = 'Hiện';
-  toggle.classList.add('input-group__btn--text');
+  const input = toggle.parentElement.querySelector('input');
+  const span = toggle.querySelector('span');
+  if (span) span.textContent = 'Hiện';
+  else {
+    toggle.textContent = 'Hiện';
+    toggle.classList.add('input-group__btn--text');
+  }
   toggle.addEventListener('click', () => {
     const visible = input.type === 'text';
     input.type = visible ? 'password' : 'text';
-    toggle.textContent = visible ? 'Hiện' : 'Ẩn';
+    if (span) span.textContent = visible ? 'Hiện' : 'Ẩn';
+    else toggle.textContent = visible ? 'Hiện' : 'Ẩn';
     toggle.setAttribute('aria-pressed', String(!visible));
     toggle.setAttribute('aria-label', visible ? 'Hiện mật khẩu' : 'Ẩn mật khẩu');
   });

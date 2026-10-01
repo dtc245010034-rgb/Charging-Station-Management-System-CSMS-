@@ -245,90 +245,115 @@
       </aside>
 
       <!-- CỘT PHẢI: KHU VỰC AUTHENTICATION (LOGIN / REGISTER) -->
-      <main class="auth-panel">
-        <button class="btn btn--ghost btn--icon auth-panel__theme" id="themeToggle" type="button" aria-label="Chuyển đổi giao diện sáng/tối"></button>
-
-        <div class="auth-card">
-          <!-- Mobile Brand Title (chỉ hiển thị khi màn hình hẹp ẩn cột bên trái) -->
-          <div class="auth-mobile-header">
-            <div class="brand" style="padding: 0">
-              <span class="brand__mark" data-icon="bolt"></span>
-              CSMS
+      <section class="panel">
+        <div class="top">
+          <div class="secure"><i><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2ed3a0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></i>Kết nối bảo mật</div>
+          <div class="top-r">
+            <a href="#" style="color:inherit;text-decoration:none">Trung tâm hỗ trợ</a>
+            <div class="theme" role="group" aria-label="Giao diện">
+              <button class="on" type="button" data-t="light">☀ Sáng</button>
+              <button type="button" data-t="dark">☾ Tối</button>
             </div>
-            <p class="auth-card__sub">Hệ thống Quản lý &amp; Vận hành Trạm sạc Xe điện</p>
           </div>
-
-          <!-- TABS ĐĂNG NHẬP / TẠO TÀI KHOẢN -->
-          <div class="tabs auth-tabs" role="tablist" aria-label="Đăng nhập hoặc tạo tài khoản">
-            <button class="tabs__btn" type="button" role="tab" id="tab-login" aria-controls="panel-login" data-tab="login" aria-selected="true">Đăng nhập</button>
-            <button class="tabs__btn" type="button" role="tab" id="tab-register" aria-controls="panel-register" data-tab="register" aria-selected="false">Tạo tài khoản</button>
-          </div>
-
-          <!-- THÔNG BÁO LỖI CHUNG (401, 429, MẠNG) -->
-          <div id="authAlert" class="form-alert" role="alert" hidden></div>
-
-          <!-- PANEL ĐĂNG NHẬP -->
-          <section id="panel-login" role="tabpanel" aria-labelledby="tab-login" data-form="login" class="stack">
-            <div class="auth-card__heading">
-              <h2>Chào mừng trở lại</h2>
-              <p class="auth-card__sub">Đăng nhập để tiếp tục vào không gian vận hành của bạn.</p>
-            </div>
-            <form class="stack" id="loginForm" novalidate>
-              <label class="field">
-                <span class="field__label">Email</span>
-                <input class="input" type="text" id="loginEmail" placeholder="ten@congty.vn" required autocomplete="username" />
-                <p class="field__error" data-error-for="loginEmail" role="alert" hidden></p>
-              </label>
-              <label class="field">
-                <span class="field__label">Mật khẩu</span>
-                <span class="input-group">
-                  <input class="input" type="password" id="loginPassword" required autocomplete="current-password" />
-                  <button class="input-group__btn password-toggle" type="button" aria-label="Hiện mật khẩu" aria-pressed="false"></button>
-                </span>
-                <p class="field__error" data-error-for="loginPassword" role="alert" hidden></p>
-              </label>
-              <button class="btn btn--primary btn--block" id="loginSubmitBtn" type="submit">Đăng nhập</button>
-            </form>
-          </section>
-
-          <!-- PANEL ĐĂNG KÝ -->
-          <section id="panel-register" role="tabpanel" aria-labelledby="tab-register" data-form="register" class="stack" hidden>
-            <div class="auth-card__heading">
-              <h2>Tạo tài khoản</h2>
-              <p class="auth-card__sub">Đăng ký để bắt đầu sử dụng nền tảng.</p>
-            </div>
-
-            <div class="auth-role-notice">
-              <span class="dot dot--ready" style="margin-top: 3px;"></span>
-              <div>
-                Tài khoản đăng ký công khai được phân quyền là <strong>Tài xế (Driver)</strong>. Các vai trò Quản trị viên, Chủ trạm, Vận hành và Kế toán do Quản trị viên khởi tạo trong hệ thống.
-              </div>
-            </div>
-
-            <form class="stack" id="registerForm" novalidate>
-              <label class="field">
-                <span class="field__label">Họ và tên</span>
-                <input class="input" type="text" id="regName" placeholder="Nguyễn Văn A" required autocomplete="name" />
-                <p class="field__error" data-error-for="regName" role="alert" hidden></p>
-              </label>
-              <label class="field">
-                <span class="field__label">Email</span>
-                <input class="input" type="email" id="regEmail" placeholder="ten@congty.vn" required autocomplete="email" />
-                <p class="field__error" data-error-for="regEmail" role="alert" hidden></p>
-              </label>
-              <label class="field">
-                <span class="field__label">Mật khẩu</span>
-                <span class="input-group">
-                  <input class="input" type="password" id="regPassword" placeholder="Tối thiểu 8 ký tự" required minlength="8" autocomplete="new-password" />
-                  <button class="input-group__btn password-toggle" type="button" aria-label="Hiện mật khẩu" aria-pressed="false"></button>
-                </span>
-                <p class="field__error" data-error-for="regPassword" role="alert" hidden></p>
-              </label>
-              <button class="btn btn--primary btn--block" id="regSubmitBtn" type="submit">Tạo tài khoản</button>
-            </form>
-          </section>
         </div>
-      </main>
+
+        <div class="center">
+          <div class="card">
+            <!-- Mobile Brand Title (chỉ hiển thị khi màn hình hẹp ẩn cột bên trái) -->
+            <div class="auth-mobile-header">
+              <div class="brand" style="padding: 0; display: inline-flex; align-items: center; gap: 8px;">
+                <span class="brand__mark" data-icon="bolt"></span>
+                <strong>CSMS</strong>
+              </div>
+              <p class="sub" style="margin-bottom: 12px;">Hệ thống Quản lý &amp; Vận hành Trạm sạc Xe điện</p>
+            </div>
+
+            <!-- TABS ĐĂNG NHẬP / TẠO TÀI KHOẢN -->
+            <div class="tabs" role="tablist" aria-label="Đăng nhập hoặc tạo tài khoản">
+              <button class="on" type="button" role="tab" id="tab-login" aria-controls="pane-login" data-tab="login" data-go="login" aria-selected="true">Đăng nhập</button>
+              <button type="button" role="tab" id="tab-register" aria-controls="pane-register" data-tab="register" data-go="register" aria-selected="false">Tạo tài khoản</button>
+            </div>
+
+            <!-- THÔNG BÁO LỖI CHUNG (401, 429, MẠNG) -->
+            <div id="authAlert" class="form-alert" role="alert" hidden></div>
+
+            <!-- PANEL ĐĂNG NHẬP -->
+            <div id="pane-login" role="tabpanel" aria-labelledby="tab-login" data-form="login">
+              <div class="eyebrow">Truy cập hệ thống</div>
+              <h2>Chào mừng quay trở lại</h2>
+              <p class="sub">Đăng nhập để tiếp tục quản lý mạng lưới trạm sạc của bạn.</p>
+
+              <form id="loginForm" novalidate>
+                <label for="loginEmail">Email</label>
+                <div class="field">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                  <input id="loginEmail" type="email" placeholder="owner2@demo.csms.local" required autocomplete="username">
+                </div>
+                <p class="field__error" data-error-for="loginEmail" role="alert" hidden></p>
+
+                <label for="loginPassword">Mật khẩu</label>
+                <div class="field">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                  <input id="loginPassword" type="password" required autocomplete="current-password">
+                  <button type="button" class="show password-toggle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Hiện</span></button>
+                </div>
+                <p class="field__error" data-error-for="loginPassword" role="alert" hidden></p>
+
+                <div class="row">
+                  <label class="check" style="margin:0;font-weight:400"><input type="checkbox" checked>Ghi nhớ đăng nhập</label>
+                  <a href="#" tabindex="-1">Quên mật khẩu?</a>
+                </div>
+
+                <button class="submit" id="loginSubmitBtn" type="submit">Đăng nhập &nbsp;→</button>
+              </form>
+
+              <p class="alt">Chưa có tài khoản? <a href="#" data-tab="register" data-go="register">Tạo tài khoản ngay</a></p>
+            </div>
+
+            <!-- PANEL ĐĂNG KÝ -->
+            <div id="pane-register" role="tabpanel" aria-labelledby="tab-register" data-form="register" hidden>
+              <div class="eyebrow">Đăng ký tài khoản</div>
+              <h2>Tạo tài khoản tài xế</h2>
+              <p class="sub">Tài khoản đăng ký công khai luôn là Tài xế. Các vai trò khác do Quản trị viên tạo.</p>
+
+              <form id="registerForm" novalidate>
+                <label for="regName">Họ và tên</label>
+                <div class="field">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                  <input id="regName" type="text" placeholder="Nguyễn Văn A" required autocomplete="name">
+                </div>
+                <p class="field__error" data-error-for="regName" role="alert" hidden></p>
+
+                <label for="regEmail">Email</label>
+                <div class="field">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                  <input id="regEmail" type="email" placeholder="ten@congty.vn" required autocomplete="email">
+                </div>
+                <p class="field__error" data-error-for="regEmail" role="alert" hidden></p>
+
+                <label for="regPassword">Mật khẩu</label>
+                <div class="field">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                  <input id="regPassword" type="password" placeholder="Tối thiểu 8 ký tự" required minlength="8" autocomplete="new-password">
+                  <button type="button" class="show password-toggle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Hiện</span></button>
+                </div>
+                <p class="field__error" data-error-for="regPassword" role="alert" hidden></p>
+
+                <button class="submit" id="regSubmitBtn" type="submit" style="margin-top:6px">Tạo tài khoản &nbsp;→</button>
+              </form>
+
+              <p class="alt">Đã có tài khoản? <a href="#" data-tab="login" data-go="login" style="font-weight:600">Đăng nhập</a></p>
+            </div>
+
+            <p class="tls">🔒 Dữ liệu được bảo vệ bằng mã hóa TLS 1.3</p>
+          </div>
+        </div>
+
+        <div class="foot">
+          <span>© 2026 CSMS. All rights reserved.</span>
+          <nav><a href="#">Điều khoản</a><a href="#">Bảo mật</a></nav>
+        </div>
+      </section>
     </div>
 
     <script type="module" src="/pages/auth/login.js"></script>

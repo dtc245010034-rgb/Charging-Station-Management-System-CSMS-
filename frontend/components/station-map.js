@@ -19,8 +19,29 @@ const TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ATTRIBUTION = '&copy; OpenStreetMap contributors';
 
 function baseMap(L, container) {
-  const map = L.map(container, { scrollWheelZoom: false, zoomControl: true }).setView([16, 106], 5);
-  L.tileLayer(TILES, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map);
+  const map = L.map(container, {
+    scrollWheelZoom: true,
+    zoomControl: true,
+    zoomAnimation: true,
+    fadeAnimation: true,
+    markerZoomAnimation: true,
+    minZoom: 4,
+    maxZoom: 19,
+    wheelDebounceTime: 120,
+    wheelPxPerZoomLevel: 120,
+  }).setView([16, 106], 5);
+
+  L.tileLayer(TILES, {
+    minZoom: 4,
+    maxZoom: 19,
+    subdomains: 'abc',
+    attribution: ATTRIBUTION,
+    keepBuffer: 3,
+    updateInterval: 100,
+    updateWhenIdle: false,
+    crossOrigin: true,
+  }).addTo(map);
+
   return map;
 }
 
@@ -31,6 +52,14 @@ export function createStationMap(container, { onSelect }) {
   let L; let map; let failed = false; let fitted = false;
   const markers = new Map();
   let pending = null;
+
+  let ro;
+  if (typeof ResizeObserver !== 'undefined') {
+    ro = new ResizeObserver(() => {
+      map?.invalidateSize();
+    });
+    ro.observe(container);
+  }
 
   const ready = loadLeaflet().then((lib) => {
     L = lib;
@@ -67,7 +96,7 @@ export function createStationMap(container, { onSelect }) {
     ready,
     update(points) { pending = points; if (map) apply(points); },
     invalidate() { map?.invalidateSize(); },
-    destroy() { map?.remove(); map = null; },
+    destroy() { ro?.disconnect(); map?.remove(); map = null; },
     get failed() { return failed; },
   };
 }
