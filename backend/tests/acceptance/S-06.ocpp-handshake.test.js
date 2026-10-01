@@ -18,6 +18,7 @@ describe('S-06: OCPP WebSocket handshake', () => {
 	const clients = new Set();
 	const warnings = [];
 	const serverConnections = [];
+	let lookupCalls = 0;
 
 	function connect(code, protocols, options = {}, query = '') {
 		return new Promise((resolve, reject) => {
@@ -68,6 +69,7 @@ describe('S-06: OCPP WebSocket handshake', () => {
 		server.on('upgrade', createOcppUpgradeHandler({
 			wss,
 			lookupChargePoint: async (code) => {
+				lookupCalls += 1;
 				const result = await pool.query(
 					'SELECT cp.id, cp.code, s.status AS station_status FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.code = $1 LIMIT 1',
 					[code]
@@ -113,7 +115,7 @@ describe('S-06: OCPP WebSocket handshake', () => {
 
 	it('rejects unknown codes within one second and logs exactly one safe warning', async () => {
 		const startedAt = Date.now();
-		const result = await connect('UNKNOWN-999\nINJECTED', ['ocpp1.6'], { headers: { Cookie: 'secret-cookie' } }, '?token=secret');
+		const result = await connect('UNKNOWN-999-INJECTED', ['ocpp1.6'], { headers: { Cookie: 'secret-cookie' } }, '?token=secret');
 		assert.strictEqual(result.statusCode, 403);
 		assert.ok(Date.now() - startedAt < 1000);
 		assert.strictEqual(warnings.length, 1);
@@ -121,6 +123,15 @@ describe('S-06: OCPP WebSocket handshake', () => {
 		assert.match(warnings[0], /UNKNOWN-999/);
 		assert.doesNotMatch(warnings[0], /secret|Cookie|token/i);
 		assert.doesNotMatch(warnings[0], /[\r\n]/);
+	});
+
+	it('rejects invalid, null-byte, and overlong codes before querying the database', async () => {
+		const lookupCount = lookupCalls;
+		for (const code of ['CP-S06\0VALID', 'CP-S06.INVALID', 'A'.repeat(51), 'CP-S06/VALID']) {
+			const result = await connect(code, ['ocpp1.6']);
+			assert.strictEqual(result.statusCode, 400, `Expected ${JSON.stringify(code)} to be rejected`);
+		}
+		assert.strictEqual(lookupCalls, lookupCount);
 	});
 
 	it('rejects unsupported subprotocols during the HTTP handshake without logging a charge-point warning', async () => {
