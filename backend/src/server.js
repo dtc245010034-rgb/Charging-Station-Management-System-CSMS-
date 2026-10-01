@@ -6,9 +6,18 @@ const { migrate } = require('./db/migrate');
 const { pool } = require('./db/pool');
 const connections = require('./modules/charge-points/connection-registry');
 const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
+const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 
 const server = http.createServer(app);
 const now = () => new Date().toISOString();
+const ocppMessages = createOcppMessageHandler({
+	handlers: {
+		BootNotification: async () => ({ status: 'Accepted', currentTime: now(), interval: 60 }),
+		Heartbeat: async () => ({ currentTime: now() }),
+		StatusNotification: async () => ({}),
+		Authorize: async (payload) => ({ idTagInfo: { status: payload.idTag ? 'Accepted' : 'Invalid' } }),
+	},
+});
 
 const wss = new WebSocketServer({
 	noServer: true,
@@ -26,9 +35,11 @@ server.on('upgrade', createOcppUpgradeHandler({
 }));
 wss.on('connection', (ws, code) => {
 	connections.connect(code, ws);
-	ws.on('close', () => connections.disconnect(code, ws));
-	ws.send(JSON.stringify([3, `welcome-${Date.now()}`, { chargePoint: code, status: 'Connected' }]));
-	ws.on('message', (raw) => { try { const [type, id, action, payload] = JSON.parse(raw.toString()); const responses = { BootNotification: { status: 'Accepted', currentTime: now(), interval: 60 }, Heartbeat: { currentTime: now() }, StatusNotification: { status: 'Accepted' }, Authorize: { idTagInfo: { status: payload?.idTag ? 'Accepted' : 'Invalid' } } }; ws.send(JSON.stringify(type === 2 && responses[action] ? [3, id, responses[action]] : [4, id, 'NotSupported', {}])); } catch { ws.send(JSON.stringify([4, null, 'FormatViolation', {}])); } });
+	ws.on('close', () => {
+		connections.disconnect(code, ws);
+		ocppMessages.closeConnection(ws);
+	});
+	ws.on('message', (raw) => { void ocppMessages.handleMessage(ws, raw); });
 });
 
 async function start() { await migrate(); server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`)); }
