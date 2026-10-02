@@ -1,5 +1,5 @@
 const { randomUUID } = require('node:crypto');
-const { safeLog } = require('../../lib/constants');
+const { safeLog, sanitizeErrorMessage } = require('../../lib/constants');
 const { OcppFrameError, OcppCallError, parseFrame, encodeCall, encodeCallResult, encodeCallError } = require('./frames');
 
 class OcppRemoteCallError extends Error {
@@ -28,7 +28,7 @@ function createOcppMessageHandler({
 				connection.send(JSON.stringify(frame), (error) => error ? reject(error) : resolve(true));
 			});
 		} catch (error) {
-			logError('[OCPP] Failed to send response:', error.message);
+			logError('[OCPP] Failed to send response:', sanitizeErrorMessage(error.message));
 			return Promise.resolve(false);
 		}
 	}
@@ -36,7 +36,7 @@ function createOcppMessageHandler({
 	function sendCallError(connection, messageId, code, description, details = {}) {
 		logInfo(`[OCPP] Created CALLERROR | messageId: ${safeLog(messageId)} | code: ${code}`);
 		return sendFrame(connection, encodeCallError(messageId, code, description, details)).catch((error) => {
-			logError('[OCPP] Failed to send CALLERROR:', error.message);
+			logError('[OCPP] Failed to send CALLERROR:', sanitizeErrorMessage(error.message));
 			return false;
 		});
 	}
@@ -140,10 +140,13 @@ function createOcppMessageHandler({
 			logInfo(`[OCPP] Created CALLRESULT | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 			await sendFrame(connection, response);
 		} catch (error) {
-			const errorCode = error.code || error.errorCode || 'InternalError';
-			const errorDescription = error.message || 'Request could not be processed';
-			const errorDetails = error.details || {};
-			logError(`[OCPP] Handler failed | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}: ${error.message}`);
+			const isOcppCallError = error instanceof OcppCallError || error?.name === 'OcppCallError';
+			const errorCode = isOcppCallError && typeof error.code === 'string' && error.code ? error.code : 'InternalError';
+			const errorDescription = isOcppCallError && typeof error.message === 'string' && error.message ? error.message : 'Internal error';
+			const errorDetails = isOcppCallError && error.details && typeof error.details === 'object' && !Array.isArray(error.details)
+				? error.details
+				: {};
+			logError(`[OCPP] Handler failed | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}: ${sanitizeErrorMessage(error?.message || error)}`);
 			await sendCallError(connection, request.messageId, errorCode, errorDescription, errorDetails);
 		}
 	}

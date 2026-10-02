@@ -9,7 +9,7 @@ const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
 const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
 
-const { MAX_WS_PAYLOAD, safeLog } = require('./lib/constants');
+const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
 const server = http.createServer(app);
 const now = () => new Date().toISOString();
@@ -41,7 +41,7 @@ wss.on('connection', (ws, code) => {
 	ws.chargePointCode = code;
 	connections.connect(code, ws);
 	ws.on('error', (err) => {
-		console.error(`[OCPP] WebSocket error | chargePoint: ${safeLog(code)}:`, err.message);
+		console.error(`[OCPP] WebSocket error | chargePoint: ${safeLog(code)}:`, sanitizeErrorMessage(err.message));
 	});
 	ws.on('close', () => {
 		connections.disconnect(code, ws);

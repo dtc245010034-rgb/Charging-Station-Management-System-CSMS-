@@ -3,7 +3,7 @@ const { once } = require('node:events');
 const { after, before, describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { WebSocket, WebSocketServer } = require('ws');
-const { createOcppMessageHandler } = require('../../src/modules/ocpp/message-handler');
+const { createOcppMessageHandler, OcppCallError } = require('../../src/modules/ocpp/message-handler');
 const { createOcppUpgradeHandler } = require('../../src/modules/ocpp/ocpp-upgrade');
 
 const CHARGE_POINT_CODE = 'S07-INTEGRATION-CP';
@@ -28,7 +28,23 @@ describe('OCPP message handler', () => {
 			handleProtocols: (protocols) => protocols.has('ocpp1.6') ? 'ocpp1.6' : false,
 		});
 		ocppMessages = createOcppMessageHandler({
-			handlers: { Heartbeat: async () => ({ currentTime: '2026-10-01T00:00:00.000Z' }) },
+			handlers: {
+				Heartbeat: async () => ({ currentTime: '2026-10-01T00:00:00.000Z' }),
+				FailWithPostgres: async () => {
+					const error = new Error('relation "users" does not exist; password=secret123 host=db.internal:5432');
+					error.code = '42P01';
+					throw error;
+				},
+				FailWithOcppCallError: async () => {
+					throw new OcppCallError('PropertyConstraintViolation', 'Field vendor exceeds maximum length of 20 characters', { field: 'vendor' });
+				},
+				FailWithGenericError: async () => {
+					throw new Error('Something internal went wrong');
+				},
+				FailWithTypeError: async () => {
+					throw new TypeError('Cannot read properties of null (reading "foo")');
+				},
+			},
 			callTimeoutMs: 50,
 			logInfo: (message) => logs.push(message),
 			logWarning: (message) => logs.push(message),
@@ -191,5 +207,59 @@ describe('OCPP message handler', () => {
 
 		// Kiểm tra messageId được escape an toàn bằng JSON.stringify
 		assert.ok(newLogs.some((l) => l.includes(JSON.stringify(injectedMessageId))));
+	});
+
+	describe('N1: Không rò rỉ mã lỗi và thông tin nội bộ của CSDL cho trụ', () => {
+		it('(a) handler ném lỗi kiểu Postgres có password= và host= -> trả CALLERROR InternalError, không chứa thông tin nhạy cảm', async () => {
+			const logCountBefore = logs.length;
+			const responsePromise = receiveFrame();
+			client.send(JSON.stringify([2, 'msg-pg-err-1', 'FailWithPostgres', {}]));
+			const response = await responsePromise;
+
+			// Trụ chỉ nhận được mã InternalError và mô tả chung cố định
+			assert.deepEqual(response, [4, 'msg-pg-err-1', 'InternalError', 'Internal error', {}]);
+			assert.equal(client.readyState, WebSocket.OPEN);
+
+			const rawResponse = JSON.stringify(response);
+			assert.ok(!rawResponse.includes('password'), 'Khung trả về không được chứa password');
+			assert.ok(!rawResponse.includes('host'), 'Khung trả về không được chứa host');
+			assert.ok(!rawResponse.includes('42P01'), 'Khung trả về không được chứa mã lỗi Postgres 42P01');
+			assert.ok(!rawResponse.includes('relation'), 'Khung trả về không được chứa tên relation');
+			assert.ok(!rawResponse.includes('users'), 'Khung trả về không được chứa tên bảng users');
+
+			// Log phía server được ghi nhận nhưng password đã được làm sạch
+			const newLogs = logs.slice(logCountBefore);
+			assert.ok(newLogs.some((l) => l.includes('Handler failed') && l.includes('msg-pg-err-1')));
+			assert.ok(!newLogs.some((l) => l.includes('password=secret123')), 'Server log không được chứa password trần');
+			assert.ok(newLogs.some((l) => l.includes('password=***')), 'Server log phải thay password bằng ***');
+		});
+
+		it('(b) handler ném OcppCallError -> code và message được giữ nguyên', async () => {
+			const responsePromise = receiveFrame();
+			client.send(JSON.stringify([2, 'msg-ocpp-err-2', 'FailWithOcppCallError', {}]));
+			const response = await responsePromise;
+
+			assert.deepEqual(response, [
+				4,
+				'msg-ocpp-err-2',
+				'PropertyConstraintViolation',
+				'Field vendor exceeds maximum length of 20 characters',
+				{ field: 'vendor' },
+			]);
+			assert.equal(client.readyState, WebSocket.OPEN);
+		});
+
+		it('(c) lỗi bất kỳ (Error thường, TypeError) -> trả InternalError với mô tả chung', async () => {
+			const genericResponsePromise = receiveFrame();
+			client.send(JSON.stringify([2, 'msg-generic-err-3', 'FailWithGenericError', {}]));
+			const genericResponse = await genericResponsePromise;
+			assert.deepEqual(genericResponse, [4, 'msg-generic-err-3', 'InternalError', 'Internal error', {}]);
+
+			const typeResponsePromise = receiveFrame();
+			client.send(JSON.stringify([2, 'msg-type-err-4', 'FailWithTypeError', {}]));
+			const typeResponse = await typeResponsePromise;
+			assert.deepEqual(typeResponse, [4, 'msg-type-err-4', 'InternalError', 'Internal error', {}]);
+			assert.equal(client.readyState, WebSocket.OPEN);
+		});
 	});
 });

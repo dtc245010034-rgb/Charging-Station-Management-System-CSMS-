@@ -288,10 +288,12 @@ describe('WS Hardening: B1, B2, B4, B7', () => {
         ]));
 
         const res = await resPromise;
-        // B7: Phải trả CALLERROR InternalError
+        // B7: Phải trả CALLERROR InternalError với mô tả chung an toàn
         assert.strictEqual(res[0], 4);
         assert.strictEqual(res[1], 'msg-b7-fail');
         assert.strictEqual(res[2], 'InternalError');
+        assert.strictEqual(res[3], 'Internal error');
+        assert.deepEqual(res[4], {});
 
         // Kiểm tra DB không bị đổi sang ONLINE và vendor không đổi
         const dbCheck = await query("SELECT status, vendor FROM charge_points WHERE code = 'CP-OK-B1'");

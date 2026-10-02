@@ -1,4 +1,4 @@
-const { CHARGE_POINT_CODE_PATTERN, safeLog } = require('../../lib/constants');
+const { CHARGE_POINT_CODE_PATTERN, safeLog, sanitizeErrorMessage } = require('../../lib/constants');
 
 const SUPPORTED_PROTOCOL = 'ocpp1.6';
 
@@ -49,7 +49,7 @@ function createOcppUpgradeHandler({ wss, lookupChargePoint, logWarning = console
 		try {
 			chargePoint = await lookupChargePoint(code);
 		} catch (error) {
-			logError('[OCPP] Charge point lookup failed:', error.message);
+			logError('[OCPP] Charge point lookup failed:', sanitizeErrorMessage(error.message));
 			rejectHandshake(socket, 503, 'Service Unavailable');
 			return;
 		}

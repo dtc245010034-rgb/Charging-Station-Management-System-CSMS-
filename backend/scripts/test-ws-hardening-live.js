@@ -71,7 +71,9 @@ async function runLiveVerification() {
     if (createOk.status !== 201) throw new Error(`Tạo trụ thất bại: ${createOk.status} ${createOk.text}`);
     cpId = createOk.body.id;
   } else {
-    console.log(`  - Trụ "CP-LIVE-B1" đã có sẵn trong DB (id=${cpId})`);
+    console.log(`  - Trụ "CP-LIVE-B1" đã có sẵn trong DB (id=${cpId}), reset lại trạng thái UNKNOWN`);
+    const { execSync } = require('node:child_process');
+    execSync('docker compose exec -T db psql -U csms -d csms -c "UPDATE charge_points SET status = \'UNKNOWN\', vendor = NULL WHERE code = \'CP-LIVE-B1\';"');
   }
 
   // Thử kết nối WebSocket với mã tốt
@@ -159,8 +161,13 @@ async function runLiveVerification() {
     cookie,
     body: { code: 'cp-live-b7' },
   });
-  const cpB7Id = cpB7Res.body?.id;
-  console.log(`  - Tạo trụ thử nghiệm CP-LIVE-B7 (id=${cpB7Id})`);
+  let cpB7Id = cpB7Res.body?.id;
+  if (!cpB7Id) {
+    const listResB7 = await request('/api/charge-points', { cookie });
+    const existingB7 = listResB7.body?.find?.((cp) => cp.code === 'CP-LIVE-B7');
+    cpB7Id = existingB7?.id;
+  }
+  console.log(`  - Trụ thử nghiệm CP-LIVE-B7 (id=${cpB7Id})`);
 
   // Thêm CHECK constraint tạm thời vào DB để kích hoạt lỗi DB khi UPDATE
   const { execSync } = require('node:child_process');
@@ -182,8 +189,8 @@ async function runLiveVerification() {
     ]));
     const b7ErrRes = await b7ErrPromise;
     console.log(`  - Gửi BootNotification kích hoạt lỗi DB: nhận frame=${JSON.stringify(b7ErrRes)}`);
-    if (b7ErrRes[0] !== 4 || b7ErrRes[2] !== 'InternalError') {
-      throw new Error(`Mong đợi CALLERROR InternalError nhưng nhận ${JSON.stringify(b7ErrRes)}`);
+    if (b7ErrRes[0] !== 4 || b7ErrRes[2] !== 'InternalError' || b7ErrRes[3] !== 'Internal error') {
+      throw new Error(`Mong đợi CALLERROR InternalError với "Internal error" nhưng nhận ${JSON.stringify(b7ErrRes)}`);
     }
 
     // Kiểm tra DB trụ CP-LIVE-B7 vẫn là UNKNOWN, vendor vẫn NULL

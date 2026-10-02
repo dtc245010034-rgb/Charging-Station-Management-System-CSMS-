@@ -18,10 +18,20 @@ function safeLog(value) {
   return JSON.stringify(value ?? '');
 }
 
+function sanitizeErrorMessage(message) {
+  if (typeof message !== 'string') return String(message ?? '');
+  return message
+    .replace(/(postgres(?:ql)?:\/\/[^:]+:)[^@]+(@)/gi, '$1***$2')
+    .replace(/(password\s*=\s*)[^\s;&]+/gi, '$1***')
+    .replace(/(password["']?\s*[:=]\s*["'])(?:[^"'\\]|\\.)*(["'])/gi, '$1***$2')
+    .replace(/[\r\n]+/g, ' ');
+}
+
 module.exports = {
   CHARGE_POINT_CODE_PATTERN,
   CHARGE_POINT_CODE_MESSAGE,
   MAX_WS_PAYLOAD,
   BOOT_NOTIFICATION_FIELD_LIMITS,
   safeLog,
+  sanitizeErrorMessage,
 };

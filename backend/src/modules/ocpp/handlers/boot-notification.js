@@ -12,7 +12,7 @@
  * - Trả về { status, currentTime (UTC ISO 8601), interval (cấu hình) }.
  */
 
-const { BOOT_NOTIFICATION_FIELD_LIMITS, safeLog } = require('../../../lib/constants');
+const { BOOT_NOTIFICATION_FIELD_LIMITS, safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
 
 function getDefaultPool() {
@@ -71,11 +71,12 @@ function createBootNotificationHandler({
           stationLocked = Boolean(chargePointRecord.locked_at);
         } else {
           logError(`[OCPP] BootNotification: Không tìm thấy bản ghi cho trụ ${safeLog(code)}`);
-          throw new OcppCallError('InternalError', 'Charge point not found');
+          throw new OcppCallError('InternalError', 'Internal error');
         }
       } catch (error) {
-        logError(`[OCPP] BootNotification: Lỗi tra cứu CSDL cho trụ ${safeLog(code)}:`, error.message);
-        throw new OcppCallError('InternalError', 'Database lookup failed');
+        if (error instanceof OcppCallError || error?.name === 'OcppCallError') throw error;
+        logError(`[OCPP] BootNotification: Lỗi tra cứu CSDL cho trụ ${safeLog(code)}:`, sanitizeErrorMessage(error.message));
+        throw new OcppCallError('InternalError', 'Internal error');
       }
     }
 
@@ -116,8 +117,8 @@ function createBootNotificationHandler({
         );
         logInfo(`[OCPP] BootNotification: Cập nhật trụ ${safeLog(code)} thành công (status=ONLINE)`);
       } catch (error) {
-        logError(`[OCPP] BootNotification: Lỗi cập nhật CSDL cho trụ ${safeLog(code)}:`, error.message);
-        throw new OcppCallError('InternalError', 'Database update failed');
+        logError(`[OCPP] BootNotification: Lỗi cập nhật CSDL cho trụ ${safeLog(code)}:`, sanitizeErrorMessage(error.message));
+        throw new OcppCallError('InternalError', 'Internal error');
       }
     }
 

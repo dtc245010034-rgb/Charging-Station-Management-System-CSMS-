@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const env = require('../config/env');
+const { sanitizeErrorMessage } = require('../lib/constants');
 
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
@@ -7,7 +8,7 @@ const pool = new Pool({
 });
 
 // Lỗi trên client rảnh (DB restart, mất mạng) không được làm sập process.
-pool.on('error', (error) => console.error('Lỗi kết nối PostgreSQL:', error.message));
+pool.on('error', (error) => console.error('Lỗi kết nối PostgreSQL:', sanitizeErrorMessage(error.message)));
 
 function convertPlaceholders(sql) {
   let index = 0;
