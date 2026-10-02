@@ -10,10 +10,20 @@ const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
 
-const { MAX_WS_PAYLOAD } = require('./lib/constants');
+const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
 const server = http.createServer(app);
 const now = () => new Date().toISOString();
+async function updateChargePointLastSeen(connection) {
+	const code = connection?.chargePointCode || connection?.chargePoint?.code;
+	if (!code) return;
+	try {
+		await pool.query('UPDATE charge_points SET last_seen_at = CURRENT_TIMESTAMP WHERE code = $1', [code]);
+	} catch (error) {
+		console.warn(`[OCPP] Failed to update last_seen_at for ${safeLog(code)}: ${sanitizeErrorMessage(error?.message || error)}`);
+	}
+}
+
 const ocppMessages = createOcppMessageHandler({
 	handlers: {
 		BootNotification: bootNotificationHandler,
@@ -21,6 +31,7 @@ const ocppMessages = createOcppMessageHandler({
 		StatusNotification: async () => ({}),
 		Authorize: async (payload) => ({ idTagInfo: { status: payload.idTag ? 'Accepted' : 'Invalid' } }),
 	},
+	updateLastSeen: updateChargePointLastSeen,
 });
 
 const wss = new WebSocketServer({

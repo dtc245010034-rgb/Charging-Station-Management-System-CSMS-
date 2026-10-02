@@ -19,6 +19,7 @@ function createOcppMessageHandler({
 	logWarning = console.warn,
 	logError = console.error,
 	callTimeoutMs = 30000,
+	updateLastSeen = async () => {},
 } = {}) {
 	const pendingCalls = new Map();
 
@@ -134,6 +135,7 @@ function createOcppMessageHandler({
 		}
 
 		try {
+			await updateLastSeen(connection);
 			logInfo(`[OCPP] Calling handler | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 			const payload = await handler(request.payload, { messageId: request.messageId, connection });
 			const response = encodeCallResult(request.messageId, payload);
