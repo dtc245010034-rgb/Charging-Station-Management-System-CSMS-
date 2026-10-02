@@ -1,7 +1,13 @@
 const { z } = require('zod');
+const { CHARGE_POINT_CODE_PATTERN, CHARGE_POINT_CODE_MESSAGE } = require('../../lib/constants');
 
 const NO_STATUS = 'Trạng thái trụ do hệ thống cập nhật, không được chỉ định';
-const code = z.string({ message: 'code là bắt buộc' }).trim().min(1, 'code là bắt buộc').max(50, 'Mã trụ tối đa 50 ký tự').transform((value) => value.toUpperCase());
+const code = z.string({ message: 'code là bắt buộc' })
+  .trim()
+  .min(1, 'code là bắt buộc')
+  .max(50, 'Mã trụ tối đa 50 ký tự')
+  .transform((value) => value.toUpperCase())
+  .pipe(z.string().regex(CHARGE_POINT_CODE_PATTERN, CHARGE_POINT_CODE_MESSAGE));
 const powerKw = z.coerce.number({ message: 'power_kw phải là số' }).min(0, 'power_kw phải >= 0');
 
 const createBody = z.object({

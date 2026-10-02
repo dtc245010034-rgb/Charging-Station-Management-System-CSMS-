@@ -2,6 +2,7 @@ const { secureRouter } = require('../../security/routeGuard');
 const { access } = require('../../security/permissions');
 const { idParam, stationIdParam } = require('../../lib/schemas');
 const { BadRequestError } = require('../../lib/errors');
+const { CHARGE_POINT_CODE_PATTERN, CHARGE_POINT_CODE_MESSAGE } = require('../../lib/constants');
 const service = require('./charge-points.service');
 const { createBody, updateBody } = require('./charge-points.schema');
 
@@ -9,8 +10,8 @@ const router = secureRouter();
 
 router.get('/charge-points', { access: access('charge-points:read') }, async (req, res) => res.json(await service.list(req.user)));
 router.get('/charge-points/check-code', { access: access('charge-points:read') }, async (req, res) => {
-  const code = typeof req.query.code === 'string' ? req.query.code.trim() : '';
-  if (!code || code.length > 50) throw new BadRequestError('Mã trụ phải từ 1 đến 50 ký tự');
+  const code = typeof req.query.code === 'string' ? req.query.code.trim().toUpperCase() : '';
+  if (!code || !CHARGE_POINT_CODE_PATTERN.test(code)) throw new BadRequestError(CHARGE_POINT_CODE_MESSAGE);
   res.json({ is_available: await service.isCodeAvailable(code) });
 });
 router.get('/charge-points/:id', { access: access('charge-points:read') }, async (req, res) => {

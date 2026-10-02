@@ -8,6 +8,15 @@ class OcppFrameError extends Error {
 	}
 }
 
+class OcppCallError extends Error {
+	constructor(code, message, details = {}) {
+		super(message);
+		this.name = 'OcppCallError';
+		this.code = code;
+		this.details = details;
+	}
+}
+
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 function requireMessageId(messageId) {
@@ -82,4 +91,4 @@ function encodeCallError(messageId, errorCode, errorDescription, errorDetails) {
 	return [4, messageId, errorCode, errorDescription, errorDetails];
 }
 
-module.exports = { OcppFrameError, parseFrame, encodeCall, encodeCallResult, encodeCallError };
+module.exports = { OcppFrameError, OcppCallError, parseFrame, encodeCall, encodeCallResult, encodeCallError };

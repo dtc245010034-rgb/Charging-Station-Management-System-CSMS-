@@ -12,6 +12,9 @@
  * - Trả về { status, currentTime (UTC ISO 8601), interval (cấu hình) }.
  */
 
+const { BOOT_NOTIFICATION_FIELD_LIMITS, safeLog } = require('../../../lib/constants');
+const { OcppCallError } = require('../frames');
+
 function getDefaultPool() {
   return require('../../../db/pool').pool;
 }
@@ -29,6 +32,17 @@ function createBootNotificationHandler({
   logError = console.error,
 } = {}) {
   return async function handleBootNotification(payload, { connection } = {}) {
+    // 0. Kiểm tra độ dài các trường theo chuẩn OCPP 1.6
+    for (const [field, limit] of Object.entries(BOOT_NOTIFICATION_FIELD_LIMITS)) {
+      const val = payload?.[field];
+      if (typeof val === 'string' && val.length > limit) {
+        throw new OcppCallError(
+          'PropertyConstraintViolation',
+          `Field ${field} exceeds maximum length of ${limit} characters`
+        );
+      }
+    }
+
     // 1. Đọc và chuẩn hoá các trường thiết bị từ payload (trường thiếu -> lưu chuỗi rỗng, không từ chối)
     const vendor = typeof payload?.chargePointVendor === 'string' ? payload.chargePointVendor.trim() : '';
     const model = typeof payload?.chargePointModel === 'string' ? payload.chargePointModel.trim() : '';
@@ -54,9 +68,13 @@ function createBootNotificationHandler({
         if (res.rows && res.rows.length > 0) {
           chargePointRecord = res.rows[0];
           stationLocked = Boolean(chargePointRecord.locked_at);
+        } else {
+          logError(`[OCPP] BootNotification: Không tìm thấy bản ghi cho trụ ${safeLog(code)}`);
+          throw new OcppCallError('InternalError', 'Charge point not found');
         }
       } catch (error) {
-        logError(`[OCPP] BootNotification: Lỗi tra cứu CSDL cho trụ ${code}:`, error.message);
+        logError(`[OCPP] BootNotification: Lỗi tra cứu CSDL cho trụ ${safeLog(code)}:`, error.message);
+        throw new OcppCallError('InternalError', 'Database lookup failed');
       }
     }
 
@@ -72,7 +90,7 @@ function createBootNotificationHandler({
       if (connection) {
         connection.isBootAccepted = false;
       }
-      logInfo(`[OCPP] BootNotification Rejected | chargePoint: ${code || 'unknown'} | trạm bị khoá`);
+      logInfo(`[OCPP] BootNotification Rejected | chargePoint: ${safeLog(code || 'unknown')} | trạm bị khoá`);
       return {
         status: 'Rejected',
         currentTime,
@@ -94,9 +112,10 @@ function createBootNotificationHandler({
              WHERE id = $5`,
             [vendor, model, firmwareVersion, interval, chargePointRecord.id]
         );
-        logInfo(`[OCPP] BootNotification: Cập nhật trụ ${code} thành công (status=ONLINE)`);
+        logInfo(`[OCPP] BootNotification: Cập nhật trụ ${safeLog(code)} thành công (status=ONLINE)`);
       } catch (error) {
-        logError(`[OCPP] BootNotification: Lỗi cập nhật CSDL cho trụ ${code}:`, error.message);
+        logError(`[OCPP] BootNotification: Lỗi cập nhật CSDL cho trụ ${safeLog(code)}:`, error.message);
+        throw new OcppCallError('InternalError', 'Database update failed');
       }
     }
 

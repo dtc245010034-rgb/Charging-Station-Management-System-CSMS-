@@ -169,4 +169,27 @@ describe('OCPP message handler', () => {
 		client.send(JSON.stringify([2, 'after-timeout', 'Heartbeat', {}]));
 		assert.deepEqual(await heartbeat, [3, 'after-timeout', { currentTime: '2026-10-01T00:00:00.000Z' }]);
 	});
+
+	it('B4: messageId chứa ký tự xuống dòng không tạo dòng log giả mạo riêng biệt', async () => {
+		const injectedMessageId = 'msg-fake\n[OCPP] FAKE LINE CREATED BY ATTACKER\n';
+		const logCountBefore = logs.length;
+
+		const responsePromise = receiveFrame();
+		client.send(JSON.stringify([2, injectedMessageId, 'Heartbeat', {}]));
+		const response = await responsePromise;
+
+		assert.equal(response[0], 3);
+		assert.equal(response[1], injectedMessageId);
+
+		const newLogs = logs.slice(logCountBefore);
+		assert.ok(newLogs.length > 0, 'Phải có log được ghi nhận');
+
+		for (const logLine of newLogs) {
+			assert.doesNotMatch(logLine, /\r?\n/, 'Không được có ký tự xuống dòng trần trong bất kỳ dòng log nào');
+			assert.notEqual(logLine, '[OCPP] FAKE LINE CREATED BY ATTACKER', 'Không được tạo ra dòng log giả mạo');
+		}
+
+		// Kiểm tra messageId được escape an toàn bằng JSON.stringify
+		assert.ok(newLogs.some((l) => l.includes(JSON.stringify(injectedMessageId))));
+	});
 });

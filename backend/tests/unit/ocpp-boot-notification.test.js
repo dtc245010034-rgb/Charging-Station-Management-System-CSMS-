@@ -123,4 +123,85 @@ describe('T-16: BootNotification handler - lưu vendor, model, firmwareVersion v
     assert.equal(updateCount, 2, 'Cả hai lần đều cập nhật vào bản ghi hiện có');
     assert.equal(connection.chargePoint.firmware_version, '2.0');
   });
+
+  it('B2: từ chối các trường vượt quá độ dài quy định trong OCPP 1.6 bằng PropertyConstraintViolation', async () => {
+    let queryExecuted = false;
+    const mockPool = {
+      query: async () => {
+        queryExecuted = true;
+        return { rows: [] };
+      },
+    };
+    const handler = createBootNotificationHandler({ pool: mockPool });
+    const connection = {
+      chargePointCode: 'CP-TEST-B2',
+      chargePoint: { id: 42, code: 'CP-TEST-B2', status: 'UNKNOWN' },
+    };
+
+    // Vendor vượt 20 ký tự
+    await assert.rejects(
+      handler({ chargePointVendor: 'A'.repeat(21), chargePointModel: 'Model' }, { messageId: 'm-v', connection }),
+      (err) => {
+        assert.equal(err.code, 'PropertyConstraintViolation');
+        assert.match(err.message, /chargePointVendor/);
+        return true;
+      }
+    );
+    assert.equal(queryExecuted, false, 'Không được gọi DB khi dữ liệu không hợp lệ');
+
+    // Model vượt 20 ký tự
+    await assert.rejects(
+      handler({ chargePointVendor: 'Vendor', chargePointModel: 'B'.repeat(21) }, { messageId: 'm-m', connection }),
+      (err) => {
+        assert.equal(err.code, 'PropertyConstraintViolation');
+        assert.match(err.message, /chargePointModel/);
+        return true;
+      }
+    );
+
+    // FirmwareVersion vượt 50 ký tự
+    await assert.rejects(
+      handler({ chargePointVendor: 'Vendor', chargePointModel: 'Model', firmwareVersion: 'C'.repeat(51) }, { messageId: 'm-f', connection }),
+      (err) => {
+        assert.equal(err.code, 'PropertyConstraintViolation');
+        assert.match(err.message, /firmwareVersion/);
+        return true;
+      }
+    );
+  });
+
+  it('B7: khi UPDATE DB thất bại, ném InternalError và không chấp nhận phiên', async () => {
+    const mockPool = {
+      query: async (sql) => {
+        if (sql.includes('SELECT cp.id')) {
+          return {
+            rows: [{ id: 42, code: 'CP-TEST-B7', status: 'UNKNOWN', station_id: 1, locked_at: null }],
+          };
+        }
+        if (sql.includes('UPDATE charge_points')) {
+          throw new Error('Database disk full');
+        }
+        return { rows: [] };
+      },
+    };
+
+    const handler = createBootNotificationHandler({ pool: mockPool });
+    const connection = {
+      chargePointCode: 'CP-TEST-B7',
+      isBootAccepted: false,
+      chargePoint: { id: 42, code: 'CP-TEST-B7', status: 'UNKNOWN', vendor: null },
+    };
+
+    await assert.rejects(
+      handler({ chargePointVendor: 'Delta', chargePointModel: 'City' }, { messageId: 'm-b7', connection }),
+      (err) => {
+        assert.equal(err.code, 'InternalError');
+        return true;
+      }
+    );
+
+    assert.equal(connection.isBootAccepted, false, 'Phiên không được coi là accepted khi DB lỗi');
+    assert.equal(connection.chargePoint.status, 'UNKNOWN', 'Trạng thái trụ không được chuyển sang ONLINE');
+    assert.equal(connection.chargePoint.vendor, null, 'Dữ liệu không được ghi vào bộ nhớ kết nối');
+  });
 });

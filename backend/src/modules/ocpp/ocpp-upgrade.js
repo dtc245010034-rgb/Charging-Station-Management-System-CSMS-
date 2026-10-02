@@ -1,5 +1,6 @@
+const { CHARGE_POINT_CODE_PATTERN, safeLog } = require('../../lib/constants');
+
 const SUPPORTED_PROTOCOL = 'ocpp1.6';
-const CHARGE_POINT_CODE_PATTERN = /^[A-Z0-9_-]{1,50}$/;
 
 function rejectHandshake(socket, statusCode, statusText) {
 	if (socket.destroyed) return;
@@ -55,7 +56,7 @@ function createOcppUpgradeHandler({ wss, lookupChargePoint, logWarning = console
 
 		if (!chargePoint) {
 			const clientIp = request.socket.remoteAddress || 'UNKNOWN_IP';
-			logWarning(`[SECURITY_WARN] Unauthorized WebSocket attempt | IP: ${clientIp} | ChargePointCode: ${JSON.stringify(code)}`);
+			logWarning(`[SECURITY_WARN] Unauthorized WebSocket attempt | IP: ${clientIp} | ChargePointCode: ${safeLog(code)}`);
 			rejectHandshake(socket, 403, 'Forbidden');
 			return;
 		}
