@@ -22,7 +22,7 @@ function createBootNotificationHandler({
   logInfo = console.info,
   logError = console.error,
 } = {}) {
-  return async function handleBootNotification(payload, { messageId, connection } = {}) {
+  return async function handleBootNotification(payload, { connection } = {}) {
     // 1. Đọc và chuẩn hoá các trường thiết bị từ payload (trường thiếu -> lưu chuỗi rỗng, không từ chối)
     const vendor = typeof payload?.chargePointVendor === 'string' ? payload.chargePointVendor.trim() : '';
     const model = typeof payload?.chargePointModel === 'string' ? payload.chargePointModel.trim() : '';

@@ -92,7 +92,7 @@ describe('T-16: BootNotification handler - lưu vendor, model, firmwareVersion v
     let updateCount = 0;
     let insertCount = 0;
     const mockPool = {
-      query: async (sql, params) => {
+      query: async (sql) => {
         if (sql.includes('INSERT INTO charge_points')) insertCount += 1;
         if (sql.includes('UPDATE charge_points')) updateCount += 1;
         if (sql.includes('SELECT cp.id')) {

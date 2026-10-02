@@ -11,7 +11,14 @@ class OcppRemoteCallError extends Error {
 	}
 }
 
-function createOcppMessageHandler({ handlers = {}, logInfo = console.info, logWarning = console.warn, logError = console.error, callTimeoutMs = 30000 } = {}) {
+function createOcppMessageHandler({
+	handlers = {},
+	requireBoot = Object.hasOwn(handlers, 'BootNotification'),
+	logInfo = console.info,
+	logWarning = console.warn,
+	logError = console.error,
+	callTimeoutMs = 30000,
+} = {}) {
 	const pendingCalls = new Map();
 
 	function sendFrame(connection, frame) {
@@ -111,6 +118,13 @@ function createOcppMessageHandler({ handlers = {}, logInfo = console.info, logWa
 		}
 
 		logInfo(`[OCPP] Received CALL | messageId: ${request.messageId} | action: ${request.action}`);
+
+		if (requireBoot && !connection?.isBootAccepted && request.action !== 'BootNotification') {
+			logWarning(`[OCPP] SecurityError: Action before BootNotification | messageId: ${request.messageId} | action: ${request.action}`);
+			await sendCallError(connection, request.messageId, 'SecurityError', 'Charge point is not accepted yet');
+			return;
+		}
+
 		const handler = Object.hasOwn(handlers, request.action) ? handlers[request.action] : undefined;
 		if (typeof handler !== 'function') {
 			logWarning(`[OCPP] Unsupported action | messageId: ${request.messageId} | action: ${request.action}`);
