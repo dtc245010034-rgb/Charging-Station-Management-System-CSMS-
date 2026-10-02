@@ -27,11 +27,18 @@ function sanitizeErrorMessage(message) {
     .replace(/[\r\n]+/g, ' ');
 }
 
+const DEFAULT_PING_INTERVAL_SECONDS = 30;
+const DEFAULT_RATE_LIMIT_MAX = 50;
+const CHARGE_POINT_OFFLINE_STATUS = 'UNKNOWN';
+
 module.exports = {
   CHARGE_POINT_CODE_PATTERN,
   CHARGE_POINT_CODE_MESSAGE,
   MAX_WS_PAYLOAD,
   BOOT_NOTIFICATION_FIELD_LIMITS,
+  DEFAULT_PING_INTERVAL_SECONDS,
+  DEFAULT_RATE_LIMIT_MAX,
+  CHARGE_POINT_OFFLINE_STATUS,
   safeLog,
   sanitizeErrorMessage,
 };
