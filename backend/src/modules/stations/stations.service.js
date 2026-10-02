@@ -59,4 +59,11 @@ async function update(actor, id, data) {
   return repo.findById(actor, id);
 }
 
-module.exports = { list, get, create, update };
+async function setLock(actor, id, locked) {
+  await find(actor, id);
+  await repo.setLock(id, locked, actor.id);
+  await audit.record(actor.id, locked ? 'LOCK' : 'UNLOCK', 'station', id, { locked });
+  return repo.findById(actor, id);
+}
+
+module.exports = { list, get, create, update, setLock };

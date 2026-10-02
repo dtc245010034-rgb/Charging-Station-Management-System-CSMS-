@@ -28,4 +28,13 @@ const update = (id, fields) => {
     .run(...keys.map((key) => fields[key]), id);
 };
 
-module.exports = { list, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, UPDATABLE };
+const setLock = (id, locked, actorId) => {
+  if (locked) {
+    return prepare('UPDATE stations SET locked_at = CURRENT_TIMESTAMP, locked_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(actorId, id);
+  }
+  return prepare('UPDATE stations SET locked_at = NULL, locked_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run(id);
+};
+
+module.exports = { list, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, setLock, UPDATABLE };

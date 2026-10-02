@@ -19,6 +19,7 @@ const permissions = {
 };
 
 function access(key) {
+  if (key === 'stations:lock') return ADMIN;
   if (!(key in permissions)) throw new Error(`Chưa khai báo quyền "${key}" trong security/permissions.js`);
   return permissions[key];
 }

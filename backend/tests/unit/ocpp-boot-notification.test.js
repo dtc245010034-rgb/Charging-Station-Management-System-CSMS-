@@ -42,14 +42,16 @@ describe('T-16: BootNotification handler - lưu vendor, model, firmwareVersion v
     assert.equal(connection.chargePoint.vendor, 'Delta');
     assert.equal(connection.chargePoint.model, 'UFC200');
     assert.equal(connection.chargePoint.firmware_version, 'v2.1.0');
+    assert.equal(connection.chargePoint.serial_number, '');
 
     const updateQuery = executedQueries.find((q) => q.sql.includes('UPDATE charge_points'));
     assert.ok(updateQuery, 'Phải thực thi câu lệnh UPDATE charge_points');
     assert.equal(updateQuery.params[0], 'Delta');
     assert.equal(updateQuery.params[1], 'UFC200');
     assert.equal(updateQuery.params[2], 'v2.1.0');
-    assert.equal(updateQuery.params[3], 60);
-    assert.equal(updateQuery.params[4], 42);
+    assert.equal(updateQuery.params[3], '');
+    assert.equal(updateQuery.params[4], 60);
+    assert.equal(updateQuery.params[5], 42);
   });
 
   it('trường thiếu thì lưu rỗng, không từ chối tin nhắn', async () => {
@@ -72,7 +74,7 @@ describe('T-16: BootNotification handler - lưu vendor, model, firmwareVersion v
       chargePoint: { id: 42, code: 'CP-TEST-2', status: 'UNKNOWN' },
     };
 
-    // Payload thiếu cả 3 trường
+    // Payload thiếu cả các trường
     const response = await handler({}, { messageId: 'msg-02', connection });
 
     assert.equal(response.status, 'Accepted');
@@ -81,12 +83,54 @@ describe('T-16: BootNotification handler - lưu vendor, model, firmwareVersion v
     assert.equal(connection.chargePoint.vendor, '');
     assert.equal(connection.chargePoint.model, '');
     assert.equal(connection.chargePoint.firmware_version, '');
+    assert.equal(connection.chargePoint.serial_number, '');
 
     const updateQuery = executedQueries.find((q) => q.sql.includes('UPDATE charge_points'));
     assert.ok(updateQuery);
     assert.equal(updateQuery.params[0], '');
     assert.equal(updateQuery.params[1], '');
     assert.equal(updateQuery.params[2], '');
+    assert.equal(updateQuery.params[3], '');
+    assert.equal(updateQuery.params[4], 60);
+    assert.equal(updateQuery.params[5], 42);
+  });
+
+  it('lưu chargePointSerialNumber vào connection và DB khi có trong payload', async () => {
+    const executedQueries = [];
+    const mockPool = {
+      query: async (sql, params) => {
+        executedQueries.push({ sql, params });
+        if (sql.includes('SELECT cp.id')) {
+          return {
+            rows: [
+              { id: 42, code: 'CP-TEST-SN', status: 'UNKNOWN', station_id: 1, station_status: 'ACTIVE', locked_at: null },
+            ],
+          };
+        }
+        return { rowCount: 1, rows: [] };
+      },
+    };
+
+    const handler = createBootNotificationHandler({ pool: mockPool });
+    const connection = {
+      chargePointCode: 'CP-TEST-SN',
+      chargePoint: { id: 42, code: 'CP-TEST-SN', status: 'UNKNOWN' },
+    };
+
+    const payload = {
+      chargePointVendor: 'Delta',
+      chargePointModel: 'UFC200',
+      chargePointSerialNumber: 'SN-TEST-12345',
+      firmwareVersion: 'v2.1.0',
+    };
+
+    const response = await handler(payload, { messageId: 'msg-sn', connection });
+    assert.equal(response.status, 'Accepted');
+    assert.equal(connection.chargePoint.serial_number, 'SN-TEST-12345');
+
+    const updateQuery = executedQueries.find((q) => q.sql.includes('UPDATE charge_points'));
+    assert.ok(updateQuery);
+    assert.equal(updateQuery.params[3], 'SN-TEST-12345');
   });
 
   it('gửi BootNotification lần hai trong cùng kết nối: cập nhật bản ghi hiện có, không insert bản ghi mới', async () => {

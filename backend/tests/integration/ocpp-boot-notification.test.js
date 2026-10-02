@@ -72,12 +72,13 @@ describe('S-08 (T-16 & T-17): BootNotification handler và kiểm soát phiên',
         };
       }
       if (sql.includes('UPDATE charge_points')) {
-        const [vendor, model, firmwareVersion, heartbeatInterval, id] = params;
+        const [vendor, model, firmwareVersion, serialNumber, heartbeatInterval, id] = params;
         for (const cp of dbChargePoints.values()) {
           if (cp.id === id) {
             cp.vendor = vendor;
             cp.model = model;
             cp.firmware_version = firmwareVersion;
+            cp.serial_number = serialNumber;
             cp.heartbeat_interval = heartbeatInterval;
             cp.status = 'ONLINE';
             break;
@@ -430,5 +431,82 @@ describe('S-08 (T-16 & T-17): BootNotification handler và kiểm soát phiên',
     await once(client, 'close');
     await new Promise((resolve) => customWss.close(resolve));
     await new Promise((resolve) => customServer.close(resolve));
+  });
+
+  it('S-08 serialNumber: Lưu chargePointSerialNumber hợp lệ (<= 25 ký tự) vào DB', async () => {
+    dbChargePoints.set('CP-SERIAL-01', {
+      id: 106,
+      code: 'CP-SERIAL-01',
+      station_id: 1,
+      vendor: null,
+      model: null,
+      serial_number: null,
+      firmware_version: null,
+      status: 'UNKNOWN',
+    });
+
+    const client = await connectClient('CP-SERIAL-01');
+    const responsePromise = receiveFrame(client);
+
+    client.send(JSON.stringify([
+      2,
+      'msg-serial-01',
+      'BootNotification',
+      {
+        chargePointVendor: 'VendorSerial',
+        chargePointModel: 'ModelSerial',
+        chargePointSerialNumber: 'SN-ABC-12345',
+        firmwareVersion: '1.0.0',
+      },
+    ]));
+
+    const response = await responsePromise;
+    assert.equal(response[0], 3);
+    assert.equal(response[2].status, 'Accepted');
+
+    const saved = dbChargePoints.get('CP-SERIAL-01');
+    assert.equal(saved.serial_number, 'SN-ABC-12345', 'chargePointSerialNumber phải được lưu vào DB');
+    assert.equal(saved.status, 'ONLINE');
+
+    await closeClient(client);
+  });
+
+  it('S-08 serialNumber: chargePointSerialNumber vượt quá 25 ký tự -> CALLERROR PropertyConstraintViolation', async () => {
+    dbChargePoints.set('CP-SERIAL-TOOLONG', {
+      id: 107,
+      code: 'CP-SERIAL-TOOLONG',
+      station_id: 1,
+      vendor: null,
+      model: null,
+      serial_number: null,
+      firmware_version: null,
+      status: 'UNKNOWN',
+    });
+
+    const client = await connectClient('CP-SERIAL-TOOLONG');
+    const responsePromise = receiveFrame(client);
+
+    // 26 ký tự (vượt quá giới hạn CiString25)
+    client.send(JSON.stringify([
+      2,
+      'msg-serial-toolong',
+      'BootNotification',
+      {
+        chargePointVendor: 'Vendor',
+        chargePointModel: 'Model',
+        chargePointSerialNumber: 'A'.repeat(26),
+      },
+    ]));
+
+    const response = await responsePromise;
+    assert.equal(response[0], 4, 'Phải trả về CALLERROR');
+    assert.equal(response[1], 'msg-serial-toolong');
+    assert.equal(response[2], 'PropertyConstraintViolation');
+
+    const saved = dbChargePoints.get('CP-SERIAL-TOOLONG');
+    assert.equal(saved.serial_number, null, 'Không được ghi DB khi vi phạm độ dài');
+    assert.equal(saved.status, 'UNKNOWN');
+
+    await closeClient(client);
   });
 });

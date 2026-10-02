@@ -1,6 +1,4 @@
-const http = require('node:http');
 const { once } = require('node:events');
-const path = require('node:path');
 const { WebSocket } = require('ws');
 
 const BASE_URL = 'http://127.0.0.1:3000';

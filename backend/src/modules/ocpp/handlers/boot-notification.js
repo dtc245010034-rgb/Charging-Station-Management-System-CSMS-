@@ -3,7 +3,7 @@
  * Story: S-08 (T-16, T-17)
  *
  * Nhiệm vụ:
- * - Lưu thông tin thiết bị: chargePointVendor, chargePointModel, firmwareVersion vào bảng charge_points.
+ * - Lưu thông tin thiết bị: chargePointVendor, chargePointModel, chargePointSerialNumber, firmwareVersion vào bảng charge_points.
  * - Trường thiếu thì lưu rỗng '', không từ chối tin nhắn.
  * - Cập nhật bản ghi hiện có khi gửi BootNotification nhiều lần trong cùng kết nối (không tạo bản ghi mới).
  * - Quyết định Accepted / Rejected theo trạng thái trụ và trạm (trạm bị khoá -> Rejected).
@@ -47,6 +47,7 @@ function createBootNotificationHandler({
     const vendor = typeof payload?.chargePointVendor === 'string' ? payload.chargePointVendor.trim() : '';
     const model = typeof payload?.chargePointModel === 'string' ? payload.chargePointModel.trim() : '';
     const firmwareVersion = typeof payload?.firmwareVersion === 'string' ? payload.firmwareVersion.trim() : '';
+    const serialNumber = typeof payload?.chargePointSerialNumber === 'string' ? payload.chargePointSerialNumber.trim() : '';
 
     // 2. Xác định mã trụ từ kết nối đã bắt tay thành công
     const code = connection?.chargePointCode || connection?.chargePoint?.code;
@@ -106,11 +107,12 @@ function createBootNotificationHandler({
            SET vendor = $1,
                model = $2,
                firmware_version = $3,
-               heartbeat_interval = $4,
+               serial_number = $4,
+               heartbeat_interval = $5,
                status = 'ONLINE',
                updated_at = CURRENT_TIMESTAMP
-             WHERE id = $5`,
-            [vendor, model, firmwareVersion, interval, chargePointRecord.id]
+             WHERE id = $6`,
+            [vendor, model, firmwareVersion, serialNumber, interval, chargePointRecord.id]
         );
         logInfo(`[OCPP] BootNotification: Cập nhật trụ ${safeLog(code)} thành công (status=ONLINE)`);
       } catch (error) {
@@ -126,6 +128,7 @@ function createBootNotificationHandler({
         connection.chargePoint.vendor = vendor;
         connection.chargePoint.model = model;
         connection.chargePoint.firmware_version = firmwareVersion;
+        connection.chargePoint.serial_number = serialNumber;
         connection.chargePoint.status = 'ONLINE';
       }
     }
