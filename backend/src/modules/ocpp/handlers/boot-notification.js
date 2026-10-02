@@ -12,12 +12,18 @@
  * - Trả về { status, currentTime (UTC ISO 8601), interval (cấu hình) }.
  */
 
-const { pool: defaultPool } = require('../../../db/pool');
-const env = require('../../../config/env');
+function getDefaultPool() {
+  return require('../../../db/pool').pool;
+}
+
+function getDefaultHeartbeatInterval() {
+  const env = require('../../../config/env');
+  return env.OCPP_HEARTBEAT_INTERVAL || 60;
+}
 
 function createBootNotificationHandler({
-  pool = defaultPool,
-  getHeartbeatInterval = () => (env.OCPP_HEARTBEAT_INTERVAL || 60),
+  pool = null,
+  getHeartbeatInterval = () => 60,
   getCurrentTime = () => new Date().toISOString(),
   logInfo = console.info,
   logError = console.error,
@@ -112,7 +118,21 @@ function createBootNotificationHandler({
   };
 }
 
+let defaultHandler = null;
+
+function getDefaultHandler() {
+  if (!defaultHandler) {
+    defaultHandler = createBootNotificationHandler({
+      pool: getDefaultPool(),
+      getHeartbeatInterval: () => getDefaultHeartbeatInterval(),
+    });
+  }
+  return defaultHandler;
+}
+
 module.exports = {
   createBootNotificationHandler,
-  bootNotificationHandler: createBootNotificationHandler(),
+  get bootNotificationHandler() {
+    return getDefaultHandler();
+  },
 };
