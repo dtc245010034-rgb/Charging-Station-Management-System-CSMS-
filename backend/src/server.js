@@ -8,6 +8,9 @@ const connections = require('./modules/charge-points/connection-registry');
 const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
 const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
+const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
+
+const { MAX_WS_PAYLOAD } = require('./lib/constants');
 
 const server = http.createServer(app);
 const now = () => new Date().toISOString();
@@ -22,8 +25,14 @@ const ocppMessages = createOcppMessageHandler({
 
 const wss = new WebSocketServer({
 	noServer: true,
+	maxPayload: MAX_WS_PAYLOAD,
 	handleProtocols: (protocols) => protocols.has('ocpp1.6') ? 'ocpp1.6' : false,
 });
+
+startKeepalive(wss, {
+	pingIntervalMs: env.OCPP_PING_INTERVAL * 1000,
+});
+
 server.on('upgrade', createOcppUpgradeHandler({
 	wss,
 	lookupChargePoint: async (code) => {
@@ -34,14 +43,14 @@ server.on('upgrade', createOcppUpgradeHandler({
 		return result.rows[0] || null;
 	},
 }));
+
 wss.on('connection', (ws, code) => {
-	ws.chargePointCode = code;
-	connections.connect(code, ws);
-	ws.on('close', () => {
-		connections.disconnect(code, ws);
-		ocppMessages.closeConnection(ws);
+	registerOcppConnection(ws, code, {
+		connections,
+		ocppMessages,
+		pool,
+		rateLimitMax: env.OCPP_RATE_LIMIT_MAX,
 	});
-	ws.on('message', (raw) => { void ocppMessages.handleMessage(ws, raw); });
 });
 
 async function start() { await migrate(); server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`)); }

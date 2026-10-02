@@ -3,7 +3,7 @@ const { access } = require('../../security/permissions');
 const { idParam } = require('../../lib/schemas');
 const { BadRequestError } = require('../../lib/errors');
 const service = require('./stations.service');
-const { createBody, updateBody } = require('./stations.schema');
+const { createBody, updateBody, lockBody } = require('./stations.schema');
 
 const router = secureRouter();
 
@@ -20,6 +20,11 @@ router.get('/stations/:id', { access: access('stations:read') }, async (req, res
 router.patch('/stations/:id', { access: access('stations:write') }, async (req, res) => {
   const { id } = idParam.parse(req.params);
   res.json(await service.update(req.user, id, updateBody.parse(req.body ?? {})));
+});
+router.patch('/admin/stations/:id/lock', { access: access('stations:lock') }, async (req, res) => {
+  const { id } = idParam.parse(req.params);
+  const { locked } = lockBody.parse(req.body ?? {});
+  res.json(await service.setLock(req.user, id, locked));
 });
 
 module.exports = router;

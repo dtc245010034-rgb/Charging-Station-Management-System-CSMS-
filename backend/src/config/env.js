@@ -22,6 +22,10 @@ const schema = z.object({
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   // Khoảng nhịp tim OCPP heartbeat interval (giây), mặc định 60 giây theo đặc tả OCPP 1.6
   OCPP_HEARTBEAT_INTERVAL: z.coerce.number().int().positive().default(60),
+  // Chu kỳ gửi Ping giữ kết nối WebSocket (giây), mặc định 30 giây (B9)
+  OCPP_PING_INTERVAL: z.coerce.number().int().positive().default(30),
+  // Giới hạn tần suất tin nhắn cho mỗi kết nối (tin/giây), mặc định 50 (B3)
+  OCPP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(50),
 });
 
 const parsed = schema.safeParse(process.env);

@@ -29,4 +29,8 @@ const updateBody = z.object({
   }
 });
 
-module.exports = { createBody, updateBody };
+const lockBody = z.object({
+  locked: z.boolean({ message: 'locked phải là boolean' }),
+}, { message: 'Dữ liệu không hợp lệ' });
+
+module.exports = { createBody, updateBody, lockBody };

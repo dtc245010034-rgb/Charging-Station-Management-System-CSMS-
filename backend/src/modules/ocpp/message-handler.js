@@ -1,5 +1,6 @@
 const { randomUUID } = require('node:crypto');
-const { OcppFrameError, parseFrame, encodeCall, encodeCallResult, encodeCallError } = require('./frames');
+const { safeLog, sanitizeErrorMessage } = require('../../lib/constants');
+const { OcppFrameError, OcppCallError, parseFrame, encodeCall, encodeCallResult, encodeCallError } = require('./frames');
 
 class OcppRemoteCallError extends Error {
 	constructor(response) {
@@ -27,15 +28,15 @@ function createOcppMessageHandler({
 				connection.send(JSON.stringify(frame), (error) => error ? reject(error) : resolve(true));
 			});
 		} catch (error) {
-			logError('[OCPP] Failed to send response:', error.message);
+			logError('[OCPP] Failed to send response:', sanitizeErrorMessage(error.message));
 			return Promise.resolve(false);
 		}
 	}
 
 	function sendCallError(connection, messageId, code, description, details = {}) {
-		logInfo(`[OCPP] Created CALLERROR | messageId: ${messageId} | code: ${code}`);
+		logInfo(`[OCPP] Created CALLERROR | messageId: ${safeLog(messageId)} | code: ${code}`);
 		return sendFrame(connection, encodeCallError(messageId, code, description, details)).catch((error) => {
-			logError('[OCPP] Failed to send CALLERROR:', error.message);
+			logError('[OCPP] Failed to send CALLERROR:', sanitizeErrorMessage(error.message));
 			return false;
 		});
 	}
@@ -100,7 +101,7 @@ function createOcppMessageHandler({
 			const frameError = error instanceof OcppFrameError
 				? error
 				: new OcppFrameError('FormationViolation', 'Invalid OCPP message');
-			logWarning(`[OCPP] Invalid frame | messageId: ${frameError.messageId ?? 'unknown'} | ${frameError.code}: ${frameError.message}`);
+			logWarning(`[OCPP] Invalid frame | messageId: ${safeLog(frameError.messageId ?? 'unknown')} | ${frameError.code}: ${frameError.message}`);
 			if (frameError.messageType === 3 || frameError.messageType === 4) return;
 			await sendCallError(connection, frameError.messageId ?? '', frameError.code, frameError.message);
 			return;
@@ -109,7 +110,7 @@ function createOcppMessageHandler({
 		if (request.type !== 'CALL') {
 			const pending = takePendingCall(connection, request.messageId);
 			if (!pending) {
-				logWarning(`[OCPP] Unmatched ${request.type} from charge point | messageId: ${request.messageId}`);
+				logWarning(`[OCPP] Unmatched ${safeLog(request.type)} from charge point | messageId: ${safeLog(request.messageId)}`);
 				return;
 			}
 			if (request.type === 'CALLRESULT') pending.resolve(request.payload);
@@ -117,34 +118,40 @@ function createOcppMessageHandler({
 			return;
 		}
 
-		logInfo(`[OCPP] Received CALL | messageId: ${request.messageId} | action: ${request.action}`);
+		logInfo(`[OCPP] Received CALL | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 
 		if (requireBoot && !connection?.isBootAccepted && request.action !== 'BootNotification') {
-			logWarning(`[OCPP] SecurityError: Action before BootNotification | messageId: ${request.messageId} | action: ${request.action}`);
+			logWarning(`[OCPP] SecurityError: Action before BootNotification | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 			await sendCallError(connection, request.messageId, 'SecurityError', 'Charge point is not accepted yet');
 			return;
 		}
 
 		const handler = Object.hasOwn(handlers, request.action) ? handlers[request.action] : undefined;
 		if (typeof handler !== 'function') {
-			logWarning(`[OCPP] Unsupported action | messageId: ${request.messageId} | action: ${request.action}`);
+			logWarning(`[OCPP] Unsupported action | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 			await sendCallError(connection, request.messageId, 'NotImplemented', 'Action is not supported');
 			return;
 		}
 
 		try {
-			logInfo(`[OCPP] Calling handler | messageId: ${request.messageId} | action: ${request.action}`);
+			logInfo(`[OCPP] Calling handler | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 			const payload = await handler(request.payload, { messageId: request.messageId, connection });
 			const response = encodeCallResult(request.messageId, payload);
-			logInfo(`[OCPP] Created CALLRESULT | messageId: ${request.messageId} | action: ${request.action}`);
+			logInfo(`[OCPP] Created CALLRESULT | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 			await sendFrame(connection, response);
 		} catch (error) {
-			logError(`[OCPP] Handler failed | messageId: ${request.messageId} | action: ${request.action}: ${error.message}`);
-			await sendCallError(connection, request.messageId, 'InternalError', 'Request could not be processed');
+			const isOcppCallError = error instanceof OcppCallError || error?.name === 'OcppCallError';
+			const errorCode = isOcppCallError && typeof error.code === 'string' && error.code ? error.code : 'InternalError';
+			const errorDescription = isOcppCallError && typeof error.message === 'string' && error.message ? error.message : 'Internal error';
+			const errorDetails = isOcppCallError && error.details && typeof error.details === 'object' && !Array.isArray(error.details)
+				? error.details
+				: {};
+			logError(`[OCPP] Handler failed | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}: ${sanitizeErrorMessage(error?.message || error)}`);
+			await sendCallError(connection, request.messageId, errorCode, errorDescription, errorDetails);
 		}
 	}
 
 	return { handleMessage, sendCall, closeConnection };
 }
 
-module.exports = { OcppRemoteCallError, createOcppMessageHandler };
+module.exports = { OcppRemoteCallError, OcppCallError, createOcppMessageHandler };

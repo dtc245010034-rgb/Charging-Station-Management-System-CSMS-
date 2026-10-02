@@ -31,4 +31,22 @@ describe('S-04/S-05 input validation', () => {
     assert.strictEqual(createChargePoint.parse({ code: 'CP-1' }).connector_count, 4);
     assert.strictEqual(createChargePoint.safeParse({ code: 'CP-2', connector_count: 5 }).success, false);
   });
+
+  it('B1: validates charge point code pattern against CHARGE_POINT_CODE_PATTERN', () => {
+    assert.strictEqual(createChargePoint.safeParse({ code: 'CP.01' }).success, false);
+    assert.strictEqual(createChargePoint.safeParse({ code: 'CP 02' }).success, false);
+    assert.strictEqual(createChargePoint.safeParse({ code: 'cp/04' }).success, false);
+    assert.strictEqual(createChargePoint.safeParse({ code: 'CP@01' }).success, false);
+    assert.strictEqual(createChargePoint.safeParse({ code: 'A'.repeat(51) }).success, false);
+    assert.strictEqual(createChargePoint.safeParse({ code: '' }).success, false);
+    assert.strictEqual(createChargePoint.safeParse({ code: '   ' }).success, false);
+
+    const validDash = createChargePoint.safeParse({ code: 'CP-01' });
+    assert.strictEqual(validDash.success, true);
+    assert.strictEqual(validDash.data.code, 'CP-01');
+
+    const validUnderscore = createChargePoint.safeParse({ code: 'cp_02' });
+    assert.strictEqual(validUnderscore.success, true);
+    assert.strictEqual(validUnderscore.data.code, 'CP_02');
+  });
 });
