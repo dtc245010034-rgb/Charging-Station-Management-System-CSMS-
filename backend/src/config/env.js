@@ -20,6 +20,8 @@ const schema = z.object({
   LOGIN_IP_MAX_FAILURES: z.coerce.number().int().positive().default(20),
   // Số proxy tin cậy đứng trước app (0 = không tin X-Forwarded-For).
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+  // Khoảng nhịp tim OCPP heartbeat interval (giây), mặc định 60 giây theo đặc tả OCPP 1.6
+  OCPP_HEARTBEAT_INTERVAL: z.coerce.number().int().positive().default(60),
 });
 
 const parsed = schema.safeParse(process.env);

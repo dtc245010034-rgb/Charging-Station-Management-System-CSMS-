@@ -50,5 +50,13 @@ describe('S-01 env: cấu hình bắt buộc', () => {
     assert.strictEqual(cfg.NODE_ENV, 'development');
     assert.strictEqual(cfg.PORT, 3000);
     assert.strictEqual(cfg.TRUST_PROXY, 0);
+    assert.strictEqual(cfg.OCPP_HEARTBEAT_INTERVAL, 60);
+  });
+
+  it('cấu hình OCPP_HEARTBEAT_INTERVAL tuỳ chỉnh được nạp đúng', () => {
+    const r = load({ ...valid, OCPP_HEARTBEAT_INTERVAL: '120' });
+    assert.strictEqual(r.status, 0, r.stderr);
+    const cfg = JSON.parse(r.stdout);
+    assert.strictEqual(cfg.OCPP_HEARTBEAT_INTERVAL, 120);
   });
 });
