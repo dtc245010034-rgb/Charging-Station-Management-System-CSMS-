@@ -466,7 +466,7 @@
 
 .auth-page .card,
 .auth-page .auth-card {
-  width: min(100%, 350px);
+  width: min(100%, 430px);
   background: var(--panel-card);
   border-radius: 20px;
   padding: clamp(18px, 2.4vh, 24px);
