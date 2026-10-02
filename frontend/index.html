@@ -1,263 +1,623 @@
 <!DOCTYPE html>
-<html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CSMS | Đăng nhập hệ thống quản lý trạm sạc</title>
-    <script src="/app/theme-boot.js"></script>
-    <link rel="stylesheet" href="/styles/tokens.css" />
-    <link rel="stylesheet" href="/styles/themes.css" />
-    <link rel="stylesheet" href="/styles/reset.css" />
-    <link rel="stylesheet" href="/styles/layout.css" />
-    <link rel="stylesheet" href="/styles/components.css" />
-  </head>
-  <body>
-    <div class="auth-page">
-      <!-- CỘT TRÁI: THỂ HIỆN BẢN SẮC CSMS & MẠNG LƯỚI TRẠM SẠC EV -->
-      <aside class="auth-brand">
-        <div class="auth-brand__wrapper">
-          <header class="auth-brand__header">
-            <div class="brand" style="padding: 0">
-              <span class="brand__mark" data-icon="bolt"></span>
-              CSMS
+<html lang="vi" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ thống Quản lý CSMS - Đăng nhập & Đăng ký</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes floatOrb1 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(80px, 60px) scale(1.15); }
+    }
+    @keyframes floatOrb2 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(-70px, -50px) scale(1.1); }
+    }
+    @keyframes floatOrb3 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(50px, -70px) scale(1.2); }
+    }
+    .orb-1 { animation: floatOrb1 16s ease-in-out infinite; }
+    .orb-2 { animation: floatOrb2 20s ease-in-out infinite; }
+    .orb-3 { animation: floatOrb3 18s ease-in-out infinite; }
+
+    .ripple-effect {
+      position: relative;
+      overflow: hidden;
+    }
+    .ripple-effect span.ripple {
+      position: absolute;
+      border-radius: 50%;
+      transform: scale(0);
+      animation: rippleAnimation 0.6s linear;
+      background-color: rgba(255, 255, 255, 0.4);
+      pointer-events: none;
+    }
+    @keyframes rippleAnimation {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake-animation {
+      animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    .form-panel {
+      transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .form-hidden-left {
+      opacity: 0;
+      transform: translateX(-35px) scale(0.98);
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+    }
+    .form-hidden-right {
+      opacity: 0;
+      transform: translateX(35px) scale(0.98);
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+    }
+    .form-active {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      position: relative;
+      pointer-events: auto;
+    }
+
+    .input-field:focus {
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
+    }
+
+    .brand-panel {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(15, 118, 110, 0.14), rgba(255, 255, 255, 0.85));
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      box-shadow: 0 25px 70px rgba(8, 47, 73, 0.12);
+    }
+    .dark .brand-panel {
+      background: linear-gradient(135deg, rgba(12, 74, 110, 0.7), rgba(15, 118, 110, 0.26), rgba(15, 23, 42, 0.85));
+      border-color: rgba(51, 65, 85, 0.8);
+      box-shadow: 0 25px 70px rgba(2, 6, 23, 0.45);
+    }
+    .feature-item {
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(8px);
+    }
+    .dark .feature-item {
+      background: rgba(15, 23, 42, 0.38);
+      border-color: rgba(51, 65, 85, 0.8);
+    }
+
+    .auth-shell {
+      position: relative;
+      z-index: 10;
+    }
+    .auth-shell::before {
+      content: "";
+      position: absolute;
+      inset: 10% 8% auto 8%;
+      height: 80%;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(56, 189, 248, 0.03));
+      filter: blur(40px);
+      border-radius: 999px;
+      pointer-events: none;
+    }
+    @media (max-width: 1023px) {
+      .brand-panel {
+        display: none !important;
+      }
+      .auth-shell > div {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),transparent_25%),radial-gradient(circle_at_bottom_right,_rgba(20,184,166,0.15),transparent_30%),linear-gradient(180deg,#f8fbff_0%,#eef7ff_25%,#f8fafc_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),transparent_25%),radial-gradient(circle_at_bottom_right,_rgba(45,212,191,0.12),transparent_30%),linear-gradient(180deg,#020817_0%,#0f172a_40%,#020817_100%)] text-slate-800 dark:text-slate-100 flex flex-col justify-between selection:bg-brand-500 selection:text-white transition-colors duration-500 relative overflow-x-hidden font-sans">
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="orb-1 absolute -top-24 -left-20 w-[480px] h-[480px] rounded-full bg-cyan-200/40 dark:bg-cyan-900/25 blur-3xl filter"></div>
+    <div class="orb-2 absolute top-1/3 -right-28 w-[520px] h-[520px] rounded-full bg-sky-200/35 dark:bg-sky-900/20 blur-3xl filter"></div>
+    <div class="orb-3 absolute -bottom-24 left-1/4 w-[460px] h-[460px] rounded-full bg-teal-100/40 dark:bg-teal-950/20 blur-3xl filter"></div>
+  </div>
+
+  <header class="w-full max-w-7xl mx-auto px-6 py-5 flex items-center justify-between relative z-10">
+    <div class="flex items-center space-x-2 text-xs md:text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3.5 py-1.5 rounded-full border border-emerald-200/70 dark:border-emerald-800/60 shadow-xs">
+      <span class="relative flex h-2.5 w-2.5">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+      </span>
+      <span>Kết nối bảo mật</span>
+    </div>
+
+    <div class="flex items-center space-x-4">
+      <a href="javascript:void(0)" onclick="showToast('Trung tâm trợ giúp: Hotline 1900 6868')" class="text-xs md:text-sm text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+        Trung tâm hỗ trợ
+      </a>
+
+      <div class="flex items-center bg-slate-200/80 dark:bg-slate-800/90 p-1 rounded-full text-xs font-medium border border-slate-300/50 dark:border-slate-700/60 shadow-inner">
+        <button id="themeLightBtn" onclick="setTheme('light')" class="flex items-center space-x-1 px-2.5 py-1 rounded-full transition-all duration-300 bg-white dark:bg-transparent text-slate-800 dark:text-slate-400 shadow-sm">
+          <span>●</span>
+          <span>Sáng</span>
+        </button>
+        <button id="themeDarkBtn" onclick="setTheme('dark')" class="flex items-center space-x-1 px-2.5 py-1 rounded-full transition-all duration-300 text-slate-500 dark:text-slate-200">
+          <span>Tối</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-shell flex-1 px-4 py-8 relative z-10">
+    <div class="mx-auto max-w-6xl grid items-center gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+      <section class="brand-panel hidden lg:flex min-h-[620px] rounded-[2rem] p-8 lg:p-10 flex-col justify-between overflow-hidden relative">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.6),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.22),transparent_30%)]"></div>
+        <div class="relative z-10">
+          <div class="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/40 dark:bg-slate-900/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">
+            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+            CSMS Platform
+          </div>
+          <h2 class="mt-6 text-4xl font-black leading-tight text-slate-900 dark:text-white">
+            Nền tảng<br />quản lý trạm sạc<br />thông minh.
+          </h2>
+          <p class="mt-4 max-w-md text-sm leading-6 text-slate-700 dark:text-slate-200/90">
+            Theo dõi hoạt động, quản lý tài xế, giám sát điểm sạc và tối ưu hiệu suất vận hành trong một hệ thống thống nhất.
+          </p>
+        </div>
+
+        <div class="relative z-10 grid gap-4">
+          <div class="grid grid-cols-3 gap-3">
+            <div class="rounded-2xl border border-white/20 bg-white/30 dark:bg-slate-900/25 p-4 shadow-sm">
+              <div class="text-2xl font-black text-slate-900 dark:text-white">1.2k</div>
+              <div class="mt-1 text-[11px] text-slate-700 dark:text-slate-300">Trạm đang hoạt động</div>
             </div>
-            <div class="auth-brand__badge">
-              <span class="auth-brand__pulse"></span>
-              <span>Hạ tầng sạc EV</span>
+            <div class="rounded-2xl border border-white/20 bg-white/30 dark:bg-slate-900/25 p-4 shadow-sm">
+              <div class="text-2xl font-black text-slate-900 dark:text-white">96.8%</div>
+              <div class="mt-1 text-[11px] text-slate-700 dark:text-slate-300">Tỷ lệ ổn định</div>
             </div>
-          </header>
-
-          <!-- KHỐI NỘI DUNG TRUNG TÂM (ĐỘ RỘNG THỐNG NHẤT VỚI HÌNH XE VÀ 4 THẺ) -->
-          <div class="auth-brand__container">
-            <div>
-              <p class="eyebrow" style="margin-bottom: 2px;">Charging Station Management System</p>
-              <h1 class="auth-brand__title">Quản lý toàn bộ mạng lưới trạm sạc trong một không gian.</h1>
-              <p class="auth-brand__sub">
-                Nền tảng tập trung kết nối trạm sạc, giám sát thiết bị thời gian thực và phân quyền vận hành đa vai trò.
-              </p>
+            <div class="rounded-2xl border border-white/20 bg-white/30 dark:bg-slate-900/25 p-4 shadow-sm">
+              <div class="text-2xl font-black text-slate-900 dark:text-white">24/7</div>
+              <div class="mt-1 text-[11px] text-slate-700 dark:text-slate-300">Hỗ trợ giám sát</div>
             </div>
-
-            <!-- VISUAL ILLUSTRATION: EV -> CHARGING STATION -> CSMS -> NETWORK -->
-            <div class="auth-visual" aria-hidden="true">
-              <svg viewBox="0 0 640 230" fill="none">
-                <defs>
-                  <linearGradient id="evStationGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#1e293b" />
-                    <stop offset="100%" stop-color="#0f172a" />
-                  </linearGradient>
-                  <linearGradient id="evAccentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#22d3ee" />
-                    <stop offset="100%" stop-color="#3b82f6" />
-                  </linearGradient>
-                  <linearGradient id="evCarGrad" x1="0%" y1="0%" x2="100%" y2="50%">
-                    <stop offset="0%" stop-color="#1e293b" />
-                    <stop offset="100%" stop-color="#091122" />
-                  </linearGradient>
-                  <radialGradient id="evGlow" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.38" />
-                    <stop offset="100%" stop-color="#22d3ee" stop-opacity="0" />
-                  </radialGradient>
-                  <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="3.5" result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                  </filter>
-                </defs>
-
-                <!-- Mạng lưới kết nối nền (Network grid & connection nodes) -->
-                <g stroke="rgba(148, 170, 210, 0.16)" stroke-width="1.2" stroke-dasharray="4 4">
-                  <line x1="95" y1="45" x2="320" y2="22" />
-                  <line x1="320" y1="22" x2="570" y2="36" />
-                  <line x1="95" y1="45" x2="95" y2="85" />
-                </g>
-
-                <!-- Node CSMS Cloud Server ở trên -->
-                <g transform="translate(320, 22)">
-                  <circle cx="0" cy="0" r="15" fill="#0f172a" stroke="#22d3ee" stroke-width="1.8" />
-                  <circle cx="0" cy="0" r="24" fill="url(#evGlow)" />
-                  <path d="M-6 -3 C-6 -8, 6 -8, 6 -3 C10 -3, 11 2, 8 5 L-8 5 C-11 2, -10 -3, -6 -3 Z" fill="#22d3ee" />
-                  <text x="0" y="24" text-anchor="middle" fill="#22d3ee" font-size="9" font-weight="700" letter-spacing="0.6">CSMS CLOUD · OCPP 1.6J</text>
-                </g>
-
-                <!-- Trạm sạc phụ vệ tinh bên phải (Network node) -->
-                <g transform="translate(570, 36)">
-                  <circle cx="0" cy="0" r="7" fill="#1e293b" stroke="#3b82f6" stroke-width="1.8" />
-                  <text x="0" y="16" text-anchor="middle" fill="#8194b5" font-size="8" font-weight="600">TRẠM VỆ TINH</text>
-                </g>
-
-                <!-- Trụ sạc EV (EV Charging Station / Charge Point CS-01) -->
-                <g transform="translate(40, 26)">
-                  <!-- Bóng chân trụ sạc -->
-                  <ellipse cx="40" cy="172" rx="34" ry="5" fill="rgba(0, 0, 0, 0.5)" />
-
-                  <!-- Thân trụ sạc to vững chãi -->
-                  <rect x="12" y="14" width="56" height="156" rx="8" fill="url(#evStationGrad)" stroke="rgba(148, 170, 210, 0.28)" stroke-width="1.8" />
-                  
-                  <!-- Dải LED nhận diện trên nóc trụ sạc -->
-                  <rect x="18" y="20" width="44" height="4.5" rx="2" fill="url(#evAccentGrad)" />
-                  
-                  <!-- Màn hình kỹ thuật số trụ sạc lớn -->
-                  <rect x="20" y="32" width="40" height="34" rx="5" fill="#060c19" stroke="rgba(34, 211, 238, 0.35)" stroke-width="1.2" />
-                  <path d="M38 37 L33 47 L41 47 L36 56 L45 45 L39 45 Z" fill="#22d3ee" />
-                  <text x="40" y="61" text-anchor="middle" fill="#22d3ee" font-size="6.5" font-weight="800">60 kW</text>
-
-                  <!-- Đèn báo trạng thái sạc (LED Status indicator) -->
-                  <circle cx="40" cy="76" r="4.2" fill="#22c55e" filter="url(#softGlow)" />
-
-                  <!-- Ổ cắm và chi tiết kỹ thuật trụ -->
-                  <rect x="24" y="88" width="32" height="14" rx="3.5" fill="#131e33" stroke="rgba(148, 170, 210, 0.22)" stroke-width="1.2" />
-                  <circle cx="33" cy="95" r="2.5" fill="#22d3ee" />
-                  <circle cx="47" cy="95" r="2.5" fill="#3b82f6" />
-                  <rect x="20" y="112" width="40" height="32" rx="3" fill="#091122" />
-                  <line x1="25" y1="120" x2="55" y2="120" stroke="rgba(148,170,210,0.22)" stroke-width="1.2" />
-                  <line x1="25" y1="126" x2="48" y2="126" stroke="rgba(148,170,210,0.22)" stroke-width="1.2" />
-                  <line x1="25" y1="132" x2="52" y2="132" stroke="rgba(148,170,210,0.22)" stroke-width="1.2" />
-
-                  <!-- Badge nổi: Trụ sạc CS-01 · 60kW -->
-                  <g transform="translate(-14, -10)">
-                    <rect x="0" y="0" width="108" height="22" rx="11" fill="#0d1729" stroke="rgba(34, 211, 238, 0.45)" stroke-width="1.2" />
-                    <circle cx="11" cy="11" r="4" fill="#22c55e" />
-                    <text x="21" y="14" fill="#e9effa" font-size="8.5" font-weight="700">TRỤ CS-01 · 60kW</text>
-                  </g>
-                </g>
-
-                <!-- Dây cáp sạc nối từ Trụ sạc tới Cổng sạc Xe điện -->
-                <g>
-                  <path d="M 96 122 C 114 182, 178 196, 238 132" fill="none" stroke="#0f172a" stroke-width="8" stroke-linecap="round" />
-                  <path d="M 96 122 C 114 182, 178 196, 238 132" fill="none" stroke="#22d3ee" stroke-width="2.8" stroke-linecap="round" />
-                  <path d="M 96 122 C 114 182, 178 196, 238 132" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-dasharray="4 8" stroke-linecap="round" opacity="0.85" />
-                  
-                  <!-- Tay sạc (Connector Gun) cắm vào xe -->
-                  <g transform="translate(235, 126) rotate(16)">
-                    <rect x="-4" y="-3.5" width="10" height="7" rx="2" fill="#3b82f6" stroke="#22d3ee" stroke-width="1.2" />
-                    <circle cx="1.5" cy="0" r="5" fill="url(#evGlow)" />
-                  </g>
-                </g>
-
-                <!-- Xe điện thể thao hiện đại (Electric Vehicle) -->
-                <g transform="translate(225, 66)">
-                  <!-- Bóng gầm xe -->
-                  <ellipse cx="185" cy="132" rx="170" ry="9" fill="rgba(0, 0, 0, 0.6)" />
-
-                  <!-- Thân xe lớn, khí động học -->
-                  <path d="M 18 108 
-                           C 14 86, 28 70, 54 66 
-                           L 96 58 
-                           C 118 36, 154 24, 205 24 
-                           L 280 28 
-                           C 316 44, 338 62, 348 84 
-                           L 358 94 
-                           C 364 100, 360 110, 350 112 
-                           L 316 112 
-                           C 312 96, 296 86, 276 86 
-                           C 256 86, 240 96, 236 112 
-                           L 128 112 
-                           C 124 96, 108 86, 88 86 
-                           C 68 86, 52 96, 48 112 
-                           L 22 112 
-                           Z" 
-                        fill="url(#evCarGrad)" stroke="rgba(148, 170, 210, 0.35)" stroke-width="1.8" />
-
-                  <!-- Kính chắn gió và cửa sổ tối màu có vệt sáng phản chiếu -->
-                  <path d="M 102 58 L 194 30 L 260 32 C 292 45, 305 58, 314 68 L 102 68 Z" fill="#0d1b33" stroke="rgba(34, 211, 238, 0.3)" stroke-width="1.2" />
-                  <path d="M 194 31 L 198 67" stroke="rgba(148, 170, 210, 0.25)" stroke-width="1.2" />
-
-                  <!-- Đường gân khí động học trên thân xe (Cyan neon streak) -->
-                  <path d="M 36 84 Q 160 76 335 78" fill="none" stroke="url(#evAccentGrad)" stroke-width="2.2" opacity="0.95" />
-
-                  <!-- Đèn pha trước (LED Headlight) lớn và phát sáng -->
-                  <path d="M 342 86 L 358 94 L 340 96 Z" fill="#22d3ee" filter="url(#softGlow)" />
-                  <polygon points="358,92 400,84 400,100 358,96" fill="url(#evGlow)" opacity="0.65" />
-
-                  <!-- Đèn hậu sau (LED Taillight) đỏ neon -->
-                  <rect x="16" y="80" width="4.5" height="14" rx="2" fill="#ef4444" opacity="0.9" />
-
-                  <!-- Bánh xe trước & sau hợp kim phay lớn (Alloy Wheels) -->
-                  <!-- Bánh sau (bên trái) -->
-                  <g transform="translate(88, 112)">
-                    <circle cx="0" cy="0" r="22" fill="#080e1a" stroke="rgba(148, 170, 210, 0.35)" stroke-width="2.5" />
-                    <circle cx="0" cy="0" r="14" fill="#131e33" stroke="#22d3ee" stroke-width="1.2" />
-                    <circle cx="0" cy="0" r="4.5" fill="#3b82f6" />
-                  </g>
-                  <!-- Bánh trước (bên phải) -->
-                  <g transform="translate(276, 112)">
-                    <circle cx="0" cy="0" r="22" fill="#080e1a" stroke="rgba(148, 170, 210, 0.35)" stroke-width="2.5" />
-                    <circle cx="0" cy="0" r="14" fill="#131e33" stroke="#22d3ee" stroke-width="1.2" />
-                    <circle cx="0" cy="0" r="4.5" fill="#3b82f6" />
-                  </g>
-
-                  <!-- Cổng sạc xe đang nhận điện -->
-                  <g transform="translate(20, 62)">
-                    <circle cx="0" cy="0" r="6.5" fill="#060c19" stroke="#22d3ee" stroke-width="1.8" />
-                    <circle cx="0" cy="0" r="2.8" fill="#22c55e" />
-                  </g>
-
-                  <!-- Badge nổi trên xe: Trạng thái đang sạc -->
-                  <g transform="translate(130, -2)">
-                    <rect x="0" y="0" width="122" height="22" rx="11" fill="#0d1729" stroke="rgba(59, 130, 246, 0.45)" stroke-width="1.2" />
-                    <circle cx="11" cy="11" r="4" fill="#3b82f6" />
-                    <text x="21" y="14" fill="#e9effa" font-size="8.5" font-weight="700">ĐANG SẠC · 48 kW</text>
-                  </g>
-                </g>
-
-                <!-- Mặt đất công nghệ (Tech floor grid line) -->
-                <line x1="20" y1="200" x2="620" y2="200" stroke="rgba(148, 170, 210, 0.2)" stroke-width="1.2" />
-              </svg>
-            </div>
-
-            <!-- CÁC TÍNH NĂNG THỰC TẾ TRONG PROJECT CSMS (RỘNG ĐÚNG BẰNG KHUNG XE) -->
-            <ul class="auth-brand__points">
-              <li class="auth-brand__point-item">
-                <span class="auth-brand__point-icon" data-icon="station"></span>
-                <div class="auth-brand__point-text">
-                  <span class="auth-brand__point-title">Trạm &amp; Trụ sạc</span>
-                  <span class="auth-brand__point-desc">Khai báo trạm, trụ sạc và đầu nối</span>
-                </div>
-              </li>
-              <li class="auth-brand__point-item">
-                <span class="auth-brand__point-icon" data-icon="activity"></span>
-                <div class="auth-brand__point-text">
-                  <span class="auth-brand__point-title">Giám sát thiết bị</span>
-                  <span class="auth-brand__point-desc">Theo dõi trạng thái &amp; công suất tức thời</span>
-                </div>
-              </li>
-              <li class="auth-brand__point-item">
-                <span class="auth-brand__point-icon" data-icon="users"></span>
-                <div class="auth-brand__point-text">
-                  <span class="auth-brand__point-title">Năm vai trò phân quyền</span>
-                  <span class="auth-brand__point-desc">Quản trị, Chủ trạm, Vận hành, Kế toán, Tài xế</span>
-                </div>
-              </li>
-              <li class="auth-brand__point-item">
-                <span class="auth-brand__point-icon" data-icon="radio"></span>
-                <div class="auth-brand__point-text">
-                  <span class="auth-brand__point-title">Chuẩn OCPP 1.6J</span>
-                  <span class="auth-brand__point-desc">Kết nối mở hai chiều qua WebSocket</span>
-                </div>
-              </li>
-            </ul>
           </div>
 
-          <footer class="auth-brand__footer">
-            <span>CSMS Enterprise Platform</span>
-            <span>Phiên bản v1.0 · Chuẩn OCPP 1.6J</span>
-          </footer>
-        </div>
-      </aside>
-
-      <!-- CỘT PHẢI: KHU VỰC AUTHENTICATION (LOGIN / REGISTER) -->
-      <section class="panel">
-        <div class="top">
-          <div class="secure"><i><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2ed3a0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></i>Kết nối bảo mật</div>
-          <div class="top-r">
-            <a href="#" style="color:inherit;text-decoration:none">Trung tâm hỗ trợ</a>
-            <div class="theme" role="group" aria-label="Giao diện">
-              <button class="on" type="button" data-t="light">☀ Sáng</button>
-              <button type="button" data-t="dark">☾ Tối</button>
+          <div class="feature-item rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Tính năng nổi bật</p>
+                <p class="mt-2 text-base font-semibold text-slate-800 dark:text-slate-100">Quản lý điểm sạc và tài xế</p>
+              </div>
+              <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </span>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="center">
+      <div id="authCard" class="mx-auto w-full max-w-[430px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/90 rounded-[28px] p-7 sm:p-8 shadow-[0_22px_60px_rgba(15,23,42,0.12)] dark:shadow-[0_22px_60px_rgba(2,6,23,0.65)] transition-all duration-300 ring-1 ring-slate-100/80 dark:ring-slate-800/80">
+        <div class="relative bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl flex items-center justify-between mb-7 border border-slate-200/60 dark:border-slate-700/50">
+          <div id="tabIndicator" class="absolute top-1 left-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-slate-700 rounded-xl shadow-xs transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"></div>
+
+          <button id="loginTabBtn" onclick="switchMode('login')" class="relative z-10 w-1/2 py-2 text-center text-sm font-semibold transition-colors duration-300 text-brand-600 dark:text-brand-400">
+            Đăng nhập
+          </button>
+          <button id="registerTabBtn" onclick="switchMode('register')" class="relative z-10 w-1/2 py-2 text-center text-sm font-semibold transition-colors duration-300 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+            Tạo tài khoản
+          </button>
+        </div>
+
+        <div class="relative overflow-hidden min-h-[380px]" id="formsContainer">
+          <div id="loginFormPanel" class="form-panel form-active flex flex-col justify-between">
+            <form onsubmit="handleLoginSubmit(event)" novalidate>
+              <div class="mb-5">
+                <span class="inline-flex items-center text-xs font-bold tracking-wider uppercase text-cyan-600 dark:text-cyan-400 mb-1.5">
+                  <span class="w-3 h-0.5 bg-cyan-600 dark:bg-cyan-400 mr-2 rounded-full"></span>
+                  Truy cập hệ thống
+                </span>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Chào mừng quay trở lại</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Đăng nhập để tiếp tục quản lý mạng lưới trạm sạc của bạn.</p>
+              </div>
+
+              <div class="space-y-1.5 mb-4">
+                <label for="loginEmail" class="block text-xs font-semibold text-slate-600 dark:text-slate-300">Email</label>
+                <div class="relative group">
+                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-600 dark:group-focus-within:text-brand-400 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                  </div>
+                  <input type="email" id="loginEmail" value="multi@demo.csms.local" required
+                    class="input-field w-full pl-10 pr-3.5 py-2.5 text-sm bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition-all duration-200"
+                    placeholder="name@example.com" />
+                </div>
+              </div>
+
+              <div class="space-y-1.5 mb-4">
+                <label for="loginPassword" class="block text-xs font-semibold text-slate-600 dark:text-slate-300">Mật khẩu</label>
+                <div class="relative group">
+                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-600 dark:group-focus-within:text-brand-400 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                  </div>
+                  <input type="password" id="loginPassword" value="DemoPass123" required
+                    class="input-field w-full pl-10 pr-20 py-2.5 text-sm bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition-all duration-200"
+                    placeholder="••••••••" />
+                  <button type="button" onclick="togglePasswordVisibility('loginPassword', this)"
+                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <span class="label">Hiện</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between text-xs mb-6">
+                <label class="flex items-center space-x-2 cursor-pointer select-none">
+                  <input type="checkbox" id="rememberMe" checked class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 border-slate-300 dark:border-slate-700 dark:bg-slate-800">
+                  <span class="text-slate-600 dark:text-slate-300 font-medium">Ghi nhớ đăng nhập</span>
+                </label>
+                <a href="javascript:void(0)" onclick="showToast('Vui lòng liên hệ Quản trị viên để đặt lại mật khẩu.')" class="font-medium text-cyan-600 dark:text-cyan-400 hover:underline">Quên mật khẩu?</a>
+              </div>
+
+              <button type="submit" id="loginBtn" class="ripple-effect w-full py-3 px-4 rounded-xl text-white font-medium text-sm bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 active:scale-[0.98] shadow-md shadow-cyan-500/25 transition-all duration-200 flex items-center justify-center space-x-2">
+                <span id="loginBtnText">Đăng nhập &rarr;</span>
+                <svg id="loginSpinner" class="hidden animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+              </button>
+            </form>
+
+            <div class="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+              Chưa có tài khoản? <a href="javascript:void(0)" onclick="switchMode('register')" class="font-semibold text-cyan-600 dark:text-cyan-400 hover:underline">Tạo tài khoản ngay</a>
+            </div>
+          </div>
+
+          <div id="registerFormPanel" class="form-panel form-hidden-right flex flex-col justify-between">
+            <form onsubmit="handleRegisterSubmit(event)" novalidate>
+              <div class="mb-5">
+                <span class="inline-flex items-center text-xs font-bold tracking-wider uppercase text-cyan-600 dark:text-cyan-400 mb-1.5">
+                  <span class="w-3 h-0.5 bg-cyan-600 dark:bg-cyan-400 mr-2 rounded-full"></span>
+                  Đăng ký tài khoản
+                </span>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Tạo tài khoản tài xế</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">Tài khoản đăng ký công khai luôn là Tài xế. Các vai trò khác do Quản trị viên tạo.</p>
+              </div>
+
+              <div class="space-y-1.5 mb-3.5">
+                <label for="regName" class="block text-xs font-semibold text-slate-600 dark:text-slate-300">Họ và tên</label>
+                <div class="relative group">
+                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-600 dark:group-focus-within:text-brand-400 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                  </div>
+                  <input type="text" id="regName" required
+                    class="input-field w-full pl-10 pr-3.5 py-2.5 text-sm bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition-all duration-200"
+                    placeholder="Nguyễn Văn A" />
+                </div>
+              </div>
+
+              <div class="space-y-1.5 mb-3.5">
+                <label for="regEmail" class="block text-xs font-semibold text-slate-600 dark:text-slate-300">Email</label>
+                <div class="relative group">
+                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-600 dark:group-focus-within:text-brand-400 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                  </div>
+                  <input type="email" id="regEmail" required
+                    class="input-field w-full pl-10 pr-3.5 py-2.5 text-sm bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition-all duration-200"
+                    placeholder="ten@congty.vn" />
+                </div>
+              </div>
+
+              <div class="space-y-1.5 mb-5">
+                <label for="regPassword" class="block text-xs font-semibold text-slate-600 dark:text-slate-300">Mật khẩu</label>
+                <div class="relative group">
+                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-brand-600 dark:group-focus-within:text-brand-400 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                  </div>
+                  <input type="password" id="regPassword" required oninput="evaluatePasswordStrength(this.value)"
+                    class="input-field w-full pl-10 pr-20 py-2.5 text-sm bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition-all duration-200"
+                    placeholder="Tối thiểu 8 ký tự" />
+                  <button type="button" onclick="togglePasswordVisibility('regPassword', this)"
+                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <span class="label">Hiện</span>
+                  </button>
+                </div>
+
+                <div class="pt-1.5 flex items-center space-x-1.5">
+                  <div class="h-1 flex-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div id="strengthBar" class="h-full w-0 bg-slate-300 transition-all duration-300"></div>
+                  </div>
+                  <span id="strengthText" class="text-[10px] text-slate-400">Độ mạnh mật khẩu</span>
+                </div>
+              </div>
+
+              <button type="submit" id="regBtn" class="ripple-effect w-full py-3 px-4 rounded-xl text-white font-medium text-sm bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 active:scale-[0.98] shadow-md shadow-cyan-500/25 transition-all duration-200 flex items-center justify-center space-x-2">
+                <span id="regBtnText">Tạo tài khoản &rarr;</span>
+                <svg id="regSpinner" class="hidden animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+              </button>
+            </form>
+
+            <div class="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+              Đã có tài khoản? <a href="javascript:void(0)" onclick="switchMode('login')" class="font-semibold text-cyan-600 dark:text-cyan-400 hover:underline">Đăng nhập</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-center text-[11px] text-amber-600 dark:text-amber-400/90 font-medium">
+          <svg class="w-3.5 h-3.5 mr-1.5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
+          </svg>
+          <span>Dữ liệu được bảo vệ bằng mã hóa TLS 1.3</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="w-full max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 dark:text-slate-500 gap-2 relative z-10">
+    <div>
+      &copy; 2026 CSMS. All rights reserved.
+    </div>
+    <div class="flex items-center space-x-5">
+      <a href="javascript:void(0)" onclick="showToast('Chính sách Điều khoản sử dụng dịch vụ CSMS')" class="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Điều khoản</a>
+      <a href="javascript:void(0)" onclick="showToast('Chính sách Bảo mật thông tin chuẩn quốc tế')" class="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Bảo mật</a>
+    </div>
+  </footer>
+
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 max-w-sm bg-slate-900/90 dark:bg-white/90 text-white dark:text-slate-900 px-4 py-3 rounded-2xl shadow-xl backdrop-blur-md text-xs font-medium flex items-center space-x-2 pointer-events-none">
+    <span id="toastIcon">✨</span>
+    <span id="toastMessage">Thông báo</span>
+  </div>
+
+  <script>
+    let currentMode = 'login';
+
+    function switchMode(mode) {
+      if (currentMode === mode) return;
+      currentMode = mode;
+
+      const tabIndicator = document.getElementById('tabIndicator');
+      const loginTabBtn = document.getElementById('loginTabBtn');
+      const registerTabBtn = document.getElementById('registerTabBtn');
+      const loginPanel = document.getElementById('loginFormPanel');
+      const registerPanel = document.getElementById('registerFormPanel');
+
+      if (mode === 'login') {
+        tabIndicator.style.transform = 'translateX(0%)';
+        loginTabBtn.className = 'relative z-10 w-1/2 py-2 text-center text-sm font-semibold transition-colors duration-300 text-brand-600 dark:text-brand-400';
+        registerTabBtn.className = 'relative z-10 w-1/2 py-2 text-center text-sm font-semibold transition-colors duration-300 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200';
+
+        registerPanel.classList.remove('form-active');
+        registerPanel.classList.add('form-hidden-right');
+
+        loginPanel.classList.remove('form-hidden-left');
+        loginPanel.classList.add('form-active');
+      } else {
+        tabIndicator.style.transform = 'translateX(100%)';
+        registerTabBtn.className = 'relative z-10 w-1/2 py-2 text-center text-sm font-semibold transition-colors duration-300 text-brand-600 dark:text-brand-400';
+        loginTabBtn.className = 'relative z-10 w-1/2 py-2 text-center text-sm font-semibold transition-colors duration-300 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200';
+
+        loginPanel.classList.remove('form-active');
+        loginPanel.classList.add('form-hidden-left');
+
+        registerPanel.classList.remove('form-hidden-right');
+        registerPanel.classList.add('form-active');
+      }
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const label = btn.querySelector('.label');
+      if (input.type === 'password') {
+        input.type = 'text';
+        label.textContent = 'Ẩn';
+      } else {
+        input.type = 'password';
+        label.textContent = 'Hiện';
+      }
+    }
+
+    function evaluatePasswordStrength(pass) {
+      const bar = document.getElementById('strengthBar');
+      const txt = document.getElementById('strengthText');
+      if (!pass) {
+        bar.style.width = '0%';
+        bar.className = 'h-full bg-slate-300 transition-all duration-300';
+        txt.textContent = 'Độ mạnh mật khẩu';
+        return;
+      }
+      let score = 0;
+      if (pass.length >= 8) score++;
+      if (/[A-Z]/.test(pass)) score++;
+      if (/[0-9]/.test(pass)) score++;
+      if (/[^A-Za-z0-9]/.test(pass)) score++;
+
+      if (score <= 1) {
+        bar.style.width = '25%';
+        bar.className = 'h-full bg-rose-500 transition-all duration-300';
+        txt.textContent = 'Yếu';
+      } else if (score === 2) {
+        bar.style.width = '50%';
+        bar.className = 'h-full bg-amber-500 transition-all duration-300';
+        txt.textContent = 'Trung bình';
+      } else if (score === 3) {
+        bar.style.width = '75%';
+        bar.className = 'h-full bg-cyan-500 transition-all duration-300';
+        txt.textContent = 'Khá';
+      } else {
+        bar.style.width = '100%';
+        bar.className = 'h-full bg-emerald-500 transition-all duration-300';
+        txt.textContent = 'Rất mạnh';
+      }
+    }
+
+    function triggerShake() {
+      const card = document.getElementById('authCard');
+      card.classList.remove('shake-animation');
+      void card.offsetWidth;
+      card.classList.add('shake-animation');
+      setTimeout(() => card.classList.remove('shake-animation'), 500);
+    }
+
+    let toastTimeout;
+    function showToast(message, icon = 'ℹ️') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMessage');
+      const toastIcn = document.getElementById('toastIcon');
+
+      toastMsg.textContent = message;
+      toastIcn.textContent = icon;
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 3200);
+    }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const pass = document.getElementById('loginPassword').value;
+
+      if (!email || !pass) {
+        triggerShake();
+        showToast('Vui lòng điền đầy đủ Email và Mật khẩu.', '⚠️');
+        return;
+      }
+
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('loginBtnText');
+      const spinner = document.getElementById('loginSpinner');
+
+      btn.disabled = true;
+      btnText.textContent = 'Đang xác thực...';
+      spinner.classList.remove('hidden');
+
+      setTimeout(() => {
+        btn.disabled = false;
+        btnText.textContent = 'Đăng nhập →';
+        spinner.classList.add('hidden');
+        showToast('Đăng nhập thành công! Chào mừng ' + email, '✅');
+      }, 1500);
+    }
+
+    function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const pass = document.getElementById('regPassword').value;
+
+      if (!name || !email || !pass) {
+        triggerShake();
+        showToast('Vui lòng điền đủ tất cả các trường thông tin.', '⚠️');
+        return;
+      }
+
+      if (pass.length < 8) {
+        triggerShake();
+        showToast('Mật khẩu tối thiểu phải từ 8 ký tự trở lên.', '⚠️');
+        return;
+      }
+
+      const btn = document.getElementById('regBtn');
+      const btnText = document.getElementById('regBtnText');
+      const spinner = document.getElementById('regSpinner');
+
+      btn.disabled = true;
+      btnText.textContent = 'Đang tạo tài khoản...';
+      spinner.classList.remove('hidden');
+
+      setTimeout(() => {
+        btn.disabled = false;
+        btnText.textContent = 'Tạo tài khoản →';
+        spinner.classList.add('hidden');
+        showToast('Tạo tài khoản tài xế thành công!', '🎉');
+        setTimeout(() => switchMode('login'), 1000);
+      }, 1500);
+    }
+
+    function setTheme(mode) {
+      const html = document.documentElement;
+      const lightBtn = document.getElementById('themeLightBtn');
+      const darkBtn = document.getElementById('themeDarkBtn');
+
+      if (mode === 'dark') {
+        html.classList.add('dark');
+        darkBtn.className = 'flex items-center space-x-1 px-2.5 py-1 rounded-full transition-all duration-300 bg-slate-700 text-white shadow-sm';
+        lightBtn.className = 'flex items-center space-x-1 px-2.5 py-1 rounded-full transition-all duration-300 text-slate-500 dark:text-slate-400';
+      } else {
+        html.classList.remove('dark');
+        lightBtn.className = 'flex items-center space-x-1 px-2.5 py-1 rounded-full transition-all duration-300 bg-white dark:bg-transparent text-slate-800 dark:text-slate-400 shadow-sm';
+        darkBtn.className = 'flex items-center space-x-1 px-2.5 py-1 rounded-full transition-all duration-300 text-slate-500 dark:text-slate-200';
+      }
+    }
+
+    document.querySelectorAll('.ripple-effect').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        const rect = this.getBoundingClientRect();
+        const ripple = document.createElement('span');
+        ripple.classList.add('ripple');
+        const diameter = Math.max(rect.width, rect.height);
+        const radius = diameter / 2;
+        ripple.style.width = ripple.style.height = `${diameter}px`;
+        ripple.style.left = `${e.clientX - rect.left - radius}px`;
+        ripple.style.top = `${e.clientY - rect.top - radius}px`;
+        this.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+      });
+    });
+  </script>
+</body>
+</html>
           <div class="card">
             <!-- Mobile Brand Title (chỉ hiển thị khi màn hình hẹp ẩn cột bên trái) -->
             <div class="auth-mobile-header">
