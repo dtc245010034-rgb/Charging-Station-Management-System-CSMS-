@@ -62,10 +62,18 @@ describe('S-05: mã trụ chuẩn hoá chữ hoa, power_kw và status', () => {
     assert.strictEqual(check.rowCount, 1);
     const bypass = await query("INSERT INTO charge_points (station_id, code) VALUES ($1, 'lowercase-code')", [stationA.id]).catch((e) => e);
     assert.ok(bypass instanceof Error, 'CHECK phải chặn mã chữ thường ghi trực tiếp');
-    const down = run('src/db/migrate.js', ['down']);
-    assert.strictEqual(down.status, 0, down.stderr);
+
+    while (true) {
+      const has005 = await query("SELECT 1 FROM schema_migrations WHERE version = '005_charge_point_code_upper.sql'");
+      if (!has005.rowCount) break;
+      const down = run('src/db/migrate.js', ['down']);
+      assert.strictEqual(down.status, 0, down.stderr);
+    }
+
     const afterDown = await query("SELECT 1 FROM information_schema.check_constraints WHERE constraint_name = 'charge_points_code_upper_check'");
     assert.strictEqual(afterDown.rowCount, 0);
     assert.strictEqual(run('src/db/migrate.js').status, 0);
+    const afterUp = await query("SELECT 1 FROM information_schema.check_constraints WHERE constraint_name = 'charge_points_code_upper_check'");
+    assert.strictEqual(afterUp.rowCount, 1);
   });
 });
