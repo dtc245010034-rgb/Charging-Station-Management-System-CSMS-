@@ -88,10 +88,11 @@ function createBootNotificationHandler({
            SET vendor = $1,
                model = $2,
                firmware_version = $3,
+               heartbeat_interval = $4,
                status = 'ONLINE',
                updated_at = CURRENT_TIMESTAMP
-           WHERE id = $4`,
-          [vendor, model, firmwareVersion, chargePointRecord.id]
+             WHERE id = $5`,
+            [vendor, model, firmwareVersion, interval, chargePointRecord.id]
         );
         logInfo(`[OCPP] BootNotification: Cập nhật trụ ${code} thành công (status=ONLINE)`);
       } catch (error) {

@@ -72,12 +72,13 @@ describe('S-08 (T-16 & T-17): BootNotification handler và kiểm soát phiên',
         };
       }
       if (sql.includes('UPDATE charge_points')) {
-        const [vendor, model, firmwareVersion, id] = params;
+        const [vendor, model, firmwareVersion, heartbeatInterval, id] = params;
         for (const cp of dbChargePoints.values()) {
           if (cp.id === id) {
             cp.vendor = vendor;
             cp.model = model;
             cp.firmware_version = firmwareVersion;
+            cp.heartbeat_interval = heartbeatInterval;
             cp.status = 'ONLINE';
             break;
           }
@@ -194,6 +195,7 @@ describe('S-08 (T-16 & T-17): BootNotification handler và kiểm soát phiên',
     assert.equal(saved.vendor, 'VinFast-Power');
     assert.equal(saved.model, 'VF-60KW');
     assert.equal(saved.firmware_version, '1.2.3');
+    assert.equal(saved.heartbeat_interval, 60);
     assert.equal(saved.status, 'ONLINE', 'Cột trạng thái phải chuyển sang ONLINE');
 
     await closeClient(client);
@@ -208,6 +210,7 @@ describe('S-08 (T-16 & T-17): BootNotification handler và kiểm soát phiên',
       vendor: null,
       model: null,
       firmware_version: null,
+      heartbeat_interval: null,
       status: 'UNKNOWN',
     });
 
@@ -232,6 +235,7 @@ describe('S-08 (T-16 & T-17): BootNotification handler và kiểm soát phiên',
     assert.equal(saved.vendor, 'OnlyVendor');
     assert.equal(saved.model, '', 'Trường thiếu phải lưu rỗng');
     assert.equal(saved.firmware_version, '', 'Trường thiếu phải lưu rỗng');
+    assert.equal(saved.heartbeat_interval, 60);
     assert.equal(saved.status, 'ONLINE');
 
     await closeClient(client);
@@ -370,6 +374,16 @@ describe('S-08 (T-16 & T-17): BootNotification handler và kiểm soát phiên',
   });
 
   it('T-17 hoàn thành: Đổi cấu hình interval và khởi động lại ứng dụng -> giá trị mới được sử dụng', async () => {
+    dbChargePoints.set('CP-CUSTOM-INTERVAL', {
+      id: 999,
+      code: 'CP-CUSTOM-INTERVAL',
+      station_id: 1,
+      vendor: null,
+      model: null,
+      firmware_version: null,
+      heartbeat_interval: null,
+      status: 'UNKNOWN',
+    });
     // Tạo handler với interval tuỳ chỉnh = 300 (giả lập cấu hình mới sau khởi động lại)
     const customBootHandler = createBootNotificationHandler({
       pool: mockPool,
@@ -410,6 +424,7 @@ describe('S-08 (T-16 & T-17): BootNotification handler và kiểm soát phiên',
     assert.equal(res[0], 3);
     assert.equal(res[2].status, 'Accepted');
     assert.equal(res[2].interval, 300, 'Khoảng nhịp tim mới từ cấu hình (300s) phải được trả về');
+    assert.equal(dbChargePoints.get('CP-CUSTOM-INTERVAL').heartbeat_interval, 300);
 
     client.close();
     await once(client, 'close');
