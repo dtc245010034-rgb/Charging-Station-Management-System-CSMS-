@@ -7,12 +7,13 @@ const { pool } = require('./db/pool');
 const connections = require('./modules/charge-points/connection-registry');
 const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
 const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
+const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
 
 const server = http.createServer(app);
 const now = () => new Date().toISOString();
 const ocppMessages = createOcppMessageHandler({
 	handlers: {
-		BootNotification: async () => ({ status: 'Accepted', currentTime: now(), interval: 60 }),
+		BootNotification: bootNotificationHandler,
 		Heartbeat: async () => ({ currentTime: now() }),
 		StatusNotification: async () => ({}),
 		Authorize: async (payload) => ({ idTagInfo: { status: payload.idTag ? 'Accepted' : 'Invalid' } }),
@@ -34,6 +35,7 @@ server.on('upgrade', createOcppUpgradeHandler({
 	},
 }));
 wss.on('connection', (ws, code) => {
+	ws.chargePointCode = code;
 	connections.connect(code, ws);
 	ws.on('close', () => {
 		connections.disconnect(code, ws);
