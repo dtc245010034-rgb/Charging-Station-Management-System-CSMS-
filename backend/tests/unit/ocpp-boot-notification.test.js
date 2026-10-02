@@ -48,7 +48,8 @@ describe('T-16: BootNotification handler - lưu vendor, model, firmwareVersion v
     assert.equal(updateQuery.params[0], 'Delta');
     assert.equal(updateQuery.params[1], 'UFC200');
     assert.equal(updateQuery.params[2], 'v2.1.0');
-    assert.equal(updateQuery.params[3], 42);
+    assert.equal(updateQuery.params[3], 60);
+    assert.equal(updateQuery.params[4], 42);
   });
 
   it('trường thiếu thì lưu rỗng, không từ chối tin nhắn', async () => {

@@ -9,6 +9,16 @@ async function tables() {
   return r.rows.map((x) => x.table_name);
 }
 
+async function rollbackThrough(version) {
+  const applied = await query('SELECT version FROM schema_migrations ORDER BY id DESC');
+  const count = applied.rows.findIndex((row) => row.version === version) + 1;
+  assert.ok(count > 0, `${version} phải đang được áp dụng`);
+  for (let index = 0; index < count; index += 1) {
+    const down = run('src/db/migrate.js', ['down']);
+    assert.strictEqual(down.status, 0, down.stderr);
+  }
+}
+
 describe('S-01 migrate: baseline up/down/up', () => {
   before(resetSchema);
   after(resetSchema);
@@ -18,6 +28,7 @@ describe('S-01 migrate: baseline up/down/up', () => {
     assert.strictEqual(up.status, 0, up.stderr);
     return (async () => {
       assert.deepStrictEqual(await tables(), TABLES);
+      assert.strictEqual((await query("SELECT 1 FROM information_schema.columns WHERE table_name = 'charge_points' AND column_name = 'heartbeat_interval'")).rowCount, 1);
       assert.strictEqual((await query('SELECT count(*)::int AS n FROM users')).rows[0].n, 0);
       const roles = await query('SELECT code FROM roles ORDER BY code');
       assert.deepStrictEqual(roles.rows.map((r) => r.code), ['ACCOUNTANT', 'ADMIN', 'DRIVER', 'OPERATOR', 'STATION_OWNER']);
@@ -29,7 +40,8 @@ describe('S-01 migrate: baseline up/down/up', () => {
   });
 
   it('down về rỗng, rồi up lại sạch', async () => {
-    for (let i = 0; i < 6; i += 1) {
+    const applied = await query('SELECT count(*)::int AS count FROM schema_migrations');
+    for (let i = 0; i < applied.rows[0].count; i += 1) {
       const down = run('src/db/migrate.js', ['down']);
       assert.strictEqual(down.status, 0, down.stderr);
     }
@@ -42,9 +54,8 @@ describe('S-01 migrate: baseline up/down/up', () => {
   it('004: tọa độ chính xác, index, idempotency và rollback; 003 vẫn rollback độc lập', async () => {
     const has = async (table, column) => (await query('SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2', [table, column])).rowCount === 1;
     const index = async (name) => (await query('SELECT 1 FROM pg_indexes WHERE indexname = $1', [name])).rowCount === 1;
-    // Bỏ 006 (boot notification) và 005 (chuẩn hoá mã trụ) trước để cách ly các khẳng định dưới đây với 004.
-    assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0); // bỏ 006
-    assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0); // bỏ 005
+    // Bỏ các migration sau 004 để cách ly các khẳng định dưới đây với 004.
+    await rollbackThrough('005_charge_point_code_upper.sql');
     assert.ok(await has('stations', 'owner_id') && await has('audit_logs', 'ip'));
     assert.ok(await index('stations_owner_id_idx') && await index('charge_points_station_id_idx'));
     assert.ok(await has('idempotency_keys', 'response_body') && await index('stations_coordinates_idx'));
@@ -59,9 +70,8 @@ describe('S-01 migrate: baseline up/down/up', () => {
     assert.strictEqual(down.status, 0, down.stderr);
     assert.ok(!await has('idempotency_keys', 'response_body') && !await index('stations_coordinates_idx'));
     assert.ok(await has('stations', 'owner_id') && await has('audit_logs', 'ip'));
-    assert.strictEqual(run('src/db/migrate.js').status, 0); // up áp lại cả 004, 005 và 006
-    assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0); // bỏ 006
-    assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0); // bỏ 005
+    assert.strictEqual(run('src/db/migrate.js').status, 0); // up áp lại các migration
+    await rollbackThrough('005_charge_point_code_upper.sql');
     assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0); // bỏ 004
     const downOwner = run('src/db/migrate.js', ['down']);
     assert.strictEqual(downOwner.status, 0, downOwner.stderr);
