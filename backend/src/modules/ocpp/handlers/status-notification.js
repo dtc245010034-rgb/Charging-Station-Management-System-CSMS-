@@ -1,6 +1,7 @@
 const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
 const { mapOcppConnectorStatus, OCPP_CONNECTOR_STATUS_MAP } = require('../../connectors/status-mapping');
+const { publish } = require('../../fleet-status/fleet-status.events');
 
 const MAX_TEXT_LENGTH = 50;
 const MAX_CONNECTOR_ID = 2147483647;
@@ -73,17 +74,29 @@ function createStatusNotificationHandler({
        SET status = $1,
            ocpp_status = $2,
            updated_at = CURRENT_TIMESTAMP
-       FROM charge_points cp, connectors previous
+       FROM charge_points cp
+       JOIN stations s ON s.id = cp.station_id, connectors previous
        WHERE cp.id = c.charge_point_id
          AND cp.code = $3
          AND c.connector_no = $4
          AND previous.id = c.id
-       RETURNING previous.ocpp_status AS previous_ocpp_status`,
+       RETURNING previous.ocpp_status AS previous_ocpp_status,
+                 (previous.status IS DISTINCT FROM $1 OR previous.ocpp_status IS DISTINCT FROM $2) AS changed,
+                 c.id AS connector_id, cp.id AS charge_point_id, cp.station_id, s.owner_id`,
       [internalStatus, status, code, connectorId]
     );
     if (result.rowCount === 0) {
       logAggregated(logWarning, 'missing-connector', code, `[OCPP] StatusNotification: Không tìm thấy đầu nối của trụ ${safeLog(code)} | connectorId`, connectorId);
       return;
+    }
+    const updated = result.rows?.[0];
+    if (updated?.changed) {
+      publish({
+        ownerId: updated.owner_id,
+        stationId: updated.station_id,
+        chargePointId: updated.charge_point_id,
+        connectorId: updated.connector_id,
+      });
     }
     if (!Object.hasOwn(OCPP_CONNECTOR_STATUS_MAP, status)) {
       logAggregated(logWarning, 'unknown-status', code, `[OCPP] StatusNotification: Trạng thái OCPP chưa biết của trụ ${safeLog(code)} | status`, safeLog(status));

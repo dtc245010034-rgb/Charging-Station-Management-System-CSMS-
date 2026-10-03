@@ -9,6 +9,7 @@ export function parseHash(hash) {
 export const PAGE_NEEDS = {
   stations: 'stations:read',
   'charge-points': 'charge-points:read',
+  'fleet-status': 'charge-points:read',
   map: 'stations:read',
   users: 'users:create',
 };
@@ -26,6 +27,7 @@ const PAGES = {
   },
   stations: () => import('../pages/shared/stations.js'),
   'charge-points': () => import('../pages/shared/charge-points.js'),
+  'fleet-status': () => import('../pages/shared/fleet-status.js'),
   map: () => import('../pages/shared/map-page.js'),
   users: () => import('../pages/admin/users.js'),
   account: () => import('../pages/shared/account.js'),

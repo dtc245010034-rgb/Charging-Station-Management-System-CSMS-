@@ -42,6 +42,7 @@ Phiên là JWT trong cookie `httpOnly` (SameSite=Lax, Secure khi production); AP
 - `GET/POST /api/stations`, `GET/PATCH /api/stations/:id`
 - `GET /api/charge-points`, `GET /api/charge-points/:id`, `GET /api/charge-points/check-code?code=...`
 - `POST /api/stations/:stationId/charge-points` (nhận `connector_count` từ 1 đến 4; mặc định 4), `PATCH /api/charge-points/:id`
+- `GET /api/fleet-status` (operator/admin: toàn bộ; chủ trạm: chỉ trạm của mình): một truy vấn trả cây trạm → trụ → đầu nối cùng `last_seen_at` và cờ `offline` (trạng thái OFFLINE đã lưu hoặc liên lạc quá 2 × `heartbeat_interval`). `GET /api/fleet-status/events` (cùng quyền) phát SSE khi trạng thái đầu nối đổi; chủ trạm chỉ nhận sự kiện trạm của mình.
 - `GET /api/roles` (chỉ ADMIN): danh sách vai trò, dùng cho form tạo tài khoản.
 - `GET /api/health`: công khai, trả `ok`, dùng cho healthcheck Docker/Render và chỉ báo “hệ thống ổn định” trên giao diện.
 - Giao diện (`frontend/`) dùng các API trên: Chủ trạm/Quản trị tạo–sửa trạm, chọn vị trí trên bản đồ, quản lý trụ/đầu nối, kiểm tra mã trụ; Vận hành xem danh sách và trạng thái; Quản trị tạo tài khoản. Danh sách `/api/stations` và `/api/charge-points` không kèm đầu nối (chỉ chi tiết `/:id` có).
