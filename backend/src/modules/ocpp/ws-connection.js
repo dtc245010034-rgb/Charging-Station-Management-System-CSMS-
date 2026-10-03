@@ -75,6 +75,7 @@ function registerOcppConnection(ws, code, {
 	logError = console.error,
 }) {
 	ws.chargePointCode = code;
+	ws.stationId = ws.stationId ?? ws.chargePoint?.station_id;
 	ws.isAlive = true;
 
 	ws.on('pong', () => {
@@ -83,7 +84,7 @@ function registerOcppConnection(ws, code, {
 
 	const rateLimiter = createConnectionRateLimiter({ maxMessagesPerSecond: rateLimitMax, now });
 
-	connections.connect(code, ws);
+	connections.connect(code, ws, { stationId: ws.stationId });
 
 	ws.on('error', (err) => {
 		logError(`[OCPP] WebSocket error | chargePoint: ${safeLog(code)}:`, sanitizeErrorMessage(err?.message || ''));
