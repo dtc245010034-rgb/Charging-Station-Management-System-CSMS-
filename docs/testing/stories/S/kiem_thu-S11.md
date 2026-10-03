@@ -1,34 +1,29 @@
-# Báo Cáo Kiểm Thử S-11: Màn Hình Trạng Thái Mọi Trụ Sạc Thời Gian Thực (T-23, T-24, T-25)
+# Báo Cáo & Đặc Tả Kiểm Thử S-11: Màn Hình Trạng Thái Mọi Trụ Sạc Thời Gian Thực (T-23, T-24, T-25)
 
 > **Dự án:** Nền tảng quản lý trạm sạc xe điện (CSMS)  
 > **Story ID:** S-11 (Jira: GYM-37)  
-> **Nhánh Git kiểm thử:** `feat/s-11-fleet-status` (Commit: `e7f0fdd6359213dec1a67dac8ecd47b817a7ff51`)  
-> **Người thực hiện:** AI Tester / QA Specialist  
-> **Chuẩn kiểm thử tuân thủ:** [`docs/testing/TESTER_STANDARD.md`](file:///c:/Users/Admin/Downloads/Charging-Station-Management-System-CSMS-/docs/testing/TESTER_STANDARD.md)  
-> **File báo cáo:** `docs/testing/stories/S/kiem_thu-S11.md`
+> **Nhánh Git kiểm thử:** `nam/docs-kiem-thu-s09-s10-s11` (dựa trên `feat/s-11-fleet-status`)  
+> **Người thực hiện:** QA Specialist / Independent AI Tester  
+> **Chuẩn quy trình:** [`docs/testing/TESTER_STANDARD.md`](file:///c:/Users/Admin/Downloads/Charging-Station-Management-System-CSMS-/docs/testing/TESTER_STANDARD.md)  
+> **Đường dẫn báo cáo:** `docs/testing/stories/S/kiem_thu-S11.md`  
+> **Script kiểm chứng tự động (Repo-Native):** [`tools/verify-s11-live.js`](file:///c:/Users/Admin/Downloads/Charging-Station-Management-System-CSMS-/tools/verify-s11-live.js)
 
 ---
 
-## 1. Thông Tin Lần Chạy (Test Execution Metadata)
+## 1. Thông Tin Lần Chạy & Môi Trường Kiểm Thử (Execution Metadata)
 
-- **Ngày chạy kiểm thử:** 2026-10-03 (Thời gian: 15:57 – 16:00 UTC+7)
-- **Môi trường:**
-  - Hệ điều hành: Windows 11 Pro 64-bit
-  - Docker Desktop: 4.92.0 (Engine 29.8.0, Compose v2)
-  - Runtime: Node.js v24.19.0 (Host) / Node.js v22.23.3 (Container `csms_app:latest`)
-  - Cơ sở dữ liệu: PostgreSQL 16 Alpine (Container `charging-station-management-system-csms--db-1`)
-  - Địa chỉ dịch vụ: HTTP `http://127.0.0.1:3000` | WebSocket `ws://127.0.0.1:3000/ocpp/<CP_CODE>`
-- **Mã định danh Git Commit:** `e7f0fdd6359213dec1a67dac8ecd47b817a7ff51` (nhánh `feat/s-11-fleet-status`, chuẩn bị merge vào `main`)
-- **Phạm vi kiểm thử:**
-  - **Story S-11:** Màn hình trạng thái mọi trụ tự động cập nhật thời gian thực (Fleet Status & Realtime Monitoring)
-  - **Nhiệm vụ T-23:** Endpoint snapshot `GET /api/fleet-status` trả về cây 3 tầng (Trạm $\rightarrow$ Trụ $\rightarrow$ Đầu nối) bằng **đúng một câu SQL duy nhất**, giới hạn dữ liệu theo chủ sở hữu (`scopeByOwner`), suy diễn trạng thái ngoại tuyến (`offline`) dựa trên `last_seen_at` và `heartbeat_interval`. Thời gian phản hồi < 200ms.
-  - **Nhiệm vụ T-24:** Giao diện hiển thị chi tiết theo từng đầu nối (`connector_no`, `status`, `ocpp_status`), hiển thị nhãn ngoại tuyến và mốc liên lạc cuối cho các trụ mất kết nối.
-  - **Nhiệm vụ T-25:** Kênh đẩy sự kiện thời gian thực qua SSE (`GET /api/fleet-status/events`), tự động phát sự kiện khi đầu nối đổi trạng thái với độ trễ $\le$ 1 giây, phân lập dữ liệu đa chủ trạm trên kênh đẩy (Chủ trạm A không nhận sự kiện của Chủ trạm B), tự kết nối lại và khôi phục snapshot, fallback polling an toàn khi lỗi mạng.
-  - **Chuỗi phụ thuộc:** S-01, S-03 (RBAC), S-05, S-06, S-07, S-08, S-09 (`last_seen_at`), S-10 (`StatusNotification`).
-- **Vị trí mã nguồn liên quan:**
-  - `backend/src/modules/fleet-status/fleet-status.routes.js`: Định nghĩa route snapshot và SSE stream có kiểm tra bảo vệ `secureRouter()`.
-  - `backend/src/modules/fleet-status/fleet-status.repository.js`: Câu truy vấn cây 3 tầng phân quyền bằng `scopeByOwner` và tính cờ `offline`.
-  - `backend/src/modules/fleet-status/fleet-status.service.js`: Chuyển đổi dữ liệu phẳng (flat rows) thành cây JSON lồng nhau.
+- **Ngày chạy kiểm thử:** 2026-10-03 (Thời gian: 16:56 UTC+7)
+- **Commit SHA:** `ec49cea` (nhánh `nam/docs-kiem-thu-s09-s10-s11`)
+- **Môi trường thực thi:**
+  - Hệ điều hành: Windows 11 (WSL2 / Docker Desktop 4.92.0)
+  - Runtime Node.js: v22.23.3 (Container `csms_app:latest`) / Host v24.19.0
+  - Cơ sở dữ liệu: PostgreSQL 16 Alpine (`charging-station-management-system-csms--db-1`)
+  - Giao thức: HTTP REST + Server-Sent Events (SSE) + WebSocket OCPP 1.6J
+- **Phân loại kiểm thử:** Kiểm thử tích hợp tự động (Integration Test) + Kiểm thử đơn vị frontend + Kiểm thử độ trễ trực tiếp trên luồng SSE (Live Realtime Latency Test).
+- **Mã nguồn liên quan:**
+  - `backend/src/modules/fleet-status/fleet-status.routes.js`: Định nghĩa route snapshot và SSE stream.
+  - `backend/src/modules/fleet-status/fleet-status.repository.js`: Truy vấn cây 3 tầng phân quyền bằng `scopeByOwner` và tính cờ `offline`.
+  - `backend/src/modules/fleet-status/fleet-status.service.js`: Chuyển đổi dữ liệu phẳng thành cây JSON lồng nhau.
   - `backend/src/modules/fleet-status/fleet-status.events.js`: Bộ phát sự kiện EventEmitter trong bộ nhớ.
   - `backend/src/modules/ocpp/handlers/status-notification.js`: Tích hợp phát sự kiện `publish()` khi trạng thái đầu nối thực sự thay đổi.
   - `frontend/services/realtime.js`: Client SSE phía trình duyệt với cơ chế auto-reconnect và fallback polling.
@@ -38,116 +33,122 @@
 
 ## 2. Bảng Tổng Kết Kết Quả Kiểm Thử (Summary)
 
-| Giai đoạn kiểm thử | Số ca kiểm thử | ĐẠT (PASS) | LỖI (FAIL) | BỊ CHẶN (BLOCKED) | Tỷ lệ Đạt |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **Giai đoạn A – Nền tảng & Xác thực vai trò (Smoke & Auth)** | 1 | 1 | 0 | 0 | 100% |
-| **Giai đoạn B – Nhiệm vụ T-23 Truy Vấn Cây & RBAC** | 5 | 5 | 0 | 0 | 100% |
-| **Giai đoạn C – Nhiệm vụ T-25 Kênh Đẩy Thời Gian Thực SSE** | 3 | 3 | 0 | 0 | 100% |
-| **Giai đoạn D – Bộ Test Hồi Quy Tự Động (Regression Suite)** | 3 | 3 | 0 | 0 | 100% |
-| **TỔNG CỘNG** | **12** | **12** | **0** | **0** | **100%** |
+| Phân nhóm kiểm thử | Loại kiểm thử | Tổng số ca | PASS | FAIL | BLOCKED | Tỷ lệ Đạt |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Giai đoạn A – Nền tảng & Xác thực (Smoke & Auth)** | Live API | 1 | 1 | 0 | 0 | 100% |
+| **Giai đoạn B – Nhiệm vụ T-23 Truy Vấn Cây & RBAC** | Live API/DB | 5 | 5 | 0 | 0 | 100% |
+| **Giai đoạn C – Nhiệm vụ T-25 Kênh Đẩy SSE Thời Gian Thực** | Live SSE/WS | 3 | 3 | 0 | 0 | 100% |
+| **Giai đoạn D – Bộ Test Hồi Quy Tự Động (CI Suite)** | CI Automated | 3 | 3 | 0 | 0 | 100% |
+| **TỔNG CỘNG** | | **12** | **12** | **0** | **0** | **100%** |
 
 ---
 
-## 3. Kết Luận Đánh Giá Theo Tiêu Chí Chấp Nhận (Acceptance Criteria)
+## 3. Ma Trận Truy Vết Tiêu Chí Chấp Nhận & Bằng Chứng Thực Tế (AC Traceability)
 
-### 3.1. Đánh giá chi tiết từng tiêu chí
-1. **Tiêu chí 1 – Truy vấn cây 3 tầng bằng 1 câu SQL duy nhất (T-23): ĐẠT (PASS).**  
-   - Endpoint `GET /api/fleet-status` sử dụng một câu lệnh `LEFT JOIN` giữa 3 bảng `stations`, `charge_points`, `connectors` có phân quyền `WHERE ${scope.sql}`.
-   - Dữ liệu trả về phân cấp lồng nhau hoàn chỉnh: `stations -> charge_points -> connectors`.
-   - Hiệu năng vượt trội: Thời gian phản hồi đo được trên hệ thống thực tế chỉ **6.1 mili-giây** (yêu cầu đặt ra là `< 200 mili-giây` với 50 trụ).
-
-2. **Tiêu chí 2 – Phân quyền RBAC và phân lập dữ liệu đa chủ trạm (T-23): ĐẠT (PASS).**  
-   - `ADMIN` & `OPERATOR`: Thấy toàn bộ 8 trạm và mọi trụ trong hệ thống.
-   - `STATION_OWNER 1`: Chỉ thấy 4 trạm thuộc quyền sở hữu của mình (`Trạm Cầu Giấy`, `Trạm Ba Đình`, `Trạm Đống Đa`, `Trạm Long Biên`).
-   - `STATION_OWNER 2`: Chỉ thấy 2 trạm của mình (`Trạm ICTU Thái Nguyên`, `Trạm Sông Công`).
-   - Hai chủ trạm không thấy chéo dữ liệu của nhau (`hasOverlap = false`).
-   - `DRIVER`: Không có quyền `stations:read`, bị từ chối truy cập ngay với mã HTTP **403 Forbidden**.
-
-3. **Tiêu chí 3 – Tự động suy diễn trạng thái ngoại tuyến `offline` (T-23/S-12): ĐẠT (PASS).**  
-   - Hệ thống không phụ thuộc vào cronjob nền để đổi trạng thái, mà tính toán động ngay tại thời điểm truy vấn:
-     `cp.status = 'OFFLINE' OR cp.last_seen_at IS NULL OR cp.last_seen_at <= CURRENT_TIMESTAMP - (cp.heartbeat_interval * INTERVAL '2 seconds')`.
-   - Trụ `DEMO-ST01-CP1` vừa gửi Heartbeat $\rightarrow$ `offline: false`.
-   - Trụ `DEMO-ST01-CP2` có `last_seen_at` cách đây 3 phút (quá `2 * 60s`) $\rightarrow$ `offline: true`.
-
-4. **Tiêu chí 4 – Chuẩn kết nối và Header SSE (T-25): ĐẠT (PASS).**  
-   - Endpoint `GET /api/fleet-status/events` phản hồi đúng các header bắt buộc của chuẩn Server-Sent Events:
-     `Content-Type: text/event-stream; charset=utf-8`, `Cache-Control: no-cache`, `Connection: keep-alive`, `X-Accel-Buffering: no`.
-   - Có gửi thông điệp giữ kết nối `: keep-alive\n\n` định kỳ 20 giây để ngăn chặn proxy ngắt kết nối ngầm.
-
-5. **Tiêu chí 5 – Độ trễ cập nhật thời gian thực $\le$ 1 giây (T-25): ĐẠT (PASS).**  
-   - Khi trụ sạc gửi `StatusNotification` thay đổi trạng thái đầu nối từ `Available` sang `Finishing`, sự kiện được phát ngay lập tức tới client SSE.
-   - Thời gian từ khi trụ gửi đến khi client SSE nhận được sự kiện đo được trên môi trường thực tế là **32.9 mili-giây** (nhỏ hơn rất nhiều so với ngưỡng yêu cầu $\le 1000$ms).
-
-6. **Tiêu chí 6 – Phân quyền trên kênh đẩy SSE (T-25): ĐẠT (PASS).**  
-   - Khi đầu nối tại Trạm 1 (của Chủ trạm 1) đổi trạng thái:
-     - `ADMIN`: Nhận được thông báo sự kiện.
-     - `OWNER 1`: Nhận được đúng thông báo sự kiện của trạm mình (`{"station_id":"1","charge_point_id":"1","connector_id":"1"}`).
-     - `OWNER 2`: **Hoàn toàn không nhận được** thông báo này (`eventsCount = 0`). Bảo mật phân lập tuyệt đối giữa các tenant.
-
-7. **Tiêu chí 7 – Client Frontend tự phục hồi và Fallback (T-24/T-25): ĐẠT (PASS).**  
-   - Module `frontend/services/realtime.js` tự động tải lại dữ liệu khi mở lại tab (`visibilitychange`), tự nạp lại snapshot khi kết nối lại SSE, và tự động chuyển sang cơ chế polling dự phòng nếu kết nối SSE bị lỗi liên tiếp 3 lần.
+| Tiêu chí chấp nhận (AC) | Mô tả yêu cầu | Ca test chứng minh | Bằng chứng thực tế xác thực (Raw Evidence) | Đánh giá |
+|---|---|:---:|---|:---:|
+| **AC-1: Truy vấn cây 3 tầng bằng 1 câu SQL duy nhất** | `GET /api/fleet-status` nạp Trạm $\rightarrow$ Trụ $\rightarrow$ Đầu nối bằng 1 câu `LEFT JOIN`, phản hồi `< 200ms`. | TC-S11-B01 | Cấu trúc JSON 3 tầng đầy đủ.<br>Thời gian phản hồi thực tế: **12.5 mili-giây** (nhanh gấp 16 lần ngưỡng yêu cầu). | **PASS** |
+| **AC-2: Phân quyền RBAC và cách ly đa chủ trạm** | `ADMIN`/`OPERATOR` thấy toàn bộ; `STATION_OWNER` chỉ thấy trạm của mình; `DRIVER` bị cấm. | TC-S11-B02<br>TC-S11-B03<br>TC-S11-B04 | • Admin & Operator: thấy đủ 8 trạm.<br>• Owner 1: thấy 4 trạm [1, 2, 3, 4].<br>• Owner 2: thấy 2 trạm [5, 6].<br>• `hasOverlap = false` (không trùng lặp).<br>• Driver: nhận HTTP **403 Forbidden**. | **PASS** |
+| **AC-3: Tự động tính cờ ngoại tuyến `offline`** | Suy diễn động tại thời điểm truy vấn: quá $2 \times interval$ $\rightarrow$ `offline: true`. | TC-S11-B05 | • Trụ CP1 vừa gửi Heartbeat $\rightarrow$ `offline = false`.<br>• Trụ CP2 last seen 3 phút trước $\rightarrow$ `offline = true`. | **PASS** |
+| **AC-4: Header chuẩn kênh đẩy SSE** | Header bắt buộc của SSE và chống proxy timeout. | TC-S11-C01 | Response Headers:<br>`Content-Type: text/event-stream; charset=utf-8`<br>`Cache-Control: no-cache`<br>`X-Accel-Buffering: no`. | **PASS** |
+| **AC-5: Độ trễ cập nhật thời gian thực $\le 1$ giây** | Trụ đổi trạng thái qua WebSocket $\rightarrow$ client SSE nhận sự kiện trong $\le 1000$ms. | TC-S11-C02 | Độ trễ đo từ khi gửi `StatusNotification` đến khi client SSE nhận được: **32.2 mili-giây** ($\le 1000$ms). | **PASS** |
+| **AC-6: Phân quyền trên kênh đẩy SSE** | Chủ trạm A không nhận sự kiện của Chủ trạm B trên kênh stream. | TC-S11-C03 | Trạm 1 đổi trạng thái $\rightarrow$ Owner 1 nhận được 1 sự kiện; Owner 2 nhận **0 sự kiện**. Bảo mật cách ly tuyệt đối. | **PASS** |
+| **AC-7: Frontend tự phục hồi & Fallback** | Tự refresh khi mở lại tab, tự nạp snapshot khi reconnect, fallback polling khi lỗi. | TC-S11-D01 | Bộ test `realtime.test.js` pass 100%, giả lập EventSource error 3 lần $\rightarrow$ tự chuyển fallback polling. | **PASS** |
 
 ---
 
-## 4. Chi Tiết Từng Ca Kiểm Thử (Test Cases Detail)
+## 4. Đặc Tả Chi Tiết Từng Ca Kiểm Thử (Test Specifications & Verification)
 
 ### Giai đoạn A: Nền Tảng & Xác Thực Vai Trò (Smoke & Auth)
 
-| Mã test case | Mục tiêu kiểm tra | Dữ liệu đầu vào / Lệnh gọi | Kết quả thực tế | Trạng thái | Bằng chứng thực tế |
-|---|---|---|---|:---:|---|
-| **TC-S11-SMOKE-01** | Đăng nhập lấy phiên làm việc của các vai trò | `POST /api/auth/login` với các tài khoản: `admin@`, `operator@`, `owner@`, `owner2@`, `driver@` | Toàn bộ 5 vai trò đăng nhập thành công, nhận cookie JWT `httpOnly` hợp lệ | **PASS** | HTTP 200 OK cho cả 5 tài khoản demo. |
+| Mã ID | Phân loại | Khung gửi / Thao tác (Input) | Kết quả kỳ vọng (Expected) | Kết quả thực tế (Actual) | Bằng chứng thô (Raw Verification) | Đánh giá |
+|---|:---:|---|---|---|---|:---:|
+| **TC-S11-A01** | Live API | Đăng nhập 5 tài khoản demo: `admin@`, `operator@`, `owner@`, `owner2@`, `driver@` | Nhận HTTP 200 và Cookie `token` | Cả 5 vai trò đăng nhập thành công | Cookie JWT hợp lệ được cấp | **PASS** |
 
 ---
 
 ### Giai đoạn B: Nhiệm Vụ T-23 Truy Vấn Cây & Phân Quyền (Snapshot & RBAC)
 
-| Mã test case | Mục tiêu kiểm tra | Lệnh gọi / Tài khoản thực hiện | Kết quả thực tế quan sát | Trạng thái | Bằng chứng chi tiết |
-|---|---|---|---|:---:|---|
-| **TC-S11-T23-01** | Cấu trúc cây 3 tầng & hiệu năng truy vấn của ADMIN | `GET /api/fleet-status` (Tài khoản `ADMIN`) | Trả về cấu trúc 3 tầng chuẩn `stations -> charge_points -> connectors`. Thời gian phản hồi: **6.1ms** (< 200ms). | **PASS** | `stationsCount: 8`, mẫu Trạm 1 có 2 trụ, mỗi trụ có 2 đầu nối. |
-| **TC-S11-T23-02** | Quyền hạn quan sát của OPERATOR | `GET /api/fleet-status` (Tài khoản `OPERATOR`) | Vận hành viên quan sát đủ 8/8 trạm tương đương với quyền Quản trị. | **PASS** | `operatorStations = adminStations = 8`. |
-| **TC-S11-T23-03** | Phân lập dữ liệu đa chủ trạm (Multi-tenant) | So sánh kết quả `GET /api/fleet-status` giữa `OWNER 1` và `OWNER 2` | `OWNER 1` nhận đúng 4 trạm (1, 2, 3, 4). `OWNER 2` nhận đúng 2 trạm (5, 6). Không có bất kỳ trạm nào bị trùng lặp chéo. | **PASS** | `hasOverlap = false`. Phạm vi dữ liệu độc lập 100%. |
-| **TC-S11-T23-04** | Chặn vai trò không có quyền xem trạm | `GET /api/fleet-status` (Tài khoản `DRIVER`) | Bị từ chối với mã lỗi HTTP **403 Forbidden**. | **PASS** | Cơ chế `routeGuard` và `permissions.js` bảo vệ route an toàn. |
-| **TC-S11-T23-05** | Suy diễn trạng thái ngoại tuyến `offline` | Kiểm tra 2 trụ: `DEMO-ST01-CP1` (mới cập nhật) và `DEMO-ST01-CP2` (last seen 3 phút trước) | CP1: `offline = false`. CP2: `offline = true`. | **PASS** | Cờ `offline` được tính toán chính xác theo công thức $2 \times interval$. |
+| Mã ID | Phân loại | Lệnh gọi / Tài khoản (Input) | Kết quả kỳ vọng (Expected) | Kết quả thực tế (Actual) | Bằng chứng thô (Raw Verification) | Đánh giá |
+|---|:---:|---|---|---|---|:---:|
+| **TC-S11-B01** | Live API | `GET /api/fleet-status` (Tài khoản `ADMIN`) | Trả về cây 3 tầng trong < 200ms | Đủ 3 tầng `stations -> charge_points -> connectors`. Thời gian: **12.5ms**. | Body chứa 8 trạm, mỗi trạm có trụ và đầu nối | **PASS** |
+| **TC-S11-B02** | Live API | `GET /api/fleet-status` (Tài khoản `OPERATOR`) | Thấy đủ toàn bộ trạm như ADMIN | Thấy đúng 8 trạm | `operatorStations === adminStations === 8` | **PASS** |
+| **TC-S11-B03** | Live API | So sánh snapshot giữa `OWNER 1` và `OWNER 2` | Mỗi chủ chỉ thấy trạm của mình | Owner 1: trạm [1,2,3,4]<br>Owner 2: trạm [5,6] | `hasOverlap = false` | **PASS** |
+| **TC-S11-B04** | Live API | `GET /api/fleet-status` (Tài khoản `DRIVER`) | Bị từ chối HTTP 403 Forbidden | HTTP 403 Forbidden | Middleware `routeGuard` chặn truy cập | **PASS** |
+| **TC-S11-B05** | Live API/DB | Kiểm tra cờ `offline` của 2 trụ | CP1 (mới): online; CP2 (3 phút trước): offline | CP1: `offline = false`<br>CP2: `offline = true` | CSDL tính toán động tại thời điểm truy vấn | **PASS** |
 
 ---
 
 ### Giai đoạn C: Nhiệm Vụ T-25 Kênh Đẩy Sự Kiện Thời Gian Thực (SSE & Latency)
 
-| Mã test case | Mục tiêu kiểm tra | Kịch bản kiểm thử | Kết quả thực tế quan sát | Trạng thái | Bằng chứng chi tiết |
-|---|---|---|---|:---:|---|
-| **TC-S11-T25-01** | Kiểm tra header và kết nối SSE | Kết nối `GET /api/fleet-status/events` | Nhận HTTP 200, Content-Type: `text/event-stream; charset=utf-8`, Cache-Control: `no-cache`, X-Accel-Buffering: `no`. | **PASS** | Đáp ứng 100% tiêu chuẩn SSE của W3C và proxy Nginx/Render. |
-| **TC-S11-T25-02** | Đo độ trễ đẩy sự kiện thời gian thực ($\le 1$s) | Trụ gửi `StatusNotification` đổi trạng thái đầu nối sang `Finishing` | Sự kiện được đẩy tức thì qua kênh SSE và client nhận được sau **32.9 mili-giây**. | **PASS** | Nhanh hơn 30 lần so với giới hạn yêu cầu 1000ms. |
-| **TC-S11-T25-03** | Phân quyền đẩy sự kiện trên kênh SSE | Kiểm tra số lượng sự kiện nhận được giữa `OWNER 1` và `OWNER 2` khi Trạm 1 đổi trạng thái | `OWNER 1` nhận được 1 sự kiện (`station_id: "1"`). `OWNER 2` nhận được **0 sự kiện**. | **PASS** | Không rò rỉ sự kiện của chủ trạm này sang chủ trạm khác trên luồng stream. |
+| Mã ID | Phân loại | Tình huống kiểm thử (Scenario) | Kết quả kỳ vọng (Expected) | Kết quả thực tế (Actual) | Bằng chứng thô (Raw Verification) | Đánh giá |
+|---|:---:|---|---|---|---|:---:|
+| **TC-S11-C01** | Live SSE | Mở kết nối `GET /api/fleet-status/events` | Nhận HTTP 200, Content-Type `text/event-stream` | Header chuẩn SSE, `X-Accel-Buffering: no` | Proxy không đệm gói tin | **PASS** |
+| **TC-S11-C02** | Live SSE/WS | Trụ gửi `StatusNotification` đổi trạng thái sang `Preparing` | Đẩy qua SSE tới client trong $\le 1000$ms | Sự kiện nhận được sau **32.2 mili-giây** | Event data: `{"station_id":"1","charge_point_id":"1","connector_id":"1"}` | **PASS** |
+| **TC-S11-C03** | Live SSE/WS | Trạm 1 đổi trạng thái, kiểm tra client Owner 1 vs Owner 2 | Owner 1 nhận được; Owner 2 không nhận | Owner 1: 1 sự kiện<br>Owner 2: **0 sự kiện** | Cách ly dữ liệu hoàn hảo trên luồng SSE | **PASS** |
 
 ---
 
-### Giai đoạn D: Bộ Test Hồi Quy Tự Động (Automated Regression Tests)
+### Giai đoạn D: Bộ Test Hồi Quy Tự Động (CI Regression)
 
-| Mã test case | Bộ test | Lệnh thực thi | Kết quả | Trạng thái |
+| Mã ID | Bộ kiểm thử | Lệnh thực thi từ thư mục gốc | Kết quả đầu ra | Đánh giá |
 |---|---|---|---|:---:|
-| **TC-S11-D01** | Unit test client realtime SSE | `node --test backend/tests/unit/realtime.test.js` | `1 test pass, 0 fail (thời gian: 55ms)` | **PASS** |
-| **TC-S11-D02** | Toàn bộ Unit test của hệ thống | `python test.py --only unit` | `64 test pass, 0 fail (thời gian: 10s)` | **PASS** |
-| **TC-S11-D03** | Toàn bộ Integration test của hệ thống | `python test.py --only integration` | `67 test pass, 0 fail (thời gian: 32s)` | **PASS** |
+| **TC-S11-D01** | Unit test client realtime | `node --test backend/tests/unit/realtime.test.js` | `1 test pass, 0 fail (thời gian: 55ms)` | **PASS** |
+| **TC-S11-D02** | Toàn bộ Unit test của hệ thống | `python test.py --only unit` | `64 test pass, 0 fail (thời gian: 10 giây)` | **PASS** |
+| **TC-S11-D03** | Toàn bộ Integration test của hệ thống | `python test.py --only integration` | `67 test pass, 0 fail (thời gian: 32 giây)` | **PASS** |
 
 ---
 
-## 5. Hướng Dẫn Tái Hiện Kết Quả Kiểm Thử (Reproduction Guide)
+## 5. Nhật Ký Thực Thi Kiểm Thử Thực Tế (Raw Execution Log)
 
-Các bước kiểm tra độc lập trên nhánh `feat/s-11-fleet-status`:
+Bằng chứng thực thi từ công cụ kiểm tra tự động chuẩn của repo:
 
-1. **Khởi động ứng dụng CSMS:**
-   ```powershell
-   python run.py --no-open
-   ```
-2. **Chạy bộ kiểm thử đơn vị realtime SSE:**
-   ```powershell
-   node --test backend/tests/unit/realtime.test.js
-   ```
-3. **Thực thi bộ kịch bản kiểm thử runtime toàn diện S-11:**
-   ```powershell
-   node C:\Users\Admin\.gemini\antigravity\brain\22b193fa-e674-48fc-91f3-86b355581a60\scratch\test-s11-live.js
-   ```
-4. **Kiểm tra kênh stream SSE trực tiếp qua cURL:**
-   ```powershell
-   curl.exe -N -s -H "Cookie: <OWNER_COOKIE>" http://127.0.0.1:3000/api/fleet-status/events
-   ```
+```
+$ node tools/verify-s11-live.js
+======================================================================
+  KIỂM THỬ XÁC MINH S-11: MÀN HÌNH TRẠNG THÁI MỌI TRỤ & SSE (T-23, T-24, T-25)
+======================================================================
+
+[PASS] TC-S11-A01: Đăng nhập thành công 5 vai trò (ADMIN, OPERATOR, OWNER 1, OWNER 2, DRIVER)
+[PASS] TC-S11-B01: ADMIN truy vấn cây 3 tầng (Trạm-Trụ-Đầu nối) thành công trong 12.5ms (< 200ms)
+[PASS] TC-S11-B02: OPERATOR thấy toàn bộ trạm trong hệ thống tương tự ADMIN
+[PASS] TC-S11-B03: Phân lập dữ liệu đa chủ trạm: OWNER 1 và OWNER 2 chỉ thấy trạm của riêng mình, không chồng lấn
+[PASS] TC-S11-B04: DRIVER không có quyền stations:read bị từ chối với HTTP 403 Forbidden
+[PASS] TC-S11-B05: Suy diễn trạng thái ngoại tuyến: last_seen_at <= 2*interval -> offline = true
+[PASS] TC-S11-C01: Kênh SSE GET /api/fleet-status/events mở thành công với các header chuẩn (text/event-stream, no-cache, X-Accel-Buffering: no)
+[PASS] TC-S11-C02: Sự kiện StatusNotification đẩy qua SSE tức thời trong 32.2ms (<= 1000ms)
+[PASS] TC-S11-C03: Phân quyền kênh đẩy SSE: Chủ trạm 1 nhận sự kiện trạm mình, Chủ trạm 2 tuyệt đối không bị lộ sự kiện
+
+======================================================================
+TỔNG KẾT: 9 Test Cases | PASS: 9 | FAIL: 0
+======================================================================
+```
+
+---
+
+## 6. Đánh Giá Rủi Ro & Giới Hạn Kiểm Thử (Risk Assessment & Test Limitations)
+
+1. **Phạm vi một tiến trình (Single Instance):**
+   - Bộ phát sự kiện `fleet-status.events.js` sử dụng `Set` các subscriber trong bộ nhớ của tiến trình Node.js. Thiết kế này đúng với phạm vi Sprint 2 (chạy một instance). Nếu tương lai mở rộng quy mô ngang (Horizontal Scaling / Multi-replica), cần nâng cấp sang Redis Pub/Sub hoặc PostgreSQL LISTEN/NOTIFY.
+2. **Số lượng kết nối SSE đồng thời:**
+   - Trình duyệt chuẩn HTTP/1.1 có giới hạn 6 kết nối đồng thời trên mỗi domain. Khi người dùng mở nhiều tab, có thể chạm giới hạn này nếu không cấu hình HTTP/2 trên reverse proxy production.
+
+---
+
+## 7. Hướng Dẫn Tái Hiện (Repo-Native Reproduction Steps)
+
+Mọi Reviewer đều có thể tái hiện 100% kết quả trên bằng các lệnh chuẩn từ thư mục gốc của repository:
+
+```bash
+# 1. Khởi động môi trường Docker của dự án
+python run.py --no-open
+
+# 2. Chạy bộ kiểm thử đơn vị client realtime
+node --test backend/tests/unit/realtime.test.js
+
+# 3. Chạy script kiểm chứng tự động S-11 (Repo-Native)
+node tools/verify-s11-live.js
+
+# 4. Kiểm tra kênh stream SSE trực tiếp qua cURL
+curl.exe -N -s -H "Cookie: <OWNER_COOKIE>" http://127.0.0.1:3000/api/fleet-status/events
+```

@@ -1,143 +1,155 @@
-# Báo Cáo Kiểm Thử S-09: Nhịp Tim và Thời Điểm Liên Lạc Cuối (T-18, T-19)
+# Báo Cáo & Đặc Tả Kiểm Thử S-09: Nhịp Tim và Thời Điểm Liên Lạc Cuối (T-18, T-19)
 
 > **Dự án:** Nền tảng quản lý trạm sạc xe điện (CSMS)  
 > **Story ID:** S-09 (Jira: GYM-35)  
-> **Người thực hiện:** AI Tester / QA Specialist  
-> **Chuẩn kiểm thử tuân thủ:** [`docs/testing/TESTER_STANDARD.md`](file:///c:/Users/Admin/Downloads/Charging-Station-Management-System-CSMS-/docs/testing/TESTER_STANDARD.md)  
-> **File báo cáo:** `docs/testing/stories/S/kiem_thu-S09.md`
+> **Người thực hiện:** QA Specialist / Independent AI Tester  
+> **Chuẩn quy trình:** [`docs/testing/TESTER_STANDARD.md`](file:///c:/Users/Admin/Downloads/Charging-Station-Management-System-CSMS-/docs/testing/TESTER_STANDARD.md)  
+> **Đường dẫn báo cáo:** `docs/testing/stories/S/kiem_thu-S09.md`  
+> **Script kiểm chứng tự động (Repo-Native):** [`tools/verify-s09-live.js`](file:///c:/Users/Admin/Downloads/Charging-Station-Management-System-CSMS-/tools/verify-s09-live.js)
 
 ---
 
-## 1. Thông Tin Lần Chạy (Test Execution Metadata)
+## 1. Thông Tin Lần Chạy & Môi Trường Kiểm Thử (Execution Metadata)
 
-- **Ngày chạy kiểm thử:** 2026-10-03 (Thời gian: 15:47 – 15:48 UTC+7)
-- **Môi trường:**
-  - Hệ điều hành: Windows 11 Pro 64-bit
-  - Docker Desktop: 4.92.0 (Engine 29.8.0, Compose v2)
-  - Runtime: Node.js v24.19.0 (Host) / Node.js v22.23.3 (Container `csms_app:latest`)
-  - Cơ sở dữ liệu: PostgreSQL 16 Alpine (Container `charging-station-management-system-csms--db-1`)
-  - Địa chỉ dịch vụ: HTTP `http://127.0.0.1:3000` | WebSocket `ws://127.0.0.1:3000/ocpp/<CP_CODE>`
-- **Mã định danh Git Commit:** `e817643b9491b64acbc86f342fe4f35d81f2c0a8` (nhánh `main`)
-- **Phạm vi kiểm thử:**
-  - **Story S-09:** Nhịp tim và thời điểm liên lạc cuối (Heartbeat & Last Seen Timestamp)
-  - **Nhiệm vụ T-18:** Handler `Heartbeat` trả thời gian máy chủ ISO 8601 UTC và hook tầng khung tự động cập nhật cột `last_seen_at` cho mọi tin nhắn OCPP.
-  - **Nhiệm vụ T-19:** Đồng hồ trụ ảo bị lệch giờ (Clock Skew / chênh lệch múi giờ) nhưng hệ thống CSMS vẫn ghi nhận `last_seen_at` hoàn toàn theo thời gian máy chủ CSDL (`CURRENT_TIMESTAMP`).
-  - **Chuỗi phụ thuộc:** S-01 (Khung hệ thống), S-06 (Kết nối WebSocket), S-07 (Khung gọi OCPP), S-08 (`BootNotification`), N2 (Khoá trạm đóng kết nối).
-- **Vị trí mã nguồn liên quan:**
-  - `backend/src/server.js`: Khởi tạo hàm hook `updateChargePointLastSeen` và handler `Heartbeat`.
-  - `backend/src/modules/ocpp/message-handler.js`: Hook trung gian gọi `await updateLastSeen(connection)` trước khi chuyển giao tin nhắn cho từng handler cụ thể.
-  - `backend/src/modules/ocpp/handlers/boot-notification.js`: Điều kiện tiên quyết `BootNotification` phải được `Accepted` trước khi gửi `Heartbeat`.
-  - `backend/migrations/009_charge_point_last_seen_at.sql`: Migration bổ sung cột `last_seen_at TIMESTAMPTZ` cho bảng `charge_points`.
+- **Ngày chạy kiểm thử:** 2026-10-03 (Thời gian: 16:56 UTC+7)
+- **Commit SHA:** `ec49cea` (nhánh `nam/docs-kiem-thu-s09-s10-s11`, tích hợp S-09/S-10/S-11)
+- **Môi trường thực thi:**
+  - Hệ điều hành: Windows 11 (WSL2 / Docker Desktop 4.92.0)
+  - Runtime Node.js: v22.23.3 (Container `csms_app:latest`) / Host v24.19.0
+  - Cơ sở dữ liệu: PostgreSQL 16 Alpine (`charging-station-management-system-csms--db-1`)
+  - Giao thức: WebSocket OCPP 1.6J (`ws://127.0.0.1:3000/ocpp/<CP_CODE>`)
+- **Phân loại kiểm thử:** Kết hợp Kiểm thử tự động (Automated Test Suite) + Kiểm thử tích hợp Runtime trên Container sống (Live Integration Test).
+- **Mã nguồn liên quan:**
+  - `backend/src/server.js`: Hook `updateChargePointLastSeen` và handler `Heartbeat`.
+  - `backend/src/modules/ocpp/message-handler.js`: Tầng đón nhận khung và gọi hook `updateLastSeen` trước mọi nghiệp vụ.
+  - `backend/migrations/009_charge_point_last_seen_at.sql`: Cột `last_seen_at TIMESTAMPTZ` trong bảng `charge_points`.
+  - `backend/tests/integration/ocpp-heartbeat-timezone.test.js`: Bộ test lệch múi giờ trụ ảo.
 
 ---
 
 ## 2. Bảng Tổng Kết Kết Quả Kiểm Thử (Summary)
 
-| Giai đoạn kiểm thử | Số ca kiểm thử | ĐẠT (PASS) | LỖI (FAIL) | BỊ CHẶN (BLOCKED) | Tỷ lệ Đạt |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **Giai đoạn A – Nền tảng & Tiền đề (Smoke & Pre-requisites)** | 4 | 4 | 0 | 0 | 100% |
-| **Giai đoạn B – Nghiệp vụ T-18 & Acceptance Criteria** | 5 | 5 | 0 | 0 | 100% |
-| **Giai đoạn C – T-19 Lệch Giờ, Khoá Trạm & Tải Biên (Edge & NFR)** | 4 | 4 | 0 | 0 | 100% |
-| **Giai đoạn D – Bộ Test Hồi Quy Tự Động (Regression Suite)** | 2 | 2 | 0 | 0 | 100% |
-| **TỔNG CỘNG** | **15** | **15** | **0** | **0** | **100%** |
+| Phân nhóm kiểm thử | Loại kiểm thử | Tổng số ca | PASS | FAIL | BLOCKED | Tỷ lệ Đạt |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Giai đoạn A – Nền tảng (Smoke & Schema)** | Automated / Live | 4 | 4 | 0 | 0 | 100% |
+| **Giai đoạn B – Nghiệp vụ T-18 & Acceptance Criteria** | Live Runtime | 5 | 5 | 0 | 0 | 100% |
+| **Giai đoạn C – T-19 Lệch Giờ, Khoá Trạm & Tải Biên** | Live Runtime | 4 | 4 | 0 | 0 | 100% |
+| **Giai đoạn D – Bộ Test Hồi Quy Tự Động (CI Suite)** | CI Automated | 2 | 2 | 0 | 0 | 100% |
+| **TỔNG CỘNG** | | **15** | **15** | **0** | **0** | **100%** |
 
 ---
 
-## 3. Kết Luận Đánh Giá Theo Tiêu Chí Chấp Nhận (Acceptance Criteria)
+## 3. Ma Trận Truy Vết Tiêu Chí Chấp Nhận & Bằng Chứng Thực Tế (AC Traceability)
 
-### 3.1. Đánh giá từng tiêu chí
-1. **Tiêu chí 1 – Phản hồi Heartbeat với `currentTime` chuẩn ISO 8601 UTC:**  
-   **Kết quả: ĐẠT (PASS).**  
-   - Khi trụ sạc đã được chấp thuận (`BootNotification` trạng thái `Accepted`) gửi yêu cầu `[2, "<id>", "Heartbeat", {}]`, máy chủ CSMS phản hồi ngay lập tức `CALLRESULT` `[3, "<id>", {"currentTime": "<timestamp>"}]`.
-   - Chuỗi thời gian trả về tuân thủ nghiêm ngặt định dạng ISO 8601 kết thúc bằng chữ `Z` (ví dụ: `2026-10-03T08:48:08.867Z`), đảm bảo múi giờ chuẩn quốc tế UTC.
-
-2. **Tiêu chí 2 – Cập nhật `last_seen_at` trong CSDL theo giờ máy chủ:**  
-   **Kết quả: ĐẠT (PASS).**  
-   - Sau khi nhận tin nhắn `Heartbeat`, CSDL tự động cập nhật trường `charge_points.last_seen_at` bằng hàm `CURRENT_TIMESTAMP` của PostgreSQL.
-   - Bằng chứng kiểm tra thực tế: Độ lệch giữa `last_seen_at` vừa ghi nhận và hàm `SELECT CURRENT_TIMESTAMP;` của CSDL là **0.313 giây** (rất nhỏ, nhỏ hơn nhiều so với ngưỡng yêu cầu `< 2 giây`).
-
-3. **Tiêu chí 3 – Mọi tin nhắn OCPP khác đều cập nhật `last_seen_at`:**  
-   **Kết quả: ĐẠT (PASS).**  
-   - Cơ chế hook `updateLastSeen` nằm trực tiếp ở tầng khung tin nhắn (`message-handler.js`, dòng 144) trước khi gọi các nghiệp vụ khác.
-   - Kiểm chứng thực tế: Khi trụ gửi `StatusNotification` hoặc `Authorize`, trường `last_seen_at` của trụ vẫn được tự động cập nhật thời gian mới tăng dần (`t_after > t_before`).
-
-4. **Tiêu chí 4 – Chặn tin nhắn Heartbeat trước khi BootNotification:**  
-   **Kết quả: ĐẠT (PASS).**  
-   - Khi trụ mới kết nối WebSocket nhưng chưa thực hiện gửi `BootNotification` (hoặc gửi nhưng chưa được `Accepted`), nếu gửi `Heartbeat` sẽ bị máy chủ từ chối ngay lập tức bằng `CALLERROR` với mã lỗi `SecurityError` và mô tả `"Charge point is not accepted yet"`. Socket vẫn giữ mở để trụ tiếp tục Boot lại.
-
-5. **Tiêu chí 5 – Trụ ảo lệch giờ không ảnh hưởng đến hệ thống (T-19):**  
-   **Kết quả: ĐẠT (PASS).**  
-   - Cho dù đồng hồ phần cứng của trụ ảo hoặc client lệch múi giờ hay lệch hàng giờ, `currentTime` trả về và `last_seen_at` lưu trong PostgreSQL hoàn toàn lấy từ đồng hồ của server/DB CSMS (độ lệch với `NOW()` chỉ ~0.138s), ngăn chặn hoàn toàn việc dữ liệu ngoại tuyến/trực tuyến bị làm giả.
-
-6. **Tiêu chí 6 – Trạm bị khoá bởi Quản trị viên (Admin Locked):**  
-   **Kết quả: ĐẠT (PASS).**  
-   - Khi Admin khoá trạm (`PATCH /api/admin/stations/:id/lock` với `locked: true`), kết nối đang mở bị đóng với mã 1008 (`Station locked`).
-   - Nếu trụ kết nối lại và cố gửi `Heartbeat`, tin nhắn bị chặn và `last_seen_at` trong DB **giữ nguyên không cập nhật** nhờ ràng buộc SQL `AND s.locked_at IS NULL`.
+| Tiêu chí chấp nhận (AC) | Mô tả yêu cầu | Ca test chứng minh | Bằng chứng thực tế xác thực (Raw Evidence) | Đánh giá |
+|---|---|:---:|---|:---:|
+| **AC-1: Phản hồi Heartbeat chuẩn ISO 8601 UTC** | Trụ đã Boot gửi `Heartbeat` nhận `CALLRESULT` chứa `currentTime` dạng ISO UTC kết thúc bằng `Z`. | TC-S09-B02 | `[3, "hb-valid-01", {"currentTime": "2026-10-03T09:56:16.892Z"}]`<br>Regex `/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/` = `true`. | **PASS** |
+| **AC-2: Cập nhật `last_seen_at` theo giờ DB** | CSDL cập nhật `charge_points.last_seen_at = CURRENT_TIMESTAMP`, sai lệch với DB `< 2 giây`. | TC-S09-B03 | DB `last_seen_at`: `2026-10-03 09:56:16.887+00`<br>DB `NOW()`: `2026-10-03 09:56:17.189+00`<br>Chênh lệch: **0.302 giây** (< 2.0s). | **PASS** |
+| **AC-3: Tin nhắn khác cũng cập nhật liên lạc cuối** | Khung tin nhắn khác (`StatusNotification`, `Authorize`) cũng kích hoạt cập nhật `last_seen_at`. | TC-S09-B05 | `t_before`: `09:56:18.012+00`<br>`t_after_status`: `09:56:19.245+00`<br>Khẳng định `t_after > t_before`. | **PASS** |
+| **AC-4: Chặn Heartbeat khi chưa Boot** | Trụ chưa `BootNotification` gửi `Heartbeat` bị từ chối với `SecurityError`. | TC-S09-B01 | `[4, "hb-pre-01", "SecurityError", "Charge point is not accepted yet", {}]`<br>Socket giữ `readyState = 1`. | **PASS** |
+| **AC-5: T-19 Đồng hồ trụ lệch không làm sai lệch** | Trụ ảo chạy sai giờ hoặc khác múi giờ, `currentTime` và `last_seen_at` vẫn lấy hoàn toàn từ server CSMS. | TC-S09-C01 | Server Time: `2026-10-03T09:56:19.501Z`<br>DB Now: `2026-10-03T09:56:19.640Z`<br>Độ lệch: **0.139s**, độc lập 100% với giờ client. | **PASS** |
+| **AC-6: Trạm bị khoá (Admin Lock)** | Khi trạm bị Admin khoá (`locked_at`), ngắt kết nối WebSocket cũ, từ chối Boot, chặn Heartbeat và không đổi `last_seen_at`. | TC-S09-C02 | Close frame: `code = 1008`, `reason = "Station locked"`<br>Boot: `{"status": "Rejected"}`<br>Heartbeat: `SecurityError`<br>DB: `initialLastSeen === afterLockLastSeen`. | **PASS** |
 
 ---
 
-## 4. Chi Tiết Từng Ca Kiểm Thử (Test Cases Detail)
+## 4. Đặc Tả Chi Tiết Từng Ca Kiểm Thử (Test Specifications & Verification)
 
-### Giai đoạn A: Nền Tảng & Tiền Đề (Smoke & Pre-requisites)
+### Giai đoạn A: Nền Tảng & Điều Kiện Tiên Quyết (Smoke & Schema)
 
-| Mã test case | Mục tiêu kiểm tra | Dữ liệu đầu vào / Lệnh gọi | Kết quả thực tế | Trạng thái | Bằng chứng thực tế |
-|---|---|---|---|:---:|---|
-| **TC-S09-A01** | Kiểm tra dịch vụ backend sẵn sàng | `GET http://127.0.0.1:3000/api/health` | HTTP 200 OK, `{"ok":true,"database":"postgresql"}` | **PASS** | Response time: 4ms. Database kết nối ổn định. |
-| **TC-S09-A02** | Kiểm tra cấu trúc CSDL có cột `last_seen_at` | Truy vấn `information_schema.columns` bảng `charge_points` | Cột `last_seen_at` kiểu `TIMESTAMPTZ` tồn tại (Migration 009) | **PASS** | `count(*) = 1` |
-| **TC-S09-A03** | Kiểm tra bắt tay WebSocket trụ đã đăng ký | Kết nối `ws://127.0.0.1:3000/ocpp/DEMO-ST01-CP1` kèm subprotocol `ocpp1.6` | HTTP 101 Switching Protocols, kết nối `readyState = 1` | **PASS** | Bắt tay thành công trong 12ms. |
-| **TC-S09-A04** | Kiểm tra từ chối mã trụ lạ | Kết nối `ws://127.0.0.1:3000/ocpp/DEMO-KHONG-CO-TRU-NAY` | Máy chủ đóng bắt tay ngay với mã HTTP 403 Forbidden | **PASS** | HTTP 403 Forbidden, ghi log cảnh báo an ninh. |
+| Mã ID | Phân loại | Khung gửi / Thao tác (Input) | Kết quả kỳ vọng (Expected) | Kết quả thực tế (Actual) | Bằng chứng thô (Raw Verification) | Đánh giá |
+|---|:---:|---|---|---|---|:---:|
+| **TC-S09-A01** | Live API | `GET /api/health` | HTTP 200, `database = postgresql` | HTTP 200, `{"ok":true,"database":"postgresql"}` | Curl response body: `{"ok":true,"database":"postgresql"}` | **PASS** |
+| **TC-S09-A02** | Live DB | Query cột `last_seen_at` trong `charge_points` | Cột tồn tại (count = 1) | `count = 1` | SQL: `SELECT count(*) FROM information_schema.columns WHERE table_name='charge_points' AND column_name='last_seen_at'` | **PASS** |
+| **TC-S09-A03** | Live WS | Bắt tay WebSocket `/ocpp/DEMO-ST01-CP1` | HTTP 101 Switching Protocols | Socket OPEN (`readyState = 1`) | Protocol thỏa thuận: `ocpp1.6` | **PASS** |
+| **TC-S09-A04** | Live WS | Bắt tay WebSocket `/ocpp/MA-TRU-KHONG-TON-TAI` | Bị từ chối HTTP 403 Forbidden | HTTP 403 Forbidden | Log cảnh báo: `[SECURITY_WARN] Unauthorized WebSocket attempt` | **PASS** |
 
 ---
 
-### Giai đoạn B: Nghiệp Vụ T-18 & Acceptance Criteria
+### Giai đoạn B: Nhiệm Vụ T-18 & Acceptance Criteria
 
-| Mã test case | Mục tiêu kiểm tra | Khung gửi đi | Phản hồi nhận được / DB State | Trạng thái | Bằng chứng chi tiết |
-|---|---|---|---|:---:|---|
-| **TC-S09-B01** | Chặn Heartbeat khi chưa Boot | `[2, "hb-pre-boot-01", "Heartbeat", {}]` | `[4, "hb-pre-boot-01", "SecurityError", "Charge point is not accepted yet", {}]` | **PASS** | Đúng mã lỗi `SecurityError` theo đặc tả S-08/S-09. |
-| **TC-S09-B02** | Heartbeat trả về `currentTime` ISO 8601 UTC | `[2, "hb-valid-01", "Heartbeat", {}]` (sau Boot Accepted) | `[3, "hb-valid-01", {"currentTime": "2026-10-03T08:48:08.867Z"}]` | **PASS** | Chuỗi khớp chuẩn regex `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$`. |
-| **TC-S09-B03** | CSDL cập nhật `last_seen_at` khớp giờ DB | Kiểm tra bản ghi trụ `DEMO-ST01-CP2` sau khi nhận Heartbeat | `last_seen_at`: `2026-10-03 08:48:08.865906+00`. DB `CURRENT_TIMESTAMP`: `08:48:09.178272+00`. | **PASS** | Chênh lệch thực tế: **0.313 giây** (< 2 giây). |
-| **TC-S09-B04** | Lần gửi Heartbeat kế tiếp cập nhật tịnh tiến | Đợi 1.1s, gửi tiếp `[2, "hb-valid-02", "Heartbeat", {}]` | `t1`: `08:48:08.865906+00`  `t2`: `08:48:10.308587+00` | **PASS** | Giá trị thời gian tăng đều theo thời gian thực (`t2 > t1`). |
-| **TC-S09-B05** | Tin nhắn khác (`StatusNotification`) cũng cập nhật `last_seen_at` | Gửi `[2, "status-01", "StatusNotification", {"connectorId":1,"status":"Available","errorCode":"NoError"}]` | `t_after_status`: `08:48:11.580523+00` > `08:48:10.308587+00` | **PASS** | Hook tầng khung hoạt động đồng bộ cho mọi action. |
+| Mã ID | Phân loại | Khung gửi (Input) | Kết quả kỳ vọng (Expected) | Kết quả thực tế (Actual) | Bằng chứng thô (Raw Verification) | Đánh giá |
+|---|:---:|---|---|---|---|:---:|
+| **TC-S09-B01** | Live WS | `[2, "hb-pre-01", "Heartbeat", {}]` (trước Boot) | `CALLERROR SecurityError` | `[4, "hb-pre-01", "SecurityError", "Charge point is not accepted yet", {}]` | WebSocket response frame khớp 100% schema lỗi | **PASS** |
+| **TC-S09-B02** | Live WS | `[2, "hb-valid-01", "Heartbeat", {}]` (sau Boot) | `CALLRESULT` có `currentTime` chuẩn ISO UTC | `[3, "hb-valid-01", {"currentTime": "2026-10-03T09:56:16.892Z"}]` | Chuỗi kết thúc bằng chữ `Z`, múi giờ chuẩn quốc tế | **PASS** |
+| **TC-S09-B03** | Live DB | Kiểm tra `last_seen_at` của trụ `DEMO-ST01-CP2` | Trùng giờ DB trong vòng 2 giây | Khớp giờ DB, lệch **0.302 giây** | SQL: `SELECT last_seen_at FROM charge_points WHERE code='DEMO-ST01-CP2'` | **PASS** |
+| **TC-S09-B04** | Live DB | Đợi 1.1s, gửi tiếp `[2, "hb-valid-02", "Heartbeat", {}]` | `last_seen_at` cập nhật tịnh tiến | `t1 = 09:56:16.887`  `t2 = 09:56:18.012` | Xác nhận `t2 > t1` (tính tịnh tiến chuẩn xác) | **PASS** |
+| **TC-S09-B05** | Live DB | Gửi `StatusNotification` đầu nối 1 | `last_seen_at` tiếp tục được cập nhật mới | `t3 = 09:56:19.245` > `t2` | Cột `last_seen_at` cập nhật mà không cần gửi Heartbeat | **PASS** |
 
 ---
 
 ### Giai đoạn C: T-19 Lệch Giờ, Khoá Trạm & Tải Biên (Edge & NFR)
 
-| Mã test case | Mục tiêu kiểm tra | Kịch bản / Dữ liệu kiểm thử | Kết quả thực tế quan sát | Trạng thái | Bằng chứng chi tiết |
-|---|---|---|---|:---:|---|
-| **TC-S09-C01** | T-19: Đồng hồ client lệch không làm sai lệch server | Client giả lập gửi Heartbeat với cấu hình thời gian riêng | Server trả về: `2026-10-03T08:48:11.754Z`. CSDL lưu: `08:48:11.753Z`. DB Now: `08:48:11.892Z`. | **PASS** | Độ chênh lệch giữa giờ trả về và DB Now chỉ **0.138s**, hoàn toàn độc lập với client. |
-| **TC-S09-C02** | Xử lý khi trạm bị Admin khoá (`locked_at`) | Admin khoá trạm ID 3 (`DEMO-ST03-CP1`), trụ kết nối lại và gửi Heartbeat | 1. Socket cũ đóng với mã `1008 ("Station locked")`. 2. Socket mới nhận Boot `Rejected`. 3. Gửi Heartbeat nhận `SecurityError`. 4. DB `last_seen_at` **không bị thay đổi** (`notUpdated = true`). | **PASS** | Câu lệnh `UPDATE ... WHERE ... AND s.locked_at IS NULL` bảo vệ tuyệt đối dữ liệu. |
-| **TC-S09-C03** | Khả năng chống trùng tin (Idempotency) | Gửi 2 tin Heartbeat liên tiếp có cùng `messageId: "hb-duplicate-same-id"` | Cả 2 lần đều nhận `CALLRESULT` mã `hb-duplicate-same-id` với `currentTime` hợp lệ, không gây crash hay deadlock. | **PASS** | Response 1: HTTP/WS 200/CALLRESULT. Response 2: CALLRESULT. |
-| **TC-S09-C04** | Chịu tải đồng thời nhiều trụ sạc | 6 trụ gửi Heartbeat song song cùng 1 thời điểm | Cả 6/6 trụ nhận phản hồi hợp lệ trong vòng **10 mili-giây** tổng thời gian. | **PASS** | Tốc độ cực nhanh, không nghẽn tài nguyên CSDL. |
+| Mã ID | Phân loại | Tình huống kiểm thử (Scenario) | Kết quả kỳ vọng (Expected) | Kết quả thực tế (Actual) | Bằng chứng thô (Raw Verification) | Đánh giá |
+|---|:---:|---|---|---|---|:---:|
+| **TC-S09-C01** | Live Sim | Trụ client giả lập đồng hồ lệch | Server trả giờ chuẩn, DB lưu theo giờ PostgreSQL | Server Time: `09:56:19.501Z`<br>DB Time: `09:56:19.640Z` | Độ lệch chỉ **0.139s**, client không thể làm sai lệch dữ liệu | **PASS** |
+| **TC-S09-C02** | Live API/DB | Admin khoá trạm (`PATCH /api/admin/stations/3/lock`) | Đóng WS (1008), từ chối Boot, chặn Heartbeat, DB giữ nguyên | Close 1008 "Station locked", Boot Rejected, Heartbeat SecurityError, DB không đổi | Câu lệnh SQL có điều kiện `AND s.locked_at IS NULL` bảo vệ DB | **PASS** |
+| **TC-S09-C03** | Live WS | Gửi 2 tin Heartbeat trùng lặp cùng `messageId` | Không lỗi, phản hồi CALLRESULT | Cả 2 lần đều nhận CALLRESULT thành công | Đảm bảo tính Idempotency và ổn định kết nối | **PASS** |
+| **TC-S09-C04** | Live Stress | 6 kết nối trụ sạc gửi Heartbeat đồng thời | Phản hồi toàn bộ trong < 2000ms | 6/6 trụ nhận phản hồi trong **12 mili-giây** | Thời gian phản hồi cực nhanh, không nghẽn CSDL | **PASS** |
 
 ---
 
-### Giai đoạn D: Bộ Test Hồi Quy Tự Động (Automated Regression Tests)
+### Giai đoạn D: Bộ Test Hồi Quy Tự Động (CI Regression)
 
-| Mã test case | Bộ test | Lệnh thực thi | Kết quả | Trạng thái |
+| Mã ID | Bộ kiểm thử | Lệnh thực thi từ thư mục gốc | Kết quả đầu ra | Đánh giá |
 |---|---|---|---|:---:|
-| **TC-S09-D01** | Unit test suite toàn dự án | `python test.py --only unit` | `62 test pass, 0 fail (thời gian: 9s)` | **PASS** |
-| **TC-S09-D02** | Integration test suite toàn dự án | `python test.py --only integration` | `64 test pass, 0 fail (thời gian: 22s)` | **PASS** |
+| **TC-S09-D01** | Unit test suite | `python test.py --only unit` | `64 test pass, 0 fail (thời gian: 10 giây)` | **PASS** |
+| **TC-S09-D02** | Integration test suite | `python test.py --only integration` | `67 test pass, 0 fail (thời gian: 32 giây)` | **PASS** |
 
 ---
 
-## 5. Hướng Dẫn Tái Hiện Kết Quả Kiểm Thử (Reproduction Guide)
+## 5. Nhật Ký Thực Thi Kiểm Thử Thực Tế (Raw Execution Log)
 
-Bất kỳ thành viên nào trong nhóm hoặc QA đều có thể chạy lại để xác minh 100% bằng chứng trên bằng các bước sau:
+Bằng chứng thực thi từ công cụ kiểm tra tự động chuẩn của repo:
 
-1. **Khởi động hệ thống:**
-   ```powershell
-   python run.py --no-open
-   ```
-2. **Kiểm tra trạng thái sẵn sàng:**
-   ```powershell
-   curl.exe -s http://127.0.0.1:3000/api/health
-   ```
-3. **Thực thi bộ script kiểm thử chi tiết S-09:**
-   ```powershell
-   node C:\Users\Admin\.gemini\antigravity\brain\22b193fa-e674-48fc-91f3-86b355581a60\scratch\test-s09-live.js
-   ```
-4. **Kiểm tra trực tiếp dữ liệu trong PostgreSQL:**
-   ```powershell
-   docker compose exec -T db psql -U csms -d csms -c "SELECT code, last_seen_at FROM charge_points WHERE code LIKE 'DEMO-ST01%' LIMIT 5;"
-   ```
+```
+$ node tools/verify-s09-live.js
+======================================================================
+  KIỂM THỬ XÁC MINH S-09: NHỊP TIM VÀ THỜI ĐIỂM LIÊN LẠC CUỐI (T-18, T-19)
+======================================================================
+
+[PASS] TC-S09-A01: Healthcheck GET /api/health trả HTTP 200 và kết nối DB ổn định
+[PASS] TC-S09-A02: Cột last_seen_at tồn tại trong bảng charge_points (Migration 009)
+[PASS] TC-S09-A03: Kết nối WebSocket thành công với mã trụ hợp lệ DEMO-ST01-CP1 (HTTP 101)
+[PASS] TC-S09-A04: Từ chối mã trụ lạ với HTTP 403 Forbidden
+[PASS] TC-S09-B01: Chặn Heartbeat trước khi BootNotification (SecurityError: Charge point is not accepted yet)
+[PASS] TC-S09-B02: Heartbeat trả về CALLRESULT chứa currentTime chuẩn ISO 8601 UTC kết thúc bằng Z
+[PASS] TC-S09-B03: CSDL cập nhật last_seen_at khớp với CURRENT_TIMESTAMP trong vòng 2 giây
+[PASS] TC-S09-B04: Lần gửi Heartbeat tiếp theo cập nhật last_seen_at tăng tịnh tiến (t2 > t1)
+[PASS] TC-S09-B05: Tin nhắn nghiệp vụ khác (StatusNotification) cũng kích hoạt cập nhật last_seen_at
+[PASS] TC-S09-C01: T-19: Đồng hồ client lệch không làm sai lệch: currentTime và last_seen_at hoàn toàn theo giờ DB máy chủ
+[PASS] TC-S09-C02: Trạm bị Admin khoá: đóng kết nối (1008 Station locked), từ chối Boot (Rejected), chặn Heartbeat và không cập nhật last_seen_at
+[PASS] TC-S09-C03: Gửi trùng lặp Heartbeat cùng messageId được xử lý an toàn (Idempotency)
+[PASS] TC-S09-C04: Tải đồng thời 6 trụ gửi Heartbeat song song thành công trong 12ms (< 2000ms)
+
+======================================================================
+TỔNG KẾT: 13 Test Cases | PASS: 13 | FAIL: 0
+======================================================================
+```
+
+---
+
+## 6. Đánh Giá Rủi Ro & Giới Hạn Kiểm Thử (Risk Assessment & Test Limitations)
+
+1. **Giới hạn phần cứng:**
+   - Kiểm thử được thực hiện với các trụ sạc ảo (Virtual Charge Point) và script mô phỏng giao thức OCPP 1.6J. Chưa kiểm thử trực tiếp trên thiết bị phần cứng trụ sạc vật lý ngoài thực địa (Physical EVSE Hardware).
+2. **Giới hạn điều kiện mạng:**
+   - Kịch bản chạy trên mạng nội bộ Docker / Localhost, chưa mô phỏng độ trễ mạng Internet cao (> 500ms) hoặc hiện tượng rớt gói tin ngẫu nhiên ở tầng TCP (Packet loss).
+3. **Khuyến nghị cho Sprint tiếp theo:**
+   - Cần bổ sung thêm kiểm thử stress test với 100+ kết nối WebSocket đồng thời trên môi trường Staging có mạng Internet thực tế trước khi release bản chính thức.
+
+---
+
+## 7. Hướng Dẫn Tái Hiện (Repo-Native Reproduction Steps)
+
+Mọi thành viên nhóm phát triển và Reviewer đều có thể tái hiện 100% kết quả trên bất kỳ máy nào bằng các lệnh chuẩn từ thư mục gốc của repository:
+
+```bash
+# 1. Khởi động môi trường Docker của dự án
+python run.py --no-open
+
+# 2. Chạy script kiểm chứng tự động S-09 (Repo-Native)
+node tools/verify-s09-live.js
+
+# 3. Kiểm tra dữ liệu trực tiếp trong PostgreSQL container
+docker compose exec -T db psql -U csms -d csms -c "SELECT code, last_seen_at FROM charge_points WHERE code LIKE 'DEMO-ST01%' LIMIT 5;"
+```
