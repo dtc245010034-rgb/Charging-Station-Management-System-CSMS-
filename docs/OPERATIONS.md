@@ -146,6 +146,7 @@ Kiểm tra nhanh sau mỗi lần deploy: `/api/health` → `"ok":true`; đăng n
 | `OCPP_HEARTBEAT_INTERVAL` | cả hai | Không | `60` giây; khoảng thời gian nhịp tim gửi cho trụ trong BootNotificationResponse |
 | `OCPP_PING_INTERVAL` | cả hai | Không | `30` giây; chu kỳ gửi WebSocket Ping giữ kết nối OCPP (B9) |
 | `OCPP_RATE_LIMIT_MAX` | cả hai | Không | `50` tin/giây; giới hạn tần suất tin nhắn cho mỗi kết nối OCPP (B3) |
+| `OCPP_ERROR_DEDUP_SECONDS` | cả hai | Không | `60` giây; bỏ qua lỗi đầu nối y hệt trong N giây (`0` = tắt khử trùng) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | cho `create-admin` | Khi tạo admin | mật khẩu ≥ 12 ký tự, tránh ký tự `#` |
 | `ALLOW_DEMO_SEED`, `DEMO_PASSWORD`, `DEMO_EMAIL_DOMAIN`, `DEMO_STATUSES` | cho `seed-demo` | Khi seed | `=1` xác nhận; mật khẩu ≥ 8; miền mặc định `demo.csms.local`; `DEMO_STATUSES=0` để trụ ở trạng thái chưa rõ |
 | `CSMS_SKIP_DOTENV` | chỉ test | Không | `=1` bỏ nạp `backend/.env` |

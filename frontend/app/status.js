@@ -17,7 +17,9 @@ const GROUP_OF = {
   Charging: 'charging', SuspendedEV: 'charging', SuspendedEVSE: 'charging', Finishing: 'charging',
   Faulted: 'fault',
   Unavailable: 'offline',
-  AVAILABLE: 'ready', OCCUPIED: 'charging', RESERVED: 'ready', ERROR: 'fault',
+  AVAILABLE: 'ready', OCCUPIED: 'charging', RESERVED: 'ready', ERROR: 'fault', UNAVAILABLE: 'offline',
+  // Trụ đang giữ kết nối OCPP (charge_points.status). Màu của trụ còn xét thêm đầu nối, xem pointGroup.
+  ONLINE: 'ready',
 };
 
 // Trụ mới đăng ký có trạng thái 'UNKNOWN' cho tới khi nhận StatusNotification → nhóm offline.
@@ -28,19 +30,41 @@ export const CONNECTOR_STATUS_LABELS = {
   OCCUPIED: 'Bận',
   RESERVED: 'Đặt chỗ',
   ERROR: 'Lỗi',
+  UNAVAILABLE: 'Tạm ngừng',
 };
+
+export function statusLabel(status, group = groupOf(status)) {
+  if (CONNECTOR_STATUS_LABELS[status]) return CONNECTOR_STATUS_LABELS[status];
+  if (status === 'UNKNOWN' || !status) return 'Chưa rõ';
+  return GROUPS[group].label;
+}
+
+// Trụ ONLINE mang màu của đầu nối nặng nhất; trụ không ONLINE (UNKNOWN...) luôn là ngoại tuyến vì không có kết nối.
+// Trụ ONLINE mà mọi đầu nối đều UNAVAILABLE không phục vụ được ai nên là ngoại tuyến; đầu nối UNKNOWN (chưa báo trạng thái) không hạ cấp trụ.
+export function pointGroup(point) {
+  if (point.status !== 'ONLINE') return groupOf(point.status);
+  const connectors = point.connector_statuses ?? [];
+  if (connectors.length > 0 && connectors.every((status) => status === 'UNAVAILABLE')) return 'offline';
+  return worstGroup([point.status, ...connectors]);
+}
+
+// Nhãn của trụ dùng đúng tên nhóm trong chú giải; nhãn riêng "Chưa rõ" chỉ dành cho đầu nối.
+export function pointLabel(status, group = groupOf(status)) {
+  if (status === 'UNKNOWN' || !status) return GROUPS.offline.label;
+  return statusLabel(status, group);
+}
 
 // Thứ tự nặng → nhẹ, dùng để chọn màu đại diện của một trạm gồm nhiều trụ.
 const SEVERITY = ['fault', 'warning', 'charging', 'ready', 'offline'];
 
-export function worstGroup(statuses) {
-  const groups = new Set(statuses.map(groupOf));
+export function worstGroup(items, toGroup = groupOf) {
+  const groups = new Set(items.map(toGroup));
   return SEVERITY.find((group) => groups.has(group)) ?? 'offline';
 }
 
-export function countByGroup(statuses) {
+export function countByGroup(items, toGroup = groupOf) {
   const counts = { ready: 0, charging: 0, warning: 0, fault: 0, offline: 0 };
-  for (const status of statuses) counts[groupOf(status)] += 1;
+  for (const item of items) counts[toGroup(item)] += 1;
   return counts;
 }
 

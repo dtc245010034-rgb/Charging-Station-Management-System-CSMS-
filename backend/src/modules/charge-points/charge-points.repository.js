@@ -3,7 +3,9 @@ const { scopeByOwner } = require('../../db/scope');
 
 const list = (actor) => {
   const scope = scopeByOwner(actor, 's');
-  return prepare(`SELECT cp.*, s.name AS station_name FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE ${scope.sql} ORDER BY cp.id DESC`).all(...scope.params);
+  return prepare(`SELECT cp.*, s.name AS station_name,
+    ARRAY(SELECT c.status FROM connectors c WHERE c.charge_point_id = cp.id ORDER BY c.connector_no) AS connector_statuses
+    FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE ${scope.sql} ORDER BY cp.id DESC`).all(...scope.params);
 };
 const findDetailById = (actor, id) => {
   const scope = scopeByOwner(actor, 's');

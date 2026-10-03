@@ -1,6 +1,6 @@
 import { h } from '../../app/dom.js';
 import { createStore } from '../../app/state.js';
-import { GROUPS, countByGroup, stationStatusLabels, worstGroup } from '../../app/status.js';
+import { GROUPS, countByGroup, pointGroup, stationStatusLabels, worstGroup } from '../../app/status.js';
 import * as csms from '../../services/csms.js';
 import { subscribe } from '../../services/realtime.js';
 import { kpiCard } from '../../components/kpi-card.js';
@@ -48,7 +48,7 @@ export const stationPoints = (state) => state.stations
   .map((s) => ({
     id: s.id, name: s.name, lat: Number(s.latitude), lng: Number(s.longitude), status: s.status, address: s.address,
     count: s.charge_point_count,
-    group: worstGroup(state.chargePoints.filter((cp) => cp.station_id === s.id).map((cp) => cp.status)),
+    group: worstGroup(state.chargePoints.filter((cp) => cp.station_id === s.id), pointGroup),
   }));
 
 // ---------- Widgets ----------
@@ -62,7 +62,7 @@ export function kpiRow(fleet) {
     offline: kpiCard({ label: 'Ngoại tuyến / chưa rõ', iconName: 'wifi', tone: 'offline', value: null }),
   };
   const el = h('section', { class: 'kpi-row', 'aria-label': 'Chỉ số chính' }, Object.values(cards).map((card) => card.el));
-  const off = watch(fleet.store, (s) => ({ loaded: s.loaded, n: s.chargePoints.length, stations: s.stations.length, groups: countByGroup(s.chargePoints.map((c) => c.status)) }), (v) => {
+  const off = watch(fleet.store, (s) => ({ loaded: s.loaded, n: s.chargePoints.length, stations: s.stations.length, groups: countByGroup(s.chargePoints, pointGroup) }), (v) => {
     if (!v.loaded) return;
     cards.total.update(v.n, `${v.stations} trạm`);
     for (const key of ['charging', 'ready', 'fault', 'offline']) cards[key].update(v.groups[key]);
@@ -78,7 +78,7 @@ export function statusCard(fleet, { onSelectGroup } = {}) {
   const el = h('section', { class: 'card', 'aria-labelledby': 'status-title' },
     h('div', { class: 'card__head' }, h('h2', { class: 'card__title', id: 'status-title' }, 'Trạng thái trụ')),
     h('div', { class: 'card__body' }, chart.el, hint));
-  const off = watch(fleet.store, (s) => ({ loaded: s.loaded, groups: countByGroup(s.chargePoints.map((c) => c.status)) }), (v) => {
+  const off = watch(fleet.store, (s) => ({ loaded: s.loaded, groups: countByGroup(s.chargePoints, pointGroup) }), (v) => {
     chart.update(v.groups);
     const total = Object.values(v.groups).reduce((a, b) => a + b, 0);
     hint.textContent = !v.loaded ? '' : total ? (onSelectGroup ? 'Bấm một nhóm để lọc danh sách trụ.' : '') : 'Chưa có trụ nào được khai báo.';
