@@ -75,6 +75,7 @@ Script in `[LỖI]` kèm cách sửa. Các trường hợp hay gặp: Docker ch�
 | `OCPP_HEARTBEAT_INTERVAL` | Khoảng thời gian nhịp tim gửi cho trụ trong BootNotificationResponse | Giây | `60` |
 | `OCPP_PING_INTERVAL` | Chu kỳ gửi WebSocket Ping giữ kết nối OCPP (B9) | Giây | `30` |
 | `OCPP_RATE_LIMIT_MAX` | Giới hạn tần suất tin nhắn cho mỗi kết nối OCPP (B3) | Tin / giây | `50` |
+| `OCPP_ERROR_DEDUP_SECONDS` | Khử trùng lỗi đầu nối: bỏ qua lỗi y hệt (cùng đầu nối, `errorCode`, `vendorErrorCode`, trạng thái không đổi) đã ghi trong N giây gần nhất; `0` = tắt | Giây | `60` |
 
 ---
 
@@ -270,7 +271,7 @@ Menu của chức năng chưa có backend được **ẩn** (cấu hình trong `
 
 - **B5 (Chưa xác thực trụ / kết nối ẩn danh):** WebSocket `/ocpp/:chargePointCode` hiện chỉ kiểm tra mã trụ có tồn tại trong CSDL và trạm không bị khóa; chưa có cơ chế xác thực danh tính trụ (chưa có Basic Auth với mật khẩu trụ hoặc mTLS). Do đó, một kết nối ẩn danh nếu biết mã trụ có thể kết nối và đá (ngắt kết nối) trụ thật đang hoạt động theo logic S-13 (kết nối mới thay thế kết nối cũ).
 - **K-01 (Boot trùng messageId xử lý hai lần):** Chưa có cơ chế idempotency/deduplication cho frame OCPP CALL; nếu trụ gửi hai bản tin CALL trùng `messageId`, server hiện tại sẽ xử lý cả hai lần độc lập thay vì trả lại kết quả đã lưu trước đó.
-- **Stub Authorize và StatusNotification:** Các action `Authorize` và `StatusNotification` hiện tại mới chỉ là các stub tạm thời trả lời tĩnh (ví dụ `StatusNotification` trả `{}` rỗng, `Authorize` trả `Accepted` nếu có `idTag`), chưa kiểm tra mã thẻ RFID trong CSDL, chưa cập nhật trạng thái hoạt động của đầu nối vào bảng `connectors`.
+- **Authorize còn là stub; StatusNotification mức trụ chưa lưu (F5):** `Authorize` trả `Accepted` nếu có `idTag`, chưa kiểm tra thẻ RFID trong CSDL. `StatusNotification` đã cập nhật `connectors` cho `connectorId` ≥ 1 (khử trùng lỗi theo `OCPP_ERROR_DEDUP_SECONDS`), nhưng tin `connectorId = 0` (trạng thái của cả trụ) vẫn chỉ được xác nhận `{}` và ghi một dòng log gom theo trụ, chưa lưu vào CSDL. Ngoài ra `errorCode` ngoài 16 mã OCPP 1.6 được lưu thành `OtherError` (mã gốc giữ trong `vendor_error_code`).
 - **Thư viện OCPP (Kế hoạch vs Triển khai):** Tài liệu kế hoạch Sprint 2 ban đầu ghi nhận dự kiến sử dụng thư viện `ocpp-rpc`. Tuy nhiên, mã nguồn thực tế đang sử dụng trực tiếp thư viện WebSocket `ws` thuần kết hợp bộ định dạng và xử lý frame tự viết (`backend/src/modules/ocpp/`) để kiểm soát chặt chẽ giao thức OCPP 1.6J.
 
 ---
