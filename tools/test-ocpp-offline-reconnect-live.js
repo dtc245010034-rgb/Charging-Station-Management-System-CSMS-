@@ -181,6 +181,9 @@ async function main() {
       if (!offlinePoint.offline) {
         throw new Error(`Expected ${CHARGE_POINT_CODE} offline after ${2 * EXPECTED_HEARTBEAT_SECONDS + 1}s`);
       }
+      if (offlinePoint.connectors?.[0]?.status !== 'UNKNOWN') {
+        throw new Error(`Expected ${CHARGE_POINT_CODE} connector status UNKNOWN while offline; got ${offlinePoint.connectors?.[0]?.status}`);
+      }
 
       console.log(`[${run}/${RUNS}] Reconnecting and reporting Charging...`);
       socket = await openChargePoint();

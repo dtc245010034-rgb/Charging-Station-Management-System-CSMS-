@@ -1,19 +1,43 @@
 const { sanitizeErrorMessage } = require('../../lib/constants');
+const { publish } = require('../fleet-status/fleet-status.events');
 
 const OFFLINE_SCAN_INTERVAL_MS = 60_000;
 
 async function scanStaleChargePoints(db) {
   const database = db || require('../../db/pool').pool;
-  return database.query(
-    `UPDATE charge_points
-     SET status = 'OFFLINE',
-         updated_at = CURRENT_TIMESTAMP
-     WHERE status = 'ONLINE'
-       AND (
-         last_seen_at IS NULL
-         OR last_seen_at <= CURRENT_TIMESTAMP - (heartbeat_interval * INTERVAL '2 seconds')
-       )`
+  const result = await database.query(
+    `WITH offline AS (
+       UPDATE charge_points cp
+       SET status = 'OFFLINE',
+           updated_at = CURRENT_TIMESTAMP
+       WHERE cp.status = 'ONLINE'
+         AND (
+           cp.last_seen_at IS NULL
+           OR cp.last_seen_at <= CURRENT_TIMESTAMP - (COALESCE(cp.heartbeat_interval, 60) * INTERVAL '2 seconds')
+         )
+       RETURNING cp.id, cp.station_id
+     ),
+     connectors_offline AS (
+       UPDATE connectors c
+       SET status = 'UNKNOWN',
+           updated_at = CURRENT_TIMESTAMP
+       FROM offline o
+       WHERE c.charge_point_id = o.id
+         AND c.status <> 'UNKNOWN'
+       RETURNING c.id
+     )
+     SELECT o.id AS charge_point_id, o.station_id, s.owner_id
+     FROM offline o
+     JOIN stations s ON s.id = o.station_id`
   );
+  for (const point of result.rows || []) {
+    publish({
+      ownerId: point.owner_id,
+      stationId: point.station_id,
+      chargePointId: point.charge_point_id,
+    });
+  }
+  return result;
 }
 
 function startChargePointOfflineJob({
