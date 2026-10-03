@@ -307,29 +307,42 @@ Lệnh: "Audit an ninh / Kiểm toán bảo mật / Security Audit"
 | **Kiểm tra Story này phụ thuộc Story nào** | [`docs/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) | Mục 8 |
 | **Xem danh sách và kết quả toàn bộ Test Cases** | [`docs/TEST_INVENTORY.md`](./TEST_INVENTORY.md) | Mục 3, 4 |
 | **Xem chi tiết kịch bản và bằng chứng Story S-04** | [`docs/stories/S-04.md`](./stories/S-04.md) | Mục 4 & 11 |
+| **Xem chi tiết kịch bản & bằng chứng Story S-06** | [`docs/testing/stories/S/S-06.md`](./stories/S/S-06.md) | Toàn bộ tệp (AC1..AC5, T-12..T-13) |
+| **Xem chi tiết kịch bản & bằng chứng Story S-07** | [`docs/testing/stories/S/kiem-thu-S-07.md`](./stories/S/kiem-thu-S-07.md) | Toàn bộ tệp (AC1..AC4, T-14..T-15) |
 | **Xem chi tiết kịch bản & bằng chứng Story S-09** | [`docs/testing/stories/S/kiem_thu-S09.md`](./stories/S/kiem_thu-S09.md) | Toàn bộ tệp (AC1..AC4, T-18..T-19) |
 | **Xem chi tiết kịch bản & bằng chứng Story S-10** | [`docs/testing/stories/S/kiem_thu-S10.md`](./stories/S/kiem_thu-S10.md) | Toàn bộ tệp (AC1..AC4, T-20..T-22) |
 | **Xem chi tiết kịch bản & bằng chứng Story S-11** | [`docs/testing/stories/S/kiem_thu-S11.md`](./stories/S/kiem_thu-S11.md) | Toàn bộ tệp (AC1..AC4, T-23..T-25) |
+| **Xem chi tiết kịch bản & bằng chứng Story S-13** | [`docs/testing/stories/S/S-13.md`](./stories/S/S-13.md) | Toàn bộ tệp (AC1..AC5, T-28..T-29) |
 | **Xem kịch bản tích hợp Frontend ↔ Backend (FB-01..11)** | [`docs/integration/FRONTEND_BACKEND.md`](./integration/FRONTEND_BACKEND.md) | Mục 3 |
 | **Xem danh sách bug và rào cản môi trường** | [`docs/testing/BUG_REPORT.md`](./testing/BUG_REPORT.md) | Mục 2 |
 | **Xem phân tích tác động khi sửa file dùng chung** | [`docs/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) | Mục 11 |
 
 ---
 
-## 5. CÁCH XÁC MINH NHANH KẾT QUẢ KIỂM THỬ S-09, S-10, S-11 (VERIFICATION RUNNERS)
+## 5. CÁCH XÁC MINH NHANH KẾT QUẢ KIỂM THỬ (REPO-NATIVE VERIFICATION RUNNERS)
 
-Dự án cung cấp bộ công cụ tự động hóa repo-native đặt tại `tools/` cho phép mọi lập trình viên hoặc Reviewer tái tạo 100% bằng chứng kiểm thử trên môi trường local/CI:
+Dự án cung cấp bộ công cụ tự động hóa repo-native đặt tại `tools/` cho phép mọi lập trình viên hoặc Reviewer tái tạo 100% bằng chứng kiểm thử trên môi trường local/CI một cách hoàn toàn độc lập:
 
 ```bash
 # Đảm bảo stack CSMS đang chạy (backend port 3000, DB PostgreSQL port 5432)
 docker compose up -d
 
-# 1. Chạy xác minh Story S-09 (Heartbeat, Clock Skew, Socket Close 1008 on Lock, Frame Hook)
+# --- Bộ kiểm thử kết nối và giao thức OCPP 1.6J (Epic E-04) ---
+# 1. Chạy xác minh Story S-06 (Bắt tay WebSocket, Lọc định dạng mã, Subprotocol, Reject < 1s)
+node tools/verify-s06-live.js
+
+# 2. Chạy xác minh Story S-07 (Đọc/Ghi khung CALL, CALLRESULT, CALLERROR, Tải lỗi dồn dập)
+node tools/verify-s07-live.js
+
+# 3. Chạy xác minh Story S-09 (Heartbeat, Clock Skew, Socket Close 1008 on Lock, Frame Hook)
 node tools/verify-s09-live.js
 
-# 2. Chạy xác minh Story S-10 (StatusNotification 9 statuses, Error Logging, Connector 0, Rate Limit)
+# 4. Chạy xác minh Story S-10 (StatusNotification 9 statuses, Error Logging, Connector 0, Rate Limit)
 node tools/verify-s10-live.js
 
-# 3. Chạy xác minh Story S-11 (Fleet Status Tree, Dynamic Offline, RBAC, SSE Live Stream)
+# 5. Chạy xác minh Story S-11 (Fleet Status Tree, Dynamic Offline, RBAC, SSE Live Stream)
 node tools/verify-s11-live.js
+
+# 6. Chạy xác minh Story S-13 (Duplicate Connection Close Code 1000, Multi-station Isolation, Race Condition)
+node tools/verify-s13-live.js
 ```
