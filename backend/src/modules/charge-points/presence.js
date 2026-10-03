@@ -1,4 +1,5 @@
-const { CHARGE_POINT_OFFLINE_STATUS } = require('../../lib/constants');
+const { CHARGE_POINT_OFFLINE_STATUS, CHARGE_POINT_ONLINE_STATUS, CHARGE_POINT_STALE_STATUS } = require('../../lib/constants');
+const { OCPP_CONNECTOR_STATUS_MAP } = require('../connectors/status-mapping');
 const { publish } = require('../fleet-status/fleet-status.events');
 
 const publishChargePoint = (row) => publish({ ownerId: row.owner_id, stationId: row.station_id, chargePointId: row.id });
@@ -32,7 +33,7 @@ async function markAllChargePointsOffline(db) {
      FROM stations s
      WHERE cp.status = $2 AND s.id = cp.station_id
      RETURNING cp.id, cp.station_id, s.owner_id`,
-    [CHARGE_POINT_OFFLINE_STATUS, 'ONLINE']
+    [CHARGE_POINT_OFFLINE_STATUS, CHARGE_POINT_ONLINE_STATUS]
   );
   const connectors = await db.query(
     `UPDATE connectors SET status = $1, updated_at = CURRENT_TIMESTAMP
@@ -43,4 +44,35 @@ async function markAllChargePointsOffline(db) {
   return { chargePoints: points.rowCount, connectors: connectors.rowCount };
 }
 
-module.exports = { markChargePointOffline, markAllChargePointsOffline };
+// Bảng ánh xạ ocpp_status -> connectors.status lấy từ status-mapping.js, truyền vào SQL dạng mảng để không có bản sao thứ hai.
+const MAPPING_OCPP = Object.keys(OCPP_CONNECTOR_STATUS_MAP);
+const MAPPING_STATUS = MAPPING_OCPP.map((ocpp) => OCPP_CONNECTOR_STATUS_MAP[ocpp]);
+
+// Mỗi tin từ trụ cập nhật last_seen_at. Trụ đang OFFLINE/UNKNOWN thì về ONLINE và đầu nối lấy lại trạng thái từ ocpp_status đã lưu.
+// SKIP LOCKED: hàng đang bị giao dịch khác giữ thì bỏ qua lần này, không để Heartbeat chờ khoá và giữ kết nối pool.
+async function markChargePointSeen(db, code) {
+  const result = await db.query(
+    `WITH target AS (
+       SELECT cp.id, cp.station_id, s.owner_id, (cp.status IN ($2, $3)) AS recovering
+       FROM charge_points cp JOIN stations s ON s.id = cp.station_id
+       WHERE cp.code = $1 AND s.locked_at IS NULL
+       FOR UPDATE OF cp SKIP LOCKED
+     ), seen AS (
+       UPDATE charge_points cp
+       SET last_seen_at = CURRENT_TIMESTAMP,
+           status = CASE WHEN target.recovering THEN $4 ELSE cp.status END
+       FROM target WHERE cp.id = target.id
+       RETURNING cp.id, target.station_id, target.owner_id, target.recovering
+     ), restored AS (
+       UPDATE connectors c SET status = m.status, updated_at = CURRENT_TIMESTAMP
+       FROM seen, unnest($5::text[], $6::text[]) AS m(ocpp_status, status)
+       WHERE seen.recovering AND c.charge_point_id = seen.id AND c.ocpp_status = m.ocpp_status AND c.status <> m.status
+       RETURNING c.id
+     )
+     SELECT id, station_id, owner_id FROM seen WHERE recovering`,
+    [code, CHARGE_POINT_STALE_STATUS, CHARGE_POINT_OFFLINE_STATUS, CHARGE_POINT_ONLINE_STATUS, MAPPING_OCPP, MAPPING_STATUS]
+  );
+  result.rows.forEach(publishChargePoint);
+}
+
+module.exports = { markChargePointOffline, markAllChargePointsOffline, markChargePointSeen };

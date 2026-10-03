@@ -13,7 +13,7 @@ const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notifi
 const { createHeartbeatHandler } = require('./modules/ocpp/handlers/heartbeat');
 const { createStatusNotificationHandler } = require('./modules/ocpp/handlers/status-notification');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
-const { markAllChargePointsOffline } = require('./modules/charge-points/presence');
+const { markAllChargePointsOffline, markChargePointSeen } = require('./modules/charge-points/presence');
 const { startChargePointOfflineJob } = require('./modules/charge-points/offline-job');
 const { createShutdown } = require('./modules/ocpp/shutdown');
 const { createMessageStore } = require('./modules/ocpp/messages.repository');
@@ -26,20 +26,7 @@ async function updateChargePointLastSeen(connection) {
 	const code = connection?.chargePointCode || connection?.chargePoint?.code;
 	if (!code || connection?.isStationLocked) return;
 	try {
-		// SKIP LOCKED: hàng đang bị giao dịch khác giữ thì bỏ qua lần này, không để Heartbeat chờ khoá và giữ kết nối pool.
-		await pool.query(
-			`WITH target AS (
-			   SELECT cp.id FROM charge_points cp JOIN stations s ON s.id = cp.station_id
-			   WHERE cp.code = $1 AND s.locked_at IS NULL
-			   FOR UPDATE OF cp SKIP LOCKED
-			 )
-			 UPDATE charge_points
-			 SET last_seen_at = CURRENT_TIMESTAMP,
-			     status = CASE WHEN charge_points.status IN ('OFFLINE', 'UNKNOWN') THEN 'ONLINE' ELSE charge_points.status END
-			 FROM target
-			 WHERE charge_points.id = target.id`,
-			[code]
-		);
+		await markChargePointSeen(pool, code);
 	} catch (error) {
 		console.warn(`[OCPP] Failed to update last_seen_at for ${safeLog(code)}: ${sanitizeErrorMessage(error?.message || error)}`);
 	}

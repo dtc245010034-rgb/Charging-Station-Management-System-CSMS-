@@ -1,5 +1,6 @@
 const { prepare } = require('../../db/pool');
 const { scopeByOwner } = require('../../db/scope');
+const { CHARGE_POINT_STALE_STATUS } = require('../../lib/constants');
 
 const snapshot = (actor) => {
   const scope = scopeByOwner(actor, 's');
@@ -17,7 +18,7 @@ const snapshot = (actor) => {
       cp.last_seen_at,
       cp.heartbeat_interval,
       (
-        cp.status = 'OFFLINE'
+        cp.status = '${CHARGE_POINT_STALE_STATUS}'
         OR
         cp.last_seen_at IS NULL
         OR cp.last_seen_at <= CURRENT_TIMESTAMP - (COALESCE(cp.heartbeat_interval, 60) * INTERVAL '2 seconds')
