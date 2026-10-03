@@ -46,7 +46,7 @@ if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
   process.exit(2);
 }
 if (ADMIN_PASSWORD.length < 12) {
-  console.error('ADMIN_PASSWORD phải từ 12 ký tự trở lên (script không dùng ALLOW_WEAK_ADMIN_PASSWORD).');
+  console.error('ADMIN_PASSWORD phải từ 12 ký tự trở lên (script không chấp nhận mật khẩu yếu).');
   process.exit(2);
 }
 

@@ -47,13 +47,13 @@ function transparentPng() {
 }
 
 // ---------- Dữ liệu seed ----------
-// Nhóm kỳ vọng SAU F2: trụ ONLINE mang màu của đầu nối nặng nhất (fault > charging > ready); đầu nối
-// UNAVAILABLE/UNKNOWN không kéo trụ ONLINE xuống "offline" vì bản thân ONLINE đã là "ready".
+// Nhóm kỳ vọng SAU F2: trụ ONLINE mang màu của đầu nối nặng nhất (fault > charging > ready). Trụ ONLINE mà MỌI
+// đầu nối đều UNAVAILABLE là "offline"; đầu nối UNKNOWN (chưa báo trạng thái) không hạ cấp trụ ONLINE.
 const STATIONS = [
   { key: 'HN', name: 'Trạm Hà Nội', lat: 21.0285, lng: 105.8542, group: 'ready', cps: [{ code: 'R6-HN-01', status: 'ONLINE', cons: [['AVAILABLE', 'Available'], ['AVAILABLE', 'Available']], group: 'ready' }] },
   { key: 'DN', name: 'Trạm Đà Nẵng', lat: 16.0544, lng: 108.2022, group: 'charging', cps: [{ code: 'R6-DN-01', status: 'ONLINE', cons: [['OCCUPIED', 'Charging'], ['AVAILABLE', 'Available']], group: 'charging' }] },
   { key: 'HUE', name: 'Trạm Huế', lat: 16.4637, lng: 107.5909, group: 'fault', cps: [{ code: 'R6-HUE-01', status: 'ONLINE', cons: [['ERROR', 'Faulted'], ['AVAILABLE', 'Available']], group: 'fault' }] },
-  { key: 'NT', name: 'Trạm Nha Trang', lat: 12.2388, lng: 109.1967, group: 'ready', cps: [{ code: 'R6-NT-01', status: 'ONLINE', cons: [['UNAVAILABLE', 'Unavailable'], ['UNAVAILABLE', 'Unavailable']], group: 'ready' }] },
+  { key: 'NT', name: 'Trạm Nha Trang', lat: 12.2388, lng: 109.1967, group: 'offline', cps: [{ code: 'R6-NT-01', status: 'ONLINE', cons: [['UNAVAILABLE', 'Unavailable'], ['UNAVAILABLE', 'Unavailable']], group: 'offline' }] },
   { key: 'SG', name: 'Trạm Sài Gòn', lat: 10.7769, lng: 106.7009, group: 'offline', cps: [{ code: 'R6-SG-01', status: 'UNKNOWN', cons: [['UNKNOWN', 'Charging'], ['UNKNOWN', 'Available']], group: 'offline' }] },
   { key: 'CT', name: 'Trạm Cần Thơ', lat: 10.0452, lng: 105.7469, group: 'fault', cps: [
     { code: 'R6-CT-A', status: 'ONLINE', cons: [['AVAILABLE', 'Available']], group: 'ready' },
@@ -63,8 +63,8 @@ const STATIONS = [
   { key: 'NOCOORD', name: 'Trạm Chưa Có Toạ Độ', lat: null, lng: null, group: null, cps: [{ code: 'R6-NC-01', status: 'ONLINE', cons: [['AVAILABLE', 'Available']], group: 'ready' }] },
 ];
 const GROUP_LABEL = { ready: 'Sẵn sàng', charging: 'Đang sạc', fault: 'Lỗi', offline: 'Ngoại tuyến / chưa rõ' };
-// Trụ UNKNOWN: nhãn "Chưa rõ" (đã có từ trước, không thuộc F2) nhưng vẫn thuộc nhóm màu offline.
-const labelOf = (cp) => (cp.status === 'UNKNOWN' ? 'Chưa rõ' : GROUP_LABEL[cp.group]);
+// Nhãn trụ luôn là tên nhóm trong chú giải (trụ UNKNOWN cũng là "Ngoại tuyến / chưa rõ").
+const labelOf = (cp) => GROUP_LABEL[cp.group];
 const ALL_CPS = STATIONS.flatMap((s) => s.cps.map((cp) => ({ ...cp, station: s.name })));
 const ON_MAP = STATIONS.filter((s) => s.lat !== null);
 const countGroups = (items) => items.reduce((acc, item) => { acc[item.group] = (acc[item.group] ?? 0) + 1; return acc; }, {});
