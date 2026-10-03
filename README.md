@@ -105,6 +105,10 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `OCPP_PING_INTERVAL` | Chu kỳ WebSocket Ping giữ kết nối OCPP (B9) | Giây | `30` |
 | `OCPP_RATE_LIMIT_MAX` | Giới hạn tần suất tin nhắn mỗi kết nối OCPP (B3) | Tin/giây | `50` |
 | `OCPP_ERROR_DEDUP_SECONDS` | Bỏ qua lỗi đầu nối y hệt (cùng đầu nối, `errorCode`, `vendorErrorCode`, trạng thái không đổi) đã ghi trong N giây gần nhất; `0` = tắt | Giây | `60` |
+| `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | Số lần gọi `GET /api/charge-points/check-code` mỗi tài khoản (quá mức trả 429 + `Retry-After`) | Lần/phút | `30` |
+| `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
+| `OCPP_HANDSHAKE_LIMIT_PER_10S` | Số lần bắt tay WebSocket mỗi cặp (IP, mã trụ), kiểm tra trước khi truy vấn DB; quá mức trả 429 | Lần/10 giây | `5` |
+| `AUDIT_DENIED_LIMIT_PER_MINUTE` | Số dòng `ACCESS_DENIED` tối đa ghi vào `audit_logs` mỗi tài khoản (phản hồi vẫn 403) | Dòng/phút | `20` |
 
 ---
 
@@ -296,6 +300,7 @@ Các mục dưới đây là hiện trạng thật trên `main`, không phải l
 | Mã | Giới hạn | Hướng xử lý |
 |---|---|---|
 | **B5** | **Trụ chưa được xác thực.** WebSocket `/ocpp/:mã` chỉ kiểm tra mã trụ tồn tại và trạm không bị khoá. Kết nối ẩn danh biết mã trụ có thể thay thế (đá) trụ thật theo logic S-13. **Rủi ro được ghi nhận và chấp nhận tạm cho demo/staging (03/10/2026); không dùng nguyên trạng cho production.** | Đề xuất thiết kế, chưa có code, chờ PO chọn phương án: [`docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`](docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md) |
+| — | **Giới hạn tần suất (#10, #22, #28, #29) lưu trong bộ nhớ một tiến trình**: mất khi khởi động lại, không chia sẻ giữa nhiều bản server. `POST /api/auth/register` vẫn trả 409 "Email đã tồn tại" nên còn dò được email từ nhiều IP khác nhau (mỗi IP bị chặn sau 5 lần/giờ); bắt tay OCPP bị giới hạn theo (IP, mã trụ) chứ không theo riêng mã trụ, để kẻ lạ không khoá được trụ thật. IP lấy theo `TRUST_PROXY` (giá trị đúng trên Render chưa kiểm chứng). | Cần kho dùng chung (DB/Redis) trước khi mở rộng ngang; B5 mới là biện pháp chặn giả mạo trụ |
 | **K-01** | Chưa chống xử lý trùng: hai khung CALL cùng `messageId` bị xử lý hai lần. | Thuộc S-14 |
 | **F5** | `StatusNotification` với `connectorId = 0` (trạng thái cả trụ) chỉ được xác nhận `{}` và ghi một dòng log gom, **chưa lưu DB** (cần thiết kế cột/bảng; `connector_errors.connector_id` đang `NOT NULL`). | Chờ Phúc/PO chốt thiết kế |
 | — | `Authorize` còn là stub (trả `Accepted` nếu có `idTag`, chưa kiểm thẻ). `errorCode` ngoài 16 mã OCPP 1.6 được lưu `OtherError` (mã gốc giữ ở `vendor_error_code`). | S-15 |

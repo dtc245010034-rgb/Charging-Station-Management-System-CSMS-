@@ -11,7 +11,7 @@ function protocolsFromHeader(header) {
 	return String(header || '').split(',').map((protocol) => protocol.trim()).filter(Boolean);
 }
 
-function createOcppUpgradeHandler({ wss, lookupChargePoint, logWarning = console.warn, logError = console.error }) {
+function createOcppUpgradeHandler({ wss, lookupChargePoint, handshakeLimiter = null, clientIpOf = (request) => request.socket.remoteAddress, logWarning = console.warn, logError = console.error }) {
 	return async (request, socket, head) => {
 		let pathname;
 		try {
@@ -45,6 +45,11 @@ function createOcppUpgradeHandler({ wss, lookupChargePoint, logWarning = console
 			return;
 		}
 
+		if (handshakeLimiter && !handshakeLimiter.take(`${clientIpOf(request) || 'unknown'}|${code}`).allowed) {
+			rejectHandshake(socket, 429, 'Too Many Requests');
+			return;
+		}
+
 		let chargePoint;
 		try {
 			chargePoint = await lookupChargePoint(code);
@@ -55,7 +60,7 @@ function createOcppUpgradeHandler({ wss, lookupChargePoint, logWarning = console
 		}
 
 		if (!chargePoint) {
-			const clientIp = request.socket.remoteAddress || 'UNKNOWN_IP';
+			const clientIp = clientIpOf(request) || 'UNKNOWN_IP';
 			logWarning(`[SECURITY_WARN] Unauthorized WebSocket attempt | IP: ${clientIp} | ChargePointCode: ${safeLog(code)}`);
 			rejectHandshake(socket, 403, 'Forbidden');
 			return;
