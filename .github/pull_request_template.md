@@ -4,7 +4,7 @@
 
 ## Việc Jira
 
-<!-- Ví dụ: GYM-19 -->
+<!-- Ví dụ: GYM-19 (hoặc mã task/story Jira tương ứng) -->
 
 ## Cách kiểm tra
 
@@ -21,7 +21,7 @@
 
 - [ ] Tên nhánh và commit đúng quy ước trong CONTRIBUTING.md
 - [ ] Đã chạy `python test.py` (lint + toàn bộ test) trên máy trước khi push; check CI trên PR xanh
-- [ ] Có test nghiệm thu cho từng AC của story (`tests/acceptance/S-xx.*.test.js`)
+- [ ] Có test cho từng AC của story (đặt tại `backend/tests/acceptance/S-xx.*.test.js` hoặc `backend/tests/integration/`)
 - [ ] Đã tự xem lại phần thay đổi
 - [ ] Không có bí mật (mật khẩu, khoá API, file `.env`) trong code
 - [ ] Đã cập nhật README nếu đổi cách chạy hoặc thêm biến môi trường

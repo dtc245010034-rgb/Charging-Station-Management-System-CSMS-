@@ -117,7 +117,7 @@ $ python test.py --verbose
 ```
 (`python run.py test` là cùng một lệnh.) Chạy trong container Node 22 với Postgres test riêng (cổng 5433, trong RAM, dừng lại sau khi xong), `node_modules` nằm trong volume Docker riêng nên không lẫn với máy. Mã thoát 0 = đạt; log đầy đủ ở `.run/test-output.log`.
 
-Trạng thái hiện tại (29/9/2026): **lint sạch, 140/140 test backend pass** + 20 test của `run.py` (`tools/`). Test chỉ chạy trên DB có tên kết thúc `_test`. `backend/.env` không ảnh hưởng (test tự tắt nạp `.env` bằng `CSMS_SKIP_DOTENV=1`). CI chạy lint, quét phụ thuộc, test backend và test của `tools/`.
+Trạng thái hiện tại: **lint sạch, 200+ test backend pass** + 20 test của `run.py` (`tools/`). Test chỉ chạy trên DB có tên kết thúc `_test`. `backend/.env` không ảnh hưởng (test tự tắt nạp `.env` bằng `CSMS_SKIP_DOTENV=1`). CI chạy lint, quét phụ thuộc, test backend và test của `tools/`.
 
 ## 9. Staging (Render)
 
@@ -141,6 +141,9 @@ Kiểm tra nhanh sau mỗi lần deploy: `/api/health` → `"ok":true`; đăng n
 | `TRUST_PROXY` | cả hai | Không | `0`; đặt số proxy tin cậy khi có reverse proxy |
 | `DATABASE_URL` | `backend/.env` | Có (chạy ngoài Docker) | Compose tự ráp khi chạy trong Docker |
 | `LOGIN_IP_MAX_FAILURES` | `backend/.env` | Không | 20 lần sai/15 phút theo IP |
+| `OCPP_HEARTBEAT_INTERVAL` | cả hai | Không | `60` giây; khoảng thời gian nhịp tim gửi cho trụ trong BootNotificationResponse |
+| `OCPP_PING_INTERVAL` | cả hai | Không | `30` giây; chu kỳ gửi WebSocket Ping giữ kết nối OCPP (B9) |
+| `OCPP_RATE_LIMIT_MAX` | cả hai | Không | `50` tin/giây; giới hạn tần suất tin nhắn cho mỗi kết nối OCPP (B3) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | cho `create-admin` | Khi tạo admin | mật khẩu ≥ 12 ký tự, tránh ký tự `#` |
 | `ALLOW_DEMO_SEED`, `DEMO_PASSWORD`, `DEMO_EMAIL_DOMAIN`, `DEMO_STATUSES` | cho `seed-demo` | Khi seed | `=1` xác nhận; mật khẩu ≥ 8; miền mặc định `demo.csms.local`; `DEMO_STATUSES=0` để trụ ở trạng thái chưa rõ |
 | `CSMS_SKIP_DOTENV` | chỉ test | Không | `=1` bỏ nạp `backend/.env` |

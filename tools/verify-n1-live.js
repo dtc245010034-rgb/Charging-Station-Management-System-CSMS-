@@ -1,15 +1,17 @@
-const http = require('node:http');
-const { once } = require('node:events');
-const { WebSocket, WebSocketServer } = require('ws');
-const { createOcppMessageHandler, OcppCallError } = require('../src/modules/ocpp/message-handler');
-const { createOcppUpgradeHandler } = require('../src/modules/ocpp/ocpp-upgrade');
-
 /**
+ * LƯU Ý: Script này chỉ dùng cho môi trường dev cục bộ (local development).
+ * Không chạy trên môi trường staging hoặc production.
+ *
  * Script tái hiện và xác minh lỗi N1:
  * - Khi handler gặp lỗi Postgres nội bộ (chứa code "42P01", password=..., host=...)
  * - Trước fix: Client nhận đúng code "42P01" và message chứa thông tin nhạy cảm.
  * - Sau fix: Client chỉ nhận mã 'InternalError' và mô tả chung cố định 'Internal error'.
  */
+const http = require('node:http');
+const { once } = require('node:events');
+const { WebSocket, WebSocketServer } = require('ws');
+const { createOcppMessageHandler, OcppCallError } = require('../backend/src/modules/ocpp/message-handler');
+const { createOcppUpgradeHandler } = require('../backend/src/modules/ocpp/ocpp-upgrade');
 async function main() {
   console.log('=== KIỂM THỬ XÁC MINH SỬA LỖI N1 (BẢO MẬT OCPP CALLERROR) ===\n');
 
