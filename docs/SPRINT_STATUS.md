@@ -39,11 +39,11 @@
 
 | Lớp | Có | Chưa có |
 |---|---|---|
-| Nền tảng | Express 5 + PostgreSQL 16, Docker Compose, migration 001–012 (tiến/lùi), CI (Ubuntu + Windows), Dockerfile chạy user thường + healthcheck, blueprint Render, tắt máy sạch (N4) | Staging chạy thật được kiểm với 50 trụ ảo, sao lưu tự động (S-62), thống kê sức khoẻ (S-63) |
+| Nền tảng | Express 5 + PostgreSQL 16, Docker Compose, migration 001–013 (tiến/lùi), CI (Ubuntu + Windows), Dockerfile chạy user thường + healthcheck, blueprint Render, tắt máy sạch (N4) | Staging chạy thật được kiểm với 50 trụ ảo, sao lưu tự động (S-62), thống kê sức khoẻ (S-63) |
 | Tài khoản & quyền | Đăng ký công khai (luôn Tài xế), Quản trị tạo mọi vai trò, đăng nhập, khoá tạm, RBAC 5 vai trò, cô lập dữ liệu theo chủ trạm, audit truy cập trái phép | Danh sách/khoá tài khoản (S-61), đổi/quên mật khẩu |
 | Trạm – trụ – đầu nối | API tạo/sửa/xem (lọc theo chủ sở hữu), mã trụ duy nhất, toạ độ, chống bấm hai lần, **khoá/mở khoá trạm** (đóng kết nối trụ bằng mã 1008) | Chặn đổi mã khi có phiên sạc |
 | OCPP | `ws://…/ocpp/<mã>`: xác thực mã trụ + subprotocol, khung CALL/CALLRESULT/CALLERROR, `BootNotification`, `Heartbeat` (`last_seen_at` theo giờ DB), `StatusNotification` (lưu trạng thái, lỗi có khử trùng, giới hạn độ dài), thay thế kết nối trùng (S-13), rate limit, ping giữ kết nối | `Authorize` (còn là stub, S-15), chống xử lý tin trùng `messageId` (S-14), Reset từ xa (S-16), xác thực trụ (B5), phiên sạc (Sprint 3) |
-| Trạng thái trụ thời gian thực | `GET /api/fleet-status` (cây trạm–trụ–đầu nối, cờ `offline`), SSE `/api/fleet-status/events` (chủ trạm chỉ nhận sự kiện của mình), giao diện tự nối lại và đồng bộ lại snapshot | Trạng thái mức trụ (`connectorId = 0`, F5) |
+| Trạng thái trụ thời gian thực | `GET /api/fleet-status` (cây trạm–trụ–đầu nối, cờ `offline`), SSE `/api/fleet-status/events` (chủ trạm chỉ nhận sự kiện của mình), giao diện tự nối lại và đồng bộ lại snapshot | Quy tắc để lỗi mức trụ ảnh hưởng trạng thái tổng của trụ/trạm (chờ PO) |
 | Giao diện | Đăng nhập/đăng ký; workspace Vận hành (bảng điều khiển trạng thái tức thời), Chủ trạm, Quản trị, Kế toán (khung), Tài xế (khung, mobile) | Cảnh báo, phiên sạc, điều khiển từ xa, ví, hoá đơn, đặt chỗ, đối soát |
 | Tiền, ví, biểu giá, công suất, đặt chỗ, đối soát | — | Sprint 4–8 |
 
@@ -59,7 +59,7 @@ Phụ thuộc và mức ưu tiên **theo file backlog của PO**. Cột “Trên
 | GYM-33 | S-07 Đọc/ghi đúng ba loại khung | 2 | Must | S-06 | **Có** (#58, #59) | Khung sai schema → `CALLERROR`, không đóng kết nối. Triển khai bằng `ws` + bộ khung tự viết, không dùng `ocpp-rpc` |
 | GYM-34 | S-08 `BootNotification` | 2 | Must | S-07 | **Có** (#60, #63, #65) | Lưu vendor/model/serial/firmware; `interval` chỉ là gợi ý |
 | GYM-35 | S-09 Nhịp tim, liên lạc cuối | 1 | Must | S-08 | **Có** (#66) | Giờ máy chủ DB |
-| GYM-36 | S-10 `StatusNotification` | 2 | Must | S-09 | **Có** (#68, #74) | `timestamp` vắng → giờ nhận; `connectorId = 0` (cả trụ) chưa lưu (F5) |
+| GYM-36 | S-10 `StatusNotification` | 2 | Must | S-09 | **Có** (#68, #74) | `timestamp` vắng → giờ nhận; `connectorId = 0` (cả trụ) đã lưu ở `charge_points` (F5, PR này) |
 | GYM-37 | S-11 Màn hình trạng thái mọi trụ | 3 | Must | S-10 | **Có** (#70, #72) | Xem “S-11 đã làm gì” bên dưới |
 | GYM-38 | S-12 Quá hạn nhịp tim → ngoại tuyến | 2 | Must | S-09 | **Có** (cờ `offline` trong fleet-status) | Suy từ `last_seen_at`, không phụ thuộc job |
 | GYM-39 | S-13 Trùng mã trụ → đóng kết nối cũ | 1 | Must | S-06 | **Có** (#56) | Registry giữ socket, đóng kết nối cũ |
@@ -172,7 +172,7 @@ Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VON
 | S-15 | `Authorize` kiểm thẻ thật | Dev |
 | S-16 | Reset từ xa | Dev (Should) |
 | B5 | Xác thực trụ. Rủi ro ghi nhận và chấp nhận tạm cho demo/staging; đề xuất thiết kế ở [`B5-xac-thuc-tru-de-xuat-thiet-ke.md`](B5-xac-thuc-tru-de-xuat-thiet-ke.md) | PO Lê Đình Tuấn |
-| F5 | Lưu trạng thái mức trụ (`connectorId = 0`), cần thiết kế cột/bảng | Phúc / PO |
+| F5 | Đã lưu trạng thái mức trụ (migration 013); còn quy tắc ảnh hưởng trạng thái tổng của trụ/trạm | PO |
 | Hiển thị | Trụ `ONLINE` có đầu nối `UNKNOWN` hiện “Sẵn sàng” (xanh) | PO / QA (Nguyễn Hà Nam) |
 | Staging | Chạy 50 trụ ảo, WebSocket qua proxy Render, `TRUST_PROXY=2` | Phúc (cần URL staging) |
 | Bản đồ | Kiểm tile OpenStreetMap thật trên mạng có Internet | QA |

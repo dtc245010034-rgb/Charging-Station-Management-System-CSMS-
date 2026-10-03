@@ -51,7 +51,7 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 | Chất lượng | Lint sạch · **280/280 test pass** (Linux, có Docker; chạy 3 lần liên tiếp không chập chờn) · CI: `lint-and-test` (Ubuntu) + `test-windows` |
 | Chạy được ngay | Đăng nhập, 5 workspace theo vai trò, quản lý trạm/trụ, bảng điều khiển Vận hành với trạng thái trụ cập nhật tức thời, khoá/mở khoá trạm, trụ ảo kết nối được |
 | Chưa có | Phiên sạc thật, tính tiền, ví, phân bổ công suất, đặt chỗ, đối soát (Sprint 3–8) |
-| Còn mở | B5 (trụ chưa xác thực), K-01 (tin trùng, thuộc S-14), F5 (trạng thái mức trụ), staging 50 trụ ảo, tile bản đồ thật: xem [Giới hạn đã biết](#giới-hạn-đã-biết) |
+| Còn mở | B5 (trụ chưa xác thực), K-01 (tin trùng, thuộc S-14), staging 50 trụ ảo, tile bản đồ thật: xem [Giới hạn đã biết](#giới-hạn-đã-biết) |
 
 ---
 
@@ -258,7 +258,7 @@ Trình duyệt ──HTTP/JSON (cookie httpOnly)──► Express 5 (backend/src
    không build; Leaflet đặt sẵn trong repo)     │           fleet-status (REST + SSE) · health · audit · ocpp
         ▲                                       ├─ security: ma trận quyền + chặn route chưa khai quyền
         └──── SSE /api/fleet-status/events ─────┤
-                                                └─ PostgreSQL 16 (migration 001–012)
+                                                └─ PostgreSQL 16 (migration 001–013)
 Trụ sạc ──WebSocket /ocpp/<mã trụ>──► máy chủ OCPP 1.6J (`ws` + bộ khung tự viết):
    xác thực mã trụ, Boot/Heartbeat/StatusNotification, thay thế kết nối trùng, rate limit, ping giữ kết nối, tắt máy sạch
 ```
@@ -297,7 +297,7 @@ Các mục dưới đây là hiện trạng thật trên `main`, không phải l
 |---|---|---|
 | **B5** | **Trụ chưa được xác thực.** WebSocket `/ocpp/:mã` chỉ kiểm tra mã trụ tồn tại và trạm không bị khoá. Kết nối ẩn danh biết mã trụ có thể thay thế (đá) trụ thật theo logic S-13. **Rủi ro được ghi nhận và chấp nhận tạm cho demo/staging (03/10/2026); không dùng nguyên trạng cho production.** | Đề xuất thiết kế, chưa có code, chờ PO chọn phương án: [`docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`](docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md) |
 | **K-01** | Chưa chống xử lý trùng: hai khung CALL cùng `messageId` bị xử lý hai lần. | Thuộc S-14 |
-| **F5** | `StatusNotification` với `connectorId = 0` (trạng thái cả trụ) chỉ được xác nhận `{}` và ghi một dòng log gom, **chưa lưu DB** (cần thiết kế cột/bảng; `connector_errors.connector_id` đang `NOT NULL`). | Chờ Phúc/PO chốt thiết kế |
+| — | **Trạng thái mức trụ (F5, `connectorId = 0`) đã được lưu** vào `charge_points.ocpp_status`, `last_error_code`, `status_updated_at`; lỗi vào `connector_errors` (cột `charge_point_id`, `connector_id` để trống). Trạng thái `ONLINE` của trụ **không đổi** theo lỗi mức trụ, giao diện chỉ thêm huy hiệu "Lỗi mức trụ". Quy tắc ảnh hưởng đến trạng thái tổng của trụ và trạm chưa có, chờ PO. Huy hiệu mới chưa kiểm bằng trình duyệt. | Chờ PO/QA xác nhận |
 | — | `Authorize` còn là stub (trả `Accepted` nếu có `idTag`, chưa kiểm thẻ). `errorCode` ngoài 16 mã OCPP 1.6 được lưu `OtherError` (mã gốc giữ ở `vendor_error_code`). | S-15 |
 | — | **Tắt máy sạch (N4) chỉ đúng với một tiến trình server.** Khởi động sau sẽ đánh dấu nhầm trụ đang kết nối ở bản kia nếu chạy nhiều bản cùng một DB. `SIGKILL` không chạy được handler tắt máy: trụ `ONLINE` mồ côi chỉ được dọn ở lần khởi động kế tiếp. | Cần cơ chế theo phiên trước khi mở rộng ngang |
 | — | **Quy tắc hiển thị:** trụ `ONLINE` mà đầu nối chưa báo trạng thái (`UNKNOWN`) vẫn hiện "Sẵn sàng" (xanh); trụ `ONLINE` có toàn đầu nối `UNAVAILABLE` hiện "Ngoại tuyến / chưa rõ". | Chờ PO/QA xác nhận |
@@ -316,7 +316,7 @@ backend/
   src/modules/ocpp/       frames, message-handler, ws-connection, ocpp-upgrade, shutdown, handlers/ (một file mỗi action)
   src/security/           ma trận quyền (permissions.js), chặn route chưa khai quyền
   src/server.js           HTTP server + WebSocketServer OCPP, đăng ký handler, tắt máy sạch
-  migrations/             NNN_ten.sql + NNN_ten.down.sql (001–012); đã merge thì không sửa, muốn đổi thì thêm file mới
+  migrations/             NNN_ten.sql + NNN_ten.down.sql (001–013); đã merge thì không sửa, muốn đổi thì thêm file mới
   scripts/                create-admin.js, seed-demo.js
   tests/                  unit/ integration/ acceptance/ helpers/
 frontend/                 HTML/CSS/JS thuần, ES modules, không build

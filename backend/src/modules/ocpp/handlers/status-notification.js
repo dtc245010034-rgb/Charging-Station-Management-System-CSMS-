@@ -35,7 +35,6 @@ function requireShortText(payload, field) {
 function createStatusNotificationHandler({
   pool = null,
   logWarning = console.warn,
-  logInfo = console.info,
   logError = console.error,
   now = Date.now,
   warningIntervalMs = 60000,
@@ -66,6 +65,63 @@ function createStatusNotificationHandler({
     const release = () => { if (exclusiveQueues.get(key) === next) exclusiveQueues.delete(key); };
     next.then(release, release);
     return next;
+  }
+
+  // Đồng hồ trụ lệch quá 24 giờ (hoặc năm cực đoan Postgres không nhận) thì dùng giờ máy chủ thay vì tin hay báo lỗi.
+  function trustedTimestamp(timestamp) {
+    const reportedAt = typeof timestamp === 'string' ? Date.parse(timestamp) : NaN;
+    return Number.isFinite(reportedAt) && Math.abs(reportedAt - now()) <= MAX_CLOCK_SKEW_MS
+      ? new Date(reportedAt).toISOString()
+      : null;
+  }
+
+  async function recordStationLevel(db, code, payload, status, errorCode) {
+    const hasError = errorCode !== undefined && errorCode !== 'NoError';
+    const knownCode = hasError && OCPP_ERROR_CODES.has(errorCode);
+    const storedErrorCode = hasError ? (knownCode ? errorCode : OTHER_ERROR) : null;
+    const result = await db.query(
+      `UPDATE charge_points cp
+       SET ocpp_status = $1::text,
+           last_error_code = $2::text,
+           status_updated_at = CURRENT_TIMESTAMP
+       FROM stations s, charge_points previous
+       WHERE s.id = cp.station_id
+         AND previous.id = cp.id
+         AND cp.code = $3
+       RETURNING previous.ocpp_status AS previous_ocpp_status,
+                 (previous.ocpp_status IS DISTINCT FROM $1::text OR previous.last_error_code IS DISTINCT FROM $2::text) AS changed,
+                 cp.id AS charge_point_id, cp.station_id, s.owner_id`,
+      [status, storedErrorCode, code]
+    );
+    if (result.rowCount === 0) {
+      logAggregated(logWarning, 'missing-charge-point', code, `[OCPP] StatusNotification: Không tìm thấy trụ ${safeLog(code)} khi lưu trạng thái mức trụ | connectorId`, 0);
+      return;
+    }
+    const updated = result.rows?.[0];
+    if (updated?.changed) {
+      publish({ ownerId: updated.owner_id, stationId: updated.station_id, chargePointId: updated.charge_point_id });
+    }
+    if (!hasError) return;
+
+    if (!knownCode) {
+      logAggregated(logWarning, 'unknown-error-code', code, `[OCPP] StatusNotification: errorCode ngoài danh sách OCPP 1.6 của trụ ${safeLog(code)} | errorCode`, safeLog(errorCode));
+    }
+    const vendorErrorCode = payload.vendorErrorCode || (knownCode ? null : errorCode);
+    const sameStatusAsBefore = updated?.previous_ocpp_status === status;
+    await db.query(
+      `INSERT INTO connector_errors (charge_point_id, error_code, vendor_error_code, occurred_at)
+       SELECT cp.id, $1::text, $2::text, COALESCE($3::timestamptz, CURRENT_TIMESTAMP)
+       FROM charge_points cp
+       WHERE cp.code = $4
+         AND NOT ($6::boolean AND $5::int > 0 AND EXISTS (
+           SELECT 1 FROM connector_errors e
+           WHERE e.charge_point_id = cp.id
+             AND e.error_code = $1::text
+             AND e.vendor_error_code IS NOT DISTINCT FROM $2::text
+             AND e.recorded_at > CURRENT_TIMESTAMP - make_interval(secs => $5::int)
+         ))`,
+      [storedErrorCode, vendorErrorCode, trustedTimestamp(payload.timestamp), code, errorDedupSeconds, sameStatusAsBefore]
+    );
   }
 
   async function record(db, code, connectorId, payload, status, errorCode) {
@@ -109,11 +165,7 @@ function createStatusNotificationHandler({
       logAggregated(logWarning, 'unknown-error-code', code, `[OCPP] StatusNotification: errorCode ngoài danh sách OCPP 1.6 của trụ ${safeLog(code)} | errorCode`, safeLog(errorCode));
     }
     const vendorErrorCode = payload.vendorErrorCode || (knownCode ? null : errorCode);
-    // Đồng hồ trụ lệch quá 24 giờ (hoặc năm cực đoan Postgres không nhận) thì dùng giờ máy chủ thay vì tin hay báo lỗi.
-    const reportedAt = typeof payload.timestamp === 'string' ? Date.parse(payload.timestamp) : NaN;
-    const occurredAt = Number.isFinite(reportedAt) && Math.abs(reportedAt - now()) <= MAX_CLOCK_SKEW_MS
-      ? new Date(reportedAt).toISOString()
-      : null;
+    const occurredAt = trustedTimestamp(payload.timestamp);
     const sameStatusAsBefore = result.rows?.[0]?.previous_ocpp_status === status;
     await db.query(
       `INSERT INTO connector_errors (connector_id, error_code, vendor_error_code, occurred_at)
@@ -153,17 +205,15 @@ function createStatusNotificationHandler({
 
     const code = connection?.chargePointCode || connection?.chargePoint?.code;
 
-    if (connectorId === 0) {
-      logAggregated(logInfo, 'station-level-status', code ?? 'UNKNOWN', `[OCPP] StatusNotification: Bỏ qua trạng thái mức trụ (connectorId 0) của trụ ${safeLog(code ?? 'UNKNOWN')}, chưa lưu | status`, safeLog(status));
-      return {};
-    }
     if (!code) {
       throw new OcppCallError('InternalError', 'Internal error');
     }
 
     const db = pool || getDefaultPool();
     try {
-      await runExclusive(`${code}:${connectorId}`, () => record(db, code, connectorId, payload, status, errorCode));
+      await runExclusive(`${code}:${connectorId}`, () => (connectorId === 0
+        ? recordStationLevel(db, code, payload, status, errorCode)
+        : record(db, code, connectorId, payload, status, errorCode)));
     } catch (error) {
       logError(`[OCPP] StatusNotification: Lỗi cập nhật trạng thái đầu nối của trụ ${safeLog(code)}:`, sanitizeErrorMessage(error?.message || error));
       throw new OcppCallError('InternalError', 'Internal error');
