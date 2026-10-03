@@ -92,13 +92,15 @@ Quan sát: lần SIGTERM thứ hai giết tiến trình theo hành vi mặc đ�
 - Bản sau F2: 121/121 kiểm tra DOM; bản trước F2 (`main`): 66/121, cả 55 chỗ sai đều do F2 (mọi trụ ONLINE hiện "Ngoại tuyến / chưa rõ"; KPI 0/0/0/10).
 - 7 marker khớp 7 trạm có toạ độ, màu đúng cả 7 (trạm 3 trụ lấy màu xấu nhất); chú giải, bộ lọc, panel danh sách, popup, ngăn chi tiết trạm và trụ đều đúng; KPI 10 trụ: 5 sẵn sàng, 1 đang sạc, 2 lỗi, 2 ngoại tuyến.
 - Sau đăng nhập: 0 lỗi JS, 0 request hỏng, không tràn ngang ở 390 px.
-- Chưa kiểm chứng: tile OSM thật trên mạng có Internet; chỉ chạy Chrome headless.
+- Chưa kiểm chứng: tile OSM thật (máy chạy kiểm thử không tới được `tile.openstreetmap.org`) trên mạng có Internet; chỉ chạy Chrome headless.
 
 **4.3 Lỗi DB (B7, N1): đã chạy** (`tools/verify-db-fault-round6.js`; log trước/sau vá ở `round6/`).
 - (a) Giết kết nối DB của ứng dụng, 5 vòng: 0 CALLERROR, phản hồi 13–17 ms, WebSocket không đóng.
 - (b) Đổi tên bảng `charge_points` và cột `connectors.ocpp_status`: Boot/StatusNotification trả `InternalError "Internal error"` trong 10–18 ms, không bao giờ `Accepted`; phản hồi và log không lộ tên bảng, mã Postgres hay đường dẫn; `messageId` chứa xuống dòng không tạo được dòng log giả; sau khôi phục Boot `Accepted`.
 - (c) Khoá hàng `FOR UPDATE`: `updateLastSeen` làm Heartbeat chờ đúng bằng thời gian khoá (6007 ms; 12 trụ cùng Heartbeat chậm nhất 6009 ms, pool chỉ 10 kết nối nên có nguy cơ cạn pool). Đã vá bằng `FOR UPDATE OF cp SKIP LOCKED` (nhánh GYM-35): Heartbeat trả lời 3 ms, 12 trụ chậm nhất 33 ms. Script: bản chưa vá 52 ok / 3 FAIL, bản vá 55 ok / 0 FAIL.
-- Chưa đo: DB sập hẳn (không dừng được Postgres 5433 dùng chung); chặn tối đa theo `connectionTimeoutMillis` 2 giây.
+- (d) DB sập hẳn (`tools/verify-db-down-round6.js`, container Postgres riêng cổng 5441, log: [`round6/db-down.log`](round6/db-down.log)): 42 dòng, 40 ok, 2 FAIL.
+  - Đạt: Boot/StatusNotification trả `InternalError` (p50 3 ms, tối đa 6 ms vì pool nhận `ECONNREFUSED` ngay), không `Accepted`, WebSocket không đóng, server không crash, không có `unhandledRejection`/`uncaughtException`; `/api/health` trả 503 `DB_UNAVAILABLE`. Khi DB chạy lại: Boot `Accepted` sau 482 ms (lần thử thứ hai), Heartbeat ghi lại `last_seen_at`, không cần khởi động lại. SIGTERM lúc DB sập: thoát mã 1 sau 48 ms, client nhận close 1001; trụ tạm kẹt `ONLINE` đến lần khởi động sau (N4 dọn).
+  - 2 FAIL (chưa vá, rủi ro thấp, cần quyết định): log vận hành của dòng `Failed to update last_seen_at` có `host:port` của DB (`ECONNREFUSED`), và handler lỗi chung ghi stack trace có đường dẫn tuyệt đối khi `/api/health` trả 503. Cả hai chỉ nằm trong log phía máy chủ, không lộ cho client, không chứa mật khẩu hay token. Nếu cần chặt hơn: chạy `sanitizeErrorMessage` rộng hơn (che host:port) và bỏ stack khỏi log lỗi 5xx của `AppError`.
 
 **4.4 PR, CI, Jira: chưa xác minh bằng API.** Không có `gh` và token. Không biết trạng thái PR #68/#69, CI xanh hay chưa, trạng thái thẻ GYM-32…42.
 
