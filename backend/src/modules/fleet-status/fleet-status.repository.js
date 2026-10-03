@@ -20,7 +20,7 @@ const snapshot = (actor) => {
         cp.status = 'OFFLINE'
         OR
         cp.last_seen_at IS NULL
-        OR cp.last_seen_at <= CURRENT_TIMESTAMP - (cp.heartbeat_interval * INTERVAL '2 seconds')
+        OR cp.last_seen_at <= CURRENT_TIMESTAMP - (COALESCE(cp.heartbeat_interval, 60) * INTERVAL '2 seconds')
       ) AS offline,
       c.id AS connector_id,
       c.connector_no,
