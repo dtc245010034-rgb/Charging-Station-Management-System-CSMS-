@@ -454,7 +454,7 @@ def print_summary(origin, credentials, args, public_port=None):
     say("\n" + "=" * 62)
     say(f"  CSMS đang chạy:  {origin}")
     if public_port:
-        say(f"  CÔNG KHAI: chạy tunnel trên máy này trỏ vào cổng {public_port} (ngrok: xem hướng dẫn hiện hành của ngrok)")
+        say(f"  CÔNG KHAI: chạy tunnel trên máy này: ngrok http {public_port} --url {origin}")
         say(f"  Máy này (không qua tunnel): http://localhost:{public_port}")
     say("=" * 62)
     if credentials["created"] == "new":

@@ -46,7 +46,7 @@ Dùng cho máy chủ nhóm (laptop chạy 24/7) để PO/mentor/người ở xa 
 
 ```
 python run.py --public-url https://<tên-của-bạn>.ngrok-free.app
-# rồi mở tunnel trỏ vào cổng 3000 (xem hướng dẫn hiện hành của ngrok; tên miền tĩnh miễn phí lấy ở trang quản lý ngrok)
+ngrok http 3000 --url https://<tên-của-bạn>.ngrok-free.app    # cửa sổ khác, cùng máy; kiểm cú pháp bằng `ngrok http --help`
 python run.py --local        # quay về chế độ chạy trên máy này
 ```
 Địa chỉ được lưu vào `.env` (`PUBLIC_URL`), nên các lần `python run.py` sau vẫn ở chế độ công khai đến khi dùng `--local`.
@@ -59,6 +59,43 @@ Chế độ này tự áp các chốt chặn (đã kiểm chứng bằng docker 
 - `BIND_HOST` bị ép về `127.0.0.1`: cổng ứng dụng và Postgres chỉ mở cho máy này, ra Internet chỉ qua tunnel.
 
 Lưu ý gói ngrok miễn phí: khoảng 20.000 yêu cầu HTTP và 1 GB băng thông mỗi tháng; có trang cảnh báo ở lần vào đầu của trình duyệt. Trụ ảo và kiểm thử tự động nên chạy trên chính máy chủ (gọi `localhost`), không đi qua tunnel. Chi tiết: `docs/SPRINT_2_PLAN.md` mục 6 (Q4).
+
+### Máy chủ nhóm (laptop/homelab chạy 24/7 + ngrok)
+
+**Chuẩn bị một lần**
+- Cài Docker + Docker Compose; thêm tài khoản vận hành vào nhóm `docker` (`sudo usermod -aG docker $USER`, đăng nhập lại) để không phải `sudo` mỗi lệnh.
+- Tắt chế độ ngủ/ngủ đông và việc tạm dừng khi gập màn hình (Linux: `sudo systemctl mask sleep.target suspend.target hibernate.target`; đặt `HandleLidSwitch=ignore` trong `/etc/systemd/logind.conf`). Máy ngủ là trụ rớt kết nối.
+- `ngrok config add-authtoken <TOKEN>` (token lấy ở trang quản lý ngrok; không commit, không dán vào tài liệu).
+
+**Cập nhật bản mới** (migration tự chạy khi app khởi động):
+```
+git pull
+python3 run.py down
+python3 run.py
+```
+
+**Quay lui khi bản mới lỗi:** đánh thẻ trước mỗi lần cập nhật rồi quay về thẻ đó.
+```
+git tag pre-update-$(date +%Y%m%d-%H%M)      # trước khi git pull
+git checkout <thẻ-cũ> && python3 run.py down && python3 run.py
+```
+⚠️ Quay code **không** lùi migration. Nếu bản mới đã thêm migration, chạy `docker compose exec app npm run migrate:down` (lùi một migration mỗi lần) **trước khi** chuyển code, hoặc khôi phục từ bản sao lưu ở dưới. Luôn sao lưu trước khi cập nhật.
+
+**Sao lưu:** `tools/backup-db.sh` chạy `pg_dump`, ghi `~/csms-backups/csms-<ngày-giờ>.sql` (quyền 600, ngoài repo) và giữ 7 bản mới nhất (đổi bằng `BACKUP_DIR`, `KEEP`). Mẫu cron, mỗi ngày 02:00 (thay đường dẫn cho đúng):
+```
+0 2 * * * cd /home/<user>/Charging-Station-Management-System-CSMS- && tools/backup-db.sh >> $HOME/csms-backups/backup.log 2>&1
+```
+Cron phải chạy bằng đúng tài khoản trong nhóm `docker`. Khôi phục: `docker compose exec -T db psql -U csms -d csms < file.sql` vào DB trống. Bản sao lưu chứa dữ liệu cá nhân: không commit, không gửi công khai.
+
+**Tunnel ngrok** (cửa sổ/dịch vụ riêng trên cùng máy; ví dụ minh hoạ, đuôi tên miền có thể là `ngrok.dev` hoặc `ngrok-free.app`):
+```
+python3 run.py --public-url https://<tên>.<đuôi>
+ngrok http 3000 --url https://<tên>.<đuôi>
+python3 -m unittest discover -s tools -q          # kiểm run.py (20 test)
+```
+Giới hạn gói miễn phí ngrok, đối chiếu lại ngày 04/10/2026 tại <https://ngrok.com/docs/pricing-limits/free-plan-limits>: 20.000 yêu cầu HTTP, 1 GB dữ liệu ra, 5.000 kết nối TCP mỗi tháng; tốc độ tối đa 4.000 yêu cầu HTTP/phút và 100 kết nối TCP/phút; tối đa 3 endpoint online, 3 agent, 1 tên miền development; trang cảnh báo trước lưu lượng HTML của trình duyệt (bỏ qua bằng header `ngrok-skip-browser-warning`). Tài liệu không nêu giới hạn riêng cho WebSocket. **Chưa kiểm chứng WebSocket OCPP qua ngrok thật**: thử 1 trụ ảo bằng `wss://` trước khi cho trụ thật dùng.
+
+⚠️ **B5 (chưa xử lý):** trụ chỉ nhận diện bằng mã trong URL `/ocpp/<mã>`, chưa có xác thực. Khi mở ra Internet, ai biết mã trụ cũng kết nối được và đá trụ thật khỏi kết nối. Dùng mã trụ khó đoán trên môi trường công khai, không nạp dữ liệu thật. Thiết kế đề xuất: `docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md` (chưa làm).
 
 ## 4. Dừng, khởi động lại
 
