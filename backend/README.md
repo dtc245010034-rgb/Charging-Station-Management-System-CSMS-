@@ -42,7 +42,7 @@ Phiên là JWT trong cookie `httpOnly` (SameSite=Lax, Secure khi production); AP
 - `GET/POST /api/stations`, `GET/PATCH /api/stations/:id`
 - `GET /api/charge-points`, `GET /api/charge-points/:id`, `GET /api/charge-points/check-code?code=...`
 - `POST /api/stations/:stationId/charge-points` (nhận `connector_count` từ 1 đến 4; mặc định 4), `PATCH /api/charge-points/:id`
-- `GET /api/fleet-status` (operator/admin: toàn bộ; chủ trạm: chỉ trạm của mình): một truy vấn trả cây trạm → trụ → đầu nối cùng `last_seen_at` và cờ `offline` (trạng thái OFFLINE đã lưu hoặc liên lạc quá 2 × `heartbeat_interval`). `GET /api/fleet-status/events` (cùng quyền) phát SSE khi trạng thái đầu nối đổi; chủ trạm chỉ nhận sự kiện trạm của mình.
+- `GET /api/fleet-status` (operator/admin: toàn bộ; chủ trạm: chỉ trạm của mình): một truy vấn trả cây trạm → trụ → đầu nối cùng `last_seen_at` và cờ `offline` (trạng thái OFFLINE đã lưu hoặc liên lạc quá 2 × `heartbeat_interval`; thời gian được so sánh bằng `CURRENT_TIMESTAMP` của PostgreSQL). Job nền quét mỗi phút và chuyển trụ `ONLINE` quá hạn sang `OFFLINE`; heartbeat tiếp theo cập nhật lại thời điểm nhận và khôi phục `ONLINE`. `GET /api/fleet-status/events` (cùng quyền) phát SSE khi trạng thái đầu nối đổi; chủ trạm chỉ nhận sự kiện trạm của mình.
 - `GET /api/roles` (chỉ ADMIN): danh sách vai trò, dùng cho form tạo tài khoản.
 - `GET /api/health`: công khai, trả `ok`, dùng cho healthcheck Docker/Render và chỉ báo “hệ thống ổn định” trên giao diện.
 - Giao diện (`frontend/`) dùng các API trên: Chủ trạm/Quản trị tạo–sửa trạm, chọn vị trí trên bản đồ, quản lý trụ/đầu nối, kiểm tra mã trụ; Vận hành xem danh sách và trạng thái; Quản trị tạo tài khoản. Danh sách `/api/stations` và `/api/charge-points` không kèm đầu nối (chỉ chi tiết `/:id` có).
@@ -72,6 +72,7 @@ Chi tiết đầy đủ (cách chạy khi chưa có Node 22.7, chạy 1 file, đ
 Vài điểm riêng của backend:
 
 - Test chỉ chạy trên database có tên kết thúc bằng `_test` (đặt `TEST_DATABASE_URL` nếu dùng DB khác) — chặn cứng để không lỡ xoá nhầm DB dev.
+- Smoke test staging cho luồng trụ ảo offline/reconnect (3 lượt liên tiếp, chu kỳ 5 giây): đặt `STAGING_BASE_URL`, `CHARGE_POINT_CODE` (trụ ảo chuyên dùng, có connector 1), `TEST_USER_EMAIL` và `TEST_USER_PASSWORD`, rồi chạy từ thư mục gốc `node tools/test-ocpp-offline-reconnect-live.js`. Tài khoản cần đọc được trụ trong fleet-status; dịch vụ staging cần trả `interval: 5` trong BootNotificationResponse. Test không tạo hoặc xoá dữ liệu.
 - Cấu trúc mã: `src/app.js` (Express app), `src/server.js` (listen + WebSocket), `src/modules/<domain>/` (routes → service → repository), `src/db/`, `src/lib/`, `src/middlewares/`.
 - Migration đầu tiên nằm tại `migrations/001_baseline.sql`, rollback tại `migrations/001_baseline.down.sql`. Đây là mẫu quy ước cho các migration sau: tên `snake_case`, khóa chính `id`, và cột `created_at`/`updated_at`.
 - `charge_points.code` có UNIQUE trực tiếp trong PostgreSQL (trên giá trị đã chuẩn hoá chữ hoa); duplicate race được trả về 409. Mỗi trụ tạo số connector theo `connector_count` với trạng thái `UNKNOWN`.

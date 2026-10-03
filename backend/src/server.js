@@ -11,6 +11,7 @@ const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notifi
 const { createStatusNotificationHandler } = require('./modules/ocpp/handlers/status-notification');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
 const { markAllChargePointsOffline } = require('./modules/charge-points/presence');
+const { startChargePointOfflineJob } = require('./modules/charge-points/offline-job');
 const { createShutdown } = require('./modules/ocpp/shutdown');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
@@ -28,7 +29,11 @@ async function updateChargePointLastSeen(connection) {
 			   WHERE cp.code = $1 AND s.locked_at IS NULL
 			   FOR UPDATE OF cp SKIP LOCKED
 			 )
-			 UPDATE charge_points SET last_seen_at = CURRENT_TIMESTAMP FROM target WHERE charge_points.id = target.id`,
+			 UPDATE charge_points
+			 SET last_seen_at = CURRENT_TIMESTAMP,
+			     status = CASE WHEN charge_points.status = 'OFFLINE' THEN 'ONLINE' ELSE charge_points.status END
+			 FROM target
+			 WHERE charge_points.id = target.id`,
 			[code]
 		);
 	} catch (error) {
@@ -77,7 +82,11 @@ wss.on('connection', (ws, code) => {
 });
 
 const shutdown = createShutdown({ server, wss, pool });
-for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => shutdown(signal));
+let stopChargePointOfflineJob = () => {};
+for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
+	stopChargePointOfflineJob();
+	shutdown(signal);
+});
 
 async function start() {
 	await migrate();
@@ -86,6 +95,7 @@ async function start() {
 	if (swept.chargePoints > 0 || swept.connectors > 0) {
 		console.log(`[CSMS] Dọn khi khởi động: ${swept.chargePoints} trụ ONLINE mồ côi, ${swept.connectors} đầu nối về UNKNOWN`);
 	}
+	stopChargePointOfflineJob = startChargePointOfflineJob().stop;
 	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
 }
 start().catch((error) => { console.error('Database startup failed:', error); process.exitCode = 1; });

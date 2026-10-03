@@ -100,6 +100,22 @@ describe('N4/F3/N8: vòng đời kết nối của trụ trên server thật', (
     assert.equal(await cpStatus(), 'UNKNOWN');
   });
 
+  it('heartbeat tiếp theo khôi phục ONLINE sau khi job đánh dấu trụ ngoại tuyến', { timeout: 60000 }, async () => {
+    server = await startServerProcess();
+    const client = await bootChargePoint(server.wsUrl, CODE);
+    await query(
+      "UPDATE charge_points SET status = 'OFFLINE', last_seen_at = CURRENT_TIMESTAMP - INTERVAL '3 minutes' WHERE id = $1",
+      [chargePointId],
+    );
+
+    const heartbeat = await sendCall(client, 'hb-after-offline', 'Heartbeat', {});
+
+    assert.equal(heartbeat[0], 3);
+    assert.equal(await cpStatus(), 'ONLINE');
+    assert.ok((await query('SELECT last_seen_at FROM charge_points WHERE id = $1', [chargePointId])).rows[0].last_seen_at);
+    client.terminate();
+  });
+
   it('F3: kết nối bị S-13 thay thế không làm đầu nối của kết nối mới về UNKNOWN', { timeout: 60000 }, async () => {
     server = await startServerProcess();
     const first = await bootChargePoint(server.wsUrl, CODE);
