@@ -52,7 +52,11 @@ describe('N4/F3/N8: vòng đời kết nối của trụ trên server thật', (
     return value;
   }
 
-  for (const signal of ['SIGTERM', 'SIGINT']) it(`N4: ${signal} khi trụ đang kết nối → client nhận close 1001, DB về UNKNOWN, tiến trình thoát 0`, { timeout: 60000 }, async () => {
+  for (const signal of ['SIGTERM', 'SIGINT']) it(`N4: ${signal} khi trụ đang kết nối → client nhận close 1001, DB về UNKNOWN, tiến trình thoát 0`, { timeout: 60000 }, async (t) => {
+    if (process.platform === 'win32') {
+      t.skip('Windows không gửi tín hiệu POSIX tới tiến trình con (kill() ngắt ngay, không chạy handler); chạy ở job Linux.');
+      return;
+    }
     server = await startServerProcess();
     const client = await bootChargePoint(server.wsUrl, CODE);
     await sendCall(client, 'st-1', 'StatusNotification', { connectorId: 1, status: 'Charging', errorCode: 'NoError' });
