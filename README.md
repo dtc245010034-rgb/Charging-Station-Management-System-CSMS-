@@ -25,11 +25,11 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 | Dừng, giữ dữ liệu | `python run.py down` |
 | Xoá sạch dữ liệu làm lại | `python run.py reset` |
 | Đọc quy ước nhánh/commit/PR | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
-| Hiểu dự án đang ở đâu | [Trạng thái dự án](#trạng-thái-dự-án-0310) |
+| Hiểu dự án đang ở đâu | [Trạng thái dự án](#trạng-thái-dự-án-0410) |
 
 ## Mục lục
 
-1. [Trạng thái dự án](#trạng-thái-dự-án-0310) · [Việc còn lại để đóng Sprint 2](#việc-còn-lại-để-đóng-sprint-2-hạn-510)
+1. [Trạng thái dự án](#trạng-thái-dự-án-0410) · [Việc còn lại để đóng Sprint 2](#việc-còn-lại-để-đóng-sprint-2-hạn-510)
 2. [Chạy dự án](#1-chạy-dự-án) · [Chạy trên máy chủ](#chạy-trên-máy-chủ-nhóm-homelab-linux) · [Công khai qua Internet](#cho-người-khác-thử-qua-internet-công-khai-tạm) · [Tài khoản có sẵn](#tài-khoản-có-sẵn) · [Biến môi trường](#biến-môi-trường)
 3. [Dùng thử hệ thống](#2-dùng-thử-hệ-thống) · [Tạo tài khoản](#tạo-tài-khoản) · [Dữ liệu demo](#dữ-liệu-demo) · [Thử trụ sạc ảo (OCPP)](#thử-trụ-sạc-ảo-ocpp)
 4. [Kiểm thử](#3-kiểm-thử)
@@ -40,9 +40,9 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 
 ---
 
-## Trạng thái dự án (03/10)
+## Trạng thái dự án (04/10)
 
-*Cập nhật 03/10/2026 23:50, khớp `main` = `dbecd10` (sau PR #76). Đã kiểm lại bằng server thật cùng ngày (báo cáo lần 7 lưu ở Project, chưa đưa vào repo). Trạng thái Done chính thức theo Jira (bảng GYM, **chưa đối chiếu bằng API**); bảng đầy đủ: [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md).*
+*Cập nhật 04/10/2026, nhánh `phuc/GYM-XX-fix-cap-nhat` (chưa merge) trên nền `main` = `dbecd10`. Đã kiểm bằng server thật ngày 04/10: [`docs/testing/BAO-CAO-VONG-7.md`](docs/testing/BAO-CAO-VONG-7.md). Trạng thái Done chính thức theo Jira (bảng GYM, **chưa đối chiếu bằng API**); bảng đầy đủ: [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md).*
 
 | Hạng mục | Tình trạng |
 |---|---|
