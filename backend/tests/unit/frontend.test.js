@@ -75,6 +75,33 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(worstGroup(['Available', 'Faulted', 'Charging']), 'fault');
     assert.deepStrictEqual(countByGroup(['Available', 'Charging', 'UNKNOWN']), { ready: 1, charging: 1, warning: 0, fault: 0, offline: 1 });
   });
+
+  it('F2: trụ ONLINE (đang kết nối) thuộc nhóm Sẵn sàng, nhãn dễ hiểu, giá trị gốc không đổi', async () => {
+    const { groupOf, statusLabel } = await load('app/status.js');
+    assert.strictEqual(groupOf('ONLINE'), 'ready');
+    assert.strictEqual(statusLabel('ONLINE'), 'Sẵn sàng');
+    assert.strictEqual(statusLabel('UNKNOWN'), 'Chưa rõ');
+    assert.strictEqual(statusLabel('ERROR'), 'Lỗi');
+  });
+
+  it('F4: đầu nối UNAVAILABLE thuộc nhóm ngoại tuyến, nhãn "Không khả dụng"', async () => {
+    const { groupOf, statusLabel } = await load('app/status.js');
+    assert.strictEqual(groupOf('UNAVAILABLE'), 'offline');
+    assert.strictEqual(statusLabel('UNAVAILABLE'), 'Không khả dụng');
+  });
+
+  it('F2: màu đại diện của trụ ONLINE lấy theo đầu nối nặng nhất; trụ không ONLINE không bị đầu nối kéo lên', async () => {
+    const { pointGroup, worstGroup, countByGroup } = await load('app/status.js');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['AVAILABLE'] }), 'ready');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['AVAILABLE', 'OCCUPIED'] }), 'charging');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['OCCUPIED', 'ERROR'] }), 'fault');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['UNAVAILABLE', 'UNKNOWN'] }), 'ready');
+    assert.strictEqual(pointGroup({ status: 'ONLINE' }), 'ready');
+    assert.strictEqual(pointGroup({ status: 'UNKNOWN', connector_statuses: ['ERROR'] }), 'offline');
+    const points = [{ status: 'ONLINE', connector_statuses: ['ERROR'] }, { status: 'ONLINE', connector_statuses: ['AVAILABLE'] }, { status: 'UNKNOWN' }];
+    assert.strictEqual(worstGroup(points, pointGroup), 'fault');
+    assert.deepStrictEqual(countByGroup(points, pointGroup), { ready: 1, charging: 0, warning: 0, fault: 1, offline: 1 });
+  });
 });
 
 describe('S-02 frontend: api.js và auth.js', () => {

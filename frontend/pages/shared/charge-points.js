@@ -1,7 +1,7 @@
 import { h } from '../../app/dom.js';
 import { formatKw, formatDateTime } from '../../app/format.js';
 import { routeFor } from '../../app/workspace.js';
-import { GROUPS, groupOf } from '../../app/status.js';
+import { GROUPS, pointGroup } from '../../app/status.js';
 import * as csms from '../../services/csms.js';
 import { dataTable } from '../../components/table.js';
 import { statusBadge } from '../../components/badge.js';
@@ -56,7 +56,7 @@ function openChargePointDrawer({ id, canWrite, workspace, onChanged, onClose }) 
   async function load() {
     try {
       const point = await csms.chargePoints.get(id);
-      drawer.setTitle(point.code, h('div', { style: 'margin-top:6px' }, statusBadge(point.status)));
+      drawer.setTitle(point.code, h('div', { style: 'margin-top:6px' }, statusBadge(point.status, point.status, pointGroup(withConnectorStatuses(point)))));
       drawer.setBody(
         h('dl', { class: 'kv' },
           h('dt', {}, 'Trạm'), h('dd', {}, h('a', { href: routeFor(workspace, 'stations', point.station_id), onclick: () => drawer.close() }, point.station_name)),
@@ -78,6 +78,8 @@ function openChargePointDrawer({ id, canWrite, workspace, onChanged, onClose }) 
   return drawer;
 }
 
+const withConnectorStatuses = (point) => ({ ...point, connector_statuses: (point.connectors ?? []).map((c) => c.status) });
+
 export function render(ctx) {
   const canWrite = ctx.can('charge-points:write');
   const fleet = createFleet();
@@ -95,7 +97,7 @@ export function render(ctx) {
     columns: [
       { key: 'code', label: 'Mã trụ', render: (p) => h('span', { class: 'cell-strong mono' }, p.code) },
       { key: 'station', label: 'Trạm', render: (p) => p.station_name },
-      { key: 'status', label: 'Trạng thái', render: (p) => statusBadge(p.status) },
+      { key: 'status', label: 'Trạng thái', render: (p) => statusBadge(p.status, p.status, pointGroup(p)) },
       { key: 'power', label: 'Công suất', align: 'num', render: (p) => formatKw(p.power_kw) },
       { key: 'model', label: 'Hãng / mẫu', render: (p) => [p.vendor, p.model].filter(Boolean).join(' · ') || '—' },
     ],
@@ -120,7 +122,7 @@ export function render(ctx) {
     }
     const q = filters.query.toLowerCase();
     const rows = state.chargePoints.filter((p) => (!q || `${p.code} ${p.station_name} ${p.vendor ?? ''} ${p.model ?? ''}`.toLowerCase().includes(q))
-      && (!filters.group || groupOf(p.status) === filters.group)
+      && (!filters.group || pointGroup(p) === filters.group)
       && (!filters.station || String(p.station_id) === filters.station));
     count.textContent = `${state.chargePoints.length} trụ sạc${rows.length !== state.chargePoints.length ? ` · đang hiện ${rows.length}` : ''}`;
     if (!rows.length) {

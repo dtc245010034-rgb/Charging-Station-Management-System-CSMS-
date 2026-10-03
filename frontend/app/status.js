@@ -17,7 +17,9 @@ const GROUP_OF = {
   Charging: 'charging', SuspendedEV: 'charging', SuspendedEVSE: 'charging', Finishing: 'charging',
   Faulted: 'fault',
   Unavailable: 'offline',
-  AVAILABLE: 'ready', OCCUPIED: 'charging', RESERVED: 'ready', ERROR: 'fault',
+  AVAILABLE: 'ready', OCCUPIED: 'charging', RESERVED: 'ready', ERROR: 'fault', UNAVAILABLE: 'offline',
+  // Trụ đang giữ kết nối OCPP (charge_points.status). Màu của trụ còn xét thêm đầu nối, xem pointGroup.
+  ONLINE: 'ready',
 };
 
 // Trụ mới đăng ký có trạng thái 'UNKNOWN' cho tới khi nhận StatusNotification → nhóm offline.
@@ -28,19 +30,32 @@ export const CONNECTOR_STATUS_LABELS = {
   OCCUPIED: 'Bận',
   RESERVED: 'Đặt chỗ',
   ERROR: 'Lỗi',
+  UNAVAILABLE: 'Không khả dụng',
 };
+
+export function statusLabel(status, group = groupOf(status)) {
+  if (CONNECTOR_STATUS_LABELS[status]) return CONNECTOR_STATUS_LABELS[status];
+  if (status === 'UNKNOWN' || !status) return 'Chưa rõ';
+  return GROUPS[group].label;
+}
+
+// Trụ ONLINE mang màu của đầu nối nặng nhất; trụ không ONLINE (UNKNOWN...) luôn là ngoại tuyến vì không có kết nối.
+export function pointGroup(point) {
+  if (point.status !== 'ONLINE') return groupOf(point.status);
+  return worstGroup([point.status, ...(point.connector_statuses ?? [])]);
+}
 
 // Thứ tự nặng → nhẹ, dùng để chọn màu đại diện của một trạm gồm nhiều trụ.
 const SEVERITY = ['fault', 'warning', 'charging', 'ready', 'offline'];
 
-export function worstGroup(statuses) {
-  const groups = new Set(statuses.map(groupOf));
+export function worstGroup(items, toGroup = groupOf) {
+  const groups = new Set(items.map(toGroup));
   return SEVERITY.find((group) => groups.has(group)) ?? 'offline';
 }
 
-export function countByGroup(statuses) {
+export function countByGroup(items, toGroup = groupOf) {
   const counts = { ready: 0, charging: 0, warning: 0, fault: 0, offline: 0 };
-  for (const status of statuses) counts[groupOf(status)] += 1;
+  for (const item of items) counts[toGroup(item)] += 1;
   return counts;
 }
 
