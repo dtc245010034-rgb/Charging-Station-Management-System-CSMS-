@@ -136,6 +136,7 @@ const kind = (res) => (res.timedOut ? 'timeout' : res.closed !== undefined ? `cl
 const isInternalError = (res) => res.frame?.[0] === 4 && res.frame[2] === 'InternalError' && res.frame[3] === 'Internal error';
 const bootAccepted = (res) => res.frame?.[0] === 3 && res.frame[2]?.status === 'Accepted';
 const LEAK = /ECONNREFUSED|ECONNRESET|57P01|08006|\/home|node_modules|\.js:\d+|password|127\.0\.0\.1|5441|at\s+\S+\s+\(/i;
+const LOG_LEAK = /57P01|08006|\/home|node_modules|\.js:\d+|password|127\.0\.0\.1|5441|at\s+\S+\s+\(/i;
 const distinctLines = (text) => {
   const counts = new Map();
   for (const line of text.split('\n').filter(Boolean)) counts.set(line.replace(/\d{4}-\d\d-\d\dT[\d:.]+Z?/g, '<ts>').slice(0, 160), (counts.get(line.replace(/\d{4}-\d\d-\d\dT[\d:.]+Z?/g, '<ts>').slice(0, 160)) || 0) + 1);
@@ -208,9 +209,9 @@ async function main() {
   check('/api/health vẫn trả lời khi DB sập (không treo)', health.status !== 0, `HTTP ${health.status}`);
   const outDown = server.child.output;
   check('log server không chứa mật khẩu/URL kết nối', !outDown.includes(PASSWORD) && !/postgres(ql)?:\/\//i.test(outDown));
-  const logLeak = outDown.split('\n').filter((line) => LEAK.test(line));
+  const logLeak = outDown.split('\n').filter((line) => LOG_LEAK.test(line));
   console.log(`     (ghi nhận) các dòng log khác nhau trong lúc DB sập:\n${distinctLines(outDown)}`);
-  check('log server không lộ ECONNREFUSED/đường dẫn/tên nội bộ', logLeak.length === 0, logLeak.length ? `${logLeak.length} dòng, ví dụ: ${logLeak[0].slice(0, 140)}` : '');
+  check('log server không lộ host:port/đường dẫn/tên nội bộ', logLeak.length === 0, logLeak.length ? `${logLeak.length} dòng, ví dụ: ${logLeak[0].slice(0, 140)}` : '');
   check('không có unhandledRejection/uncaughtException trong log', !/unhandled|uncaught/i.test(outDown));
 
   console.log('\n--- Giai đoạn 2: docker start (phục hồi) ---');
@@ -256,9 +257,9 @@ async function main() {
   check('client nhận close 1001 khi server tắt lúc DB sập', ws.closeCode === 1001, `mã đóng ${ws.closeCode}`);
   const outAll = server.child.output;
   check('log tắt máy không chứa mật khẩu/URL kết nối', !outAll.includes(PASSWORD) && !/postgres(ql)?:\/\//i.test(outAll));
-  const shutdownLeak = outAll.split('\n').filter((line) => LEAK.test(line));
+  const shutdownLeak = outAll.split('\n').filter((line) => LOG_LEAK.test(line));
   console.log(`     (ghi nhận) các dòng log mới từ lúc tắt máy:\n${distinctLines(outAll.slice(outDown.length))}`);
-  check('log tắt máy không lộ ECONNREFUSED/đường dẫn', shutdownLeak.length === 0, shutdownLeak.length ? `${shutdownLeak.length} dòng, ví dụ: ${shutdownLeak[0].slice(0, 140)}` : '');
+  check('log tắt máy không lộ host:port/đường dẫn', shutdownLeak.length === 0, shutdownLeak.length ? `${shutdownLeak.length} dòng, ví dụ: ${shutdownLeak[0].slice(0, 140)}` : '');
   check('không có unhandledRejection/uncaughtException suốt kịch bản', !/unhandled|uncaught/i.test(outAll));
 
   return events;

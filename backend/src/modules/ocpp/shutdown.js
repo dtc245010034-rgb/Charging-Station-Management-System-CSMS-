@@ -1,4 +1,5 @@
 const { markAllChargePointsOffline } = require('../charge-points/presence');
+const { sanitizeErrorMessage } = require('../../lib/constants');
 const { closeWithGrace } = require('../charge-points/connection-registry');
 
 const SHUTDOWN_CLOSE_CODE = 1001;
@@ -29,7 +30,7 @@ function createShutdown({ server, wss, pool, log = console.log, logError = conso
       await pool.end();
     } catch (error) {
       exitCode = 1;
-      logError('[CSMS] Lỗi khi tắt máy:', error?.message || error);
+      logError('[CSMS] Lỗi khi tắt máy:', sanitizeErrorMessage(error?.message || error));
     }
     exit(exitCode);
   }

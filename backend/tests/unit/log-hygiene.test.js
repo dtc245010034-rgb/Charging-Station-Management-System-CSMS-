@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { sanitizeErrorMessage } = require('../../src/lib/constants');
 const { errorHandler } = require('../../src/middlewares/errorHandler');
 const { AppError } = require('../../src/lib/errors');
+const { createShutdown } = require('../../src/modules/ocpp/shutdown');
 
 function captureErrorLog(err) {
   const lines = [];
@@ -45,5 +46,21 @@ describe('GYM-35 vệ sinh log (4.3)', () => {
     const output = captureErrorLog(new Error('boom bất ngờ'));
     assert.match(output, /boom bất ngờ/);
     assert.match(output, /\sat\s/);
+  });
+
+  it('lỗi khi tắt máy không lộ host:port của DB trong log', async () => {
+    const errors = [];
+    const shutdown = createShutdown({
+      server: { close() {} },
+      wss: { clients: new Set() },
+      pool: { query: async () => { throw new Error('connect ECONNREFUSED 127.0.0.1:5441'); }, end: async () => {} },
+      log: () => {},
+      logError: (...args) => errors.push(args.join(' ')),
+      exit: () => {},
+    });
+    await shutdown('SIGTERM');
+    const output = errors.join('\n');
+    assert.match(output, /ECONNREFUSED/);
+    assert.ok(!output.includes('127.0.0.1') && !output.includes('5441'), `lộ host:port: ${output}`);
   });
 });
