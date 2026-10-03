@@ -1,5 +1,6 @@
 // Dùng SSE cho màn hình có eventsUrl; polling vẫn được giữ cho các màn hình còn lại và làm fallback.
-export function subscribe(load, onData, { intervalMs = 15000, onError, eventsUrl } = {}) {
+// Khi SSE đang mở vẫn thăm dò chậm (safetyIntervalMs) để bắt thay đổi không có sự kiện, ví dụ trạm bị đổi trạng thái.
+export function subscribe(load, onData, { intervalMs = 15000, onError, eventsUrl, safetyIntervalMs = 60000 } = {}) {
   let timer = null;
   let stopped = false;
   let failures = 0;
@@ -23,8 +24,9 @@ export function subscribe(load, onData, { intervalMs = 15000, onError, eventsUrl
       if (refreshPending) {
         refreshPending = false;
         queueMicrotask(tick);
-      } else if (!stopped && (!eventSource || fallback)) {
-        timer = setTimeout(tick, Math.min(intervalMs * 2 ** failures, 120000));
+      } else if (!stopped) {
+        const live = eventSource && !fallback;
+        timer = setTimeout(tick, live ? safetyIntervalMs : Math.min(intervalMs * 2 ** failures, 120000));
       }
     }
   }

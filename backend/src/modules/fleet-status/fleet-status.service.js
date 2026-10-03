@@ -28,6 +28,8 @@ async function snapshot(actor) {
         id: row.charge_point_id,
         code: row.charge_point_code,
         status: row.charge_point_status,
+        ocpp_status: row.charge_point_ocpp_status,
+        last_error_code: row.charge_point_last_error_code,
         last_seen_at: row.last_seen_at,
         heartbeat_interval: row.heartbeat_interval,
         offline: row.offline,

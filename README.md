@@ -51,7 +51,7 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 | Chất lượng | Lint sạch · **280/280 test pass** (Linux, có Docker; chạy 3 lần liên tiếp không chập chờn) · CI: `lint-and-test` (Ubuntu) + `test-windows` |
 | Chạy được ngay | Đăng nhập, 5 workspace theo vai trò, quản lý trạm/trụ, bảng điều khiển Vận hành với trạng thái trụ cập nhật tức thời, khoá/mở khoá trạm, trụ ảo kết nối được |
 | Chưa có | Phiên sạc thật, tính tiền, ví, phân bổ công suất, đặt chỗ, đối soát (Sprint 3–8) |
-| Còn mở | B5 (trụ chưa xác thực), K-01 (tin trùng, thuộc S-14), F5 (trạng thái mức trụ), staging 50 trụ ảo, tile bản đồ thật: xem [Giới hạn đã biết](#giới-hạn-đã-biết) |
+| Còn mở | B5 (trụ chưa xác thực), staging 50 trụ ảo, tile bản đồ thật: xem [Giới hạn đã biết](#giới-hạn-đã-biết) |
 
 ---
 
@@ -105,6 +105,11 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `OCPP_PING_INTERVAL` | Chu kỳ WebSocket Ping giữ kết nối OCPP (B9) | Giây | `30` |
 | `OCPP_RATE_LIMIT_MAX` | Giới hạn tần suất tin nhắn mỗi kết nối OCPP (B3) | Tin/giây | `50` |
 | `OCPP_ERROR_DEDUP_SECONDS` | Bỏ qua lỗi đầu nối y hệt (cùng đầu nối, `errorCode`, `vendorErrorCode`, trạng thái không đổi) đã ghi trong N giây gần nhất; `0` = tắt | Giây | `60` |
+| `OCPP_MESSAGE_RETENTION_DAYS` | Số ngày giữ câu trả lời đã gửi để nhận ra tin OCPP trùng `messageId` (S-14); mặc định `7`. Job dọn chạy khi khởi động và mỗi giờ. |
+| `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | Số lần gọi `GET /api/charge-points/check-code` mỗi tài khoản (quá mức trả 429 + `Retry-After`) | Lần/phút | `30` |
+| `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
+| `OCPP_HANDSHAKE_LIMIT_PER_10S` | Số lần bắt tay WebSocket mỗi cặp (IP, mã trụ), kiểm tra trước khi truy vấn DB; quá mức trả 429 | Lần/10 giây | `5` |
+| `AUDIT_DENIED_LIMIT_PER_MINUTE` | Số dòng `ACCESS_DENIED` tối đa ghi vào `audit_logs` mỗi tài khoản (phản hồi vẫn 403) | Dòng/phút | `20` |
 
 ---
 
@@ -258,7 +263,7 @@ Trình duyệt ──HTTP/JSON (cookie httpOnly)──► Express 5 (backend/src
    không build; Leaflet đặt sẵn trong repo)     │           fleet-status (REST + SSE) · health · audit · ocpp
         ▲                                       ├─ security: ma trận quyền + chặn route chưa khai quyền
         └──── SSE /api/fleet-status/events ─────┤
-                                                └─ PostgreSQL 16 (migration 001–012)
+                                                └─ PostgreSQL 16 (migration 001–015)
 Trụ sạc ──WebSocket /ocpp/<mã trụ>──► máy chủ OCPP 1.6J (`ws` + bộ khung tự viết):
    xác thực mã trụ, Boot/Heartbeat/StatusNotification, thay thế kết nối trùng, rate limit, ping giữ kết nối, tắt máy sạch
 ```
@@ -296,12 +301,14 @@ Các mục dưới đây là hiện trạng thật trên `main`, không phải l
 | Mã | Giới hạn | Hướng xử lý |
 |---|---|---|
 | **B5** | **Trụ chưa được xác thực.** WebSocket `/ocpp/:mã` chỉ kiểm tra mã trụ tồn tại và trạm không bị khoá. Kết nối ẩn danh biết mã trụ có thể thay thế (đá) trụ thật theo logic S-13. **Rủi ro được ghi nhận và chấp nhận tạm cho demo/staging (03/10/2026); không dùng nguyên trạng cho production.** | Đề xuất thiết kế, chưa có code, chờ PO chọn phương án: [`docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`](docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md) |
-| **K-01** | Chưa chống xử lý trùng: hai khung CALL cùng `messageId` bị xử lý hai lần. | Thuộc S-14 |
-| **F5** | `StatusNotification` với `connectorId = 0` (trạng thái cả trụ) chỉ được xác nhận `{}` và ghi một dòng log gom, **chưa lưu DB** (cần thiết kế cột/bảng; `connector_errors.connector_id` đang `NOT NULL`). | Chờ Phúc/PO chốt thiết kế |
+| — | **Giới hạn tần suất (#10, #22, #28, #29) lưu trong bộ nhớ một tiến trình**: mất khi khởi động lại, không chia sẻ giữa nhiều bản server. `POST /api/auth/register` vẫn trả 409 "Email đã tồn tại" nên còn dò được email từ nhiều IP khác nhau (mỗi IP bị chặn sau 5 lần/giờ); bắt tay OCPP bị giới hạn theo (IP, mã trụ) chứ không theo riêng mã trụ, để kẻ lạ không khoá được trụ thật. IP lấy theo `TRUST_PROXY` (giá trị đúng trên Render chưa kiểm chứng). | Cần kho dùng chung (DB/Redis) trước khi mở rộng ngang; B5 mới là biện pháp chặn giả mạo trụ |
+| **K-01** | **Đã xử lý (S-14):** tin trùng (cùng trụ, cùng `messageId`) nhận lại đúng câu cũ, lưu ở bảng `ocpp_messages` nên khởi động lại vẫn nhận ra. Ngoại lệ: `BootNotification` vẫn xử lý lại (ghi `ONLINE`, đánh dấu kết nối; xử lý lại vô hại). Chỉ lưu khi handler thành công; `messageId` dài hơn 64 ký tự bỏ qua chống trùng. Tin đang xử lý bị bỏ rơi quá 30 giây thì được xử lý lại. | Cần PO xác nhận ngoại lệ Boot |
+| — | **Trạng thái mức trụ (F5, `connectorId = 0`) đã được lưu** vào `charge_points.ocpp_status`, `last_error_code`, `status_updated_at`; lỗi vào `connector_errors` (cột `charge_point_id`, `connector_id` để trống). Trạng thái `ONLINE` của trụ **không đổi** theo lỗi mức trụ, giao diện chỉ thêm huy hiệu "Lỗi mức trụ". Quy tắc ảnh hưởng đến trạng thái tổng của trụ và trạm chưa có, chờ PO. Huy hiệu mới chưa kiểm bằng trình duyệt. | Chờ PO/QA xác nhận |
 | — | `Authorize` còn là stub (trả `Accepted` nếu có `idTag`, chưa kiểm thẻ). `errorCode` ngoài 16 mã OCPP 1.6 được lưu `OtherError` (mã gốc giữ ở `vendor_error_code`). | S-15 |
 | — | **Tắt máy sạch (N4) chỉ đúng với một tiến trình server.** Khởi động sau sẽ đánh dấu nhầm trụ đang kết nối ở bản kia nếu chạy nhiều bản cùng một DB. `SIGKILL` không chạy được handler tắt máy: trụ `ONLINE` mồ côi chỉ được dọn ở lần khởi động kế tiếp. | Cần cơ chế theo phiên trước khi mở rộng ngang |
 | — | **Quy tắc hiển thị:** trụ `ONLINE` mà đầu nối chưa báo trạng thái (`UNKNOWN`) vẫn hiện "Sẵn sàng" (xanh); trụ `ONLINE` có toàn đầu nối `UNAVAILABLE` hiện "Ngoại tuyến / chưa rõ". | Chờ PO/QA xác nhận |
 | — | Hai test N4 bỏ qua trên Windows (xem [Kiểm thử](#3-kiểm-thử)); đường tắt máy bằng `taskkill` trên Windows chưa kiểm. | Khởi động lại sẽ tự dọn trụ mồ côi |
+| #25 | **Đăng xuất thu hồi mọi phiên của tài khoản** (kể cả thiết bị khác): `users.token_version` tăng lên, token cũ bị `authenticate` từ chối (401). Mỗi yêu cầu có xác thực tốn thêm một truy vấn khoá chính. Luồng SSE `/api/fleet-status/events` đã mở **không bị đóng ngay** khi đăng xuất, kết thúc khi JWT hết hạn. | Đóng luồng SSE theo `token_version` nếu PO yêu cầu |
 | — | **Chưa kiểm chứng:** staging với 50 trụ ảo (thiếu URL staging), tile bản đồ OSM thật (kiểm thử giao diện dùng tile giả), trạng thái Jira bằng API (thiếu token). | Xem [`docs/testing/BAO-CAO-VONG-6.md`](docs/testing/BAO-CAO-VONG-6.md) |
 | — | Bộ khung OCPP tự viết trên `ws` (không dùng `ocpp-rpc` như kế hoạch ban đầu) để kiểm soát chặt giao thức. | Quyết định đã thực hiện |
 
@@ -316,7 +323,7 @@ backend/
   src/modules/ocpp/       frames, message-handler, ws-connection, ocpp-upgrade, shutdown, handlers/ (một file mỗi action)
   src/security/           ma trận quyền (permissions.js), chặn route chưa khai quyền
   src/server.js           HTTP server + WebSocketServer OCPP, đăng ký handler, tắt máy sạch
-  migrations/             NNN_ten.sql + NNN_ten.down.sql (001–012); đã merge thì không sửa, muốn đổi thì thêm file mới
+  migrations/             NNN_ten.sql + NNN_ten.down.sql (001–015); đã merge thì không sửa, muốn đổi thì thêm file mới
   scripts/                create-admin.js, seed-demo.js
   tests/                  unit/ integration/ acceptance/ helpers/
 frontend/                 HTML/CSS/JS thuần, ES modules, không build

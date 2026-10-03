@@ -13,7 +13,7 @@ const { publicUser } = usersService;
 
 function issueToken(user, roles = []) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: roles[0] || null, roles },
+    { id: user.id, email: user.email, role: roles[0] || null, roles, tv: user.token_version ?? 0 },
     env.JWT_SECRET,
     { expiresIn: '8h' }
   );
@@ -55,4 +55,16 @@ async function me(userId) {
   return publicUser(user, await users.roleCodesOf(user.id));
 }
 
-module.exports = { register, login, me, issueToken, publicUser };
+// Thu hồi mọi phiên của tài khoản khi token đang dùng vẫn hợp lệ; token rác hoặc đã bị thu hồi thì bỏ qua.
+async function revokeSessions(token) {
+  if (!token) return;
+  let payload;
+  try {
+    payload = jwt.verify(token, env.JWT_SECRET);
+  } catch {
+    return;
+  }
+  await users.bumpTokenVersion(payload.id, payload.tv ?? 0);
+}
+
+module.exports = { register, login, me, issueToken, revokeSessions, publicUser };

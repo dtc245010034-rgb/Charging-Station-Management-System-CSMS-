@@ -4,7 +4,7 @@ import { routeFor } from '../../app/workspace.js';
 import { GROUPS, pointGroup } from '../../app/status.js';
 import * as csms from '../../services/csms.js';
 import { dataTable } from '../../components/table.js';
-import { pointStatusBadge, statusBadge } from '../../components/badge.js';
+import { pointStatusBadge, statusBadge, stationLevelErrorBadge } from '../../components/badge.js';
 import { openDrawer, openModal } from '../../components/modal.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
 import { icon } from '../../components/icons.js';
@@ -64,6 +64,8 @@ function openChargePointDrawer({ id, canWrite, workspace, onChanged, onClose }) 
           h('dt', {}, 'Hãng'), h('dd', {}, point.vendor || '—'),
           h('dt', {}, 'Mẫu'), h('dd', {}, point.model || '—'),
           h('dt', {}, 'Trạng thái gốc'), h('dd', {}, h('span', { class: 'mono' }, point.status)),
+          point.ocpp_status && h('dt', {}, 'Trạng thái mức trụ'), point.ocpp_status && h('dd', {}, h('span', { class: 'mono' }, point.ocpp_status)),
+          point.last_error_code && h('dt', {}, 'Lỗi mức trụ'), point.last_error_code && h('dd', {}, stationLevelErrorBadge(point)),
           h('dt', {}, 'Cập nhật'), h('dd', {}, formatDateTime(point.updated_at))),
         h('section', {},
           h('div', { class: 'section-title' }, `Đầu nối (${point.connectors.length})`),

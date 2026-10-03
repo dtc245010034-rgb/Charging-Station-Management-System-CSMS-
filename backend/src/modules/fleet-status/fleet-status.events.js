@@ -6,8 +6,15 @@ function subscribe(listener) {
   return () => subscribers.delete(listener);
 }
 
+// Một người nghe hỏng không được chặn người nghe khác hay làm hỏng handler OCPP đang gọi publish().
 function publish(event) {
-  for (const listener of subscribers) listener(event);
+  for (const listener of subscribers) {
+    try {
+      listener(event);
+    } catch {
+      subscribers.delete(listener);
+    }
+  }
 }
 
 module.exports = { publish, subscribe };

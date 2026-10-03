@@ -5,13 +5,17 @@ const app = require('./app');
 const { migrate } = require('./db/migrate');
 const { pool } = require('./db/pool');
 const connections = require('./modules/charge-points/connection-registry');
+const { createRateLimiter } = require('./lib/rate-limit');
+const { clientIpOf } = require('./lib/client-ip');
 const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
 const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
+const { createHeartbeatHandler } = require('./modules/ocpp/handlers/heartbeat');
 const { createStatusNotificationHandler } = require('./modules/ocpp/handlers/status-notification');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
 const { markAllChargePointsOffline } = require('./modules/charge-points/presence');
 const { createShutdown } = require('./modules/ocpp/shutdown');
+const { createMessageStore } = require('./modules/ocpp/messages.repository');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
@@ -36,14 +40,16 @@ async function updateChargePointLastSeen(connection) {
 	}
 }
 
+const messageStore = createMessageStore(pool);
 const ocppMessages = createOcppMessageHandler({
 	handlers: {
 		BootNotification: bootNotificationHandler,
-		Heartbeat: async () => ({ currentTime: now() }),
+		Heartbeat: createHeartbeatHandler({ now }),
 		StatusNotification: createStatusNotificationHandler({ pool, errorDedupSeconds: env.OCPP_ERROR_DEDUP_SECONDS }),
 		Authorize: async (payload) => ({ idTagInfo: { status: payload.idTag ? 'Accepted' : 'Invalid' } }),
 	},
 	updateLastSeen: updateChargePointLastSeen,
+	messageStore,
 });
 
 const wss = new WebSocketServer({
@@ -58,6 +64,8 @@ startKeepalive(wss, {
 
 server.on('upgrade', createOcppUpgradeHandler({
 	wss,
+	handshakeLimiter: createRateLimiter({ limit: env.OCPP_HANDSHAKE_LIMIT_PER_10S, windowMs: 10000 }),
+	clientIpOf: (request) => clientIpOf(request, env.TRUST_PROXY),
 	lookupChargePoint: async (code) => {
 		const result = await pool.query(
 			'SELECT cp.id, cp.code, cp.station_id, s.status AS station_status FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.code = $1 LIMIT 1',
@@ -76,6 +84,17 @@ wss.on('connection', (ws, code) => {
 	});
 });
 
+const PURGE_INTERVAL_MS = 60 * 60 * 1000;
+let purgeTimer = null;
+async function purgeOldMessages() {
+	try {
+		const removed = await messageStore.purgeOlderThan(env.OCPP_MESSAGE_RETENTION_DAYS);
+		if (removed > 0) console.log(`[CSMS] Đã dọn ${removed} tin OCPP cũ hơn ${env.OCPP_MESSAGE_RETENTION_DAYS} ngày`);
+	} catch (error) {
+		console.error('[CSMS] Lỗi dọn bảng ocpp_messages:', sanitizeErrorMessage(error?.message || error));
+	}
+}
+
 const shutdown = createShutdown({ server, wss, pool });
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => shutdown(signal));
 
@@ -86,6 +105,9 @@ async function start() {
 	if (swept.chargePoints > 0 || swept.connectors > 0) {
 		console.log(`[CSMS] Dọn khi khởi động: ${swept.chargePoints} trụ ONLINE mồ côi, ${swept.connectors} đầu nối về UNKNOWN`);
 	}
+	await purgeOldMessages();
+	purgeTimer = setInterval(purgeOldMessages, PURGE_INTERVAL_MS);
+	purgeTimer.unref();
 	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
 }
 start().catch((error) => { console.error('Database startup failed:', error); process.exitCode = 1; });

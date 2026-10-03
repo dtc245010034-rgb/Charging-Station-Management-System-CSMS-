@@ -1,18 +1,25 @@
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
+const users = require('../modules/users/users.repository');
 const { UnauthorizedError, ForbiddenError } = require('../lib/errors');
 
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   // Chỉ nhận phiên qua cookie httpOnly (không nhận Authorization: Bearer).
   const token = req.cookies?.token || null;
   if (!token) return next(new UnauthorizedError());
 
+  const invalid = () => next(new UnauthorizedError('Phiên đăng nhập đã hết hạn hoặc không hợp lệ'));
+  let payload;
   try {
-    req.user = { ...jwt.verify(token, env.JWT_SECRET), ip: req.ip };
-    return next();
+    payload = jwt.verify(token, env.JWT_SECRET);
   } catch {
-    return next(new UnauthorizedError('Phiên đăng nhập đã hết hạn hoặc không hợp lệ'));
+    return invalid();
   }
+  // Token bị thu hồi khi đăng xuất (token_version đổi) hoặc tài khoản không còn tồn tại; token cũ không có `tv` tính là 0.
+  const current = /^\d{1,18}$/.test(String(payload.id)) ? await users.tokenVersionOf(payload.id) : null;
+  if (current === null || current !== (payload.tv ?? 0)) return invalid();
+  req.user = { ...payload, ip: req.ip };
+  return next();
 }
 
 function allow(...roles) {
