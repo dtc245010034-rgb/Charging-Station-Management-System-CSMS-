@@ -21,8 +21,14 @@ async function updateChargePointLastSeen(connection) {
 	const code = connection?.chargePointCode || connection?.chargePoint?.code;
 	if (!code || connection?.isStationLocked) return;
 	try {
+		// SKIP LOCKED: hàng đang bị giao dịch khác giữ thì bỏ qua lần này, không để Heartbeat chờ khoá và giữ kết nối pool.
 		await pool.query(
-			'UPDATE charge_points cp SET last_seen_at = CURRENT_TIMESTAMP FROM stations s WHERE cp.station_id = s.id AND cp.code = $1 AND s.locked_at IS NULL',
+			`WITH target AS (
+			   SELECT cp.id FROM charge_points cp JOIN stations s ON s.id = cp.station_id
+			   WHERE cp.code = $1 AND s.locked_at IS NULL
+			   FOR UPDATE OF cp SKIP LOCKED
+			 )
+			 UPDATE charge_points SET last_seen_at = CURRENT_TIMESTAMP FROM target WHERE charge_points.id = target.id`,
 			[code]
 		);
 	} catch (error) {
