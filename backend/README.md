@@ -46,6 +46,8 @@ Phiên là JWT trong cookie `httpOnly` (SameSite=Lax, Secure khi production); AP
 - `GET /api/health`: công khai, trả `ok`, dùng cho healthcheck Docker/Render và chỉ báo “hệ thống ổn định” trên giao diện.
 - Giao diện (`frontend/`) dùng các API trên: Chủ trạm/Quản trị tạo–sửa trạm, chọn vị trí trên bản đồ, quản lý trụ/đầu nối, kiểm tra mã trụ; Vận hành xem danh sách và trạng thái; Quản trị tạo tài khoản. Danh sách `/api/stations` và `/api/charge-points` không kèm đầu nối (chỉ chi tiết `/:id` có).
 
+OCPP `StatusNotification` cập nhật trạng thái nội bộ của đầu nối trong `connectors.status` (`AVAILABLE`, `OCCUPIED`, `RESERVED`, `ERROR`) và lưu nguyên trạng thái thiết bị trong `connectors.ocpp_status`. Trạng thái OCPP chưa được biết vẫn được lưu nguyên văn và xếp vào `ERROR`; `connectorId: 0` áp dụng cho trụ sạc nên không cập nhật đầu nối. Mã lỗi khác `NoError` được ghi nối thêm vào `connector_errors`, kèm mã lỗi nhà sản xuất và thời điểm; lịch sử được giữ nguyên khi trạng thái đầu nối thay đổi. Đầu nối chưa khai báo được bỏ qua kèm cảnh báo đã giới hạn tần suất theo trụ.
+
 Tọa độ lưu bằng `NUMERIC(10,8)` / `NUMERIC(11,8)` và có giới hạn địa lý, **bắt buộc** khi tạo trạm. Trạm mới luôn `INACTIVE` (gửi `status` lúc tạo → 400); tọa độ của trạm `ACTIVE` chỉ sửa được sau khi chuyển trạm về `INACTIVE`. Index B-tree trên cặp tọa độ không thay thế spatial index; tìm trạm theo bán kính cần triển khai PostGIS/GIST trước khi làm S-47.
 
 `POST /api/stations` **bắt buộc** header `Idempotency-Key` (8–128 ký tự, thiếu → 400). Cùng key và cùng payload sẽ replay kết quả cũ; dùng lại key với payload khác trả 409. Frontend tự gửi key cho thao tác tạo trạm.
