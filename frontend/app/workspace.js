@@ -20,7 +20,6 @@ export const WORKSPACES = {
       {
         title: 'Giám sát',
         items: [
-          { page: 'fleet-status', label: 'Trạng thái trụ', icon: 'charger', enabled: true, needs: 'charge-points:read' },
           { page: 'map', label: 'Bản đồ', icon: 'map', enabled: true, needs: 'stations:read' },
           { page: 'incidents', label: 'Sự cố', icon: 'alert', enabled: false, since: 'S-46' },
           { page: 'performance', label: 'Hiệu suất', icon: 'activity', enabled: false, since: 'S-19' },
@@ -43,7 +42,6 @@ export const WORKSPACES = {
       {
         title: 'Quản lý',
         items: [
-          { page: 'fleet-status', label: 'Trạng thái trụ', icon: 'charger', enabled: true, needs: 'charge-points:read' },
           { page: 'stations', label: 'Trạm sạc của tôi', icon: 'station', enabled: true, needs: 'stations:read' },
           { page: 'charge-points', label: 'Trụ sạc', icon: 'charger', enabled: true, needs: 'charge-points:read' },
           { page: 'map', label: 'Bản đồ', icon: 'map', enabled: true, needs: 'stations:read' },

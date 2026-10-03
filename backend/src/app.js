@@ -10,7 +10,6 @@ const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
 const stationsRoutes = require('./modules/stations/stations.routes');
 const chargePointsRoutes = require('./modules/charge-points/charge-points.routes');
-const fleetStatusRoutes = require('./modules/fleet-status/fleet-status.routes');
 
 const app = express();
 if (env.TRUST_PROXY > 0) app.set('trust proxy', env.TRUST_PROXY);
@@ -20,7 +19,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.resolve(__dirname, '../../frontend')));
 
-app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, chargePointsRoutes, fleetStatusRoutes);
+app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, chargePointsRoutes);
 app.use(errorHandler);
 
 module.exports = app;

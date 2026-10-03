@@ -1,7 +1,6 @@
 const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
 const { mapOcppConnectorStatus, OCPP_CONNECTOR_STATUS_MAP } = require('../../connectors/status-mapping');
-const { publish } = require('../../fleet-status/fleet-status.events');
 
 function getDefaultPool() {
   return require('../../../db/pool').pool;
@@ -51,44 +50,19 @@ function createStatusNotificationHandler({
     const internalStatus = mapOcppConnectorStatus(status);
     try {
       const result = await db.query(
-        `WITH current_connector AS MATERIALIZED (
-           SELECT c.id AS connector_id, c.status AS previous_status, c.ocpp_status AS previous_ocpp_status,
-                  cp.id AS charge_point_id,
-                  cp.station_id, s.owner_id
-           FROM connectors c
-           JOIN charge_points cp ON cp.id = c.charge_point_id
-           JOIN stations s ON s.id = cp.station_id
-           WHERE cp.code = $3
-             AND c.connector_no = $4
-           FOR UPDATE OF c
-         ),
-         updated_connector AS (
-           UPDATE connectors c
-           SET status = $1,
-               ocpp_status = $2,
-               updated_at = CURRENT_TIMESTAMP
-           FROM current_connector current
-           WHERE c.id = current.connector_id
-           RETURNING c.id
-         )
-         SELECT current.connector_id, current.charge_point_id, current.station_id, current.owner_id,
-                (current.previous_status IS DISTINCT FROM $1
-                 OR current.previous_ocpp_status IS DISTINCT FROM $2) AS changed
-         FROM current_connector current
-         JOIN updated_connector updated ON updated.id = current.connector_id`,
+        `UPDATE connectors c
+         SET status = $1,
+             ocpp_status = $2,
+             updated_at = CURRENT_TIMESTAMP
+         FROM charge_points cp
+         WHERE cp.id = c.charge_point_id
+           AND cp.code = $3
+           AND c.connector_no = $4`,
         [internalStatus, status, code, connectorId]
       );
       if (result.rowCount === 0) {
         warnMissingConnector(code, connectorId);
       } else {
-        if (result.rows?.[0]?.changed) {
-          publish({
-            ownerId: result.rows[0].owner_id,
-            stationId: result.rows[0].station_id,
-            chargePointId: result.rows[0].charge_point_id,
-            connectorId: result.rows[0].connector_id,
-          });
-        }
         if (!Object.hasOwn(OCPP_CONNECTOR_STATUS_MAP, status)) {
           logWarning(`[OCPP] StatusNotification: Trạng thái OCPP chưa biết ${safeLog(status)} cho trụ ${safeLog(code)}`);
         }

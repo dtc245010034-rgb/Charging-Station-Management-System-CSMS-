@@ -1,17 +1,14 @@
-// Dùng SSE cho màn hình có eventsUrl; polling vẫn được giữ cho các màn hình còn lại và làm fallback.
-export function subscribe(load, onData, { intervalMs = 15000, onError, eventsUrl } = {}) {
+// Kênh cập nhật thời gian thực. HIỆN TẠI là polling (chỉ tải khi tab đang hiển thị, lùi dần khi lỗi):
+// backend chưa có kênh đẩy cho trình duyệt (S-11/T-25 sẽ thêm SSE). Khi có, chỉ thay phần bên trong subscribe()
+// — các màn hình vẫn nhận dữ liệu qua cùng một hàm và chỉ cập nhật component bị ảnh hưởng.
+export function subscribe(load, onData, { intervalMs = 15000, onError } = {}) {
   let timer = null;
   let stopped = false;
   let failures = 0;
   let inFlight = false;
-  let refreshPending = false;
-  let eventSource = null;
-  let eventFailures = 0;
-  let fallback = false;
 
   async function tick() {
-    if (stopped) return;
-    if (inFlight) { refreshPending = true; return; }
+    if (stopped || inFlight) return;
     inFlight = true;
     try {
       if (!document.hidden) { onData(await load()); failures = 0; }
@@ -20,49 +17,16 @@ export function subscribe(load, onData, { intervalMs = 15000, onError, eventsUrl
       onError?.(error);
     } finally {
       inFlight = false;
-      if (refreshPending) {
-        refreshPending = false;
-        queueMicrotask(tick);
-      } else if (!stopped && (!eventSource || fallback)) {
-        timer = setTimeout(tick, Math.min(intervalMs * 2 ** failures, 120000));
-      }
+      if (!stopped) timer = setTimeout(tick, Math.min(intervalMs * 2 ** failures, 120000));
     }
   }
 
   const onVisible = () => { if (!document.hidden) { clearTimeout(timer); tick(); } };
   document.addEventListener('visibilitychange', onVisible);
-
-  if (eventsUrl && typeof EventSource === 'function') {
-    eventSource = new EventSource(eventsUrl);
-    eventSource.onopen = () => {
-      eventFailures = 0;
-      fallback = false;
-      clearTimeout(timer);
-      tick();
-    };
-    eventSource.onmessage = () => {
-      clearTimeout(timer);
-      tick();
-    };
-    eventSource.onerror = () => {
-      eventFailures += 1;
-      if (eventFailures >= 3 && !fallback) {
-        fallback = true;
-        clearTimeout(timer);
-        tick();
-      }
-    };
-  }
-
   tick();
 
   return {
     refresh: () => { clearTimeout(timer); return tick(); },
-    stop() {
-      stopped = true;
-      clearTimeout(timer);
-      eventSource?.close();
-      document.removeEventListener('visibilitychange', onVisible);
-    },
+    stop() { stopped = true; clearTimeout(timer); document.removeEventListener('visibilitychange', onVisible); },
   };
 }

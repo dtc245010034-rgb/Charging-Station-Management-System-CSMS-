@@ -22,10 +22,6 @@ export const chargePoints = {
   checkCode: (code) => api(`/api/charge-points/check-code?code=${encodeURIComponent(code)}`),
 };
 
-export const fleetStatus = {
-  snapshot: () => api('/api/fleet-status'),
-};
-
 export const admin = {
   roles: () => api('/api/roles'),
   createUser: (body) => api('/api/admin/users', { method: 'POST', body }),
