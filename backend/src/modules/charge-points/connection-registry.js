@@ -4,20 +4,38 @@ const connections = new Map();
 
 const keyFor = (code) => String(code).trim().toUpperCase();
 
+const CLOSE_GRACE_MS = 1500;
+
+// ws chờ ~30 giây trước khi tự hủy socket nếu đối phương không trả close frame; ở đây chỉ chờ ngắn rồi terminate.
+function closeWithGrace(ws, code, reason, graceMs = CLOSE_GRACE_MS) {
+  try {
+    ws.close(code, reason);
+  } catch {
+    try {
+      ws.terminate();
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  if (typeof ws.once !== 'function') return;
+  const timer = setTimeout(() => {
+    try {
+      ws.terminate();
+    } catch {
+      /* ignore */
+    }
+  }, graceMs);
+  if (typeof timer.unref === 'function') timer.unref();
+  ws.once('close', () => clearTimeout(timer));
+}
+
 function connect(code, connection, { stationId } = {}) {
   const key = keyFor(code);
   const previous = connections.get(key);
   if (previous && previous !== connection) {
     previous.isReplacedByNewConnection = true;
-    try {
-      previous.close(1000);
-    } catch {
-      try {
-        previous.terminate();
-      } catch {
-        /* ignore */
-      }
-    }
+    closeWithGrace(previous, 1000);
   }
   if (stationId !== undefined) {
     connection.stationId = stationId;
@@ -62,15 +80,7 @@ function closeStationConnections(stationId, {
     if (matchesStation || matchesCode) {
       ws.isStationLocked = true;
       ws.isBootAccepted = false;
-      try {
-        ws.close(code, reason);
-      } catch {
-        try {
-          ws.terminate();
-        } catch {
-          /* ignore */
-        }
-      }
+      closeWithGrace(ws, code, reason);
       closed.push(key);
     }
   }
@@ -81,6 +91,7 @@ function closeStationConnections(stationId, {
 const closeStationConnection = closeStationConnections;
 
 module.exports = {
+  closeWithGrace,
   connect,
   disconnect,
   getConnection,

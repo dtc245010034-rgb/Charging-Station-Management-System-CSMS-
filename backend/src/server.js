@@ -8,8 +8,10 @@ const connections = require('./modules/charge-points/connection-registry');
 const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
 const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
-const { statusNotificationHandler } = require('./modules/ocpp/handlers/status-notification');
+const { createStatusNotificationHandler } = require('./modules/ocpp/handlers/status-notification');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
+const { markAllChargePointsOffline } = require('./modules/charge-points/presence');
+const { createShutdown } = require('./modules/ocpp/shutdown');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
@@ -19,8 +21,14 @@ async function updateChargePointLastSeen(connection) {
 	const code = connection?.chargePointCode || connection?.chargePoint?.code;
 	if (!code || connection?.isStationLocked) return;
 	try {
+		// SKIP LOCKED: hàng đang bị giao dịch khác giữ thì bỏ qua lần này, không để Heartbeat chờ khoá và giữ kết nối pool.
 		await pool.query(
-			'UPDATE charge_points cp SET last_seen_at = CURRENT_TIMESTAMP FROM stations s WHERE cp.station_id = s.id AND cp.code = $1 AND s.locked_at IS NULL',
+			`WITH target AS (
+			   SELECT cp.id FROM charge_points cp JOIN stations s ON s.id = cp.station_id
+			   WHERE cp.code = $1 AND s.locked_at IS NULL
+			   FOR UPDATE OF cp SKIP LOCKED
+			 )
+			 UPDATE charge_points SET last_seen_at = CURRENT_TIMESTAMP FROM target WHERE charge_points.id = target.id`,
 			[code]
 		);
 	} catch (error) {
@@ -32,7 +40,7 @@ const ocppMessages = createOcppMessageHandler({
 	handlers: {
 		BootNotification: bootNotificationHandler,
 		Heartbeat: async () => ({ currentTime: now() }),
-		StatusNotification: statusNotificationHandler,
+		StatusNotification: createStatusNotificationHandler({ pool, errorDedupSeconds: env.OCPP_ERROR_DEDUP_SECONDS }),
 		Authorize: async (payload) => ({ idTagInfo: { status: payload.idTag ? 'Accepted' : 'Invalid' } }),
 	},
 	updateLastSeen: updateChargePointLastSeen,
@@ -68,5 +76,16 @@ wss.on('connection', (ws, code) => {
 	});
 });
 
-async function start() { await migrate(); server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`)); }
+const shutdown = createShutdown({ server, wss, pool });
+for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => shutdown(signal));
+
+async function start() {
+	await migrate();
+	// Chưa có kết nối OCPP nào trước khi mở cổng, nên trụ còn ONLINE là do lần chạy trước tắt đột ngột.
+	const swept = await markAllChargePointsOffline(pool);
+	if (swept.chargePoints > 0 || swept.connectors > 0) {
+		console.log(`[CSMS] Dọn khi khởi động: ${swept.chargePoints} trụ ONLINE mồ côi, ${swept.connectors} đầu nối về UNKNOWN`);
+	}
+	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
+}
 start().catch((error) => { console.error('Database startup failed:', error); process.exitCode = 1; });

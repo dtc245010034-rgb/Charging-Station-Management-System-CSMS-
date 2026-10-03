@@ -1,4 +1,5 @@
-const { CHARGE_POINT_OFFLINE_STATUS, safeLog, sanitizeErrorMessage } = require('../../lib/constants');
+const { safeLog, sanitizeErrorMessage } = require('../../lib/constants');
+const { markChargePointOffline } = require('../charge-points/presence');
 
 function createConnectionRateLimiter({ maxMessagesPerSecond = 50, now = Date.now } = {}) {
 	let windowStart = now();
@@ -97,10 +98,7 @@ function registerOcppConnection(ws, code, {
 		// B8: Chỉ cập nhật DB sang offline nếu socket vừa đóng là kết nối hiện hành và không bị thay thế bởi kết nối đôi S-13
 		if (isCurrent && !ws.isReplacedByNewConnection && pool) {
 			try {
-				await pool.query(
-					'UPDATE charge_points SET status = $1 WHERE code = $2',
-					[CHARGE_POINT_OFFLINE_STATUS, code]
-				);
+				await markChargePointOffline(pool, code);
 			} catch (err) {
 				logError(
 					`[OCPP] Failed to update offline status on disconnect | chargePoint: ${safeLog(code)}:`,

@@ -2,7 +2,8 @@ import { h } from '../../app/dom.js';
 import { coordinate } from '../../app/format.js';
 import * as csms from '../../services/csms.js';
 import { openDrawer } from '../../components/modal.js';
-import { stationBadge, statusBadge } from '../../components/badge.js';
+import { pointStatusBadge, stationBadge } from '../../components/badge.js';
+import { pointGroup } from '../../app/status.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
 import { icon } from '../../components/icons.js';
 import { toast } from '../../components/toast.js';
@@ -78,7 +79,7 @@ function render(station, { canWrite, onEdit, reload, onOpenChargePoint }) {
           h('div', { style: 'min-width:0' },
             h('button', { class: 'row-link mono', type: 'button', onclick: () => onOpenChargePoint(point.id) }, point.code),
             h('div', { class: 'chips' }, (point.connectors ?? []).map((c) => h('span', { class: 'badge badge--neutral', title: `Trạng thái gốc: ${c.status}` }, `Đầu ${c.connector_no}: ${c.status}`)))),
-          statusBadge(point.status))))
+          pointStatusBadge(point, pointGroup({ ...point, connector_statuses: (point.connectors ?? []).map((c) => c.status) })))))
         : emptyState({ iconName: 'charger', title: 'Trạm chưa có trụ sạc', text: canWrite ? 'Thêm trụ đầu tiên ở bên dưới.' : undefined })),
     chargePointForm(station, canWrite, reload),
     canWrite && h('div', {}, h('button', { class: 'btn', type: 'button', onclick: onEdit }, icon('edit'), 'Sửa thông tin trạm')),

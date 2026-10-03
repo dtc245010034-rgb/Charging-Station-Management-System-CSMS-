@@ -26,6 +26,8 @@ const schema = z.object({
   OCPP_PING_INTERVAL: z.coerce.number().int().positive().default(30),
   // Giới hạn tần suất tin nhắn cho mỗi kết nối (tin/giây), mặc định 50 (B3)
   OCPP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(50),
+  // Khử trùng connector_errors: bỏ qua lỗi y hệt đã ghi trong N giây gần nhất (0 = tắt), mặc định 60
+  OCPP_ERROR_DEDUP_SECONDS: z.coerce.number().int().min(0).default(60),
 });
 
 const parsed = schema.safeParse(process.env);

@@ -6,7 +6,7 @@ const OCPP_CONNECTOR_STATUS_MAP = Object.freeze({
   SuspendedEVSE: 'OCCUPIED',
   Finishing: 'OCCUPIED',
   Reserved: 'RESERVED',
-  Unavailable: 'ERROR',
+  Unavailable: 'UNAVAILABLE',
   Faulted: 'ERROR',
 });
 

@@ -24,6 +24,8 @@ function sanitizeErrorMessage(message) {
     .replace(/(postgres(?:ql)?:\/\/[^:]+:)[^@]+(@)/gi, '$1***$2')
     .replace(/(password\s*=\s*)[^\s;&]+/gi, '$1***')
     .replace(/(password["']?\s*[:=]\s*["'])(?:[^"'\\]|\\.)*(["'])/gi, '$1***$2')
+    .replace(/(ENOTFOUND\s+)\S+/g, '$1***')
+    .replace(/(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?|(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}(?::\d+)?|[0-9a-f:]*::[0-9a-f:]*/gi, '***')
     .replace(/[\r\n]+/g, ' ');
 }
 

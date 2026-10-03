@@ -75,6 +75,7 @@ Script in `[LỖI]` kèm cách sửa. Các trường hợp hay gặp: Docker ch�
 | `OCPP_HEARTBEAT_INTERVAL` | Khoảng thời gian nhịp tim gửi cho trụ trong BootNotificationResponse | Giây | `60` |
 | `OCPP_PING_INTERVAL` | Chu kỳ gửi WebSocket Ping giữ kết nối OCPP (B9) | Giây | `30` |
 | `OCPP_RATE_LIMIT_MAX` | Giới hạn tần suất tin nhắn cho mỗi kết nối OCPP (B3) | Tin / giây | `50` |
+| `OCPP_ERROR_DEDUP_SECONDS` | Khử trùng lỗi đầu nối: bỏ qua lỗi y hệt (cùng đầu nối, `errorCode`, `vendorErrorCode`, trạng thái không đổi) đã ghi trong N giây gần nhất; `0` = tắt | Giây | `60` |
 
 ---
 
@@ -268,10 +269,13 @@ Menu của chức năng chưa có backend được **ẩn** (cấu hình trong `
 
 ### Giới hạn đã biết
 
-- **B5 (Chưa xác thực trụ / kết nối ẩn danh):** WebSocket `/ocpp/:chargePointCode` hiện chỉ kiểm tra mã trụ có tồn tại trong CSDL và trạm không bị khóa; chưa có cơ chế xác thực danh tính trụ (chưa có Basic Auth với mật khẩu trụ hoặc mTLS). Do đó, một kết nối ẩn danh nếu biết mã trụ có thể kết nối và đá (ngắt kết nối) trụ thật đang hoạt động theo logic S-13 (kết nối mới thay thế kết nối cũ).
+- **B5 (Chưa xác thực trụ / kết nối ẩn danh):** WebSocket `/ocpp/:chargePointCode` hiện chỉ kiểm tra mã trụ có tồn tại trong CSDL và trạm không bị khóa; chưa có cơ chế xác thực danh tính trụ (chưa có Basic Auth với mật khẩu trụ hoặc mTLS). Do đó, một kết nối ẩn danh nếu biết mã trụ có thể kết nối và đá (ngắt kết nối) trụ thật đang hoạt động theo logic S-13 (kết nối mới thay thế kết nối cũ). Đề xuất thiết kế (chưa có code, chờ PO chọn phương án): `docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`. **Rủi ro được ghi nhận và chấp nhận tạm cho môi trường demo/staging (03/10/2026) đến khi PO chọn phương án; không dùng nguyên trạng cho production.**
 - **K-01 (Boot trùng messageId xử lý hai lần):** Chưa có cơ chế idempotency/deduplication cho frame OCPP CALL; nếu trụ gửi hai bản tin CALL trùng `messageId`, server hiện tại sẽ xử lý cả hai lần độc lập thay vì trả lại kết quả đã lưu trước đó.
-- **Stub Authorize và StatusNotification:** Các action `Authorize` và `StatusNotification` hiện tại mới chỉ là các stub tạm thời trả lời tĩnh (ví dụ `StatusNotification` trả `{}` rỗng, `Authorize` trả `Accepted` nếu có `idTag`), chưa kiểm tra mã thẻ RFID trong CSDL, chưa cập nhật trạng thái hoạt động của đầu nối vào bảng `connectors`.
+- **Authorize còn là stub; StatusNotification mức trụ chưa lưu (F5):** `Authorize` trả `Accepted` nếu có `idTag`, chưa kiểm tra thẻ RFID trong CSDL. `StatusNotification` đã cập nhật `connectors` cho `connectorId` ≥ 1 (khử trùng lỗi theo `OCPP_ERROR_DEDUP_SECONDS`), nhưng tin `connectorId = 0` (trạng thái của cả trụ) vẫn chỉ được xác nhận `{}` và ghi một dòng log gom theo trụ, chưa lưu vào CSDL (thiết kế cột/bảng cho trạng thái mức trụ thuộc S-11 và chờ Phúc/PO chốt; S-11 đã merge ở #70 chưa giải quyết mục này). Ngoài ra `errorCode` ngoài 16 mã OCPP 1.6 được lưu thành `OtherError` (mã gốc giữ trong `vendor_error_code`).
 - **Thư viện OCPP (Kế hoạch vs Triển khai):** Tài liệu kế hoạch Sprint 2 ban đầu ghi nhận dự kiến sử dụng thư viện `ocpp-rpc`. Tuy nhiên, mã nguồn thực tế đang sử dụng trực tiếp thư viện WebSocket `ws` thuần kết hợp bộ định dạng và xử lý frame tự viết (`backend/src/modules/ocpp/`) để kiểm soát chặt chẽ giao thức OCPP 1.6J.
+- **Tắt máy sạch (N4) chỉ đúng với một tiến trình server:** khi khởi động, server đặt mọi trụ `ONLINE` còn sót về `UNKNOWN` (kèm đầu nối). Nếu chạy nhiều bản sao cùng một CSDL, bản khởi động sau sẽ đánh dấu nhầm trụ đang kết nối ở bản kia; cần cơ chế theo phiên trước khi mở rộng ngang. `SIGKILL` không chạy được handler tắt máy, nên trụ `ONLINE` mồ côi chỉ được dọn ở lần khởi động kế tiếp.
+- **Hiển thị trụ ONLINE có đầu nối `UNKNOWN`:** trụ `ONLINE` mà đầu nối chưa báo trạng thái (`UNKNOWN`, thường vừa Boot) vẫn hiện nhóm "Sẵn sàng" (xanh) vì trụ đang kết nối. Trụ `ONLINE` có toàn đầu nối `UNAVAILABLE` đã hiện "Ngoại tuyến / chưa rõ". Cần PO/QA xác nhận quy tắc này.
+- **Tile bản đồ thật chưa kiểm:** kiểm thử giao diện bản đồ dùng tile OSM giả (PNG trong suốt); chưa thử tải tile thật trên mạng có Internet. Chưa kiểm staging với 50 trụ ảo (thiếu URL staging).
 
 ---
 
