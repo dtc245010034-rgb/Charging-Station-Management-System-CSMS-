@@ -1,8 +1,11 @@
 /**
  * LƯU Ý: Script này chỉ dùng cho môi trường dev cục bộ (local development).
- * Yêu cầu: Docker compose đang chạy, tài khoản admin@csms.local / admin,
- * và biến ALLOW_WEAK_ADMIN_PASSWORD=1. Tuyệt đối không chạy trên staging/production.
+ * Yêu cầu: server đang chạy và một tài khoản ADMIN có sẵn (tạo bằng scripts/create-admin.js
+ * với mật khẩu mạnh). Đặt ADMIN_EMAIL và ADMIN_PASSWORD trong biến môi trường, ví dụ:
+ *   ADMIN_EMAIL=... ADMIN_PASSWORD=... node tools/<tên-script>.js
+ * Thiếu một trong hai biến thì script dừng. Tuyệt đối không chạy trên staging/production.
  */
+const { requireAdminCredentials } = require('./lib/admin-credentials');
 const { WebSocket } = require('ws');
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -25,11 +28,11 @@ async function main() {
   console.log('=== BẮT ĐẦU KIỂM THỬ N2 TRÊN SERVER THẬT ===\n');
 
   // 1. Đăng nhập Admin
-  console.log('[1] Đăng nhập admin@csms.local...');
+  console.log('[1] Đăng nhập tài khoản admin (ADMIN_EMAIL)...');
   const loginRes = await request('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@csms.local', password: 'admin' }),
+    body: JSON.stringify(requireAdminCredentials()),
   });
   if (loginRes.status !== 200) {
     throw new Error(`Đăng nhập thất bại: ${loginRes.status} ${loginRes.text}`);
