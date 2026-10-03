@@ -69,7 +69,7 @@ function openChargePointDrawer({ id, canWrite, workspace, onChanged, onClose }) 
           h('div', { class: 'section-title' }, `Đầu nối (${point.connectors.length})`),
           h('div', { class: 'list-rows' }, point.connectors.map((c) => h('div', { class: 'list-row' },
             h('div', {}, h('div', { class: 'cell-strong' }, `Đầu ${c.connector_no}`), h('div', { class: 'cell-sub' }, c.type)),
-            statusBadge(c.status))))),
+            statusBadge(c.status, c.ocpp_status))))),
         canWrite && h('div', {}, h('button', { class: 'btn', type: 'button', onclick: () => openEditForm(point, async () => { await load(); onChanged(); }) }, icon('edit'), 'Sửa thông tin trụ')),
       );
     } catch (error) { drawer.setBody(errorState({ message: error.message, onRetry: load })); }

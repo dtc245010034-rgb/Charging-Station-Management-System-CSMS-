@@ -2,7 +2,7 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
 const { run, query, resetSchema } = require('../helpers/db');
 
-const TABLES = ['audit_logs', 'charge_points', 'connectors', 'idempotency_keys', 'login_throttle', 'roles', 'stations', 'user_roles', 'users'];
+const TABLES = ['audit_logs', 'charge_points', 'connector_errors', 'connectors', 'idempotency_keys', 'login_throttle', 'roles', 'stations', 'user_roles', 'users'];
 
 async function tables() {
   const r = await query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name <> 'schema_migrations' ORDER BY 1");
@@ -29,6 +29,10 @@ describe('S-01 migrate: baseline up/down/up', () => {
     return (async () => {
       assert.deepStrictEqual(await tables(), TABLES);
       assert.strictEqual((await query("SELECT 1 FROM information_schema.columns WHERE table_name = 'charge_points' AND column_name = 'heartbeat_interval'")).rowCount, 1);
+      assert.strictEqual((await query("SELECT 1 FROM information_schema.columns WHERE table_name = 'connectors' AND column_name = 'ocpp_status'")).rowCount, 1);
+      assert.strictEqual((await query("SELECT 1 FROM information_schema.columns WHERE table_name = 'connector_errors' AND column_name = 'vendor_error_code'")).rowCount, 1);
+      const errorIndex = await query("SELECT indexdef FROM pg_indexes WHERE indexname = 'connector_errors_connector_time_idx'");
+      assert.match(errorIndex.rows[0].indexdef, /\(connector_id, occurred_at\)/);
       assert.strictEqual((await query('SELECT count(*)::int AS n FROM users')).rows[0].n, 0);
       const roles = await query('SELECT code FROM roles ORDER BY code');
       assert.deepStrictEqual(roles.rows.map((r) => r.code), ['ACCOUNTANT', 'ADMIN', 'DRIVER', 'OPERATOR', 'STATION_OWNER']);
@@ -77,7 +81,10 @@ describe('S-01 migrate: baseline up/down/up', () => {
     assert.strictEqual(downOwner.status, 0, downOwner.stderr);
     assert.ok(!await has('stations', 'owner_id') && !await has('audit_logs', 'ip'));
     assert.ok(!await index('stations_owner_id_idx') && !await index('charge_points_station_id_idx'));
-    assert.deepStrictEqual(await tables(), TABLES.filter((table) => table !== 'idempotency_keys'));
+    assert.deepStrictEqual(
+      await tables(),
+      TABLES.filter((table) => !['connector_errors', 'idempotency_keys'].includes(table))
+    );
     assert.strictEqual(run('src/db/migrate.js').status, 0);
   });
 });
