@@ -102,6 +102,32 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(worstGroup(points, pointGroup), 'fault');
     assert.deepStrictEqual(countByGroup(points, pointGroup), { ready: 1, charging: 0, warning: 0, fault: 1, offline: 1 });
   });
+
+  it('trụ ONLINE mà mọi đầu nối đều UNAVAILABLE là ngoại tuyến; đầu nối UNKNOWN (chưa báo trạng thái) không hạ cấp trụ', async () => {
+    const { pointGroup, countByGroup } = await load('app/status.js');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['UNAVAILABLE'] }), 'offline');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['UNAVAILABLE', 'UNAVAILABLE'] }), 'offline');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['UNKNOWN'] }), 'ready');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['UNAVAILABLE', 'UNKNOWN'] }), 'ready');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['UNAVAILABLE', 'AVAILABLE'] }), 'ready');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['UNAVAILABLE', 'OCCUPIED'] }), 'charging');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: ['UNAVAILABLE', 'ERROR'] }), 'fault');
+    assert.strictEqual(pointGroup({ status: 'ONLINE', connector_statuses: [] }), 'ready');
+    const points = [{ status: 'ONLINE', connector_statuses: ['UNAVAILABLE'] }, { status: 'ONLINE', connector_statuses: ['AVAILABLE'] }];
+    assert.deepStrictEqual(countByGroup(points, pointGroup), { ready: 1, charging: 0, warning: 0, fault: 0, offline: 1 });
+  });
+
+  it('nhãn trạng thái trụ khớp chú giải: UNKNOWN và ONLINE-toàn-đầu-nối-tạm-ngừng là "Ngoại tuyến / chưa rõ"; nhãn đầu nối giữ nguyên', async () => {
+    const { pointLabel, pointGroup, statusLabel } = await load('app/status.js');
+    assert.strictEqual(pointLabel('UNKNOWN', 'offline'), 'Ngoại tuyến / chưa rõ');
+    assert.strictEqual(pointLabel(undefined, 'offline'), 'Ngoại tuyến / chưa rõ');
+    const idle = { status: 'ONLINE', connector_statuses: ['UNAVAILABLE'] };
+    assert.strictEqual(pointLabel(idle.status, pointGroup(idle)), 'Ngoại tuyến / chưa rõ');
+    assert.strictEqual(pointLabel('ONLINE', 'ready'), 'Sẵn sàng');
+    assert.strictEqual(pointLabel('ONLINE', 'fault'), 'Lỗi');
+    assert.strictEqual(statusLabel('UNKNOWN'), 'Chưa rõ');
+    assert.strictEqual(statusLabel('UNAVAILABLE'), 'Tạm ngừng');
+  });
 });
 
 describe('S-02 frontend: api.js và auth.js', () => {

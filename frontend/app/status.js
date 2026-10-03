@@ -40,9 +40,18 @@ export function statusLabel(status, group = groupOf(status)) {
 }
 
 // Trụ ONLINE mang màu của đầu nối nặng nhất; trụ không ONLINE (UNKNOWN...) luôn là ngoại tuyến vì không có kết nối.
+// Trụ ONLINE mà mọi đầu nối đều UNAVAILABLE không phục vụ được ai nên là ngoại tuyến; đầu nối UNKNOWN (chưa báo trạng thái) không hạ cấp trụ.
 export function pointGroup(point) {
   if (point.status !== 'ONLINE') return groupOf(point.status);
-  return worstGroup([point.status, ...(point.connector_statuses ?? [])]);
+  const connectors = point.connector_statuses ?? [];
+  if (connectors.length > 0 && connectors.every((status) => status === 'UNAVAILABLE')) return 'offline';
+  return worstGroup([point.status, ...connectors]);
+}
+
+// Nhãn của trụ dùng đúng tên nhóm trong chú giải; nhãn riêng "Chưa rõ" chỉ dành cho đầu nối.
+export function pointLabel(status, group = groupOf(status)) {
+  if (status === 'UNKNOWN' || !status) return GROUPS.offline.label;
+  return statusLabel(status, group);
 }
 
 // Thứ tự nặng → nhẹ, dùng để chọn màu đại diện của một trạm gồm nhiều trụ.

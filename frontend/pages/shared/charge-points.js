@@ -4,7 +4,7 @@ import { routeFor } from '../../app/workspace.js';
 import { GROUPS, pointGroup } from '../../app/status.js';
 import * as csms from '../../services/csms.js';
 import { dataTable } from '../../components/table.js';
-import { statusBadge } from '../../components/badge.js';
+import { pointStatusBadge, statusBadge } from '../../components/badge.js';
 import { openDrawer, openModal } from '../../components/modal.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
 import { icon } from '../../components/icons.js';
@@ -56,7 +56,7 @@ function openChargePointDrawer({ id, canWrite, workspace, onChanged, onClose }) 
   async function load() {
     try {
       const point = await csms.chargePoints.get(id);
-      drawer.setTitle(point.code, h('div', { style: 'margin-top:6px' }, statusBadge(point.status, point.status, pointGroup(withConnectorStatuses(point)))));
+      drawer.setTitle(point.code, h('div', { style: 'margin-top:6px' }, pointStatusBadge(point, pointGroup(withConnectorStatuses(point)))));
       drawer.setBody(
         h('dl', { class: 'kv' },
           h('dt', {}, 'Trạm'), h('dd', {}, h('a', { href: routeFor(workspace, 'stations', point.station_id), onclick: () => drawer.close() }, point.station_name)),
@@ -97,7 +97,7 @@ export function render(ctx) {
     columns: [
       { key: 'code', label: 'Mã trụ', render: (p) => h('span', { class: 'cell-strong mono' }, p.code) },
       { key: 'station', label: 'Trạm', render: (p) => p.station_name },
-      { key: 'status', label: 'Trạng thái', render: (p) => statusBadge(p.status, p.status, pointGroup(p)) },
+      { key: 'status', label: 'Trạng thái', render: (p) => pointStatusBadge(p, pointGroup(p)) },
       { key: 'power', label: 'Công suất', align: 'num', render: (p) => formatKw(p.power_kw) },
       { key: 'model', label: 'Hãng / mẫu', render: (p) => [p.vendor, p.model].filter(Boolean).join(' · ') || '—' },
     ],
