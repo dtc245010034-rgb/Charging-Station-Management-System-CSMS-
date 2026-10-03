@@ -26,7 +26,7 @@
 
 **Luồng bắt tay (trong `ocpp-upgrade.js`, trước mọi thay đổi sổ kết nối):**
 1. Đọc `Authorization`; `username` phải trùng mã trong URL (không phân biệt hoa thường như `keyFor`).
-2. Tra `auth_secret_hash`; so sánh bằng `crypto.timingSafeEqual` trên kết quả scrypt. Trụ không tồn tại, không có hash hoặc sai mật khẩu đều trả cùng một đáp ứng `401` + `WWW-Authenticate: Basic realm="ocpp"`, rồi huỷ socket. Không phân biệt "mã không tồn tại" với "sai mật khẩu" để không dò được mã trụ.
+2. Tra `auth_secret_hash`; kiểm bằng `argon2.verify`; với trụ không tồn tại hoặc chưa có hash vẫn verify với một hash giả để thời gian đáp ứng như nhau. Trụ không tồn tại, không có hash hoặc sai mật khẩu đều trả cùng một đáp ứng `401` + `WWW-Authenticate: Basic realm="ocpp"`, rồi huỷ socket. Không phân biệt "mã không tồn tại" với "sai mật khẩu" để không dò được mã trụ.
 3. Chỉ sau khi xác thực thành công mới gọi `connections.connect`. **Tác động lên S-13:** kết nối thay thế chỉ được chấp nhận sau xác thực; kết nối ẩn danh thất bại không đụng tới sổ kết nối hay CSDL, nên không còn đá được trụ thật.
 4. Giới hạn thử sai theo (IP, mã trụ) bằng cơ chế như `login_throttle`; ghi `audit_logs` với hành động `OCPP_AUTH_FAILED`.
 
