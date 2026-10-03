@@ -1,6 +1,6 @@
 # Vận hành CSMS — build, chạy, dừng, khởi động lại, dữ liệu, staging
 
-> Cập nhật: 28/9/2026. Đây là sổ tay **vận hành**. Hướng dẫn chạy lần đầu từng bước nằm ở [`README.md`](../README.md); tình trạng dự án ở [`SPRINT_STATUS.md`](./SPRINT_STATUS.md).
+> Cập nhật: 03/10/2026 (khớp `main` sau PR #74). Đây là sổ tay **vận hành**. Hướng dẫn chạy lần đầu từng bước nằm ở [`README.md`](../README.md); tình trạng dự án ở [`SPRINT_STATUS.md`](./SPRINT_STATUS.md).
 > Ký hiệu: `$` = shell của Linux/Git Bash. Windows dùng `py run.py` nếu không có lệnh `python`; `curl.exe` thay `curl` trong PowerShell.
 
 ## 1. Thành phần và cổng
@@ -105,6 +105,7 @@ $ docker compose exec -T db pg_dump -U csms csms > backup.sql        # sao lưu
 $ docker compose exec -T db psql -U csms -d csms < backup.sql        # khôi phục vào DB trống
 ```
 - Quy ước: migration đã merge thì **không sửa**, muốn đổi thì thêm file mới (`NNN_ten.sql` + `NNN_ten.down.sql`).
+- Đăng xuất (`POST /api/auth/logout`) tăng `users.token_version` (migration 014): mọi token cũ của tài khoản đó, kể cả trên thiết bị khác, bị từ chối. Muốn buộc một tài khoản đăng nhập lại: `UPDATE users SET token_version = token_version + 1 WHERE email = '…';`.
 - DB dev cũ từ trước `001_baseline` hoặc `003_stations_owner` lỗi khi migrate → `docker compose down -v` một lần. Chi tiết: `backend/README.md`.
 - `backup.sql` chứa dữ liệu cá nhân → **không commit, không gửi công khai** (file `*.sql` nên nằm ngoài repo).
 
@@ -119,7 +120,7 @@ $ python test.py --verbose
 ```
 (`python run.py test` là cùng một lệnh.) Chạy trong container Node 22 với Postgres test riêng (cổng 5433, trong RAM, dừng lại sau khi xong), `node_modules` nằm trong volume Docker riêng nên không lẫn với máy. Mã thoát 0 = đạt; log đầy đủ ở `.run/test-output.log`.
 
-Trạng thái hiện tại: **lint sạch, 200+ test backend pass** + 20 test của `run.py` (`tools/`). Test chỉ chạy trên DB có tên kết thúc `_test`. `backend/.env` không ảnh hưởng (test tự tắt nạp `.env` bằng `CSMS_SKIP_DOTENV=1`). CI chạy lint, quét phụ thuộc, test backend và test của `tools/`.
+Trạng thái hiện tại (03/10/2026): **lint sạch, 280/280 test backend pass** (3 lần liên tiếp, khoảng 105–115 s) + 20 test của `run.py` (`tools/`). Test S-09 T-19 cần Docker; hai test tắt máy sạch (N4) bỏ qua trên Windows. Test chỉ chạy trên DB có tên kết thúc `_test`. `backend/.env` không ảnh hưởng (test tự tắt nạp `.env` bằng `CSMS_SKIP_DOTENV=1`). CI chạy lint, quét phụ thuộc, test backend và test của `tools/`.
 
 ## 9. Staging (Render)
 
@@ -147,6 +148,11 @@ Kiểm tra nhanh sau mỗi lần deploy: `/api/health` → `"ok":true`; đăng n
 | `OCPP_PING_INTERVAL` | cả hai | Không | `30` giây; chu kỳ gửi WebSocket Ping giữ kết nối OCPP (B9) |
 | `OCPP_RATE_LIMIT_MAX` | cả hai | Không | `50` tin/giây; giới hạn tần suất tin nhắn cho mỗi kết nối OCPP (B3) |
 | `OCPP_ERROR_DEDUP_SECONDS` | cả hai | Không | `60` giây; bỏ qua lỗi đầu nối y hệt trong N giây (`0` = tắt khử trùng) |
+| `OCPP_MESSAGE_RETENTION_DAYS` | cả hai | Không | `7` ngày; giữ câu trả lời OCPP để nhận ra tin trùng `messageId`, job dọn chạy mỗi giờ |
+| `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | cả hai | Không | `30` lần/phút/tài khoản cho `check-code` (429 + `Retry-After`) |
+| `REGISTER_CONFLICT_LIMIT_PER_HOUR` | cả hai | Không | `5` lần dò email trùng/giờ/IP; vượt thì đăng ký từ IP đó trả 429. IP lấy theo `TRUST_PROXY` |
+| `OCPP_HANDSHAKE_LIMIT_PER_10S` | cả hai | Không | `5` lần bắt tay/10 giây/(IP, mã trụ), kiểm trước khi truy vấn DB |
+| `AUDIT_DENIED_LIMIT_PER_MINUTE` | cả hai | Không | `20` dòng `ACCESS_DENIED`/phút/tài khoản trong `audit_logs` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | cho `create-admin` | Khi tạo admin | mật khẩu ≥ 12 ký tự, tránh ký tự `#` |
 | `ALLOW_DEMO_SEED`, `DEMO_PASSWORD`, `DEMO_EMAIL_DOMAIN`, `DEMO_STATUSES` | cho `seed-demo` | Khi seed | `=1` xác nhận; mật khẩu ≥ 8; miền mặc định `demo.csms.local`; `DEMO_STATUSES=0` để trụ ở trạng thái chưa rõ |
 | `CSMS_SKIP_DOTENV` | chỉ test | Không | `=1` bỏ nạp `backend/.env` |

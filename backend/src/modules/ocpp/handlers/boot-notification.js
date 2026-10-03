@@ -14,6 +14,7 @@
 
 const { BOOT_NOTIFICATION_FIELD_LIMITS, safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
+const { publish } = require('../../fleet-status/fleet-status.events');
 
 function getDefaultPool() {
   return require('../../../db/pool').pool;
@@ -59,7 +60,7 @@ function createBootNotificationHandler({
     if (code && pool) {
       try {
         const query = `
-          SELECT cp.id, cp.code, cp.status, s.id AS station_id, s.status AS station_status, s.locked_at
+          SELECT cp.id, cp.code, cp.status, s.id AS station_id, s.owner_id, s.status AS station_status, s.locked_at
           FROM charge_points cp
           JOIN stations s ON s.id = cp.station_id
           WHERE cp.code = $1
@@ -115,6 +116,7 @@ function createBootNotificationHandler({
              WHERE id = $6`,
             [vendor, model, firmwareVersion, serialNumber, interval, chargePointRecord.id]
         );
+        publish({ ownerId: chargePointRecord.owner_id, stationId: chargePointRecord.station_id, chargePointId: chargePointRecord.id });
         logInfo(`[OCPP] BootNotification: Cập nhật trụ ${safeLog(code)} thành công (status=ONLINE)`);
       } catch (error) {
         logError(`[OCPP] BootNotification: Lỗi cập nhật CSDL cho trụ ${safeLog(code)}:`, sanitizeErrorMessage(error.message));

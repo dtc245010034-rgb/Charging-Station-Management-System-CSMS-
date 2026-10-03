@@ -193,6 +193,15 @@ describe('S-11 T-25: SSE trạng thái đầu nối theo quyền', () => {
     });
     assert.strictEqual(boot.status, 'Accepted');
 
+    // BootNotification đổi trụ sang ONLINE nên cũng phát sự kiện mức trụ (chưa có connector_id), chỉ tới chủ trạm B và vận hành.
+    const bootEvents = await Promise.all([nextEvent(streams[1]), nextEvent(streams[2])]);
+    for (const event of bootEvents) {
+      assert.ok(event, 'Boot must notify the station owner and the operator');
+      assert.strictEqual(String(event.charge_point_id), String(chargePoint.id));
+      assert.strictEqual(Object.hasOwn(event, 'connector_id'), false);
+    }
+    assert.strictEqual(await nextEvent(streams[0], 150), null, 'owner A must not receive owner B boot events');
+
     const start = performance.now();
     await callChargePoint(socket, 'StatusNotification', {
       connectorId: 1,

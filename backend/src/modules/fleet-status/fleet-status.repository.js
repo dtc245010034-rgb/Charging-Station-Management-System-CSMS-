@@ -12,6 +12,8 @@ const snapshot = (actor) => {
       cp.id AS charge_point_id,
       cp.code AS charge_point_code,
       cp.status AS charge_point_status,
+      cp.ocpp_status AS charge_point_ocpp_status,
+      cp.last_error_code AS charge_point_last_error_code,
       cp.last_seen_at,
       cp.heartbeat_interval,
       (

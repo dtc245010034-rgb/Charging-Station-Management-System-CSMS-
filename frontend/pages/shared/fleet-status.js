@@ -1,7 +1,7 @@
 import { h } from '../../app/dom.js';
 import { formatDateTime } from '../../app/format.js';
 import { WORKSPACES } from '../../app/workspace.js';
-import { statusBadge, stationBadge } from '../../components/badge.js';
+import { statusBadge, stationBadge, stationLevelErrorBadge } from '../../components/badge.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
 import { icon } from '../../components/icons.js';
 import { workspaceHero } from '../../components/hero.js';
@@ -24,6 +24,7 @@ function chargePointCard(point, station) {
     h('header', { class: 'fleet-status__point-head' },
       h('h3', { class: 'fleet-status__code mono' }, point.code),
       chargePointBadge(point)),
+    stationLevelErrorBadge(point),
     point.offline && h('p', { class: 'fleet-status__last-seen' },
       h('strong', {}, 'Liên lạc cuối: '),
       point.last_seen_at ? formatDateTime(point.last_seen_at) : 'Chưa từng liên lạc'),

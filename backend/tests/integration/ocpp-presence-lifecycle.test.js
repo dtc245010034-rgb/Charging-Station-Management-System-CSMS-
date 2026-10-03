@@ -24,6 +24,7 @@ describe('N4/F3/N8: vòng đời kết nối của trụ trên server thật', (
 
   beforeEach(async () => {
     await query('DELETE FROM charge_points');
+    await query('DELETE FROM ocpp_messages');
     chargePointId = (await query("INSERT INTO charge_points (station_id, code, status) VALUES ($1, $2, 'UNKNOWN') RETURNING id", [stationId, CODE])).rows[0].id;
     await query('INSERT INTO connectors (charge_point_id, connector_no) VALUES ($1, 1), ($1, 2)', [chargePointId]);
   });

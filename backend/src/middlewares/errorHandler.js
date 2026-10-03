@@ -12,6 +12,7 @@ function errorHandler(err, req, res, next) {
   if (err instanceof AppError) {
     ({ status, code } = err);
     message = err.message;
+    if (err.retryAfterSec) res.set('Retry-After', String(err.retryAfterSec));
   } else if (err instanceof ZodError) {
     status = 400;
     code = 'VALIDATION_ERROR';

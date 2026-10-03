@@ -11,6 +11,8 @@
 
 ---
 
+> **Cập nhật 03/10/2026:** cây dưới đây là snapshot 30/09. Thêm sau đó trên `main`: `backend/src/modules/fleet-status/` (REST + SSE), `modules/ocpp/handlers/status-notification.js`, `modules/ocpp/shutdown.js`, migration `010`–`012`, `docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`, `docs/testing/BAO-CAO-VONG-6.md`, `docs/testing/ui-round6/`, `docs/testing/round6/`, các `tools/verify-*-round6.js`. Cấu trúc hiện hành: `README.md` mục 7.
+
 ## 0. Cập nhật cấu trúc toàn diện (30/09/2026)
 
 Tài liệu này được tái tạo toàn bộ (**Rescanned and Rebuilt**) từ filesystem thực tế tại commit `7fe1e7a` trên nhánh `main`, triệt tiêu toàn bộ độ lệch (discrepancy) so với các snapshot cũ:
@@ -53,7 +55,9 @@ Tài liệu này được tái tạo toàn bộ (**Rescanned and Rebuilt**) từ
 Tài liệu này là **VERIFIED PROJECT MAP** (Bản đồ cấu trúc dự án đã qua xác minh thực tế) với các mục tiêu:
 - Cung cấp bức tranh toàn diện, chính xác 100% về cấu trúc thư mục, tệp tin và các thành phần mã nguồn của dự án CSMS.
 - Xác định quyền sở hữu tài nguyên và ranh giới kiểm thử: Tester/QA toàn quyền quản trị phân vùng `docs/` và đọc-kiểm tra (read-only) toàn bộ các thành phần khác.
-- Thiết lập hệ thống ánh xạ truy vết hai chiều (Bidirectional Traceability) giữa Yêu cầu nghiệp vụ ($E ightarrow S ightarrow T$) $\longleftrightarrow$ Mã nguồn hiện thực (Source Components) $\longleftrightarrow$ Bộ kiểm thử tự động của Dev $\longleftrightarrow$ Hồ sơ kiểm thử của QA.
+- Thiết lập hệ thống ánh xạ truy vết hai chiều (Bidirectional Traceability) giữa Yêu cầu nghiệp vụ ($E 
+ightarrow S 
+ightarrow T$) $\longleftrightarrow$ Mã nguồn hiện thực (Source Components) $\longleftrightarrow$ Bộ kiểm thử tự động của Dev $\longleftrightarrow$ Hồ sơ kiểm thử của QA.
 - Thực thi nguyên tắc **NO-REDISCOVERY**: Mọi tác vụ phân tích, kiểm thử và rà soát đều trực tiếp tra cứu vị trí cần thiết từ bản đồ này mà không phải quét lại toàn bộ mã nguồn hoặc suy đoán vị trí file.
 
 ---

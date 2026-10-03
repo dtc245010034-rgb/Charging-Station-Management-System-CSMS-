@@ -60,4 +60,29 @@ describe('frontend realtime SSE subscription', () => {
       else delete globalThis.EventSource;
     }
   });
+
+  it('vẫn thăm dò chậm khi SSE đang mở để bắt các thay đổi mà máy chủ không phát sự kiện', async () => {
+    const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+    const originalEventSource = Object.getOwnPropertyDescriptor(globalThis, 'EventSource');
+    globalThis.document = { hidden: false, addEventListener() {}, removeEventListener() {} };
+    globalThis.EventSource = class {
+      constructor() { this.constructor.last = this; }
+      close() { this.closed = true; }
+    };
+
+    try {
+      const { subscribe } = await load();
+      let loads = 0;
+      const subscription = subscribe(async () => ++loads, () => {}, { eventsUrl: '/api/fleet-status/events', intervalMs: 100000, safetyIntervalMs: 20 });
+      globalThis.EventSource.last.onopen();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      subscription.stop();
+      assert.ok(loads >= 3, `cần thăm dò an toàn khi SSE mở, chỉ tải ${loads} lần`);
+    } finally {
+      if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument);
+      else delete globalThis.document;
+      if (originalEventSource) Object.defineProperty(globalThis, 'EventSource', originalEventSource);
+      else delete globalThis.EventSource;
+    }
+  });
 });

@@ -87,13 +87,15 @@ describe('StatusNotification handler', () => {
     assert.deepEqual(history, [{ error_code: 'GroundFailure' }]);
   });
 
-  it('does not update the database for connectorId 0', async () => {
-    let called = false;
+  it('connectorId 0 chỉ cập nhật charge_points, không cập nhật connectors', async () => {
+    const queries = [];
     const handler = createStatusNotificationHandler({
-      pool: { query: async () => { called = true; return { rowCount: 1 }; } },
+      pool: { query: async (sql, params) => { queries.push({ sql, params }); return { rowCount: 1, rows: [] }; } },
     });
-    assert.deepEqual(await handler({ connectorId: 0, status: 'Available' }), {});
-    assert.equal(called, false);
+    assert.deepEqual(await handler({ connectorId: 0, status: 'Available' }, { connection: { chargePointCode: 'CP-TEST' } }), {});
+    assert.equal(queries.length, 1);
+    assert.match(queries[0].sql, /UPDATE charge_points/);
+    assert.doesNotMatch(queries[0].sql, /UPDATE connectors/);
   });
 
   it('ignores undeclared connectors and rate-limits warnings per charge point', async () => {
@@ -253,15 +255,12 @@ describe('F4: Unavailable là tạm ngừng khai thác, không phải sự cố'
 });
 
 describe('F5: connectorId = 0 (trạng thái cả trụ)', () => {
-  it('trả {} không chạm DB và ghi info có gom theo trụ', async () => {
+  it('lưu mức trụ qua charge_points, thiếu trụ trong DB thì cảnh báo có gom, vẫn trả {}', async () => {
     let currentTime = 1000;
-    const { call, queries, infos } = recordingHandler({ now: () => currentTime });
+    const { call, queries, warnings } = recordingHandler({ now: () => currentTime, pool: { query: async () => ({ rowCount: 0, rows: [] }) } });
     for (let index = 0; index < 5; index += 1) assert.deepEqual(await call({ connectorId: 0, status: 'Available' }), {});
     assert.equal(queries.length, 0);
-    assert.equal(infos.length, 1);
-    assert.match(infos[0], /CP-TEST/);
-    currentTime += 60000;
-    await call({ connectorId: 0, status: 'Faulted' });
-    assert.equal(infos.length, 2);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /CP-TEST/);
   });
 });
