@@ -22,6 +22,13 @@ describe('GYM-35 vệ sinh log (4.3)', () => {
     assert.match(sanitizeErrorMessage('connect ECONNREFUSED 127.0.0.1:5441'), /ECONNREFUSED/);
   });
 
+  it('sanitizeErrorMessage không che nhầm chuỗi giờ và vẫn che IPv6 đầy đủ', () => {
+    assert.equal(sanitizeErrorMessage('lúc 10:20:30 lỗi'), 'lúc 10:20:30 lỗi');
+    assert.equal(sanitizeErrorMessage('timestamp 2026-10-03T10:20:30Z'), 'timestamp 2026-10-03T10:20:30Z');
+    assert.ok(!sanitizeErrorMessage('connect ECONNREFUSED fe80::1').includes('fe80'));
+    assert.ok(!sanitizeErrorMessage('connect ECONNREFUSED 2001:db8:0:0:0:0:0:1').includes('2001'));
+  });
+
   it('sanitizeErrorMessage giữ hành vi che mật khẩu cũ', () => {
     assert.equal(sanitizeErrorMessage('postgres://user:secret@db/x'), 'postgres://user:***@db/x');
   });
