@@ -23,6 +23,15 @@ router.get('/fleet-status/events', { access: access('stations:read') }, (req, re
     unsubscribe?.();
   };
 
+  // Client đọc chậm (write trả false): huỷ luôn kết nối để không ghi tiếp vào luồng đã đóng; EventSource tự nối lại.
+  const send = (chunk) => {
+    if (closed || res.destroyed || res.writableEnded) return;
+    if (!res.write(chunk)) {
+      cleanup();
+      res.destroy();
+    }
+  };
+
   res.status(200);
   res.set({
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -37,12 +46,11 @@ router.get('/fleet-status/events', { access: access('stations:read') }, (req, re
       charge_point_id: event.chargePointId,
       connector_id: event.connectorId,
     });
-    if (!res.write(`data: ${data}\n\n`)) res.end();
+    send(`data: ${data}\n\n`);
   });
-  heartbeat = setInterval(() => {
-    if (!res.write(': keep-alive\n\n')) res.end();
-  }, 20000);
+  heartbeat = setInterval(() => send(': keep-alive\n\n'), 20000);
   res.on('close', cleanup);
+  res.on('error', cleanup);
   res.flushHeaders();
   res.write('retry: 1000\n\n');
 });
