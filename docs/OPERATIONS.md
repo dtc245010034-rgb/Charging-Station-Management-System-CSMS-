@@ -149,6 +149,10 @@ Kiểm tra nhanh sau mỗi lần deploy: `/api/health` → `"ok":true`; đăng n
 | `OCPP_RATE_LIMIT_MAX` | cả hai | Không | `50` tin/giây; giới hạn tần suất tin nhắn cho mỗi kết nối OCPP (B3) |
 | `OCPP_ERROR_DEDUP_SECONDS` | cả hai | Không | `60` giây; bỏ qua lỗi đầu nối y hệt trong N giây (`0` = tắt khử trùng) |
 | `OCPP_MESSAGE_RETENTION_DAYS` | cả hai | Không | `7` ngày; giữ câu trả lời OCPP để nhận ra tin trùng `messageId`, job dọn chạy mỗi giờ |
+| `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | cả hai | Không | `30` lần/phút/tài khoản cho `check-code` (429 + `Retry-After`) |
+| `REGISTER_CONFLICT_LIMIT_PER_HOUR` | cả hai | Không | `5` lần dò email trùng/giờ/IP; vượt thì đăng ký từ IP đó trả 429. IP lấy theo `TRUST_PROXY` |
+| `OCPP_HANDSHAKE_LIMIT_PER_10S` | cả hai | Không | `5` lần bắt tay/10 giây/(IP, mã trụ), kiểm trước khi truy vấn DB |
+| `AUDIT_DENIED_LIMIT_PER_MINUTE` | cả hai | Không | `20` dòng `ACCESS_DENIED`/phút/tài khoản trong `audit_logs` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | cho `create-admin` | Khi tạo admin | mật khẩu ≥ 12 ký tự, tránh ký tự `#` |
 | `ALLOW_DEMO_SEED`, `DEMO_PASSWORD`, `DEMO_EMAIL_DOMAIN`, `DEMO_STATUSES` | cho `seed-demo` | Khi seed | `=1` xác nhận; mật khẩu ≥ 8; miền mặc định `demo.csms.local`; `DEMO_STATUSES=0` để trụ ở trạng thái chưa rõ |
 | `CSMS_SKIP_DOTENV` | chỉ test | Không | `=1` bỏ nạp `backend/.env` |

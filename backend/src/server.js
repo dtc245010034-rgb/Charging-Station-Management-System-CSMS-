@@ -5,6 +5,8 @@ const app = require('./app');
 const { migrate } = require('./db/migrate');
 const { pool } = require('./db/pool');
 const connections = require('./modules/charge-points/connection-registry');
+const { createRateLimiter } = require('./lib/rate-limit');
+const { clientIpOf } = require('./lib/client-ip');
 const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
 const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
@@ -62,6 +64,8 @@ startKeepalive(wss, {
 
 server.on('upgrade', createOcppUpgradeHandler({
 	wss,
+	handshakeLimiter: createRateLimiter({ limit: env.OCPP_HANDSHAKE_LIMIT_PER_10S, windowMs: 10000 }),
+	clientIpOf: (request) => clientIpOf(request, env.TRUST_PROXY),
 	lookupChargePoint: async (code) => {
 		const result = await pool.query(
 			'SELECT cp.id, cp.code, cp.station_id, s.status AS station_status FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.code = $1 LIMIT 1',

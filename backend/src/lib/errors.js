@@ -22,4 +22,11 @@ class ConflictError extends AppError {
   constructor(message = 'Dữ liệu đã tồn tại') { super(409, 'CONFLICT', message); }
 }
 
-module.exports = { AppError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError };
+class TooManyRequestsError extends AppError {
+  constructor(retryAfterSec, message = 'Quá nhiều yêu cầu, vui lòng thử lại sau') {
+    super(429, 'TOO_MANY_REQUESTS', message);
+    this.retryAfterSec = retryAfterSec;
+  }
+}
+
+module.exports = { TooManyRequestsError, AppError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError };

@@ -30,6 +30,12 @@ const schema = z.object({
   OCPP_ERROR_DEDUP_SECONDS: z.coerce.number().int().min(0).default(60),
   // Số ngày giữ câu trả lời đã gửi để nhận ra tin OCPP trùng messageId (S-14), mặc định 7
   OCPP_MESSAGE_RETENTION_DAYS: z.coerce.number().int().positive().default(7),
+  // Giới hạn tần suất trong bộ nhớ (một tiến trình): check-code theo tài khoản, số lần dò email trùng khi đăng ký theo IP, bắt tay OCPP theo (IP, mã trụ)
+  CHECK_CODE_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(30),
+  REGISTER_CONFLICT_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(5),
+  OCPP_HANDSHAKE_LIMIT_PER_10S: z.coerce.number().int().positive().default(5),
+  // Số dòng ACCESS_DENIED tối đa ghi vào audit_logs mỗi phút cho mỗi tài khoản
+  AUDIT_DENIED_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(20),
 });
 
 const parsed = schema.safeParse(process.env);
