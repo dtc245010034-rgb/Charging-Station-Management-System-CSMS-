@@ -13,6 +13,7 @@ describe('Job nền: phát hiện trụ mất heartbeat', () => {
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
+    await query('ALTER TABLE charge_points ALTER COLUMN heartbeat_interval DROP NOT NULL');
     await truncateAll();
     const owner = await createUser('offline-job-owner@test.invalid', 'STATION_OWNER');
     ownerId = owner.id;

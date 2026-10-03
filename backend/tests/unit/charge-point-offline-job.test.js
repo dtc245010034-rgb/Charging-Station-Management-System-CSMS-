@@ -19,7 +19,7 @@ describe('Job nền phát hiện trụ mất heartbeat', () => {
 
     assert.strictEqual(result, expectedResult);
     assert.match(executedQuery, /last_seen_at <= CURRENT_TIMESTAMP/);
-    assert.match(executedQuery, /heartbeat_interval \* INTERVAL '2 seconds'/);
+    assert.match(executedQuery, /COALESCE\(cp\.heartbeat_interval, 60\) \* INTERVAL '2 seconds'/);
     assert.match(executedQuery, /status = 'ONLINE'/);
     assert.match(executedQuery, /SET status = 'OFFLINE'/);
   });
