@@ -10,6 +10,8 @@
 
 ---
 
+> **Cập nhật 03/10/2026:** `main` (`8008b45`) hiện có **280 test backend pass** (3 lần liên tiếp) và 20 test của `tools/`. Hồ sơ QA bên dưới là snapshot tới mốc ghi ở đầu file, **chưa gồm** các ca Sprint 2 sau S-13 (S-08…S-11, vòng 6). Số liệu và bằng chứng vòng 6: [`BAO-CAO-VONG-6.md`](./BAO-CAO-VONG-6.md); ảnh giao diện: [`ui-round6/`](./ui-round6/).
+
 ## 1. TỔNG QUAN HỆ THỐNG TÀI LIỆU TESTER (DOCUMENT ARCHITECTURE)
 
 Hệ thống tài liệu kiểm định chất lượng của dự án được phân định rạch ròi thành các phân vùng chức năng thống nhất:
