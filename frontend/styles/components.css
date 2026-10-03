@@ -394,3 +394,19 @@ button.legend__row:hover { background: var(--surface-hover); }
 .muted { color: var(--text-muted); }
 .stack { display: grid; gap: 14px; }
 .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+
+/* ---------- Fleet status grid ---------- */
+.fleet-status__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fleet-status__count { color: var(--text-secondary); font-size: 12.5px; }
+.fleet-status__body, .fleet-status__grid { min-width: 0; }
+.fleet-status__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 10px; min-width: 0; }
+.fleet-status__point { display: grid; align-content: start; gap: 8px; min-width: 0; padding: 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface); }
+.fleet-status__station-line { display: grid; justify-items: start; gap: 3px; min-width: 0; }
+.fleet-status__station-name { min-width: 0; color: var(--text-secondary); font-size: 10.5px; font-weight: 600; overflow-wrap: anywhere; }
+.fleet-status__station-line .badge { padding: 1px 6px; font-size: 10.5px; }
+.fleet-status__point-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; min-width: 0; }
+.fleet-status__code { min-width: 0; overflow-wrap: anywhere; font-weight: 700; }
+.fleet-status__last-seen { color: var(--text-secondary); font-size: 11.5px; overflow-wrap: anywhere; }
+.fleet-status__connectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin: 0; padding: 0; list-style: none; }
+.fleet-status__connector { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; font-size: 12px; }
+.fleet-status__connector .badge { gap: 4px; padding: 1px 5px; font-size: 10.5px; }
