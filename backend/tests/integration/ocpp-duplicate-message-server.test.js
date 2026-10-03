@@ -8,7 +8,7 @@ const { startServerProcess, stopServerProcess, stopAllServerProcesses, sendCall,
 
 const CODE = 'K01-SRV-CP-01';
 
-describe('S-14 / K-01 trên server thật: tin trùng nhận lại câu cũ, kể cả sau khi khởi động lại', () => {
+describe('S-14 / K-01 trên server thật: Heartbeat không lưu chống trùng; tin cũ bị dọn', () => {
   let server;
 
   before(async () => {
@@ -28,23 +28,17 @@ describe('S-14 / K-01 trên server thật: tin trùng nhận lại câu cũ, k�
     runScript('src/db/migrate.js');
   });
 
-  it('Heartbeat gửi lại cùng messageId nhận đúng currentTime cũ, cả sau khi tiến trình khởi động lại', async () => {
+  it('Heartbeat không được lưu chống trùng (F11): cùng messageId nhận currentTime mới, không sinh dòng ocpp_messages', async () => {
     server = await startServerProcess();
-    let client = await bootChargePoint(server.wsUrl, CODE);
+    const client = await bootChargePoint(server.wsUrl, CODE);
     const first = await sendCall(client, 'hb-fixed-1', 'Heartbeat', {});
     await new Promise((resolve) => setTimeout(resolve, 1100));
     const second = await sendCall(client, 'hb-fixed-1', 'Heartbeat', {});
     assert.equal(first[0], 3);
-    assert.equal(second[2].currentTime, first[2].currentTime);
-    const fresh = await sendCall(client, 'hb-fixed-2', 'Heartbeat', {});
-    assert.notEqual(fresh[2].currentTime, first[2].currentTime);
-
-    client.terminate();
-    await stopServerProcess(server);
-    server = await startServerProcess();
-    client = await bootChargePoint(server.wsUrl, CODE);
-    const afterRestart = await sendCall(client, 'hb-fixed-1', 'Heartbeat', {});
-    assert.equal(afterRestart[2].currentTime, first[2].currentTime);
+    assert.equal(second[0], 3);
+    assert.notEqual(second[2].currentTime, first[2].currentTime);
+    const stored = (await query("SELECT count(*)::int AS n FROM ocpp_messages WHERE message_id = 'hb-fixed-1'")).rows[0].n;
+    assert.equal(stored, 0);
     client.terminate();
   });
 

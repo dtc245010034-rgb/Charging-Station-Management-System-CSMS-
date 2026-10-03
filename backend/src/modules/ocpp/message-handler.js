@@ -23,7 +23,8 @@ function createOcppMessageHandler({
 	updateLastSeen = async () => {},
 	messageStore = null,
 	// BootNotification ghi ONLINE và đánh dấu kết nối; phát lại câu cũ trên kết nối mới sẽ bỏ qua hai việc đó, mà xử lý lại thì vô hại.
-	dedupeSkipActions = ['BootNotification'],
+	// Heartbeat vốn idempotent; lưu mỗi nhịp sẽ thêm hàng triệu dòng ocpp_messages mỗi ngày khi có hàng nghìn trụ.
+	dedupeSkipActions = ['BootNotification', 'Heartbeat'],
 } = {}) {
 	const pendingCalls = new Map();
 
@@ -111,9 +112,6 @@ function createOcppMessageHandler({
 		const begun = await messageStore.begin(code, request.messageId, request.action, hashCall(request.action, request.payload));
 		if (begun.state === 'replay') {
 			logInfo(`[OCPP] Duplicate CALL, replaying stored response | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
-			if (!begun.sameCall) {
-				logWarning(`[OCPP] Duplicate messageId with different content, returning the first response | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
-			}
 			return begun.response;
 		}
 
