@@ -1,8 +1,13 @@
 /**
  * LƯU Ý: Script này chỉ dùng cho môi trường dev cục bộ (local development).
- * Yêu cầu: Docker compose đang chạy, tài khoản admin@csms.local / admin,
- * và biến ALLOW_WEAK_ADMIN_PASSWORD=1. Tuyệt đối không chạy trên staging/production.
+ * Yêu cầu: server đang chạy và một tài khoản ADMIN có sẵn (tạo bằng scripts/create-admin.js
+ * với mật khẩu mạnh). Đặt ADMIN_EMAIL và ADMIN_PASSWORD trong biến môi trường, ví dụ:
+ *   ADMIN_EMAIL=... ADMIN_PASSWORD=... node tools/test-s08-lock-and-serial-live.js
+ * Thiếu một trong hai biến thì script dừng. Tuyệt đối không chạy trên staging/production.
  */
+const { randomBytes } = require('node:crypto');
+const { execSync } = require('node:child_process');
+const { requireAdminCredentials } = require('./lib/admin-credentials');
 const { once } = require('node:events');
 const { WebSocket } = require('ws');
 
@@ -62,18 +67,14 @@ async function runLiveVerification() {
 
   // 1. Đăng nhập / đăng ký tài khoản
   console.log('1. Thiết lập tài khoản ADMIN và DRIVER...');
-  const adminEmail = `admin-live-${Date.now()}@example.com`;
+  const { email: adminEmail, password: adminPassword } = requireAdminCredentials();
   const driverEmail = `driver-live-${Date.now()}@example.com`;
-  const password = 'password123456';
-
-  // Seed / tạo admin bằng command dòng lệnh
-  const { execSync } = require('node:child_process');
-  execSync(`docker compose exec -e ADMIN_EMAIL=${adminEmail} -e ADMIN_PASSWORD=${password} -e ALLOW_WEAK_ADMIN_PASSWORD=1 app node scripts/create-admin.js`, { stdio: 'pipe' });
+  const driverPassword = randomBytes(18).toString('base64url');
 
   // Đăng nhập Admin
   const adminLogin = await request('/api/auth/login', {
     method: 'POST',
-    body: { email: adminEmail, password },
+    body: { email: adminEmail, password: adminPassword },
   });
   if (adminLogin.status !== 200) {
     throw new Error(`Đăng nhập admin thất bại: ${adminLogin.status} ${adminLogin.text}`);
@@ -84,7 +85,7 @@ async function runLiveVerification() {
   // Đăng ký Driver
   const driverReg = await request('/api/auth/register', {
     method: 'POST',
-    body: { name: 'Driver Live', email: driverEmail, password },
+    body: { name: 'Driver Live', email: driverEmail, password: driverPassword },
   });
   const driverCookie = parseCookie(driverReg.cookie);
   console.log('   Driver đăng ký thành công.');
