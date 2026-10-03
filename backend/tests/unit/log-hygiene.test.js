@@ -1,0 +1,42 @@
+const { describe, it } = require('node:test');
+const assert = require('node:assert/strict');
+const { sanitizeErrorMessage } = require('../../src/lib/constants');
+const { errorHandler } = require('../../src/middlewares/errorHandler');
+const { AppError } = require('../../src/lib/errors');
+
+function captureErrorLog(err) {
+  const lines = [];
+  const original = console.error;
+  console.error = (...args) => { lines.push(args.map((arg) => (arg instanceof Error ? `${arg.stack}` : String(arg))).join(' ')); };
+  const res = { status() { return this; }, json() { return this; } };
+  try { errorHandler(err, {}, res, () => {}); } finally { console.error = original; }
+  return lines.join('\n');
+}
+
+describe('GYM-35 vệ sinh log (4.3)', () => {
+  it('sanitizeErrorMessage che địa chỉ host:port của DB', () => {
+    assert.ok(!sanitizeErrorMessage('connect ECONNREFUSED 127.0.0.1:5441').includes('127.0.0.1'));
+    assert.ok(!sanitizeErrorMessage('connect ECONNREFUSED 127.0.0.1:5441').includes('5441'));
+    assert.ok(!sanitizeErrorMessage('connect ECONNREFUSED ::1:5441').includes('::1'));
+    assert.ok(!sanitizeErrorMessage('getaddrinfo ENOTFOUND db.internal.example').includes('db.internal.example'));
+    assert.match(sanitizeErrorMessage('connect ECONNREFUSED 127.0.0.1:5441'), /ECONNREFUSED/);
+  });
+
+  it('sanitizeErrorMessage giữ hành vi che mật khẩu cũ', () => {
+    assert.equal(sanitizeErrorMessage('postgres://user:secret@db/x'), 'postgres://user:***@db/x');
+  });
+
+  it('AppError 5xx chỉ log một dòng status + code, không kèm stack hay đường dẫn', () => {
+    const output = captureErrorLog(new AppError(503, 'DB_UNAVAILABLE', 'Cơ sở dữ liệu không sẵn sàng'));
+    assert.match(output, /503/);
+    assert.match(output, /DB_UNAVAILABLE/);
+    assert.ok(!output.includes('\n'), 'chỉ một dòng');
+    assert.ok(!output.includes('/home/') && !/\sat\s/.test(output) && !output.includes('.js:'), `lộ stack: ${output}`);
+  });
+
+  it('lỗi không lường trước vẫn log đầy đủ stack để gỡ lỗi', () => {
+    const output = captureErrorLog(new Error('boom bất ngờ'));
+    assert.match(output, /boom bất ngờ/);
+    assert.match(output, /\sat\s/);
+  });
+});

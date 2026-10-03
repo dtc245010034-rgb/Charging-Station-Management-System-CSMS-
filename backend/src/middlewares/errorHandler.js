@@ -31,7 +31,10 @@ function errorHandler(err, req, res, next) {
     message = 'Yêu cầu không hợp lệ';
   }
 
-  if (status >= 500) console.error(err);
+  if (status >= 500) {
+    if (err instanceof AppError) console.error(`[HTTP] ${status} ${code}`);
+    else console.error(err);
+  }
   return res.status(status).json({ error: details ? { code, message, details } : { code, message } });
 }
 
