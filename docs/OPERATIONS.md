@@ -1,6 +1,6 @@
 # Vận hành CSMS — build, chạy, dừng, khởi động lại, dữ liệu, staging
 
-> Cập nhật: 28/9/2026. Đây là sổ tay **vận hành**. Hướng dẫn chạy lần đầu từng bước nằm ở [`README.md`](../README.md); tình trạng dự án ở [`SPRINT_STATUS.md`](./SPRINT_STATUS.md).
+> Cập nhật: 03/10/2026 (khớp `main` sau PR #74). Đây là sổ tay **vận hành**. Hướng dẫn chạy lần đầu từng bước nằm ở [`README.md`](../README.md); tình trạng dự án ở [`SPRINT_STATUS.md`](./SPRINT_STATUS.md).
 > Ký hiệu: `$` = shell của Linux/Git Bash. Windows dùng `py run.py` nếu không có lệnh `python`; `curl.exe` thay `curl` trong PowerShell.
 
 ## 1. Thành phần và cổng
@@ -119,7 +119,7 @@ $ python test.py --verbose
 ```
 (`python run.py test` là cùng một lệnh.) Chạy trong container Node 22 với Postgres test riêng (cổng 5433, trong RAM, dừng lại sau khi xong), `node_modules` nằm trong volume Docker riêng nên không lẫn với máy. Mã thoát 0 = đạt; log đầy đủ ở `.run/test-output.log`.
 
-Trạng thái hiện tại: **lint sạch, 200+ test backend pass** + 20 test của `run.py` (`tools/`). Test chỉ chạy trên DB có tên kết thúc `_test`. `backend/.env` không ảnh hưởng (test tự tắt nạp `.env` bằng `CSMS_SKIP_DOTENV=1`). CI chạy lint, quét phụ thuộc, test backend và test của `tools/`.
+Trạng thái hiện tại (03/10/2026): **lint sạch, 280/280 test backend pass** (3 lần liên tiếp, khoảng 105–115 s) + 20 test của `run.py` (`tools/`). Test S-09 T-19 cần Docker; hai test tắt máy sạch (N4) bỏ qua trên Windows. Test chỉ chạy trên DB có tên kết thúc `_test`. `backend/.env` không ảnh hưởng (test tự tắt nạp `.env` bằng `CSMS_SKIP_DOTENV=1`). CI chạy lint, quét phụ thuộc, test backend và test của `tools/`.
 
 ## 9. Staging (Render)
 

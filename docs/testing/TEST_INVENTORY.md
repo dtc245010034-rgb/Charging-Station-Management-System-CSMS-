@@ -11,6 +11,8 @@
 
 ---
 
+> **Cập nhật 03/10/2026:** bộ test của Developer trên `main` (`8008b45`) là **280 test, 280 pass** (3 lần liên tiếp, kể cả S-09 T-19 cần Docker; hai test N4 bỏ qua trên Windows). Các ca Sprint 2 sau S-13 chưa có dòng trong bảng QA bên dưới; xem [`BAO-CAO-VONG-6.md`](./BAO-CAO-VONG-6.md).
+>
 > **Ghi chú cập nhật 28/09/2026 — số test tự động:** bộ test của Developer hiện có **140 test, 139 pass** (12 file acceptance, 4 integration, 10 unit; chạy bằng `npm test` trong `backend/`). Đợt này thêm: `unit/frontend-permissions.test.js` (bảng quyền frontend khớp backend), `integration/seed-demo.test.js` (dữ liệu demo), các ca mới trong `unit/frontend.test.js` (router hash, menu theo quyền, nhóm trạng thái OCPP) và `acceptance/S-02.frontend.test.js` (không innerHTML, không tài nguyên ngoài, mọi workspace có trang). Bảng test case QA ở mục 3–5 là hồ sơ xác minh tới mốc snapshot ghi ở đầu file, **chưa gồm** các ca mới này và chưa được QA chạy lại trên giao diện mới; đường dẫn `frontend/js/*` trong hồ sơ cũ tra theo [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md) mục 0.
 
 ---
