@@ -21,7 +21,7 @@
 
 **Dữ liệu (migration 013, có file `.down.sql`):**
 - `charge_points.auth_secret_hash TEXT NULL`, `auth_secret_set_at TIMESTAMPTZ NULL`. Không lưu mật khẩu gốc.
-- Băm: `crypto.scrypt` của Node (không thêm phụ thuộc native, muối ngẫu nhiên 16 byte, lưu dạng `scrypt$N$r$p$salt$hash`). argon2id là lựa chọn thay thế nếu lead dev chấp nhận thêm gói native; bcrypt cắt mật khẩu ở 72 byte nên chỉ dùng nếu mật khẩu ngắn hơn.
+- Băm: argon2id qua gói `argon2` đã có sẵn trong `backend/package.json` và đang dùng ở `backend/src/lib/password.js`, nên không thêm phụ thuộc mới; tái sử dụng cùng cách băm và cùng kiểu so khớp chống dò thời gian như mật khẩu người dùng. Không dùng bcrypt vì cắt mật khẩu ở 72 byte.
 - Mật khẩu trụ: 24 ký tự ngẫu nhiên (≥ 128 bit entropy), sinh phía server, hiện **một lần** cho người cấp.
 
 **Luồng bắt tay (trong `ocpp-upgrade.js`, trước mọi thay đổi sổ kết nối):**
