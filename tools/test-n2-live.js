@@ -1,3 +1,8 @@
+/**
+ * LƯU Ý: Script này chỉ dùng cho môi trường dev cục bộ (local development).
+ * Yêu cầu: Docker compose đang chạy, tài khoản admin@csms.local / admin,
+ * và biến ALLOW_WEAK_ADMIN_PASSWORD=1. Tuyệt đối không chạy trên staging/production.
+ */
 const { WebSocket } = require('ws');
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
