@@ -268,10 +268,13 @@ Menu của chức năng chưa có backend được **ẩn** (cấu hình trong `
 
 ### Giới hạn đã biết
 
-- **B5 (Chưa xác thực trụ / kết nối ẩn danh):** WebSocket `/ocpp/:chargePointCode` hiện chỉ kiểm tra mã trụ có tồn tại trong CSDL và trạm không bị khóa; chưa có cơ chế xác thực danh tính trụ (chưa có Basic Auth với mật khẩu trụ hoặc mTLS). Do đó, một kết nối ẩn danh nếu biết mã trụ có thể kết nối và đá (ngắt kết nối) trụ thật đang hoạt động theo logic S-13 (kết nối mới thay thế kết nối cũ).
+- **B5 (Chưa xác thực trụ / kết nối ẩn danh):** WebSocket `/ocpp/:chargePointCode` hiện chỉ kiểm tra mã trụ có tồn tại trong CSDL và trạm không bị khóa; chưa có cơ chế xác thực danh tính trụ (chưa có Basic Auth với mật khẩu trụ hoặc mTLS). Do đó, một kết nối ẩn danh nếu biết mã trụ có thể kết nối và đá (ngắt kết nối) trụ thật đang hoạt động theo logic S-13 (kết nối mới thay thế kết nối cũ). Đề xuất thiết kế (chưa có code, chờ PO chọn phương án): `docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`.
 - **K-01 (Boot trùng messageId xử lý hai lần):** Chưa có cơ chế idempotency/deduplication cho frame OCPP CALL; nếu trụ gửi hai bản tin CALL trùng `messageId`, server hiện tại sẽ xử lý cả hai lần độc lập thay vì trả lại kết quả đã lưu trước đó.
 - **Stub Authorize và StatusNotification:** Các action `Authorize` và `StatusNotification` hiện tại mới chỉ là các stub tạm thời trả lời tĩnh (ví dụ `StatusNotification` trả `{}` rỗng, `Authorize` trả `Accepted` nếu có `idTag`), chưa kiểm tra mã thẻ RFID trong CSDL, chưa cập nhật trạng thái hoạt động của đầu nối vào bảng `connectors`.
 - **Thư viện OCPP (Kế hoạch vs Triển khai):** Tài liệu kế hoạch Sprint 2 ban đầu ghi nhận dự kiến sử dụng thư viện `ocpp-rpc`. Tuy nhiên, mã nguồn thực tế đang sử dụng trực tiếp thư viện WebSocket `ws` thuần kết hợp bộ định dạng và xử lý frame tự viết (`backend/src/modules/ocpp/`) để kiểm soát chặt chẽ giao thức OCPP 1.6J.
+- **Tắt máy sạch (N4) chỉ đúng với một tiến trình server:** khi khởi động, server đặt mọi trụ `ONLINE` còn sót về `UNKNOWN` (kèm đầu nối). Nếu chạy nhiều bản sao cùng một CSDL, bản khởi động sau sẽ đánh dấu nhầm trụ đang kết nối ở bản kia; cần cơ chế theo phiên trước khi mở rộng ngang. `SIGKILL` không chạy được handler tắt máy, nên trụ `ONLINE` mồ côi chỉ được dọn ở lần khởi động kế tiếp.
+- **Hiển thị trụ ONLINE có đầu nối không khả dụng:** trụ `ONLINE` mà mọi đầu nối đều `UNAVAILABLE`/`UNKNOWN` vẫn hiện nhóm "Sẵn sàng" (xanh). Cần PO/QA chốt cách hiển thị.
+- **Tile bản đồ thật chưa kiểm:** kiểm thử giao diện bản đồ dùng tile OSM giả (PNG trong suốt); chưa thử tải tile thật trên mạng có Internet. Chưa kiểm staging với 50 trụ ảo (thiếu URL staging).
 
 ---
 

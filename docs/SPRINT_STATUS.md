@@ -152,3 +152,19 @@ Thứ tự cắt nếu trễ (chốt sớm với PO, ví dụ tối Thứ Tư 30
 | `phuc/docs-cap-nhat` | Gộp cả ba + tài liệu này | lint sạch, **138/138 test** |
 
 Ba nhánh đầu gộp với nhau không xung đột (đã thử). Nhánh cũ `claude/focused-einstein-g66f92` chứa cùng nội dung nhưng có tên Claude — nên xoá sau khi merge.
+
+## 9. Cập nhật 03/10/2026 — vòng sửa lỗi 6
+
+Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VONG-6.md). Các bản vá nằm ở nhánh riêng, **chưa merge**, chưa mở PR (môi trường không có `gh`/token), nên bảng mục 4 phía trên chưa phản ánh chúng.
+
+| Hạng mục | Kết quả đã chạy thật |
+|---|---|
+| Lint và test (hợp nhất cục bộ các nhánh vá) | Lint sạch; **257/257 pass, 0 fail, 0 skipped**, 3 lần liên tiếp (81,1 s; 84,0 s; 85,9 s), gồm S-09 T-19 chạy thật. Không test chập chờn |
+| Migration 009 ⇄ 012 | Lên → xuống tới 009 → lên đạt trên DB rỗng và DB seed-demo, schema giống hệt trước |
+| Kịch bản server thật (`tools/verify-round6-live.js`) | 93 ok, 0 FAIL, hai lần chạy |
+| Giao diện/bản đồ (Playwright, tile giả) | Sau F2: 121/121; trước F2: 66/121. Tile OSM thật **chưa kiểm** |
+| Lỗi DB (B7/N1) | Phát hiện và vá Heartbeat bị treo 6007 ms khi hàng bị khoá (nay 3 ms) |
+| Staging 50 trụ ảo | **Chưa kiểm chứng** (không có URL staging) |
+| Trạng thái PR/CI/Jira bằng API | **Chưa xác minh** (không có `gh`/token) |
+
+Việc còn mở: B5 (chờ PO chọn phương án), K-01 (thuộc S-14), F5 (lưu trạng thái mức trụ, chờ thiết kế cho S-11), nhãn/màu trụ ONLINE có đầu nối không khả dụng.
