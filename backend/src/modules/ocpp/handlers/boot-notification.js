@@ -4,7 +4,7 @@
  *
  * Nhiệm vụ:
  * - Lưu thông tin thiết bị: chargePointVendor, chargePointModel, chargePointSerialNumber, firmwareVersion vào bảng charge_points.
- * - Trường thiếu thì lưu rỗng '', không từ chối tin nhắn.
+ * - Trường thiếu thì lưu rỗng '', không từ chối tin nhắn; riêng firmwareVersion/serialNumber vắng ở lần Boot sau thì giữ giá trị đã lưu (N8).
  * - Cập nhật bản ghi hiện có khi gửi BootNotification nhiều lần trong cùng kết nối (không tạo bản ghi mới).
  * - Quyết định Accepted / Rejected theo trạng thái trụ và trạm (trạm bị khoá -> Rejected).
  * - Khi được chấp nhận: đặt trạng thái trụ thành 'ONLINE', gắn isBootAccepted = true cho kết nối.
@@ -107,8 +107,8 @@ function createBootNotificationHandler({
           `UPDATE charge_points
            SET vendor = $1,
                model = $2,
-               firmware_version = $3,
-               serial_number = $4,
+               firmware_version = COALESCE(NULLIF($3, ''), firmware_version, ''),
+               serial_number = COALESCE(NULLIF($4, ''), serial_number, ''),
                heartbeat_interval = $5,
                status = 'ONLINE',
                updated_at = CURRENT_TIMESTAMP
@@ -128,8 +128,8 @@ function createBootNotificationHandler({
       if (connection.chargePoint) {
         connection.chargePoint.vendor = vendor;
         connection.chargePoint.model = model;
-        connection.chargePoint.firmware_version = firmwareVersion;
-        connection.chargePoint.serial_number = serialNumber;
+        connection.chargePoint.firmware_version = firmwareVersion || connection.chargePoint.firmware_version || '';
+        connection.chargePoint.serial_number = serialNumber || connection.chargePoint.serial_number || '';
         connection.chargePoint.status = 'ONLINE';
       }
     }

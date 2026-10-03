@@ -10,6 +10,8 @@ const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
 const { statusNotificationHandler } = require('./modules/ocpp/handlers/status-notification');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
+const { markAllChargePointsOffline } = require('./modules/charge-points/presence');
+const { createShutdown } = require('./modules/ocpp/shutdown');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
@@ -68,5 +70,16 @@ wss.on('connection', (ws, code) => {
 	});
 });
 
-async function start() { await migrate(); server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`)); }
+const shutdown = createShutdown({ server, wss, pool });
+for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => shutdown(signal));
+
+async function start() {
+	await migrate();
+	// Chưa có kết nối OCPP nào trước khi mở cổng, nên trụ còn ONLINE là do lần chạy trước tắt đột ngột.
+	const swept = await markAllChargePointsOffline(pool);
+	if (swept.chargePoints > 0 || swept.connectors > 0) {
+		console.log(`[CSMS] Dọn khi khởi động: ${swept.chargePoints} trụ ONLINE mồ côi, ${swept.connectors} đầu nối về UNKNOWN`);
+	}
+	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
+}
 start().catch((error) => { console.error('Database startup failed:', error); process.exitCode = 1; });
