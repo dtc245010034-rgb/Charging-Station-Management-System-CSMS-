@@ -20,8 +20,6 @@ const { createMessageStore } = require('./modules/ocpp/messages.repository');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
-const { publish } = require('./modules/fleet-status/fleet-status.events');
-
 const server = http.createServer(app);
 const now = () => new Date().toISOString();
 async function updateChargePointLastSeen(connection) {
@@ -29,10 +27,9 @@ async function updateChargePointLastSeen(connection) {
 	if (!code || connection?.isStationLocked) return;
 	try {
 		// SKIP LOCKED: hàng đang bị giao dịch khác giữ thì bỏ qua lần này, không để Heartbeat chờ khoá và giữ kết nối pool.
-		const result = await pool.query(
+		await pool.query(
 			`WITH target AS (
-			   SELECT cp.id, cp.status AS prev_status, cp.station_id, s.owner_id
-			   FROM charge_points cp JOIN stations s ON s.id = cp.station_id
+			   SELECT cp.id FROM charge_points cp JOIN stations s ON s.id = cp.station_id
 			   WHERE cp.code = $1 AND s.locked_at IS NULL
 			   FOR UPDATE OF cp SKIP LOCKED
 			 )
@@ -40,18 +37,9 @@ async function updateChargePointLastSeen(connection) {
 			 SET last_seen_at = CURRENT_TIMESTAMP,
 			     status = CASE WHEN charge_points.status IN ('OFFLINE', 'UNKNOWN') THEN 'ONLINE' ELSE charge_points.status END
 			 FROM target
-			 WHERE charge_points.id = target.id
-			 RETURNING charge_points.id, target.prev_status, charge_points.status AS current_status, target.station_id, target.owner_id`,
+			 WHERE charge_points.id = target.id`,
 			[code]
 		);
-		const updated = result.rows?.[0];
-		if (updated && updated.prev_status !== 'ONLINE' && updated.current_status === 'ONLINE') {
-			publish({
-				ownerId: updated.owner_id,
-				stationId: updated.station_id,
-				chargePointId: updated.id,
-			});
-		}
 	} catch (error) {
 		console.warn(`[OCPP] Failed to update last_seen_at for ${safeLog(code)}: ${sanitizeErrorMessage(error?.message || error)}`);
 	}
@@ -116,6 +104,7 @@ const shutdown = createShutdown({ server, wss, pool });
 let stopChargePointOfflineJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();
+	if (purgeTimer) clearInterval(purgeTimer);
 	shutdown(signal);
 });
 
@@ -126,6 +115,9 @@ async function start() {
 	if (swept.chargePoints > 0 || swept.connectors > 0) {
 		console.log(`[CSMS] Dọn khi khởi động: ${swept.chargePoints} trụ ONLINE mồ côi, ${swept.connectors} đầu nối về UNKNOWN`);
 	}
+	await purgeOldMessages();
+	purgeTimer = setInterval(purgeOldMessages, PURGE_INTERVAL_MS);
+	purgeTimer.unref();
 	stopChargePointOfflineJob = startChargePointOfflineJob().stop;
 	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
 }
