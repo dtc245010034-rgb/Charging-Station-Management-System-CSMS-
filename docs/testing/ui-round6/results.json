@@ -1,0 +1,2577 @@
+{
+  "before": {
+    "rows": [
+      {
+        "label": "before",
+        "id": "kpi-total",
+        "desc": "KPI Tổng số trụ",
+        "expected": 10,
+        "actual": 10,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "kpi-ready",
+        "desc": "KPI Sẵn sàng",
+        "expected": 5,
+        "actual": 0,
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "kpi-charging",
+        "desc": "KPI Đang sạc",
+        "expected": 1,
+        "actual": 0,
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "kpi-fault",
+        "desc": "KPI Lỗi",
+        "expected": 2,
+        "actual": 0,
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "kpi-offline",
+        "desc": "KPI Ngoại tuyến / chưa rõ",
+        "expected": 2,
+        "actual": 10,
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "map-count",
+        "desc": "Số marker = số trạm có toạ độ",
+        "expected": 7,
+        "actual": 7,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "marker-HN",
+        "desc": "Màu marker Trạm Hà Nội",
+        "expected": "ready",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "marker-DN",
+        "desc": "Màu marker Trạm Đà Nẵng",
+        "expected": "charging",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "marker-HUE",
+        "desc": "Màu marker Trạm Huế",
+        "expected": "fault",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "marker-NT",
+        "desc": "Màu marker Trạm Nha Trang",
+        "expected": "ready",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "marker-SG",
+        "desc": "Màu marker Trạm Sài Gòn",
+        "expected": "offline",
+        "actual": "offline",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "marker-CT",
+        "desc": "Màu marker Trạm Cần Thơ",
+        "expected": "fault",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "marker-VT",
+        "desc": "Màu marker Trạm Vũng Tàu",
+        "expected": "ready",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "map-missing-note",
+        "desc": "Ghi chú trạm chưa có toạ độ",
+        "expected": "1 trạm chưa có toạ độ nên không hiện trên bản đồ.",
+        "actual": "1 trạm chưa có toạ độ nên không hiện trên bản đồ.",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "legend-ready",
+        "desc": "Chú giải có \"Sẵn sàng\"",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "legend-charging",
+        "desc": "Chú giải có \"Đang sạc\"",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "legend-fault",
+        "desc": "Chú giải có \"Lỗi\"",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "legend-offline",
+        "desc": "Chú giải có \"Ngoại tuyến / chưa rõ\"",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "legend-warning",
+        "desc": "Chú giải có \"Cảnh báo\"",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "tiles-stubbed",
+        "desc": "Leaflet khởi tạo và yêu cầu tile (đã thay bằng PNG trong suốt)",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "list-count",
+        "desc": "Panel danh sách: số dòng",
+        "expected": 7,
+        "actual": 7,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "list-HN",
+        "desc": "Chấm màu danh sách Trạm Hà Nội",
+        "expected": "ready",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "list-DN",
+        "desc": "Chấm màu danh sách Trạm Đà Nẵng",
+        "expected": "charging",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "list-HUE",
+        "desc": "Chấm màu danh sách Trạm Huế",
+        "expected": "fault",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "list-NT",
+        "desc": "Chấm màu danh sách Trạm Nha Trang",
+        "expected": "ready",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "list-SG",
+        "desc": "Chấm màu danh sách Trạm Sài Gòn",
+        "expected": "offline",
+        "actual": "offline",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "list-CT",
+        "desc": "Chấm màu danh sách Trạm Cần Thơ",
+        "expected": "fault",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "list-VT",
+        "desc": "Chấm màu danh sách Trạm Vũng Tàu",
+        "expected": "ready",
+        "actual": "offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "filter-ready-list",
+        "desc": "Lọc \"Sẵn sàng\": danh sách",
+        "expected": [
+          "Trạm Hà Nội",
+          "Trạm Nha Trang",
+          "Trạm Vũng Tàu"
+        ],
+        "actual": [],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "filter-ready-markers",
+        "desc": "Lọc \"Sẵn sàng\": marker",
+        "expected": [
+          "Trạm Hà Nội",
+          "Trạm Nha Trang",
+          "Trạm Vũng Tàu"
+        ],
+        "actual": [],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "filter-charging-list",
+        "desc": "Lọc \"Đang sạc\": danh sách",
+        "expected": [
+          "Trạm Đà Nẵng"
+        ],
+        "actual": [],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "filter-charging-markers",
+        "desc": "Lọc \"Đang sạc\": marker",
+        "expected": [
+          "Trạm Đà Nẵng"
+        ],
+        "actual": [],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "filter-fault-list",
+        "desc": "Lọc \"Lỗi\": danh sách",
+        "expected": [
+          "Trạm Cần Thơ",
+          "Trạm Huế"
+        ],
+        "actual": [],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "filter-fault-markers",
+        "desc": "Lọc \"Lỗi\": marker",
+        "expected": [
+          "Trạm Cần Thơ",
+          "Trạm Huế"
+        ],
+        "actual": [],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "filter-offline-list",
+        "desc": "Lọc \"Ngoại tuyến / chưa rõ\": danh sách",
+        "expected": [
+          "Trạm Sài Gòn"
+        ],
+        "actual": [
+          "Trạm Cần Thơ",
+          "Trạm Huế",
+          "Trạm Hà Nội",
+          "Trạm Nha Trang",
+          "Trạm Sài Gòn",
+          "Trạm Vũng Tàu",
+          "Trạm Đà Nẵng"
+        ],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "filter-offline-markers",
+        "desc": "Lọc \"Ngoại tuyến / chưa rõ\": marker",
+        "expected": [
+          "Trạm Sài Gòn"
+        ],
+        "actual": [
+          "Trạm Cần Thơ",
+          "Trạm Huế",
+          "Trạm Hà Nội",
+          "Trạm Nha Trang",
+          "Trạm Sài Gòn",
+          "Trạm Vũng Tàu",
+          "Trạm Đà Nẵng"
+        ],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "search-hue",
+        "desc": "Tìm \"Huế\": 1 marker",
+        "expected": [
+          "Trạm Huế"
+        ],
+        "actual": [
+          "Trạm Huế"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-DN-title",
+        "desc": "Bấm marker Trạm Đà Nẵng mở chi tiết đúng trạm",
+        "expected": "Trạm Đà Nẵng",
+        "actual": "Trạm Đà Nẵng",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-DN-R6-DN-01",
+        "desc": "Chi tiết R6-DN-01: nhãn trụ",
+        "expected": "Đang sạc",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "drawer-DN-R6-DN-01-tooltip",
+        "desc": "Chi tiết R6-DN-01: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-DN-R6-DN-01-chips",
+        "desc": "Chi tiết R6-DN-01: đầu nối",
+        "expected": [
+          "Đầu 1: OCCUPIED",
+          "Đầu 2: AVAILABLE"
+        ],
+        "actual": [
+          "Đầu 1: OCCUPIED",
+          "Đầu 2: AVAILABLE"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-HUE-title",
+        "desc": "Bấm marker Trạm Huế mở chi tiết đúng trạm",
+        "expected": "Trạm Huế",
+        "actual": "Trạm Huế",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-HUE-R6-HUE-01",
+        "desc": "Chi tiết R6-HUE-01: nhãn trụ",
+        "expected": "Lỗi",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "drawer-HUE-R6-HUE-01-tooltip",
+        "desc": "Chi tiết R6-HUE-01: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-HUE-R6-HUE-01-chips",
+        "desc": "Chi tiết R6-HUE-01: đầu nối",
+        "expected": [
+          "Đầu 1: ERROR",
+          "Đầu 2: AVAILABLE"
+        ],
+        "actual": [
+          "Đầu 1: ERROR",
+          "Đầu 2: AVAILABLE"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-NT-title",
+        "desc": "Bấm marker Trạm Nha Trang mở chi tiết đúng trạm",
+        "expected": "Trạm Nha Trang",
+        "actual": "Trạm Nha Trang",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-NT-R6-NT-01",
+        "desc": "Chi tiết R6-NT-01: nhãn trụ",
+        "expected": "Sẵn sàng",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "drawer-NT-R6-NT-01-tooltip",
+        "desc": "Chi tiết R6-NT-01: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-NT-R6-NT-01-chips",
+        "desc": "Chi tiết R6-NT-01: đầu nối",
+        "expected": [
+          "Đầu 1: UNAVAILABLE",
+          "Đầu 2: UNAVAILABLE"
+        ],
+        "actual": [
+          "Đầu 1: UNAVAILABLE",
+          "Đầu 2: UNAVAILABLE"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-SG-title",
+        "desc": "Bấm marker Trạm Sài Gòn mở chi tiết đúng trạm",
+        "expected": "Trạm Sài Gòn",
+        "actual": "Trạm Sài Gòn",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-SG-R6-SG-01",
+        "desc": "Chi tiết R6-SG-01: nhãn trụ",
+        "expected": "Chưa rõ",
+        "actual": "Chưa rõ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-SG-R6-SG-01-tooltip",
+        "desc": "Chi tiết R6-SG-01: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: UNKNOWN",
+        "actual": "Trạng thái gốc: UNKNOWN",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-SG-R6-SG-01-chips",
+        "desc": "Chi tiết R6-SG-01: đầu nối",
+        "expected": [
+          "Đầu 1: UNKNOWN",
+          "Đầu 2: UNKNOWN"
+        ],
+        "actual": [
+          "Đầu 1: UNKNOWN",
+          "Đầu 2: UNKNOWN"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-CT-title",
+        "desc": "Bấm marker Trạm Cần Thơ mở chi tiết đúng trạm",
+        "expected": "Trạm Cần Thơ",
+        "actual": "Trạm Cần Thơ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-CT-R6-CT-A",
+        "desc": "Chi tiết R6-CT-A: nhãn trụ",
+        "expected": "Sẵn sàng",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "drawer-CT-R6-CT-A-tooltip",
+        "desc": "Chi tiết R6-CT-A: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-CT-R6-CT-A-chips",
+        "desc": "Chi tiết R6-CT-A: đầu nối",
+        "expected": [
+          "Đầu 1: AVAILABLE"
+        ],
+        "actual": [
+          "Đầu 1: AVAILABLE"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-CT-R6-CT-B",
+        "desc": "Chi tiết R6-CT-B: nhãn trụ",
+        "expected": "Lỗi",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "drawer-CT-R6-CT-B-tooltip",
+        "desc": "Chi tiết R6-CT-B: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-CT-R6-CT-B-chips",
+        "desc": "Chi tiết R6-CT-B: đầu nối",
+        "expected": [
+          "Đầu 1: ERROR"
+        ],
+        "actual": [
+          "Đầu 1: ERROR"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-CT-R6-CT-C",
+        "desc": "Chi tiết R6-CT-C: nhãn trụ",
+        "expected": "Chưa rõ",
+        "actual": "Chưa rõ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-CT-R6-CT-C-tooltip",
+        "desc": "Chi tiết R6-CT-C: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: UNKNOWN",
+        "actual": "Trạng thái gốc: UNKNOWN",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-CT-R6-CT-C-chips",
+        "desc": "Chi tiết R6-CT-C: đầu nối",
+        "expected": [
+          "Đầu 1: UNKNOWN"
+        ],
+        "actual": [
+          "Đầu 1: UNKNOWN"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-VT-title",
+        "desc": "Bấm marker Trạm Vũng Tàu mở chi tiết đúng trạm",
+        "expected": "Trạm Vũng Tàu",
+        "actual": "Trạm Vũng Tàu",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-VT-R6-VT-01",
+        "desc": "Chi tiết R6-VT-01: nhãn trụ",
+        "expected": "Sẵn sàng",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "drawer-VT-R6-VT-01-tooltip",
+        "desc": "Chi tiết R6-VT-01: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-VT-R6-VT-01-chips",
+        "desc": "Chi tiết R6-VT-01: đầu nối",
+        "expected": [
+          "Đầu 1: UNKNOWN",
+          "Đầu 2: UNKNOWN"
+        ],
+        "actual": [
+          "Đầu 1: UNKNOWN",
+          "Đầu 2: UNKNOWN"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "drawer-list-click",
+        "desc": "Bấm dòng danh sách mở chi tiết Trạm Hà Nội",
+        "expected": "Trạm Hà Nội",
+        "actual": "Trạm Hà Nội",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-rows",
+        "desc": "Danh sách trụ: số dòng",
+        "expected": 10,
+        "actual": 10,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-HN-01",
+        "desc": "Danh sách trụ R6-HN-01: nhãn",
+        "expected": "Sẵn sàng",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-HN-01-class",
+        "desc": "Danh sách trụ R6-HN-01: màu badge",
+        "expected": "badge--ready",
+        "actual": "badge--offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-HN-01-tooltip",
+        "desc": "Danh sách trụ R6-HN-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-DN-01",
+        "desc": "Danh sách trụ R6-DN-01: nhãn",
+        "expected": "Đang sạc",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-DN-01-class",
+        "desc": "Danh sách trụ R6-DN-01: màu badge",
+        "expected": "badge--charging",
+        "actual": "badge--offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-DN-01-tooltip",
+        "desc": "Danh sách trụ R6-DN-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-HUE-01",
+        "desc": "Danh sách trụ R6-HUE-01: nhãn",
+        "expected": "Lỗi",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-HUE-01-class",
+        "desc": "Danh sách trụ R6-HUE-01: màu badge",
+        "expected": "badge--fault",
+        "actual": "badge--offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-HUE-01-tooltip",
+        "desc": "Danh sách trụ R6-HUE-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-NT-01",
+        "desc": "Danh sách trụ R6-NT-01: nhãn",
+        "expected": "Sẵn sàng",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-NT-01-class",
+        "desc": "Danh sách trụ R6-NT-01: màu badge",
+        "expected": "badge--ready",
+        "actual": "badge--offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-NT-01-tooltip",
+        "desc": "Danh sách trụ R6-NT-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-SG-01",
+        "desc": "Danh sách trụ R6-SG-01: nhãn",
+        "expected": "Chưa rõ",
+        "actual": "Chưa rõ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-SG-01-class",
+        "desc": "Danh sách trụ R6-SG-01: màu badge",
+        "expected": "badge--offline",
+        "actual": "badge--offline",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-SG-01-tooltip",
+        "desc": "Danh sách trụ R6-SG-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: UNKNOWN",
+        "actual": "Trạng thái gốc: UNKNOWN",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-CT-A",
+        "desc": "Danh sách trụ R6-CT-A: nhãn",
+        "expected": "Sẵn sàng",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-CT-A-class",
+        "desc": "Danh sách trụ R6-CT-A: màu badge",
+        "expected": "badge--ready",
+        "actual": "badge--offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-CT-A-tooltip",
+        "desc": "Danh sách trụ R6-CT-A: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-CT-B",
+        "desc": "Danh sách trụ R6-CT-B: nhãn",
+        "expected": "Lỗi",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-CT-B-class",
+        "desc": "Danh sách trụ R6-CT-B: màu badge",
+        "expected": "badge--fault",
+        "actual": "badge--offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-CT-B-tooltip",
+        "desc": "Danh sách trụ R6-CT-B: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-CT-C",
+        "desc": "Danh sách trụ R6-CT-C: nhãn",
+        "expected": "Chưa rõ",
+        "actual": "Chưa rõ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-CT-C-class",
+        "desc": "Danh sách trụ R6-CT-C: màu badge",
+        "expected": "badge--offline",
+        "actual": "badge--offline",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-CT-C-tooltip",
+        "desc": "Danh sách trụ R6-CT-C: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: UNKNOWN",
+        "actual": "Trạng thái gốc: UNKNOWN",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-VT-01",
+        "desc": "Danh sách trụ R6-VT-01: nhãn",
+        "expected": "Sẵn sàng",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-VT-01-class",
+        "desc": "Danh sách trụ R6-VT-01: màu badge",
+        "expected": "badge--ready",
+        "actual": "badge--offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-VT-01-tooltip",
+        "desc": "Danh sách trụ R6-VT-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-NC-01",
+        "desc": "Danh sách trụ R6-NC-01: nhãn",
+        "expected": "Sẵn sàng",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-NC-01-class",
+        "desc": "Danh sách trụ R6-NC-01: màu badge",
+        "expected": "badge--ready",
+        "actual": "badge--offline",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-R6-NC-01-tooltip",
+        "desc": "Danh sách trụ R6-NC-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cp-filter-ready",
+        "desc": "Lọc trụ \"Sẵn sàng\"",
+        "expected": [
+          "R6-CT-A",
+          "R6-HN-01",
+          "R6-NC-01",
+          "R6-NT-01",
+          "R6-VT-01"
+        ],
+        "actual": [],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-filter-charging",
+        "desc": "Lọc trụ \"Đang sạc\"",
+        "expected": [
+          "R6-DN-01"
+        ],
+        "actual": [],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-filter-fault",
+        "desc": "Lọc trụ \"Lỗi\"",
+        "expected": [
+          "R6-CT-B",
+          "R6-HUE-01"
+        ],
+        "actual": [],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cp-filter-offline",
+        "desc": "Lọc trụ \"Ngoại tuyến / chưa rõ\"",
+        "expected": [
+          "R6-CT-C",
+          "R6-SG-01"
+        ],
+        "actual": [
+          "R6-CT-A",
+          "R6-CT-B",
+          "R6-CT-C",
+          "R6-DN-01",
+          "R6-HN-01",
+          "R6-HUE-01",
+          "R6-NC-01",
+          "R6-NT-01",
+          "R6-SG-01",
+          "R6-VT-01"
+        ],
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-DN-01-head",
+        "desc": "Ngăn chi tiết R6-DN-01: nhãn trụ",
+        "expected": "Đang sạc",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-DN-01-raw",
+        "desc": "Ngăn chi tiết R6-DN-01: \"Trạng thái gốc\"",
+        "expected": "ONLINE",
+        "actual": "ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-DN-01-connectors",
+        "desc": "Ngăn chi tiết R6-DN-01: tooltip đầu nối giữ OCPP gốc",
+        "expected": [
+          "Trạng thái gốc: Charging",
+          "Trạng thái gốc: Available"
+        ],
+        "actual": [
+          "Trạng thái gốc: Charging",
+          "Trạng thái gốc: Available"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-NT-01-head",
+        "desc": "Ngăn chi tiết R6-NT-01: nhãn trụ",
+        "expected": "Sẵn sàng",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-NT-01-raw",
+        "desc": "Ngăn chi tiết R6-NT-01: \"Trạng thái gốc\"",
+        "expected": "ONLINE",
+        "actual": "ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-NT-01-connectors",
+        "desc": "Ngăn chi tiết R6-NT-01: tooltip đầu nối giữ OCPP gốc",
+        "expected": [
+          "Trạng thái gốc: Unavailable",
+          "Trạng thái gốc: Unavailable"
+        ],
+        "actual": [
+          "Trạng thái gốc: Unavailable",
+          "Trạng thái gốc: Unavailable"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-SG-01-head",
+        "desc": "Ngăn chi tiết R6-SG-01: nhãn trụ",
+        "expected": "Chưa rõ",
+        "actual": "Chưa rõ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-SG-01-raw",
+        "desc": "Ngăn chi tiết R6-SG-01: \"Trạng thái gốc\"",
+        "expected": "UNKNOWN",
+        "actual": "UNKNOWN",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-SG-01-connectors",
+        "desc": "Ngăn chi tiết R6-SG-01: tooltip đầu nối giữ OCPP gốc",
+        "expected": [
+          "Trạng thái gốc: Charging",
+          "Trạng thái gốc: Available"
+        ],
+        "actual": [
+          "Trạng thái gốc: Charging",
+          "Trạng thái gốc: Available"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-VT-01-head",
+        "desc": "Ngăn chi tiết R6-VT-01: nhãn trụ",
+        "expected": "Sẵn sàng",
+        "actual": "Ngoại tuyến / chưa rõ",
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-VT-01-raw",
+        "desc": "Ngăn chi tiết R6-VT-01: \"Trạng thái gốc\"",
+        "expected": "ONLINE",
+        "actual": "ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "cpd-R6-VT-01-connectors",
+        "desc": "Ngăn chi tiết R6-VT-01: tooltip đầu nối giữ OCPP gốc",
+        "expected": [
+          "Trạng thái gốc: UNKNOWN",
+          "Trạng thái gốc: UNKNOWN"
+        ],
+        "actual": [
+          "Trạng thái gốc: UNKNOWN",
+          "Trạng thái gốc: UNKNOWN"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "m-map-count",
+        "desc": "[390px] Số marker = số trạm có toạ độ",
+        "expected": 7,
+        "actual": 7,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "m-marker-colors",
+        "desc": "[390px] Màu marker theo nhóm",
+        "expected": {
+          "Trạm Hà Nội": "ready",
+          "Trạm Đà Nẵng": "charging",
+          "Trạm Huế": "fault",
+          "Trạm Nha Trang": "ready",
+          "Trạm Sài Gòn": "offline",
+          "Trạm Cần Thơ": "fault",
+          "Trạm Vũng Tàu": "ready"
+        },
+        "actual": {
+          "Trạm Vũng Tàu": "offline",
+          "Trạm Cần Thơ": "offline",
+          "Trạm Sài Gòn": "offline",
+          "Trạm Nha Trang": "offline",
+          "Trạm Huế": "offline",
+          "Trạm Đà Nẵng": "offline",
+          "Trạm Hà Nội": "offline"
+        },
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "m-no-hscroll",
+        "desc": "[390px] Không tràn ngang trang bản đồ",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "m-cp-badges",
+        "desc": "[390px] Nhãn trạng thái trụ",
+        "expected": {
+          "R6-HN-01": "Sẵn sàng",
+          "R6-DN-01": "Đang sạc",
+          "R6-HUE-01": "Lỗi",
+          "R6-NT-01": "Sẵn sàng",
+          "R6-SG-01": "Chưa rõ",
+          "R6-CT-A": "Sẵn sàng",
+          "R6-CT-B": "Lỗi",
+          "R6-CT-C": "Chưa rõ",
+          "R6-VT-01": "Sẵn sàng",
+          "R6-NC-01": "Sẵn sàng"
+        },
+        "actual": {
+          "R6-NC-01": "Ngoại tuyến / chưa rõ",
+          "R6-VT-01": "Ngoại tuyến / chưa rõ",
+          "R6-CT-C": "Chưa rõ",
+          "R6-CT-B": "Ngoại tuyến / chưa rõ",
+          "R6-CT-A": "Ngoại tuyến / chưa rõ",
+          "R6-SG-01": "Chưa rõ",
+          "R6-NT-01": "Ngoại tuyến / chưa rõ",
+          "R6-HUE-01": "Ngoại tuyến / chưa rõ",
+          "R6-DN-01": "Ngoại tuyến / chưa rõ",
+          "R6-HN-01": "Ngoại tuyến / chưa rõ"
+        },
+        "ok": false,
+        "f2": true
+      },
+      {
+        "label": "before",
+        "id": "m-no-hscroll-cp",
+        "desc": "[390px] Không tràn ngang trang danh sách trụ",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "before",
+        "id": "console-clean",
+        "desc": "Không lỗi JS/console/request ngoài tile đã chặn",
+        "expected": [],
+        "actual": [],
+        "ok": true,
+        "f2": false
+      }
+    ],
+    "shots": [
+      "before-overview-desktop.png",
+      "before-map-desktop.png",
+      "before-station-drawer-charging-desktop.png",
+      "before-station-drawer-unavailable-desktop.png",
+      "before-charge-points-desktop.png",
+      "before-charge-point-drawer-charging-desktop.png",
+      "before-charge-point-drawer-unavailable-desktop.png",
+      "before-overview-mobile.png",
+      "before-map-mobile.png",
+      "before-station-drawer-mobile.png",
+      "before-charge-points-mobile.png"
+    ],
+    "consoleIssues": [],
+    "preLogin": [
+      "[1280px] console.error: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "[390px] console.error: Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ],
+    "tileRequests": 37
+  },
+  "after": {
+    "rows": [
+      {
+        "label": "after",
+        "id": "kpi-total",
+        "desc": "KPI Tổng số trụ",
+        "expected": 10,
+        "actual": 10,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "kpi-ready",
+        "desc": "KPI Sẵn sàng",
+        "expected": 5,
+        "actual": 5,
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "kpi-charging",
+        "desc": "KPI Đang sạc",
+        "expected": 1,
+        "actual": 1,
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "kpi-fault",
+        "desc": "KPI Lỗi",
+        "expected": 2,
+        "actual": 2,
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "kpi-offline",
+        "desc": "KPI Ngoại tuyến / chưa rõ",
+        "expected": 2,
+        "actual": 2,
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "map-count",
+        "desc": "Số marker = số trạm có toạ độ",
+        "expected": 7,
+        "actual": 7,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "marker-HN",
+        "desc": "Màu marker Trạm Hà Nội",
+        "expected": "ready",
+        "actual": "ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "marker-DN",
+        "desc": "Màu marker Trạm Đà Nẵng",
+        "expected": "charging",
+        "actual": "charging",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "marker-HUE",
+        "desc": "Màu marker Trạm Huế",
+        "expected": "fault",
+        "actual": "fault",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "marker-NT",
+        "desc": "Màu marker Trạm Nha Trang",
+        "expected": "ready",
+        "actual": "ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "marker-SG",
+        "desc": "Màu marker Trạm Sài Gòn",
+        "expected": "offline",
+        "actual": "offline",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "marker-CT",
+        "desc": "Màu marker Trạm Cần Thơ",
+        "expected": "fault",
+        "actual": "fault",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "marker-VT",
+        "desc": "Màu marker Trạm Vũng Tàu",
+        "expected": "ready",
+        "actual": "ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "map-missing-note",
+        "desc": "Ghi chú trạm chưa có toạ độ",
+        "expected": "1 trạm chưa có toạ độ nên không hiện trên bản đồ.",
+        "actual": "1 trạm chưa có toạ độ nên không hiện trên bản đồ.",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "legend-ready",
+        "desc": "Chú giải có \"Sẵn sàng\"",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "legend-charging",
+        "desc": "Chú giải có \"Đang sạc\"",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "legend-fault",
+        "desc": "Chú giải có \"Lỗi\"",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "legend-offline",
+        "desc": "Chú giải có \"Ngoại tuyến / chưa rõ\"",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "legend-warning",
+        "desc": "Chú giải có \"Cảnh báo\"",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "tiles-stubbed",
+        "desc": "Leaflet khởi tạo và yêu cầu tile (đã thay bằng PNG trong suốt)",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "list-count",
+        "desc": "Panel danh sách: số dòng",
+        "expected": 7,
+        "actual": 7,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "list-HN",
+        "desc": "Chấm màu danh sách Trạm Hà Nội",
+        "expected": "ready",
+        "actual": "ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "list-DN",
+        "desc": "Chấm màu danh sách Trạm Đà Nẵng",
+        "expected": "charging",
+        "actual": "charging",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "list-HUE",
+        "desc": "Chấm màu danh sách Trạm Huế",
+        "expected": "fault",
+        "actual": "fault",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "list-NT",
+        "desc": "Chấm màu danh sách Trạm Nha Trang",
+        "expected": "ready",
+        "actual": "ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "list-SG",
+        "desc": "Chấm màu danh sách Trạm Sài Gòn",
+        "expected": "offline",
+        "actual": "offline",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "list-CT",
+        "desc": "Chấm màu danh sách Trạm Cần Thơ",
+        "expected": "fault",
+        "actual": "fault",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "list-VT",
+        "desc": "Chấm màu danh sách Trạm Vũng Tàu",
+        "expected": "ready",
+        "actual": "ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "filter-ready-list",
+        "desc": "Lọc \"Sẵn sàng\": danh sách",
+        "expected": [
+          "Trạm Hà Nội",
+          "Trạm Nha Trang",
+          "Trạm Vũng Tàu"
+        ],
+        "actual": [
+          "Trạm Hà Nội",
+          "Trạm Nha Trang",
+          "Trạm Vũng Tàu"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "filter-ready-markers",
+        "desc": "Lọc \"Sẵn sàng\": marker",
+        "expected": [
+          "Trạm Hà Nội",
+          "Trạm Nha Trang",
+          "Trạm Vũng Tàu"
+        ],
+        "actual": [
+          "Trạm Hà Nội",
+          "Trạm Nha Trang",
+          "Trạm Vũng Tàu"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "filter-charging-list",
+        "desc": "Lọc \"Đang sạc\": danh sách",
+        "expected": [
+          "Trạm Đà Nẵng"
+        ],
+        "actual": [
+          "Trạm Đà Nẵng"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "filter-charging-markers",
+        "desc": "Lọc \"Đang sạc\": marker",
+        "expected": [
+          "Trạm Đà Nẵng"
+        ],
+        "actual": [
+          "Trạm Đà Nẵng"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "filter-fault-list",
+        "desc": "Lọc \"Lỗi\": danh sách",
+        "expected": [
+          "Trạm Cần Thơ",
+          "Trạm Huế"
+        ],
+        "actual": [
+          "Trạm Cần Thơ",
+          "Trạm Huế"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "filter-fault-markers",
+        "desc": "Lọc \"Lỗi\": marker",
+        "expected": [
+          "Trạm Cần Thơ",
+          "Trạm Huế"
+        ],
+        "actual": [
+          "Trạm Cần Thơ",
+          "Trạm Huế"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "filter-offline-list",
+        "desc": "Lọc \"Ngoại tuyến / chưa rõ\": danh sách",
+        "expected": [
+          "Trạm Sài Gòn"
+        ],
+        "actual": [
+          "Trạm Sài Gòn"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "filter-offline-markers",
+        "desc": "Lọc \"Ngoại tuyến / chưa rõ\": marker",
+        "expected": [
+          "Trạm Sài Gòn"
+        ],
+        "actual": [
+          "Trạm Sài Gòn"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "search-hue",
+        "desc": "Tìm \"Huế\": 1 marker",
+        "expected": [
+          "Trạm Huế"
+        ],
+        "actual": [
+          "Trạm Huế"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-DN-title",
+        "desc": "Bấm marker Trạm Đà Nẵng mở chi tiết đúng trạm",
+        "expected": "Trạm Đà Nẵng",
+        "actual": "Trạm Đà Nẵng",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-DN-R6-DN-01",
+        "desc": "Chi tiết R6-DN-01: nhãn trụ",
+        "expected": "Đang sạc",
+        "actual": "Đang sạc",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "drawer-DN-R6-DN-01-tooltip",
+        "desc": "Chi tiết R6-DN-01: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-DN-R6-DN-01-chips",
+        "desc": "Chi tiết R6-DN-01: đầu nối",
+        "expected": [
+          "Đầu 1: OCCUPIED",
+          "Đầu 2: AVAILABLE"
+        ],
+        "actual": [
+          "Đầu 1: OCCUPIED",
+          "Đầu 2: AVAILABLE"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-HUE-title",
+        "desc": "Bấm marker Trạm Huế mở chi tiết đúng trạm",
+        "expected": "Trạm Huế",
+        "actual": "Trạm Huế",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-HUE-R6-HUE-01",
+        "desc": "Chi tiết R6-HUE-01: nhãn trụ",
+        "expected": "Lỗi",
+        "actual": "Lỗi",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "drawer-HUE-R6-HUE-01-tooltip",
+        "desc": "Chi tiết R6-HUE-01: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-HUE-R6-HUE-01-chips",
+        "desc": "Chi tiết R6-HUE-01: đầu nối",
+        "expected": [
+          "Đầu 1: ERROR",
+          "Đầu 2: AVAILABLE"
+        ],
+        "actual": [
+          "Đầu 1: ERROR",
+          "Đầu 2: AVAILABLE"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-NT-title",
+        "desc": "Bấm marker Trạm Nha Trang mở chi tiết đúng trạm",
+        "expected": "Trạm Nha Trang",
+        "actual": "Trạm Nha Trang",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-NT-R6-NT-01",
+        "desc": "Chi tiết R6-NT-01: nhãn trụ",
+        "expected": "Sẵn sàng",
+        "actual": "Sẵn sàng",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "drawer-NT-R6-NT-01-tooltip",
+        "desc": "Chi tiết R6-NT-01: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-NT-R6-NT-01-chips",
+        "desc": "Chi tiết R6-NT-01: đầu nối",
+        "expected": [
+          "Đầu 1: UNAVAILABLE",
+          "Đầu 2: UNAVAILABLE"
+        ],
+        "actual": [
+          "Đầu 1: UNAVAILABLE",
+          "Đầu 2: UNAVAILABLE"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-SG-title",
+        "desc": "Bấm marker Trạm Sài Gòn mở chi tiết đúng trạm",
+        "expected": "Trạm Sài Gòn",
+        "actual": "Trạm Sài Gòn",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-SG-R6-SG-01",
+        "desc": "Chi tiết R6-SG-01: nhãn trụ",
+        "expected": "Chưa rõ",
+        "actual": "Chưa rõ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-SG-R6-SG-01-tooltip",
+        "desc": "Chi tiết R6-SG-01: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: UNKNOWN",
+        "actual": "Trạng thái gốc: UNKNOWN",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-SG-R6-SG-01-chips",
+        "desc": "Chi tiết R6-SG-01: đầu nối",
+        "expected": [
+          "Đầu 1: UNKNOWN",
+          "Đầu 2: UNKNOWN"
+        ],
+        "actual": [
+          "Đầu 1: UNKNOWN",
+          "Đầu 2: UNKNOWN"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-CT-title",
+        "desc": "Bấm marker Trạm Cần Thơ mở chi tiết đúng trạm",
+        "expected": "Trạm Cần Thơ",
+        "actual": "Trạm Cần Thơ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-CT-R6-CT-A",
+        "desc": "Chi tiết R6-CT-A: nhãn trụ",
+        "expected": "Sẵn sàng",
+        "actual": "Sẵn sàng",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "drawer-CT-R6-CT-A-tooltip",
+        "desc": "Chi tiết R6-CT-A: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-CT-R6-CT-A-chips",
+        "desc": "Chi tiết R6-CT-A: đầu nối",
+        "expected": [
+          "Đầu 1: AVAILABLE"
+        ],
+        "actual": [
+          "Đầu 1: AVAILABLE"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-CT-R6-CT-B",
+        "desc": "Chi tiết R6-CT-B: nhãn trụ",
+        "expected": "Lỗi",
+        "actual": "Lỗi",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "drawer-CT-R6-CT-B-tooltip",
+        "desc": "Chi tiết R6-CT-B: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-CT-R6-CT-B-chips",
+        "desc": "Chi tiết R6-CT-B: đầu nối",
+        "expected": [
+          "Đầu 1: ERROR"
+        ],
+        "actual": [
+          "Đầu 1: ERROR"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-CT-R6-CT-C",
+        "desc": "Chi tiết R6-CT-C: nhãn trụ",
+        "expected": "Chưa rõ",
+        "actual": "Chưa rõ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-CT-R6-CT-C-tooltip",
+        "desc": "Chi tiết R6-CT-C: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: UNKNOWN",
+        "actual": "Trạng thái gốc: UNKNOWN",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-CT-R6-CT-C-chips",
+        "desc": "Chi tiết R6-CT-C: đầu nối",
+        "expected": [
+          "Đầu 1: UNKNOWN"
+        ],
+        "actual": [
+          "Đầu 1: UNKNOWN"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-VT-title",
+        "desc": "Bấm marker Trạm Vũng Tàu mở chi tiết đúng trạm",
+        "expected": "Trạm Vũng Tàu",
+        "actual": "Trạm Vũng Tàu",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-VT-R6-VT-01",
+        "desc": "Chi tiết R6-VT-01: nhãn trụ",
+        "expected": "Sẵn sàng",
+        "actual": "Sẵn sàng",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "drawer-VT-R6-VT-01-tooltip",
+        "desc": "Chi tiết R6-VT-01: tooltip giữ trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-VT-R6-VT-01-chips",
+        "desc": "Chi tiết R6-VT-01: đầu nối",
+        "expected": [
+          "Đầu 1: UNKNOWN",
+          "Đầu 2: UNKNOWN"
+        ],
+        "actual": [
+          "Đầu 1: UNKNOWN",
+          "Đầu 2: UNKNOWN"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "drawer-list-click",
+        "desc": "Bấm dòng danh sách mở chi tiết Trạm Hà Nội",
+        "expected": "Trạm Hà Nội",
+        "actual": "Trạm Hà Nội",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-rows",
+        "desc": "Danh sách trụ: số dòng",
+        "expected": 10,
+        "actual": 10,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-HN-01",
+        "desc": "Danh sách trụ R6-HN-01: nhãn",
+        "expected": "Sẵn sàng",
+        "actual": "Sẵn sàng",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-HN-01-class",
+        "desc": "Danh sách trụ R6-HN-01: màu badge",
+        "expected": "badge--ready",
+        "actual": "badge--ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-HN-01-tooltip",
+        "desc": "Danh sách trụ R6-HN-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-DN-01",
+        "desc": "Danh sách trụ R6-DN-01: nhãn",
+        "expected": "Đang sạc",
+        "actual": "Đang sạc",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-DN-01-class",
+        "desc": "Danh sách trụ R6-DN-01: màu badge",
+        "expected": "badge--charging",
+        "actual": "badge--charging",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-DN-01-tooltip",
+        "desc": "Danh sách trụ R6-DN-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-HUE-01",
+        "desc": "Danh sách trụ R6-HUE-01: nhãn",
+        "expected": "Lỗi",
+        "actual": "Lỗi",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-HUE-01-class",
+        "desc": "Danh sách trụ R6-HUE-01: màu badge",
+        "expected": "badge--fault",
+        "actual": "badge--fault",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-HUE-01-tooltip",
+        "desc": "Danh sách trụ R6-HUE-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-NT-01",
+        "desc": "Danh sách trụ R6-NT-01: nhãn",
+        "expected": "Sẵn sàng",
+        "actual": "Sẵn sàng",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-NT-01-class",
+        "desc": "Danh sách trụ R6-NT-01: màu badge",
+        "expected": "badge--ready",
+        "actual": "badge--ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-NT-01-tooltip",
+        "desc": "Danh sách trụ R6-NT-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-SG-01",
+        "desc": "Danh sách trụ R6-SG-01: nhãn",
+        "expected": "Chưa rõ",
+        "actual": "Chưa rõ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-SG-01-class",
+        "desc": "Danh sách trụ R6-SG-01: màu badge",
+        "expected": "badge--offline",
+        "actual": "badge--offline",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-SG-01-tooltip",
+        "desc": "Danh sách trụ R6-SG-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: UNKNOWN",
+        "actual": "Trạng thái gốc: UNKNOWN",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-CT-A",
+        "desc": "Danh sách trụ R6-CT-A: nhãn",
+        "expected": "Sẵn sàng",
+        "actual": "Sẵn sàng",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-CT-A-class",
+        "desc": "Danh sách trụ R6-CT-A: màu badge",
+        "expected": "badge--ready",
+        "actual": "badge--ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-CT-A-tooltip",
+        "desc": "Danh sách trụ R6-CT-A: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-CT-B",
+        "desc": "Danh sách trụ R6-CT-B: nhãn",
+        "expected": "Lỗi",
+        "actual": "Lỗi",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-CT-B-class",
+        "desc": "Danh sách trụ R6-CT-B: màu badge",
+        "expected": "badge--fault",
+        "actual": "badge--fault",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-CT-B-tooltip",
+        "desc": "Danh sách trụ R6-CT-B: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-CT-C",
+        "desc": "Danh sách trụ R6-CT-C: nhãn",
+        "expected": "Chưa rõ",
+        "actual": "Chưa rõ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-CT-C-class",
+        "desc": "Danh sách trụ R6-CT-C: màu badge",
+        "expected": "badge--offline",
+        "actual": "badge--offline",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-CT-C-tooltip",
+        "desc": "Danh sách trụ R6-CT-C: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: UNKNOWN",
+        "actual": "Trạng thái gốc: UNKNOWN",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-VT-01",
+        "desc": "Danh sách trụ R6-VT-01: nhãn",
+        "expected": "Sẵn sàng",
+        "actual": "Sẵn sàng",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-VT-01-class",
+        "desc": "Danh sách trụ R6-VT-01: màu badge",
+        "expected": "badge--ready",
+        "actual": "badge--ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-VT-01-tooltip",
+        "desc": "Danh sách trụ R6-VT-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-NC-01",
+        "desc": "Danh sách trụ R6-NC-01: nhãn",
+        "expected": "Sẵn sàng",
+        "actual": "Sẵn sàng",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-NC-01-class",
+        "desc": "Danh sách trụ R6-NC-01: màu badge",
+        "expected": "badge--ready",
+        "actual": "badge--ready",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-R6-NC-01-tooltip",
+        "desc": "Danh sách trụ R6-NC-01: tooltip trạng thái gốc",
+        "expected": "Trạng thái gốc: ONLINE",
+        "actual": "Trạng thái gốc: ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cp-filter-ready",
+        "desc": "Lọc trụ \"Sẵn sàng\"",
+        "expected": [
+          "R6-CT-A",
+          "R6-HN-01",
+          "R6-NC-01",
+          "R6-NT-01",
+          "R6-VT-01"
+        ],
+        "actual": [
+          "R6-CT-A",
+          "R6-HN-01",
+          "R6-NC-01",
+          "R6-NT-01",
+          "R6-VT-01"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-filter-charging",
+        "desc": "Lọc trụ \"Đang sạc\"",
+        "expected": [
+          "R6-DN-01"
+        ],
+        "actual": [
+          "R6-DN-01"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-filter-fault",
+        "desc": "Lọc trụ \"Lỗi\"",
+        "expected": [
+          "R6-CT-B",
+          "R6-HUE-01"
+        ],
+        "actual": [
+          "R6-CT-B",
+          "R6-HUE-01"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cp-filter-offline",
+        "desc": "Lọc trụ \"Ngoại tuyến / chưa rõ\"",
+        "expected": [
+          "R6-CT-C",
+          "R6-SG-01"
+        ],
+        "actual": [
+          "R6-CT-C",
+          "R6-SG-01"
+        ],
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-DN-01-head",
+        "desc": "Ngăn chi tiết R6-DN-01: nhãn trụ",
+        "expected": "Đang sạc",
+        "actual": "Đang sạc",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-DN-01-raw",
+        "desc": "Ngăn chi tiết R6-DN-01: \"Trạng thái gốc\"",
+        "expected": "ONLINE",
+        "actual": "ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-DN-01-connectors",
+        "desc": "Ngăn chi tiết R6-DN-01: tooltip đầu nối giữ OCPP gốc",
+        "expected": [
+          "Trạng thái gốc: Charging",
+          "Trạng thái gốc: Available"
+        ],
+        "actual": [
+          "Trạng thái gốc: Charging",
+          "Trạng thái gốc: Available"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-NT-01-head",
+        "desc": "Ngăn chi tiết R6-NT-01: nhãn trụ",
+        "expected": "Sẵn sàng",
+        "actual": "Sẵn sàng",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-NT-01-raw",
+        "desc": "Ngăn chi tiết R6-NT-01: \"Trạng thái gốc\"",
+        "expected": "ONLINE",
+        "actual": "ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-NT-01-connectors",
+        "desc": "Ngăn chi tiết R6-NT-01: tooltip đầu nối giữ OCPP gốc",
+        "expected": [
+          "Trạng thái gốc: Unavailable",
+          "Trạng thái gốc: Unavailable"
+        ],
+        "actual": [
+          "Trạng thái gốc: Unavailable",
+          "Trạng thái gốc: Unavailable"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-SG-01-head",
+        "desc": "Ngăn chi tiết R6-SG-01: nhãn trụ",
+        "expected": "Chưa rõ",
+        "actual": "Chưa rõ",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-SG-01-raw",
+        "desc": "Ngăn chi tiết R6-SG-01: \"Trạng thái gốc\"",
+        "expected": "UNKNOWN",
+        "actual": "UNKNOWN",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-SG-01-connectors",
+        "desc": "Ngăn chi tiết R6-SG-01: tooltip đầu nối giữ OCPP gốc",
+        "expected": [
+          "Trạng thái gốc: Charging",
+          "Trạng thái gốc: Available"
+        ],
+        "actual": [
+          "Trạng thái gốc: Charging",
+          "Trạng thái gốc: Available"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-VT-01-head",
+        "desc": "Ngăn chi tiết R6-VT-01: nhãn trụ",
+        "expected": "Sẵn sàng",
+        "actual": "Sẵn sàng",
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-VT-01-raw",
+        "desc": "Ngăn chi tiết R6-VT-01: \"Trạng thái gốc\"",
+        "expected": "ONLINE",
+        "actual": "ONLINE",
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "cpd-R6-VT-01-connectors",
+        "desc": "Ngăn chi tiết R6-VT-01: tooltip đầu nối giữ OCPP gốc",
+        "expected": [
+          "Trạng thái gốc: UNKNOWN",
+          "Trạng thái gốc: UNKNOWN"
+        ],
+        "actual": [
+          "Trạng thái gốc: UNKNOWN",
+          "Trạng thái gốc: UNKNOWN"
+        ],
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "m-map-count",
+        "desc": "[390px] Số marker = số trạm có toạ độ",
+        "expected": 7,
+        "actual": 7,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "m-marker-colors",
+        "desc": "[390px] Màu marker theo nhóm",
+        "expected": {
+          "Trạm Hà Nội": "ready",
+          "Trạm Đà Nẵng": "charging",
+          "Trạm Huế": "fault",
+          "Trạm Nha Trang": "ready",
+          "Trạm Sài Gòn": "offline",
+          "Trạm Cần Thơ": "fault",
+          "Trạm Vũng Tàu": "ready"
+        },
+        "actual": {
+          "Trạm Vũng Tàu": "ready",
+          "Trạm Cần Thơ": "fault",
+          "Trạm Sài Gòn": "offline",
+          "Trạm Nha Trang": "ready",
+          "Trạm Huế": "fault",
+          "Trạm Đà Nẵng": "charging",
+          "Trạm Hà Nội": "ready"
+        },
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "m-no-hscroll",
+        "desc": "[390px] Không tràn ngang trang bản đồ",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "m-cp-badges",
+        "desc": "[390px] Nhãn trạng thái trụ",
+        "expected": {
+          "R6-HN-01": "Sẵn sàng",
+          "R6-DN-01": "Đang sạc",
+          "R6-HUE-01": "Lỗi",
+          "R6-NT-01": "Sẵn sàng",
+          "R6-SG-01": "Chưa rõ",
+          "R6-CT-A": "Sẵn sàng",
+          "R6-CT-B": "Lỗi",
+          "R6-CT-C": "Chưa rõ",
+          "R6-VT-01": "Sẵn sàng",
+          "R6-NC-01": "Sẵn sàng"
+        },
+        "actual": {
+          "R6-NC-01": "Sẵn sàng",
+          "R6-VT-01": "Sẵn sàng",
+          "R6-CT-C": "Chưa rõ",
+          "R6-CT-B": "Lỗi",
+          "R6-CT-A": "Sẵn sàng",
+          "R6-SG-01": "Chưa rõ",
+          "R6-NT-01": "Sẵn sàng",
+          "R6-HUE-01": "Lỗi",
+          "R6-DN-01": "Đang sạc",
+          "R6-HN-01": "Sẵn sàng"
+        },
+        "ok": true,
+        "f2": true
+      },
+      {
+        "label": "after",
+        "id": "m-no-hscroll-cp",
+        "desc": "[390px] Không tràn ngang trang danh sách trụ",
+        "expected": true,
+        "actual": true,
+        "ok": true,
+        "f2": false
+      },
+      {
+        "label": "after",
+        "id": "console-clean",
+        "desc": "Không lỗi JS/console/request ngoài tile đã chặn",
+        "expected": [],
+        "actual": [],
+        "ok": true,
+        "f2": false
+      }
+    ],
+    "shots": [
+      "after-overview-desktop.png",
+      "after-map-desktop.png",
+      "after-station-drawer-charging-desktop.png",
+      "after-station-drawer-unavailable-desktop.png",
+      "after-charge-points-desktop.png",
+      "after-charge-point-drawer-charging-desktop.png",
+      "after-charge-point-drawer-unavailable-desktop.png",
+      "after-overview-mobile.png",
+      "after-map-mobile.png",
+      "after-station-drawer-mobile.png",
+      "after-charge-points-mobile.png"
+    ],
+    "consoleIssues": [],
+    "preLogin": [
+      "[1280px] console.error: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "[390px] console.error: Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ],
+    "tileRequests": 37
+  }
+}
