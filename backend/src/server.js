@@ -16,9 +16,12 @@ const server = http.createServer(app);
 const now = () => new Date().toISOString();
 async function updateChargePointLastSeen(connection) {
 	const code = connection?.chargePointCode || connection?.chargePoint?.code;
-	if (!code) return;
+	if (!code || connection?.isStationLocked) return;
 	try {
-		await pool.query('UPDATE charge_points SET last_seen_at = CURRENT_TIMESTAMP WHERE code = $1', [code]);
+		await pool.query(
+			'UPDATE charge_points cp SET last_seen_at = CURRENT_TIMESTAMP FROM stations s WHERE cp.station_id = s.id AND cp.code = $1 AND s.locked_at IS NULL',
+			[code]
+		);
 	} catch (error) {
 		console.warn(`[OCPP] Failed to update last_seen_at for ${safeLog(code)}: ${sanitizeErrorMessage(error?.message || error)}`);
 	}
@@ -48,7 +51,7 @@ server.on('upgrade', createOcppUpgradeHandler({
 	wss,
 	lookupChargePoint: async (code) => {
 		const result = await pool.query(
-			'SELECT cp.id, cp.code, s.status AS station_status FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.code = $1 LIMIT 1',
+			'SELECT cp.id, cp.code, cp.station_id, s.status AS station_status FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.code = $1 LIMIT 1',
 			[code]
 		);
 		return result.rows[0] || null;

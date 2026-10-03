@@ -121,6 +121,12 @@ function createOcppMessageHandler({
 
 		logInfo(`[OCPP] Received CALL | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 
+		if (connection?.isStationLocked) {
+			logWarning(`[OCPP] SecurityError: Station is locked | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
+			await sendCallError(connection, request.messageId, 'SecurityError', 'Station is locked');
+			return;
+		}
+
 		if (requireBoot && !connection?.isBootAccepted && request.action !== 'BootNotification') {
 			logWarning(`[OCPP] SecurityError: Action before BootNotification | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 			await sendCallError(connection, request.messageId, 'SecurityError', 'Charge point is not accepted yet');

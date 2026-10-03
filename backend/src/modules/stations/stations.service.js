@@ -1,6 +1,7 @@
 const { createHash } = require('node:crypto');
 const repo = require('./stations.repository');
 const audit = require('../audit/audit.repository');
+const connectionRegistry = require('../charge-points/connection-registry');
 const { denyOrNotFound } = require('../../lib/ownership');
 const { withTransaction } = require('../../db/tx');
 const { BadRequestError, ConflictError } = require('../../lib/errors');
@@ -63,6 +64,13 @@ async function setLock(actor, id, locked) {
   await find(actor, id);
   await repo.setLock(id, locked, actor.id);
   await audit.record(actor.id, locked ? 'LOCK' : 'UNLOCK', 'station', id, { locked });
+
+  if (locked) {
+    const chargePoints = await repo.chargePointsOf(id);
+    const codes = chargePoints.map((cp) => cp.code);
+    connectionRegistry.closeStationConnection(id, { chargePointCodes: codes });
+  }
+
   return repo.findById(actor, id);
 }
 
