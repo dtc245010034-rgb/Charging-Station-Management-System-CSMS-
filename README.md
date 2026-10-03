@@ -258,7 +258,7 @@ Trình duyệt ──HTTP/JSON (cookie httpOnly)──► Express 5 (backend/src
    không build; Leaflet đặt sẵn trong repo)     │           fleet-status (REST + SSE) · health · audit · ocpp
         ▲                                       ├─ security: ma trận quyền + chặn route chưa khai quyền
         └──── SSE /api/fleet-status/events ─────┤
-                                                └─ PostgreSQL 16 (migration 001–013)
+                                                └─ PostgreSQL 16 (migration 001–014)
 Trụ sạc ──WebSocket /ocpp/<mã trụ>──► máy chủ OCPP 1.6J (`ws` + bộ khung tự viết):
    xác thực mã trụ, Boot/Heartbeat/StatusNotification, thay thế kết nối trùng, rate limit, ping giữ kết nối, tắt máy sạch
 ```
@@ -302,6 +302,7 @@ Các mục dưới đây là hiện trạng thật trên `main`, không phải l
 | — | **Tắt máy sạch (N4) chỉ đúng với một tiến trình server.** Khởi động sau sẽ đánh dấu nhầm trụ đang kết nối ở bản kia nếu chạy nhiều bản cùng một DB. `SIGKILL` không chạy được handler tắt máy: trụ `ONLINE` mồ côi chỉ được dọn ở lần khởi động kế tiếp. | Cần cơ chế theo phiên trước khi mở rộng ngang |
 | — | **Quy tắc hiển thị:** trụ `ONLINE` mà đầu nối chưa báo trạng thái (`UNKNOWN`) vẫn hiện "Sẵn sàng" (xanh); trụ `ONLINE` có toàn đầu nối `UNAVAILABLE` hiện "Ngoại tuyến / chưa rõ". | Chờ PO/QA xác nhận |
 | — | Hai test N4 bỏ qua trên Windows (xem [Kiểm thử](#3-kiểm-thử)); đường tắt máy bằng `taskkill` trên Windows chưa kiểm. | Khởi động lại sẽ tự dọn trụ mồ côi |
+| #25 | **Đăng xuất thu hồi mọi phiên của tài khoản** (kể cả thiết bị khác): `users.token_version` tăng lên, token cũ bị `authenticate` từ chối (401). Mỗi yêu cầu có xác thực tốn thêm một truy vấn khoá chính. Luồng SSE `/api/fleet-status/events` đã mở **không bị đóng ngay** khi đăng xuất, kết thúc khi JWT hết hạn. | Đóng luồng SSE theo `token_version` nếu PO yêu cầu |
 | — | **Chưa kiểm chứng:** staging với 50 trụ ảo (thiếu URL staging), tile bản đồ OSM thật (kiểm thử giao diện dùng tile giả), trạng thái Jira bằng API (thiếu token). | Xem [`docs/testing/BAO-CAO-VONG-6.md`](docs/testing/BAO-CAO-VONG-6.md) |
 | — | Bộ khung OCPP tự viết trên `ws` (không dùng `ocpp-rpc` như kế hoạch ban đầu) để kiểm soát chặt giao thức. | Quyết định đã thực hiện |
 
@@ -316,7 +317,7 @@ backend/
   src/modules/ocpp/       frames, message-handler, ws-connection, ocpp-upgrade, shutdown, handlers/ (một file mỗi action)
   src/security/           ma trận quyền (permissions.js), chặn route chưa khai quyền
   src/server.js           HTTP server + WebSocketServer OCPP, đăng ký handler, tắt máy sạch
-  migrations/             NNN_ten.sql + NNN_ten.down.sql (001–013); đã merge thì không sửa, muốn đổi thì thêm file mới
+  migrations/             NNN_ten.sql + NNN_ten.down.sql (001–014); đã merge thì không sửa, muốn đổi thì thêm file mới
   scripts/                create-admin.js, seed-demo.js
   tests/                  unit/ integration/ acceptance/ helpers/
 frontend/                 HTML/CSS/JS thuần, ES modules, không build

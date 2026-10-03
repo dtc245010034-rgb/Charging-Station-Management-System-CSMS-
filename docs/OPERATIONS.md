@@ -105,6 +105,7 @@ $ docker compose exec -T db pg_dump -U csms csms > backup.sql        # sao lưu
 $ docker compose exec -T db psql -U csms -d csms < backup.sql        # khôi phục vào DB trống
 ```
 - Quy ước: migration đã merge thì **không sửa**, muốn đổi thì thêm file mới (`NNN_ten.sql` + `NNN_ten.down.sql`).
+- Đăng xuất (`POST /api/auth/logout`) tăng `users.token_version` (migration 014): mọi token cũ của tài khoản đó, kể cả trên thiết bị khác, bị từ chối. Muốn buộc một tài khoản đăng nhập lại: `UPDATE users SET token_version = token_version + 1 WHERE email = '…';`.
 - DB dev cũ từ trước `001_baseline` hoặc `003_stations_owner` lỗi khi migrate → `docker compose down -v` một lần. Chi tiết: `backend/README.md`.
 - `backup.sql` chứa dữ liệu cá nhân → **không commit, không gửi công khai** (file `*.sql` nên nằm ngoài repo).
 

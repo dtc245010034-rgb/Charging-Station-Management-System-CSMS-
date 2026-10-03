@@ -29,6 +29,10 @@ describe('migration 013: trạng thái mức trụ', () => {
   });
 
   it('down xoá dòng lỗi mức trụ, trả connector_id về NOT NULL, bỏ cột; up lại sạch', async () => {
+    // Các migration sau 013 (vd. 014) phải lùi trước để đúng bản 013 là bản lùi cuối.
+    while ((await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1')).rows[0].version !== '013_station_level_status.sql') {
+      assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0);
+    }
     const down = run('src/db/migrate.js', ['down']);
     assert.strictEqual(down.status, 0, down.stderr);
     assert.ok(!await hasColumn('connector_errors', 'charge_point_id'));

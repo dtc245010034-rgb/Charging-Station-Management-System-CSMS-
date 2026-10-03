@@ -25,7 +25,8 @@ router.post('/auth/login', PUBLIC, async (req, res) => {
   res.json({ user });
 });
 
-router.post('/auth/logout', PUBLIC, (req, res) => {
+router.post('/auth/logout', PUBLIC, async (req, res) => {
+  await service.revokeSessions(req.cookies?.token);
   res.clearCookie('token', cookieOptions);
   res.json({ ok: true, message: 'Đăng xuất thành công' });
 });

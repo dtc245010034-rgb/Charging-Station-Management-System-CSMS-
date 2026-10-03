@@ -3,14 +3,21 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 const net = require('node:net');
 const { app, closePool } = require('../helpers/app');
+const { run, resetSchema, truncateAll } = require('../helpers/db');
+const { createUser } = require('../helpers/auth');
 const { issueToken } = require('../../src/modules/auth/auth.service');
 const { publish } = require('../../src/modules/fleet-status/fleet-status.events');
 
 describe('SSE fleet-status: client đọc chậm', () => {
   let server;
   let port;
+  let admin;
 
   before(async () => {
+    await resetSchema();
+    assert.strictEqual(run('src/db/migrate.js').status, 0);
+    await truncateAll();
+    admin = await createUser('sse-bp@test.invalid', 'ADMIN');
     server = http.createServer(app);
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     port = server.address().port;
@@ -20,6 +27,8 @@ describe('SSE fleet-status: client đọc chậm', () => {
     server.closeAllConnections?.();
     await new Promise((resolve) => server.close(resolve));
     await closePool();
+    await resetSchema();
+    run('src/db/migrate.js');
   });
 
   it('client ngừng đọc: server đóng luồng, không ghi sau khi res.end() và không có lỗi chưa bắt', async () => {
@@ -27,7 +36,7 @@ describe('SSE fleet-status: client đọc chậm', () => {
     const onUncaught = (error) => uncaught.push(error.code || error.message);
     process.on('uncaughtException', onUncaught);
     try {
-      const token = issueToken({ id: 1, email: 'sse@test.invalid' }, ['ADMIN']);
+      const token = issueToken(admin, ['ADMIN']);
       let serverSideClosed = false;
       server.once('connection', (socket) => socket.on('close', () => { serverSideClosed = true; }));
       const client = net.connect(port, '127.0.0.1');
