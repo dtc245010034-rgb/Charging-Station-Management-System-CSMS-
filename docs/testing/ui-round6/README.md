@@ -35,19 +35,21 @@ Các kiểm tra (desktop 1280 px; mobile 390 px kiểm lại số marker, màu, 
 |---|---|---|
 | Số marker = số trạm có toạ độ (7), ghi chú "1 trạm chưa có toạ độ" | ok | ok |
 | Chú giải đủ 5 nhóm; Leaflet khởi tạo, yêu cầu tile | ok | ok |
-| Màu marker từng trạm (Hà Nội ready, Đà Nẵng charging, Huế fault, Nha Trang ready, Sài Gòn offline, Cần Thơ fault, Vũng Tàu ready) | 6/7 sai: mọi trạm có trụ ONLINE hiện offline | 7/7 đúng |
+| Màu marker từng trạm (Hà Nội ready, Đà Nẵng charging, Huế fault, Nha Trang offline, Sài Gòn offline, Cần Thơ fault, Vũng Tàu ready) | 6/7 sai: mọi trạm có trụ ONLINE hiện offline | 7/7 đúng |
 | Chấm màu panel danh sách trạm | 6/7 sai | 7/7 đúng |
 | Bộ lọc trạng thái (4 nhóm) cho danh sách và marker | sai: "Sẵn sàng/Đang sạc/Lỗi" rỗng, "Ngoại tuyến" hiện cả 7 trạm | đúng |
 | Tìm "Huế" → 1 marker | ok | ok |
 | Bấm marker / bấm dòng danh sách → ngăn chi tiết đúng trạm, đầu nối hiện đúng giá trị gốc | ok | ok |
-| Nhãn trụ trong ngăn chi tiết trạm | ONLINE hiện "Ngoại tuyến / chưa rõ" | "Sẵn sàng" / "Đang sạc" / "Lỗi" theo đầu nối |
+| Nhãn trụ trong ngăn chi tiết trạm | ONLINE hiện "Ngoại tuyến / chưa rõ" | "Sẵn sàng" / "Đang sạc" / "Lỗi" theo đầu nối; trụ ONLINE có toàn đầu nối `UNAVAILABLE` (Nha Trang) và trụ `UNKNOWN` hiện "Ngoại tuyến / chưa rõ" |
 | Tooltip giữ trạng thái gốc (`Trạng thái gốc: ONLINE`, `Available`, `Charging`...) | ok | ok |
 | Màn danh sách trụ: nhãn, màu badge, bộ lọc 4 nhóm | 8/10 trụ sai, lọc sai | đúng |
 | Ngăn chi tiết trụ: nhãn đầu ngăn, "Trạng thái gốc" = ONLINE, tooltip đầu nối | nhãn sai | đúng |
-| KPI tổng quan: Tổng 10, Sẵn sàng 5, Đang sạc 1, Lỗi 2, Ngoại tuyến 2 | 0/0/0/10 | đúng |
+| KPI tổng quan: Tổng 10, Sẵn sàng 4, Đang sạc 1, Lỗi 2, Ngoại tuyến / chưa rõ 3 | 0/0/0/10 | đúng |
 | Không tràn ngang ở 390 px (bản đồ, danh sách trụ) | ok | ok |
 
 Chi tiết từng kiểm tra (kỳ vọng/thực tế) nằm trong `results.json`.
+
+Lưu ý: cột "Trước" và các ảnh `before-*` lấy từ lần chạy đầu trên `main` với kỳ vọng cũ (trạm Nha Trang kỳ vọng "ready"); chỉ phần `after` được chạy lại ngày 03/10 với kỳ vọng mới (Nha Trang "offline", KPI 4/1/2/3). Số 66/121 của bản trước không tính lại.
 
 ## Ảnh chụp
 
@@ -68,11 +70,13 @@ Chi tiết từng kiểm tra (kỳ vọng/thực tế) nằm trong `results.json
   thay bằng ảnh trong suốt; chưa xác nhận tile thật hiển thị, CORS (`crossOrigin: true`) và tốc độ tải tile.
 - Chỉ chạy Chrome (150) headless; chưa chạy Firefox/Safari. Chưa đo trên thiết bị thật.
 
-## Bất thường của sản phẩm ghi nhận (chưa vá, cần PO/QA quyết định)
+## Quyết định hiển thị đã xử lý (cập nhật 03/10, commit `9fc383d` và `65e3cc5`)
 
-1. Trụ `ONLINE` mà mọi đầu nối đều `UNAVAILABLE` hoặc `UNKNOWN` hiện "Sẵn sàng" (xanh) vì `ONLINE` thuộc nhóm ready và
-   `SEVERITY` xếp ready nặng hơn offline. Ảnh `after-charge-point-drawer-unavailable-desktop.png`: trụ "Sẵn sàng" nhưng cả
-   hai đầu "Không khả dụng". Có thể gây hiểu nhầm là sạc được.
-2. Nhãn đầu nối `UNAVAILABLE` là "Không khả dụng", trong khi mô tả F4 nêu nhãn "Tạm ngừng".
-3. Trụ `UNKNOWN` hiện nhãn "Chưa rõ" (màu nhóm offline), khác nhãn nhóm "Ngoại tuyến / chưa rõ" ở chú giải và bộ lọc.
-   Đây là hành vi đã có từ trước F2.
+1. Trụ `ONLINE` mà **mọi** đầu nối đều `UNAVAILABLE` thuộc nhóm "Ngoại tuyến / chưa rõ" (trạm Nha Trang trong dữ liệu
+   thử, marker và KPI đổi theo). Đã sửa `pointGroup`; ảnh `after-*` được chụp lại sau khi sửa (121/121 ok).
+2. Nhãn đầu nối `UNAVAILABLE` là "Tạm ngừng" (đúng mô tả F4).
+3. Nhãn trụ `UNKNOWN` thống nhất là "Ngoại tuyến / chưa rõ" ở danh sách trụ, ngăn chi tiết trụ và ngăn chi tiết trạm.
+   Nhãn đầu nối `UNKNOWN` vẫn là "Chưa rõ".
+
+**Còn để PO/QA xác nhận:** trụ `ONLINE` có đầu nối `UNKNOWN` (vừa Boot, chưa gửi `StatusNotification`) vẫn hiện
+"Sẵn sàng". Đã chọn giữ như vậy vì trụ đang kết nối; đầu nối `UNKNOWN` không hạ nhóm của trụ.

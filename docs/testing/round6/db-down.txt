@@ -1,0 +1,218 @@
+ok   migrate trên DB mới đạt
+
+--- Giai đoạn 0: nền (DB sống) ---
+ok   nền: BootNotification CALLRESULT | 85 ms
+ok   nền: Heartbeat CALLRESULT | 29 ms
+ok   nền: StatusNotification CALLRESULT | 52 ms
+
+--- Giai đoạn 1: docker stop giữa chừng ---
+ok   sập vòng 1: Heartbeat → CALLRESULT (6 ms)
+ok   sập vòng 1: StatusNotification → CALLERROR InternalError (6 ms)
+ok   sập vòng 1: BootNotification → CALLERROR InternalError (4 ms)
+ok   sập vòng 2: Heartbeat → CALLRESULT (2 ms)
+ok   sập vòng 2: StatusNotification → CALLERROR InternalError (4 ms)
+ok   sập vòng 2: BootNotification → CALLERROR InternalError (4 ms)
+ok   sập vòng 3: Heartbeat → CALLRESULT (2 ms)
+ok   sập vòng 3: StatusNotification → CALLERROR InternalError (2 ms)
+ok   sập vòng 3: BootNotification → CALLERROR InternalError (2 ms)
+ok   sập vòng 4: Heartbeat → CALLRESULT (1 ms)
+ok   sập vòng 4: StatusNotification → CALLERROR InternalError (2 ms)
+ok   sập vòng 4: BootNotification → CALLERROR InternalError (2 ms)
+ok   sập vòng 5: Heartbeat → CALLRESULT (1 ms)
+ok   sập vòng 5: StatusNotification → CALLERROR InternalError (3 ms)
+ok   sập vòng 5: BootNotification → CALLERROR InternalError (2 ms)
+(node:1066240) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 close listeners added to [WebSocket]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1066240) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 message listeners added to [WebSocket]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+ok   12 Heartbeat đồng thời khi DB sập đều có phản hồi | p50 6 ms, max 7 ms
+ok   Boot/Status khi DB sập luôn là CALLERROR InternalError "Internal error" | kết quả: CALLERROR InternalError
+ok   không có BootNotification nào bị Accepted khi DB sập
+ok   Heartbeat khi DB sập trả CALLRESULT hoặc InternalError (không timeout/đóng) | kết quả: CALLRESULT
+ok   mỗi phản hồi khi DB sập ≤ 2500 ms | p50 4 ms, p95 7 ms, max 7 ms (Boot/Status: p50 2, max 6 ms)
+ok   phản hồi CALLERROR không lộ chi tiết Postgres/đường dẫn/ECONNREFUSED
+ok   WebSocket không bị đóng vì DB sập
+ok   process server vẫn sống
+     (ghi nhận) /api/health khi DB sập: HTTP 503 {"error":{"code":"DB_UNAVAILABLE","message":"Cơ sở dữ liệu không sẵn sàng"}}
+ok   /api/health vẫn trả lời khi DB sập (không treo) | HTTP 503
+ok   log server không chứa mật khẩu/URL kết nối
+     (ghi nhận) các dòng log khác nhau trong lúc DB sập:
+       x1 CSMS backend listening on http://localhost:37133
+       x1 [OCPP] Received CALL | messageId: "d96dc423-755d-4a34-bed8-61aef09ea304" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "d96dc423-755d-4a34-bed8-61aef09ea304" | action: "BootNotification"
+       x1 [OCPP] BootNotification: Cập nhật trụ "R6-DOWN-CP-01" thành công (status=ONLINE)
+       x1 [OCPP] Created CALLRESULT | messageId: "d96dc423-755d-4a34-bed8-61aef09ea304" | action: "BootNotification"
+       x1 [OCPP] Received CALL | messageId: "bee38420-5004-431f-95fb-b4b1c371ef92" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "bee38420-5004-431f-95fb-b4b1c371ef92" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "bee38420-5004-431f-95fb-b4b1c371ef92" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "51c8e053-ae13-4921-a268-65ea5ef9765a" | action: "StatusNotification"
+       x1 [OCPP] Calling handler | messageId: "51c8e053-ae13-4921-a268-65ea5ef9765a" | action: "StatusNotification"
+       x1 [OCPP] Created CALLRESULT | messageId: "51c8e053-ae13-4921-a268-65ea5ef9765a" | action: "StatusNotification"
+       x1 Lỗi kết nối PostgreSQL: terminating connection due to administrator command
+       x1 [OCPP] Received CALL | messageId: "6d51ca3a-ba6f-45b7-b693-d747d255d133" | action: "Heartbeat"
+       x27 [OCPP] Failed to update last_seen_at for "R6-DOWN-CP-01": connect ECONNREFUSED ***
+       x1 [OCPP] Calling handler | messageId: "6d51ca3a-ba6f-45b7-b693-d747d255d133" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "6d51ca3a-ba6f-45b7-b693-d747d255d133" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "7df0ecb1-d45e-4699-a1c7-3fecb2932ace" | action: "StatusNotification"
+       x1 [OCPP] Calling handler | messageId: "7df0ecb1-d45e-4699-a1c7-3fecb2932ace" | action: "StatusNotification"
+       x5 [OCPP] StatusNotification: Lỗi cập nhật trạng thái đầu nối của trụ "R6-DOWN-CP-01": connect ECONNREFUSED ***
+       x1 [OCPP] Handler failed | messageId: "7df0ecb1-d45e-4699-a1c7-3fecb2932ace" | action: "StatusNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "7df0ecb1-d45e-4699-a1c7-3fecb2932ace" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "d98e0634-9a22-4a27-b121-2ccf486fa25f" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "d98e0634-9a22-4a27-b121-2ccf486fa25f" | action: "BootNotification"
+       x5 [OCPP] BootNotification: Lỗi tra cứu CSDL cho trụ "R6-DOWN-CP-01": connect ECONNREFUSED ***
+       x1 [OCPP] Handler failed | messageId: "d98e0634-9a22-4a27-b121-2ccf486fa25f" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "d98e0634-9a22-4a27-b121-2ccf486fa25f" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "c810d602-8d7b-4375-9dfe-86a5d665f8f5" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "c810d602-8d7b-4375-9dfe-86a5d665f8f5" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "c810d602-8d7b-4375-9dfe-86a5d665f8f5" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "62d6dfd8-82e8-488c-b7a6-7dd9b13eae40" | action: "StatusNotification"
+       x1 [OCPP] Calling handler | messageId: "62d6dfd8-82e8-488c-b7a6-7dd9b13eae40" | action: "StatusNotification"
+       x1 [OCPP] Handler failed | messageId: "62d6dfd8-82e8-488c-b7a6-7dd9b13eae40" | action: "StatusNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "62d6dfd8-82e8-488c-b7a6-7dd9b13eae40" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "86d80c72-7cf0-44bc-8695-94eb09c326e4" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "86d80c72-7cf0-44bc-8695-94eb09c326e4" | action: "BootNotification"
+       x1 [OCPP] Handler failed | messageId: "86d80c72-7cf0-44bc-8695-94eb09c326e4" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "86d80c72-7cf0-44bc-8695-94eb09c326e4" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "af20ecde-a12c-4707-a96d-3c5eb5c29cbe" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "af20ecde-a12c-4707-a96d-3c5eb5c29cbe" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "af20ecde-a12c-4707-a96d-3c5eb5c29cbe" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "d8532c55-f2e6-420f-bc95-a0e96b254df5" | action: "StatusNotification"
+       x1 [OCPP] Calling handler | messageId: "d8532c55-f2e6-420f-bc95-a0e96b254df5" | action: "StatusNotification"
+       x1 [OCPP] Handler failed | messageId: "d8532c55-f2e6-420f-bc95-a0e96b254df5" | action: "StatusNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "d8532c55-f2e6-420f-bc95-a0e96b254df5" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "aa561c42-d7a7-4838-81a0-30215040fec3" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "aa561c42-d7a7-4838-81a0-30215040fec3" | action: "BootNotification"
+       x1 [OCPP] Handler failed | messageId: "aa561c42-d7a7-4838-81a0-30215040fec3" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "aa561c42-d7a7-4838-81a0-30215040fec3" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "6768d800-92db-4116-8225-2d892c52e5cd" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "6768d800-92db-4116-8225-2d892c52e5cd" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "6768d800-92db-4116-8225-2d892c52e5cd" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "3a2b5bd3-f59b-450e-b603-9c6c8ac05922" | action: "StatusNotification"
+       x1 [OCPP] Calling handler | messageId: "3a2b5bd3-f59b-450e-b603-9c6c8ac05922" | action: "StatusNotification"
+       x1 [OCPP] Handler failed | messageId: "3a2b5bd3-f59b-450e-b603-9c6c8ac05922" | action: "StatusNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "3a2b5bd3-f59b-450e-b603-9c6c8ac05922" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "38a215c9-91fe-46f0-ba24-3b0af44c8af2" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "38a215c9-91fe-46f0-ba24-3b0af44c8af2" | action: "BootNotification"
+       x1 [OCPP] Handler failed | messageId: "38a215c9-91fe-46f0-ba24-3b0af44c8af2" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "38a215c9-91fe-46f0-ba24-3b0af44c8af2" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "3a127281-21a4-45e6-9c8b-3932f9837f61" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "3a127281-21a4-45e6-9c8b-3932f9837f61" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "3a127281-21a4-45e6-9c8b-3932f9837f61" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "d390c166-3266-40d0-a49b-207be390f7ed" | action: "StatusNotification"
+       x1 [OCPP] Calling handler | messageId: "d390c166-3266-40d0-a49b-207be390f7ed" | action: "StatusNotification"
+       x1 [OCPP] Handler failed | messageId: "d390c166-3266-40d0-a49b-207be390f7ed" | action: "StatusNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "d390c166-3266-40d0-a49b-207be390f7ed" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "293f6054-feb1-490f-adae-21b599933541" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "293f6054-feb1-490f-adae-21b599933541" | action: "BootNotification"
+       x1 [OCPP] Handler failed | messageId: "293f6054-feb1-490f-adae-21b599933541" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "293f6054-feb1-490f-adae-21b599933541" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "5cc046ce-b71d-441a-84de-1e45fda8e1ed" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "7fd808cf-d64c-43b3-8d12-7aa6e15d9d05" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "221c9b1d-5177-410b-aae6-c88d8e89fde0" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "62f97cce-e54c-4d42-958d-9d65ca736850" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "14221502-ee5a-4de6-b641-ce28dd2dee44" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "262442ac-75ab-4c0b-b45a-4ee44eda8aea" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "a93f58c4-718d-4787-8e79-abafbc55c7a3" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "e7b1f845-f708-497a-a9c6-779b088778ad" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "5cc046ce-b71d-441a-84de-1e45fda8e1ed" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "5cc046ce-b71d-441a-84de-1e45fda8e1ed" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "cd10628a-780e-4aed-a445-0ddc434a48f7" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "346dc1dd-5d77-4b3b-b156-78861148aa40" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "19f33b0f-4c7b-4fbf-a6df-fb796e95e14b" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "0f0e860d-5006-4fa2-9648-665b60b5aa19" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "7fd808cf-d64c-43b3-8d12-7aa6e15d9d05" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "7fd808cf-d64c-43b3-8d12-7aa6e15d9d05" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "221c9b1d-5177-410b-aae6-c88d8e89fde0" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "221c9b1d-5177-410b-aae6-c88d8e89fde0" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "62f97cce-e54c-4d42-958d-9d65ca736850" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "62f97cce-e54c-4d42-958d-9d65ca736850" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "14221502-ee5a-4de6-b641-ce28dd2dee44" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "14221502-ee5a-4de6-b641-ce28dd2dee44" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "262442ac-75ab-4c0b-b45a-4ee44eda8aea" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "262442ac-75ab-4c0b-b45a-4ee44eda8aea" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "a93f58c4-718d-4787-8e79-abafbc55c7a3" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "a93f58c4-718d-4787-8e79-abafbc55c7a3" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "e7b1f845-f708-497a-a9c6-779b088778ad" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "e7b1f845-f708-497a-a9c6-779b088778ad" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "cd10628a-780e-4aed-a445-0ddc434a48f7" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "cd10628a-780e-4aed-a445-0ddc434a48f7" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "346dc1dd-5d77-4b3b-b156-78861148aa40" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "346dc1dd-5d77-4b3b-b156-78861148aa40" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "19f33b0f-4c7b-4fbf-a6df-fb796e95e14b" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "19f33b0f-4c7b-4fbf-a6df-fb796e95e14b" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "0f0e860d-5006-4fa2-9648-665b60b5aa19" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "0f0e860d-5006-4fa2-9648-665b60b5aa19" | action: "Heartbeat"
+       x1 [HTTP] 503 DB_UNAVAILABLE
+ok   log server không lộ host:port/đường dẫn/tên nội bộ
+ok   không có unhandledRejection/uncaughtException trong log
+
+--- Giai đoạn 2: docker start (phục hồi) ---
+ok   Boot kế tiếp Accepted sau khi DB chạy lại (pool tự phục hồi) | 3388 ms sau docker start (docker start trả về sau 1142 ms; 9 lần thử, lần lỗi trước đó: CALLERROR InternalError)
+ok   Heartbeat sau phục hồi CALLRESULT và ghi lại last_seen_at | 17 ms, last_seen_at mới hơn nền 4924 ms; trạng thái trụ ONLINE
+ok   StatusNotification sau phục hồi CALLRESULT | 56 ms
+ok   WebSocket vẫn mở sau toàn bộ chu trình sập/phục hồi
+ok   server không crash trong cả chu trình
+
+--- Giai đoạn 3: SIGTERM khi DB đang sập ---
+ok   server thoát khi nhận SIGTERM lúc DB sập (≤ 15 s) | thoát sau 16 ms, mã 1, tín hiệu null
+     (ghi nhận) mã thoát 1 (0 = sạch, 1 = có lỗi khi ghi UNKNOWN/đóng pool)
+ok   client nhận close 1001 khi server tắt lúc DB sập | mã đóng 1001
+ok   log tắt máy không chứa mật khẩu/URL kết nối
+     (ghi nhận) các dòng log mới từ lúc tắt máy:
+       x1 [OCPP] Received CALL | messageId: "dd8dc483-3d2d-4e68-b141-e4815fdc4c50" | action: "BootNotification"
+       x1 [OCPP] Failed to update last_seen_at for "R6-DOWN-CP-01": read ECONNRESET
+       x1 [OCPP] Calling handler | messageId: "dd8dc483-3d2d-4e68-b141-e4815fdc4c50" | action: "BootNotification"
+       x1 [OCPP] BootNotification: Lỗi tra cứu CSDL cho trụ "R6-DOWN-CP-01": Connection terminated unexpectedly
+       x1 [OCPP] Handler failed | messageId: "dd8dc483-3d2d-4e68-b141-e4815fdc4c50" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "dd8dc483-3d2d-4e68-b141-e4815fdc4c50" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "b5cf611a-0ba3-498b-b005-886b916aa2b1" | action: "BootNotification"
+       x1 [OCPP] Failed to update last_seen_at for "R6-DOWN-CP-01": the database system is starting up
+       x1 [OCPP] Calling handler | messageId: "b5cf611a-0ba3-498b-b005-886b916aa2b1" | action: "BootNotification"
+       x1 [OCPP] BootNotification: Lỗi tra cứu CSDL cho trụ "R6-DOWN-CP-01": the database system is starting up
+       x1 [OCPP] Handler failed | messageId: "b5cf611a-0ba3-498b-b005-886b916aa2b1" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "b5cf611a-0ba3-498b-b005-886b916aa2b1" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "85d2c31c-3932-41c2-b908-c715680ab4e4" | action: "BootNotification"
+       x6 [OCPP] Failed to update last_seen_at for "R6-DOWN-CP-01": the database system is not yet accepting connections
+       x1 [OCPP] Calling handler | messageId: "85d2c31c-3932-41c2-b908-c715680ab4e4" | action: "BootNotification"
+       x6 [OCPP] BootNotification: Lỗi tra cứu CSDL cho trụ "R6-DOWN-CP-01": the database system is not yet accepting connections
+       x1 [OCPP] Handler failed | messageId: "85d2c31c-3932-41c2-b908-c715680ab4e4" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "85d2c31c-3932-41c2-b908-c715680ab4e4" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "5ce97fd9-a0ae-4b74-9e4b-27a00ab13d4e" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "5ce97fd9-a0ae-4b74-9e4b-27a00ab13d4e" | action: "BootNotification"
+       x1 [OCPP] Handler failed | messageId: "5ce97fd9-a0ae-4b74-9e4b-27a00ab13d4e" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "5ce97fd9-a0ae-4b74-9e4b-27a00ab13d4e" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "6d9750b2-e137-4d7e-83e3-790018394fbe" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "6d9750b2-e137-4d7e-83e3-790018394fbe" | action: "BootNotification"
+       x1 [OCPP] Handler failed | messageId: "6d9750b2-e137-4d7e-83e3-790018394fbe" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "6d9750b2-e137-4d7e-83e3-790018394fbe" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "1ca3bcde-453d-4409-b786-95c9d92a327f" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "1ca3bcde-453d-4409-b786-95c9d92a327f" | action: "BootNotification"
+       x1 [OCPP] Handler failed | messageId: "1ca3bcde-453d-4409-b786-95c9d92a327f" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "1ca3bcde-453d-4409-b786-95c9d92a327f" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "76658557-cdf5-4043-8f22-27d926ccaa54" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "76658557-cdf5-4043-8f22-27d926ccaa54" | action: "BootNotification"
+       x1 [OCPP] Handler failed | messageId: "76658557-cdf5-4043-8f22-27d926ccaa54" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "76658557-cdf5-4043-8f22-27d926ccaa54" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "d10d6c33-1dce-44e6-867c-9d873a704e52" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "d10d6c33-1dce-44e6-867c-9d873a704e52" | action: "BootNotification"
+       x1 [OCPP] Handler failed | messageId: "d10d6c33-1dce-44e6-867c-9d873a704e52" | action: "BootNotification": Internal error
+       x1 [OCPP] Created CALLERROR | messageId: "d10d6c33-1dce-44e6-867c-9d873a704e52" | code: InternalError
+       x1 [OCPP] Received CALL | messageId: "74a4b921-18da-43e8-8930-d82024a46a43" | action: "BootNotification"
+       x1 [OCPP] Calling handler | messageId: "74a4b921-18da-43e8-8930-d82024a46a43" | action: "BootNotification"
+       x1 [OCPP] BootNotification: Cập nhật trụ "R6-DOWN-CP-01" thành công (status=ONLINE)
+       x1 [OCPP] Created CALLRESULT | messageId: "74a4b921-18da-43e8-8930-d82024a46a43" | action: "BootNotification"
+       x1 [OCPP] Received CALL | messageId: "263b8c5d-1f68-4725-8e1a-06bb399d090a" | action: "Heartbeat"
+       x1 [OCPP] Calling handler | messageId: "263b8c5d-1f68-4725-8e1a-06bb399d090a" | action: "Heartbeat"
+       x1 [OCPP] Created CALLRESULT | messageId: "263b8c5d-1f68-4725-8e1a-06bb399d090a" | action: "Heartbeat"
+       x1 [OCPP] Received CALL | messageId: "4622a285-f088-48dc-80c0-0071295e280e" | action: "StatusNotification"
+       x1 [OCPP] Calling handler | messageId: "4622a285-f088-48dc-80c0-0071295e280e" | action: "StatusNotification"
+       x1 [OCPP] Created CALLRESULT | messageId: "4622a285-f088-48dc-80c0-0071295e280e" | action: "StatusNotification"
+       x1 Lỗi kết nối PostgreSQL: terminating connection due to administrator command
+       x1 [CSMS] Nhận SIGTERM, đang tắt máy...
+       x1 [OCPP] Failed to update offline status on disconnect | chargePoint: "R6-DOWN-CP-01": connect ECONNREFUSED ***
+       x1 [CSMS] Lỗi khi tắt máy: connect ECONNREFUSED ***
+ok   log tắt máy không lộ host:port/đường dẫn
+ok   không có unhandledRejection/uncaughtException suốt kịch bản
+ok   đã xoá container thử và dữ liệu tạm
+
+Tổng 42 dòng: 42 ok, 0 FAIL

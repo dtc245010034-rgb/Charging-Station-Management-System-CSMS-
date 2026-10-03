@@ -1297,8 +1297,8 @@
         "label": "after",
         "id": "kpi-ready",
         "desc": "KPI Sẵn sàng",
-        "expected": 5,
-        "actual": 5,
+        "expected": 4,
+        "actual": 4,
         "ok": true,
         "f2": true
       },
@@ -1324,8 +1324,8 @@
         "label": "after",
         "id": "kpi-offline",
         "desc": "KPI Ngoại tuyến / chưa rõ",
-        "expected": 2,
-        "actual": 2,
+        "expected": 3,
+        "actual": 3,
         "ok": true,
         "f2": true
       },
@@ -1369,8 +1369,8 @@
         "label": "after",
         "id": "marker-NT",
         "desc": "Màu marker Trạm Nha Trang",
-        "expected": "ready",
-        "actual": "ready",
+        "expected": "offline",
+        "actual": "offline",
         "ok": true,
         "f2": true
       },
@@ -1504,8 +1504,8 @@
         "label": "after",
         "id": "list-NT",
         "desc": "Chấm màu danh sách Trạm Nha Trang",
-        "expected": "ready",
-        "actual": "ready",
+        "expected": "offline",
+        "actual": "offline",
         "ok": true,
         "f2": true
       },
@@ -1542,12 +1542,10 @@
         "desc": "Lọc \"Sẵn sàng\": danh sách",
         "expected": [
           "Trạm Hà Nội",
-          "Trạm Nha Trang",
           "Trạm Vũng Tàu"
         ],
         "actual": [
           "Trạm Hà Nội",
-          "Trạm Nha Trang",
           "Trạm Vũng Tàu"
         ],
         "ok": true,
@@ -1559,12 +1557,10 @@
         "desc": "Lọc \"Sẵn sàng\": marker",
         "expected": [
           "Trạm Hà Nội",
-          "Trạm Nha Trang",
           "Trạm Vũng Tàu"
         ],
         "actual": [
           "Trạm Hà Nội",
-          "Trạm Nha Trang",
           "Trạm Vũng Tàu"
         ],
         "ok": true,
@@ -1631,9 +1627,11 @@
         "id": "filter-offline-list",
         "desc": "Lọc \"Ngoại tuyến / chưa rõ\": danh sách",
         "expected": [
+          "Trạm Nha Trang",
           "Trạm Sài Gòn"
         ],
         "actual": [
+          "Trạm Nha Trang",
           "Trạm Sài Gòn"
         ],
         "ok": true,
@@ -1644,9 +1642,11 @@
         "id": "filter-offline-markers",
         "desc": "Lọc \"Ngoại tuyến / chưa rõ\": marker",
         "expected": [
+          "Trạm Nha Trang",
           "Trạm Sài Gòn"
         ],
         "actual": [
+          "Trạm Nha Trang",
           "Trạm Sài Gòn"
         ],
         "ok": true,
@@ -1762,8 +1762,8 @@
         "label": "after",
         "id": "drawer-NT-R6-NT-01",
         "desc": "Chi tiết R6-NT-01: nhãn trụ",
-        "expected": "Sẵn sàng",
-        "actual": "Sẵn sàng",
+        "expected": "Ngoại tuyến / chưa rõ",
+        "actual": "Ngoại tuyến / chưa rõ",
         "ok": true,
         "f2": true
       },
@@ -1804,8 +1804,8 @@
         "label": "after",
         "id": "drawer-SG-R6-SG-01",
         "desc": "Chi tiết R6-SG-01: nhãn trụ",
-        "expected": "Chưa rõ",
-        "actual": "Chưa rõ",
+        "expected": "Ngoại tuyến / chưa rõ",
+        "actual": "Ngoại tuyến / chưa rõ",
         "ok": true,
         "f2": false
       },
@@ -1908,8 +1908,8 @@
         "label": "after",
         "id": "drawer-CT-R6-CT-C",
         "desc": "Chi tiết R6-CT-C: nhãn trụ",
-        "expected": "Chưa rõ",
-        "actual": "Chưa rõ",
+        "expected": "Ngoại tuyến / chưa rõ",
+        "actual": "Ngoại tuyến / chưa rõ",
         "ok": true,
         "f2": false
       },
@@ -2080,8 +2080,8 @@
         "label": "after",
         "id": "cp-R6-NT-01",
         "desc": "Danh sách trụ R6-NT-01: nhãn",
-        "expected": "Sẵn sàng",
-        "actual": "Sẵn sàng",
+        "expected": "Ngoại tuyến / chưa rõ",
+        "actual": "Ngoại tuyến / chưa rõ",
         "ok": true,
         "f2": true
       },
@@ -2089,8 +2089,8 @@
         "label": "after",
         "id": "cp-R6-NT-01-class",
         "desc": "Danh sách trụ R6-NT-01: màu badge",
-        "expected": "badge--ready",
-        "actual": "badge--ready",
+        "expected": "badge--offline",
+        "actual": "badge--offline",
         "ok": true,
         "f2": true
       },
@@ -2107,8 +2107,8 @@
         "label": "after",
         "id": "cp-R6-SG-01",
         "desc": "Danh sách trụ R6-SG-01: nhãn",
-        "expected": "Chưa rõ",
-        "actual": "Chưa rõ",
+        "expected": "Ngoại tuyến / chưa rõ",
+        "actual": "Ngoại tuyến / chưa rõ",
         "ok": true,
         "f2": false
       },
@@ -2188,8 +2188,8 @@
         "label": "after",
         "id": "cp-R6-CT-C",
         "desc": "Danh sách trụ R6-CT-C: nhãn",
-        "expected": "Chưa rõ",
-        "actual": "Chưa rõ",
+        "expected": "Ngoại tuyến / chưa rõ",
+        "actual": "Ngoại tuyến / chưa rõ",
         "ok": true,
         "f2": false
       },
@@ -2273,14 +2273,12 @@
           "R6-CT-A",
           "R6-HN-01",
           "R6-NC-01",
-          "R6-NT-01",
           "R6-VT-01"
         ],
         "actual": [
           "R6-CT-A",
           "R6-HN-01",
           "R6-NC-01",
-          "R6-NT-01",
           "R6-VT-01"
         ],
         "ok": true,
@@ -2320,10 +2318,12 @@
         "desc": "Lọc trụ \"Ngoại tuyến / chưa rõ\"",
         "expected": [
           "R6-CT-C",
+          "R6-NT-01",
           "R6-SG-01"
         ],
         "actual": [
           "R6-CT-C",
+          "R6-NT-01",
           "R6-SG-01"
         ],
         "ok": true,
@@ -2366,8 +2366,8 @@
         "label": "after",
         "id": "cpd-R6-NT-01-head",
         "desc": "Ngăn chi tiết R6-NT-01: nhãn trụ",
-        "expected": "Sẵn sàng",
-        "actual": "Sẵn sàng",
+        "expected": "Ngoại tuyến / chưa rõ",
+        "actual": "Ngoại tuyến / chưa rõ",
         "ok": true,
         "f2": true
       },
@@ -2399,8 +2399,8 @@
         "label": "after",
         "id": "cpd-R6-SG-01-head",
         "desc": "Ngăn chi tiết R6-SG-01: nhãn trụ",
-        "expected": "Chưa rõ",
-        "actual": "Chưa rõ",
+        "expected": "Ngoại tuyến / chưa rõ",
+        "actual": "Ngoại tuyến / chưa rõ",
         "ok": true,
         "f2": false
       },
@@ -2478,7 +2478,7 @@
           "Trạm Hà Nội": "ready",
           "Trạm Đà Nẵng": "charging",
           "Trạm Huế": "fault",
-          "Trạm Nha Trang": "ready",
+          "Trạm Nha Trang": "offline",
           "Trạm Sài Gòn": "offline",
           "Trạm Cần Thơ": "fault",
           "Trạm Vũng Tàu": "ready"
@@ -2487,7 +2487,7 @@
           "Trạm Vũng Tàu": "ready",
           "Trạm Cần Thơ": "fault",
           "Trạm Sài Gòn": "offline",
-          "Trạm Nha Trang": "ready",
+          "Trạm Nha Trang": "offline",
           "Trạm Huế": "fault",
           "Trạm Đà Nẵng": "charging",
           "Trạm Hà Nội": "ready"
@@ -2512,22 +2512,22 @@
           "R6-HN-01": "Sẵn sàng",
           "R6-DN-01": "Đang sạc",
           "R6-HUE-01": "Lỗi",
-          "R6-NT-01": "Sẵn sàng",
-          "R6-SG-01": "Chưa rõ",
+          "R6-NT-01": "Ngoại tuyến / chưa rõ",
+          "R6-SG-01": "Ngoại tuyến / chưa rõ",
           "R6-CT-A": "Sẵn sàng",
           "R6-CT-B": "Lỗi",
-          "R6-CT-C": "Chưa rõ",
+          "R6-CT-C": "Ngoại tuyến / chưa rõ",
           "R6-VT-01": "Sẵn sàng",
           "R6-NC-01": "Sẵn sàng"
         },
         "actual": {
           "R6-NC-01": "Sẵn sàng",
           "R6-VT-01": "Sẵn sàng",
-          "R6-CT-C": "Chưa rõ",
+          "R6-CT-C": "Ngoại tuyến / chưa rõ",
           "R6-CT-B": "Lỗi",
           "R6-CT-A": "Sẵn sàng",
-          "R6-SG-01": "Chưa rõ",
-          "R6-NT-01": "Sẵn sàng",
+          "R6-SG-01": "Ngoại tuyến / chưa rõ",
+          "R6-NT-01": "Ngoại tuyến / chưa rõ",
           "R6-HUE-01": "Lỗi",
           "R6-DN-01": "Đang sạc",
           "R6-HN-01": "Sẵn sàng"
