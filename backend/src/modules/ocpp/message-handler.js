@@ -1,6 +1,7 @@
 const { randomUUID } = require('node:crypto');
 const { safeLog, sanitizeErrorMessage } = require('../../lib/constants');
 const { OcppFrameError, OcppCallError, parseFrame, encodeCall, encodeCallResult, encodeCallError } = require('./frames');
+const { hashCall, MAX_MESSAGE_ID_LENGTH } = require('./messages.repository');
 
 class OcppRemoteCallError extends Error {
 	constructor(response) {
@@ -20,6 +21,9 @@ function createOcppMessageHandler({
 	logError = console.error,
 	callTimeoutMs = 30000,
 	updateLastSeen = async () => {},
+	messageStore = null,
+	// BootNotification ghi ONLINE và đánh dấu kết nối; phát lại câu cũ trên kết nối mới sẽ bỏ qua hai việc đó, mà xử lý lại thì vô hại.
+	dedupeSkipActions = ['BootNotification'],
 } = {}) {
 	const pendingCalls = new Map();
 
@@ -94,6 +98,39 @@ function createOcppMessageHandler({
 		}
 	}
 
+	// Tin trùng (cùng trụ, cùng messageId) nhận lại đúng câu trả lời đã lưu và không chạy handler lần hai (K-01).
+	async function runOnce(connection, request, handler) {
+		const invoke = () => handler(request.payload, { messageId: request.messageId, connection });
+		const code = connection?.chargePointCode || connection?.chargePoint?.code;
+		if (!messageStore || !code || dedupeSkipActions.includes(request.action)) return invoke();
+		if (request.messageId.length > MAX_MESSAGE_ID_LENGTH) {
+			logWarning(`[OCPP] messageId quá dài, bỏ qua chống trùng | action: ${safeLog(request.action)}`);
+			return invoke();
+		}
+
+		const begun = await messageStore.begin(code, request.messageId, request.action, hashCall(request.action, request.payload));
+		if (begun.state === 'replay') {
+			logInfo(`[OCPP] Duplicate CALL, replaying stored response | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
+			if (!begun.sameCall) {
+				logWarning(`[OCPP] Duplicate messageId with different content, returning the first response | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
+			}
+			return begun.response;
+		}
+
+		let payload;
+		try {
+			payload = await invoke();
+		} catch (error) {
+			await messageStore.release(code, request.messageId).catch(() => {});
+			throw error;
+		}
+		await messageStore.complete(code, request.messageId, payload).catch((error) => {
+			logWarning(`[OCPP] Không lưu được câu trả lời để chống trùng | messageId: ${safeLog(request.messageId)}: ${sanitizeErrorMessage(error?.message || error)}`);
+			return messageStore.release(code, request.messageId).catch(() => {});
+		});
+		return payload;
+	}
+
 	async function handleMessage(connection, rawMessage) {
 		let request;
 		try {
@@ -143,7 +180,7 @@ function createOcppMessageHandler({
 		try {
 			await updateLastSeen(connection);
 			logInfo(`[OCPP] Calling handler | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
-			const payload = await handler(request.payload, { messageId: request.messageId, connection });
+			const payload = await runOnce(connection, request, handler);
 			const response = encodeCallResult(request.messageId, payload);
 			logInfo(`[OCPP] Created CALLRESULT | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 			await sendFrame(connection, response);

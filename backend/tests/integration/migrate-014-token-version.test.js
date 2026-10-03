@@ -21,6 +21,10 @@ describe('migration 014: users.token_version', () => {
   });
 
   it('down bỏ cột; up lại sạch', async () => {
+    // Các migration sau 014 (vd. 015) phải lùi trước để đúng bản 014 là bản lùi cuối.
+    while ((await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1')).rows[0].version !== '014_users_token_version.sql') {
+      assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0);
+    }
     const down = run('src/db/migrate.js', ['down']);
     assert.strictEqual(down.status, 0, down.stderr);
     assert.equal(await column(), undefined);

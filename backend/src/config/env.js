@@ -28,6 +28,8 @@ const schema = z.object({
   OCPP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(50),
   // Khử trùng connector_errors: bỏ qua lỗi y hệt đã ghi trong N giây gần nhất (0 = tắt), mặc định 60
   OCPP_ERROR_DEDUP_SECONDS: z.coerce.number().int().min(0).default(60),
+  // Số ngày giữ câu trả lời đã gửi để nhận ra tin OCPP trùng messageId (S-14), mặc định 7
+  OCPP_MESSAGE_RETENTION_DAYS: z.coerce.number().int().positive().default(7),
 });
 
 const parsed = schema.safeParse(process.env);

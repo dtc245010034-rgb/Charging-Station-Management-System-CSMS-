@@ -39,7 +39,7 @@
 
 | Lớp | Có | Chưa có |
 |---|---|---|
-| Nền tảng | Express 5 + PostgreSQL 16, Docker Compose, migration 001–014 (tiến/lùi), CI (Ubuntu + Windows), Dockerfile chạy user thường + healthcheck, blueprint Render, tắt máy sạch (N4) | Staging chạy thật được kiểm với 50 trụ ảo, sao lưu tự động (S-62), thống kê sức khoẻ (S-63) |
+| Nền tảng | Express 5 + PostgreSQL 16, Docker Compose, migration 001–015 (tiến/lùi), CI (Ubuntu + Windows), Dockerfile chạy user thường + healthcheck, blueprint Render, tắt máy sạch (N4) | Staging chạy thật được kiểm với 50 trụ ảo, sao lưu tự động (S-62), thống kê sức khoẻ (S-63) |
 | Tài khoản & quyền | Đăng ký công khai (luôn Tài xế), Quản trị tạo mọi vai trò, đăng nhập, khoá tạm, RBAC 5 vai trò, cô lập dữ liệu theo chủ trạm, audit truy cập trái phép | Danh sách/khoá tài khoản (S-61), đổi/quên mật khẩu |
 | Trạm – trụ – đầu nối | API tạo/sửa/xem (lọc theo chủ sở hữu), mã trụ duy nhất, toạ độ, chống bấm hai lần, **khoá/mở khoá trạm** (đóng kết nối trụ bằng mã 1008) | Chặn đổi mã khi có phiên sạc |
 | OCPP | `ws://…/ocpp/<mã>`: xác thực mã trụ + subprotocol, khung CALL/CALLRESULT/CALLERROR, `BootNotification`, `Heartbeat` (`last_seen_at` theo giờ DB), `StatusNotification` (lưu trạng thái, lỗi có khử trùng, giới hạn độ dài), thay thế kết nối trùng (S-13), rate limit, ping giữ kết nối | `Authorize` (còn là stub, S-15), chống xử lý tin trùng `messageId` (S-14), Reset từ xa (S-16), xác thực trụ (B5), phiên sạc (Sprint 3) |
