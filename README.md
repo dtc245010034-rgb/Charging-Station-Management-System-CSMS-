@@ -11,8 +11,8 @@
 | | |
 |---|---|
 | Sprint 1 | **12/12 SP xong** (Jira): khung dự án, đăng nhập, phân quyền, trạm/trụ/đầu nối, spike OCPP. Demo Thứ Tư 30/9 |
-| Sprint 2 | Kế hoạch 20 SP (kết nối OCPP có xác thực, trạng thái trụ), **chưa bắt đầu code** |
-| Chất lượng | Lint sạch · **140/140 test pass** · giao diện mới đã chạy thử trên trình duyệt |
+| Sprint 2 | Đang thực hiện: S-06, S-07, S-13 hoàn thành; S-08 (BootNotification, khoá trạm), S-09 (Heartbeat, last_seen_at) đã có trên main |
+| Chất lượng | Lint sạch · **200+ test pass** · giao diện mới đã chạy thử trên trình duyệt |
 | Chạy được ngay | Đăng nhập, 5 workspace theo vai trò, quản lý trạm/trụ, bảng điều khiển Vận hành, dữ liệu demo |
 | Chưa có | Phiên sạc thật, tính tiền, ví, phân bổ công suất, đặt chỗ, đối soát (Sprint 2–8) |
 
@@ -61,6 +61,20 @@ Lần đầu (máy chưa build gì) script tự làm hết, mất vài phút:
 
 ### Gặp sự cố khi chạy
 Script in `[LỖI]` kèm cách sửa. Các trường hợp hay gặp: Docker chưa mở (mở Docker Desktop, đợi báo *running*); Linux báo `permission denied` (`sudo usermod -aG docker $USER` rồi đăng nhập lại); có dữ liệu Postgres cũ nhưng mất `.env` (chạy lại `python run.py`: script hỏi gõ `xoa` để xoá dữ liệu cũ rồi tạo `.env` mới; thêm `--yes` để bỏ hỏi). Bảng đầy đủ ở mục 4. Cấu hình thủ công không dùng script (nâng cao): `docs/OPERATIONS.md`.
+
+### Biến môi trường chính (`.env` và `backend/.env`)
+
+| Biến | Ý nghĩa | Đơn vị / Kiểu | Mặc định |
+|---|---|---|---|
+| `PORT` | Cổng HTTP / WebSocket server | Số nguyên | `3000` |
+| `DATABASE_URL` | Chuỗi kết nối PostgreSQL | URL | (Bắt buộc) |
+| `JWT_SECRET` | Khóa bí mật ký phiên JWT (≥ 32 ký tự) | Chuỗi | (Bắt buộc) |
+| `APP_ORIGIN` | Nguồn gốc hợp lệ của frontend (chống CSRF) | URL | `http://localhost:3000` |
+| `LOGIN_IP_MAX_FAILURES` | Ngưỡng khóa đăng nhập sai theo IP trong 15 phút | Số lần | `20` |
+| `TRUST_PROXY` | Số proxy tin cậy đứng trước app (0 = bỏ qua `X-Forwarded-For`) | Số nguyên | `0` |
+| `OCPP_HEARTBEAT_INTERVAL` | Khoảng thời gian nhịp tim gửi cho trụ trong BootNotificationResponse | Giây | `60` |
+| `OCPP_PING_INTERVAL` | Chu kỳ gửi WebSocket Ping giữ kết nối OCPP (B9) | Giây | `30` |
+| `OCPP_RATE_LIMIT_MAX` | Giới hạn tần suất tin nhắn cho mỗi kết nối OCPP (B3) | Tin / giây | `50` |
 
 ---
 
@@ -142,7 +156,7 @@ python test.py --verbose              # in toàn bộ output thay vì bản tóm
 - **`# fail 0` là điều kiện để merge** — CI trên mỗi Pull Request chạy lint + test + quét phụ thuộc.
 - Lần đầu chậm (tải Node 22 và cài thư viện, vài phút); các lần sau nhanh hơn.
 - Muốn chạy bằng Node trên máy (cần Node ≥ 22.7): `docker compose up -d db_test`, rồi trong `backend/`: `npm ci && npm run lint && npm test`; test chỉ chạy trên DB có tên kết thúc `_test`.
-- Ca kiểm thử và báo cáo QA: `docs/testing/`, `docs/testing/stories/S-xx.md`.
+- Ca kiểm thử và báo cáo QA: [`docs/testing/`](docs/testing/), [`docs/testing/stories/S/`](docs/testing/stories/S/).
 
 ---
 
@@ -202,7 +216,7 @@ Trình duyệt ──HTTP/JSON (cookie httpOnly)──► Express 5 (backend/src
    frontend/ (HTML/CSS/JS thuần, ES modules,          ├─ modules: auth · users · stations · charge-points · health · audit
    không build; Leaflet đặt sẵn trong repo)           ├─ security: ma trận quyền + chặn route chưa khai quyền
                                                       └─ PostgreSQL 16 (migration 001–005)
-Trụ sạc ──WebSocket /ocpp/<mã trụ>──► máy chủ OCPP (hiện là mã spike, chỉ trả lời tĩnh)
+Trụ sạc ──WebSocket /ocpp/<mã trụ>──► máy chủ OCPP 1.6J (xác thực trụ, BootNotification, Heartbeat, rate limiting, keepalive ping)
 ```
 
 Công nghệ: Node ≥ 22.7 · Express 5 · PostgreSQL 16 · Zod · argon2id · JWT trong cookie · `ws` · Docker Compose · GitHub Actions · Render (staging).
@@ -236,13 +250,13 @@ Menu của chức năng chưa có backend được **ẩn** (cấu hình trong `
 
 ### API hiện có (chi tiết ở `backend/README.md`)
 
-`/api/auth/{register,login,logout,me}` · `/api/admin/users` · `/api/roles` · `/api/stations` (+`/:id`) · `/api/stations/:id/charge-points` · `/api/charge-points` (+`/:id`, `/check-code`) · `/api/health` · WebSocket `/ocpp/<mã>` (spike).
+`/api/auth/{register,login,logout,me}` · `/api/admin/users` · `/api/roles` · `/api/stations` (+`/:id`) · `/api/stations/:id/charge-points` · `/api/charge-points` (+`/:id`, `/check-code`) · `/api/health` · WebSocket `/ocpp/<mã>` (OCPP 1.6J).
 
 ### Đang làm / sắp tới
 
 | Sprint | Mục tiêu | Trạng thái |
 |---|---|---|
-| 2 (28/9–5/10) | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ (S-06…S-16, GYM-32…42, 20 SP, cam kết đủ) | Chưa bắt đầu code; đã chốt dùng `ocpp-rpc`; kế hoạch chi tiết: `docs/SPRINT_2_PLAN.md` |
+| 2 (28/9–5/10) | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ (S-06…S-16, GYM-32…42, 20 SP, cam kết đủ) | Đang thực hiện: S-06, S-07, S-13 xong; S-08, S-09 đã có trên main; kế hoạch chi tiết: `docs/SPRINT_2_PLAN.md` |
 | 3 | Một phiên sạc trọn vẹn, kWh đúng dù trụ mất kết nối | Chưa |
 | 4 | Tính đúng tiền theo biểu giá nhiều khung giờ | Chưa |
 | 5 | Nạp ví (sandbox), tự trừ tiền | Chưa; **chưa có hồ sơ sandbox thanh toán** |
@@ -252,6 +266,13 @@ Menu của chức năng chưa có backend được **ẩn** (cấu hình trong `
 
 > ⚠️ Backlog có 8 sprint nhưng dự án chỉ còn khoảng 5 tuần làm việc (kết thúc 26/10). Phạm vi thực tế do PO chốt; bảng trên là lộ trình, không phải cam kết.
 
+### Giới hạn đã biết
+
+- **B5 (Chưa xác thực trụ / kết nối ẩn danh):** WebSocket `/ocpp/:chargePointCode` hiện chỉ kiểm tra mã trụ có tồn tại trong CSDL và trạm không bị khóa; chưa có cơ chế xác thực danh tính trụ (chưa có Basic Auth với mật khẩu trụ hoặc mTLS). Do đó, một kết nối ẩn danh nếu biết mã trụ có thể kết nối và đá (ngắt kết nối) trụ thật đang hoạt động theo logic S-13 (kết nối mới thay thế kết nối cũ).
+- **K-01 (Boot trùng messageId xử lý hai lần):** Chưa có cơ chế idempotency/deduplication cho frame OCPP CALL; nếu trụ gửi hai bản tin CALL trùng `messageId`, server hiện tại sẽ xử lý cả hai lần độc lập thay vì trả lại kết quả đã lưu trước đó.
+- **Stub Authorize và StatusNotification:** Các action `Authorize` và `StatusNotification` hiện tại mới chỉ là các stub tạm thời trả lời tĩnh (ví dụ `StatusNotification` trả `{}` rỗng, `Authorize` trả `Accepted` nếu có `idTag`), chưa kiểm tra mã thẻ RFID trong CSDL, chưa cập nhật trạng thái hoạt động của đầu nối vào bảng `connectors`.
+- **Thư viện OCPP (Kế hoạch vs Triển khai):** Tài liệu kế hoạch Sprint 2 ban đầu ghi nhận dự kiến sử dụng thư viện `ocpp-rpc`. Tuy nhiên, mã nguồn thực tế đang sử dụng trực tiếp thư viện WebSocket `ws` thuần kết hợp bộ định dạng và xử lý frame tự viết (`backend/src/modules/ocpp/`) để kiểm soát chặt chẽ giao thức OCPP 1.6J.
+
 ---
 
 ## 6. Cấu trúc thư mục
@@ -260,7 +281,7 @@ Menu của chức năng chưa có backend được **ẩn** (cấu hình trong `
 backend/
   src/modules/<miền>/     routes (khai quyền, kiểm đầu vào) → service (nghiệp vụ) → repository (SQL)
   src/security/           ma trận quyền (permissions.js), chặn route chưa khai quyền (routeGuard.js)
-  src/server.js           listen + WebSocket OCPP (mã spike, sẽ thay ở Sprint 2)
+  src/server.js           Khởi động HTTP server + WebSocketServer OCPP 1.6J (upgrade handler, kết nối, heartbeat, rate limiting, keepalive ping)
   migrations/             NNN_ten.sql + NNN_ten.down.sql — đã merge thì không sửa, muốn đổi thì thêm file mới
   scripts/                create-admin.js, seed-demo.js
   tests/                  unit/ integration/ acceptance/ (một file cho mỗi story, tên test theo AC)
@@ -292,6 +313,6 @@ run.py / test.py          chạy dự án bằng Docker / chạy toàn bộ test
 - **Chi tiết backend** (API, phân quyền, khoá đăng nhập): [`backend/README.md`](backend/README.md).
 - **Thiết kế giao diện**: [`docs/design/`](docs/design/) (đặc tả, ảnh chụp, các quyết định lệch đặc tả).
 - **Spike OCPP**: [`docs/spikes/K-01-ocpp-simulator.md`](docs/spikes/K-01-ocpp-simulator.md).
-- **Kiểm thử/QA**: [`docs/README.md`](docs/README.md) (điểm vào), `docs/testing/`, `docs/testing/stories/`.
+- **Kiểm thử/QA**: [`docs/testing/README.md`](docs/testing/README.md) (điểm vào), [`docs/testing/`](docs/testing/), [`docs/testing/stories/S/`](docs/testing/stories/S/).
 - Backlog dự án: file ghim trong nhóm Zalo của Khối 8 — nguồn sự thật về phạm vi và AC.
 - Jira: bảng **GYM** (Team-CodeGym).
