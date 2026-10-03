@@ -81,7 +81,10 @@ describe('S-01 migrate: baseline up/down/up', () => {
     assert.strictEqual(downOwner.status, 0, downOwner.stderr);
     assert.ok(!await has('stations', 'owner_id') && !await has('audit_logs', 'ip'));
     assert.ok(!await index('stations_owner_id_idx') && !await index('charge_points_station_id_idx'));
-    assert.deepStrictEqual(await tables(), TABLES.filter((table) => table !== 'idempotency_keys'));
+    assert.deepStrictEqual(
+      await tables(),
+      TABLES.filter((table) => !['connector_errors', 'idempotency_keys'].includes(table))
+    );
     assert.strictEqual(run('src/db/migrate.js').status, 0);
   });
 });
