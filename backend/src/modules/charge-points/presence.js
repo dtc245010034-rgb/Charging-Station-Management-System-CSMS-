@@ -50,11 +50,11 @@ const MAPPING_STATUS = MAPPING_OCPP.map((ocpp) => OCPP_CONNECTOR_STATUS_MAP[ocpp
 
 // Mỗi tin từ trụ cập nhật last_seen_at. Trụ đang OFFLINE/UNKNOWN thì về ONLINE và đầu nối lấy lại trạng thái từ ocpp_status đã lưu.
 // SKIP LOCKED: hàng đang bị giao dịch khác giữ thì bỏ qua lần này, không để Heartbeat chờ khoá và giữ kết nối pool.
-// recover=false cho tin trước khi Boot được chấp nhận: BootNotification tự ghi ONLINE và phát sự kiện, không phát trùng.
-async function markChargePointSeen(db, code, { recover = true } = {}) {
+// notify=false cho tin trước khi Boot được chấp nhận: BootNotification tự phát sự kiện, không phát trùng. Đầu nối vẫn được khôi phục.
+async function markChargePointSeen(db, code, { notify = true } = {}) {
   const result = await db.query(
     `WITH target AS (
-       SELECT cp.id, cp.station_id, s.owner_id, ($7::boolean AND cp.status IN ($2, $3)) AS recovering
+       SELECT cp.id, cp.station_id, s.owner_id, (cp.status IN ($2, $3)) AS recovering
        FROM charge_points cp JOIN stations s ON s.id = cp.station_id
        WHERE cp.code = $1 AND s.locked_at IS NULL
        FOR UPDATE OF cp SKIP LOCKED
@@ -71,9 +71,9 @@ async function markChargePointSeen(db, code, { recover = true } = {}) {
        RETURNING c.id
      )
      SELECT id, station_id, owner_id FROM seen WHERE recovering`,
-    [code, CHARGE_POINT_STALE_STATUS, CHARGE_POINT_OFFLINE_STATUS, CHARGE_POINT_ONLINE_STATUS, MAPPING_OCPP, MAPPING_STATUS, recover]
+    [code, CHARGE_POINT_STALE_STATUS, CHARGE_POINT_OFFLINE_STATUS, CHARGE_POINT_ONLINE_STATUS, MAPPING_OCPP, MAPPING_STATUS]
   );
-  result.rows.forEach(publishChargePoint);
+  if (notify) result.rows.forEach(publishChargePoint);
 }
 
 module.exports = { markChargePointOffline, markAllChargePointsOffline, markChargePointSeen };

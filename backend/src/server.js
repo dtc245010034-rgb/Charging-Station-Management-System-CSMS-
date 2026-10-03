@@ -27,7 +27,7 @@ async function updateChargePointLastSeen(connection) {
 	const code = connection?.chargePointCode || connection?.chargePoint?.code;
 	if (!code || connection?.isStationLocked) return;
 	try {
-		await markChargePointSeen(pool, code, { recover: Boolean(connection.isBootAccepted) });
+		await markChargePointSeen(pool, code, { notify: Boolean(connection.isBootAccepted) });
 	} catch (error) {
 		console.warn(`[OCPP] Failed to update last_seen_at for ${safeLog(code)}: ${sanitizeErrorMessage(error?.message || error)}`);
 	}
