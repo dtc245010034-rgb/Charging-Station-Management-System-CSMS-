@@ -7,8 +7,17 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
+// Pool riêng cho handler OCPP: khoá hàng giữ quá lâu thì lỗi sau lock_timeout thay vì treo tới khi trụ tự ngắt (F10).
+const ocppPool = new Pool({
+  connectionString: env.DATABASE_URL,
+  connectionTimeoutMillis: 2000,
+  options: `-c lock_timeout=${env.OCPP_LOCK_TIMEOUT_SECONDS * 1000}`,
+});
+
 // Lỗi trên client rảnh (DB restart, mất mạng) không được làm sập process.
-pool.on('error', (error) => console.error('Lỗi kết nối PostgreSQL:', sanitizeErrorMessage(error.message)));
+for (const instance of [pool, ocppPool]) {
+  instance.on('error', (error) => console.error('Lỗi kết nối PostgreSQL:', sanitizeErrorMessage(error.message)));
+}
 
 function convertPlaceholders(sql) {
   let index = 0;
@@ -34,4 +43,4 @@ function prepare(sql) {
   };
 }
 
-module.exports = { pool, prepare };
+module.exports = { pool, ocppPool, prepare };

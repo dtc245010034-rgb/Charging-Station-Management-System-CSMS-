@@ -3,7 +3,7 @@ const { WebSocketServer } = require('ws');
 const env = require('./config/env');
 const app = require('./app');
 const { migrate } = require('./db/migrate');
-const { pool } = require('./db/pool');
+const { pool, ocppPool } = require('./db/pool');
 const connections = require('./modules/charge-points/connection-registry');
 const { createRateLimiter } = require('./lib/rate-limit');
 const { clientIpOf } = require('./lib/client-ip');
@@ -37,7 +37,7 @@ const ocppMessages = createOcppMessageHandler({
 	handlers: {
 		BootNotification: bootNotificationHandler,
 		Heartbeat: createHeartbeatHandler({ now }),
-		StatusNotification: createStatusNotificationHandler({ pool, errorDedupSeconds: env.OCPP_ERROR_DEDUP_SECONDS }),
+		StatusNotification: createStatusNotificationHandler({ pool: ocppPool, errorDedupSeconds: env.OCPP_ERROR_DEDUP_SECONDS }),
 		Authorize: async (payload) => ({ idTagInfo: { status: payload.idTag ? 'Accepted' : 'Invalid' } }),
 	},
 	updateLastSeen: updateChargePointLastSeen,
@@ -87,7 +87,7 @@ async function purgeOldMessages() {
 	}
 }
 
-const shutdown = createShutdown({ server, wss, pool });
+const shutdown = createShutdown({ server, wss, pool: { end: () => Promise.all([pool.end(), ocppPool.end()]) } });
 let stopChargePointOfflineJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();

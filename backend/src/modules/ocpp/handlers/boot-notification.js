@@ -17,7 +17,7 @@ const { OcppCallError } = require('../frames');
 const { publish } = require('../../fleet-status/fleet-status.events');
 
 function getDefaultPool() {
-  return require('../../../db/pool').pool;
+  return require('../../../db/pool').ocppPool;
 }
 
 function getDefaultHeartbeatInterval() {

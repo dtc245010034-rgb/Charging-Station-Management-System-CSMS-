@@ -32,6 +32,8 @@ const schema = z.object({
   OCPP_MESSAGE_RETENTION_DAYS: z.coerce.number().int().positive().default(7),
   // Cửa sổ phát lại (giây): tin cùng messageId, cùng hành động, cùng nội dung trong cửa sổ này nhận lại câu cũ; ngoài cửa sổ hoặc khác nội dung là tin mới (F8), mặc định 600
   OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS: z.coerce.number().int().positive().default(600),
+  // Thời gian tối đa (giây) một truy vấn của handler OCPP chờ khoá hàng trước khi trả InternalError (F10), mặc định 5
+  OCPP_LOCK_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(5),
   // Giới hạn tần suất trong bộ nhớ (một tiến trình): check-code theo tài khoản, số lần dò email trùng khi đăng ký theo IP, bắt tay OCPP theo (IP, mã trụ)
   CHECK_CODE_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(30),
   REGISTER_CONFLICT_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(5),
