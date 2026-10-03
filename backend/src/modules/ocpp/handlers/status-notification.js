@@ -5,6 +5,7 @@ const { publish } = require('../../fleet-status/fleet-status.events');
 
 const MAX_TEXT_LENGTH = 50;
 const MAX_CONNECTOR_ID = 2147483647;
+const MAX_CLOCK_SKEW_MS = 24 * 3600 * 1000;
 const OTHER_ERROR = 'OtherError';
 const OCPP_ERROR_CODES = new Set([
   'ConnectorLockFailure', 'EVCommunicationError', 'GroundFailure', 'HighTemperature', 'InternalError', 'LocalListConflict',
@@ -108,8 +109,10 @@ function createStatusNotificationHandler({
       logAggregated(logWarning, 'unknown-error-code', code, `[OCPP] StatusNotification: errorCode ngoài danh sách OCPP 1.6 của trụ ${safeLog(code)} | errorCode`, safeLog(errorCode));
     }
     const vendorErrorCode = payload.vendorErrorCode || (knownCode ? null : errorCode);
-    const occurredAt = typeof payload.timestamp === 'string' && Number.isFinite(Date.parse(payload.timestamp))
-      ? new Date(payload.timestamp).toISOString()
+    // Đồng hồ trụ lệch quá 24 giờ (hoặc năm cực đoan Postgres không nhận) thì dùng giờ máy chủ thay vì tin hay báo lỗi.
+    const reportedAt = typeof payload.timestamp === 'string' ? Date.parse(payload.timestamp) : NaN;
+    const occurredAt = Number.isFinite(reportedAt) && Math.abs(reportedAt - now()) <= MAX_CLOCK_SKEW_MS
+      ? new Date(reportedAt).toISOString()
       : null;
     const sameStatusAsBefore = result.rows?.[0]?.previous_ocpp_status === status;
     await db.query(
