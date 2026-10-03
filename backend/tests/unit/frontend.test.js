@@ -58,6 +58,18 @@ describe('S-02 frontend: router', () => {
     assert.ok(!pages('owner').includes('users') && !pages('accountant').includes('stations'));
   });
 
+  it('S-11 T-24: operator và owner có đường dẫn tới lưới trạng thái', async () => {
+    const { visibleNav, WORKSPACES } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const pages = (workspace) => visibleNav(workspace, WORKSPACES[workspace].role, can).flatMap((group) => group.items.map((item) => item.page));
+
+    assert.ok(pages('operator').includes('fleet-status'));
+    assert.ok(pages('owner').includes('fleet-status'));
+    assert.strictEqual(PAGE_NEEDS['fleet-status'], 'charge-points:read');
+    assert.strictEqual(typeof pageLoader('fleet-status', 'operator'), 'function');
+  });
+
   it('status: gom 9 trạng thái OCPP vào nhóm hiển thị, trạng thái lạ/UNKNOWN là offline, giá trị gốc không đổi', async () => {
     const { groupOf, OCPP_STATUSES, CONNECTOR_STATUS_LABELS, worstGroup, countByGroup } = await load('app/status.js');
     assert.strictEqual(OCPP_STATUSES.length, 9);
