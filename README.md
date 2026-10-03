@@ -29,8 +29,8 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 
 ## Mục lục
 
-1. [Trạng thái dự án](#trạng-thái-dự-án-0310)
-2. [Chạy dự án](#1-chạy-dự-án) · [Tài khoản có sẵn](#tài-khoản-có-sẵn) · [Biến môi trường](#biến-môi-trường)
+1. [Trạng thái dự án](#trạng-thái-dự-án-0310) · [Việc còn lại để đóng Sprint 2](#việc-còn-lại-để-đóng-sprint-2-hạn-510)
+2. [Chạy dự án](#1-chạy-dự-án) · [Chạy trên máy chủ](#chạy-trên-máy-chủ-nhóm-homelab-linux) · [Công khai qua Internet](#cho-người-khác-thử-qua-internet-công-khai-tạm) · [Tài khoản có sẵn](#tài-khoản-có-sẵn) · [Biến môi trường](#biến-môi-trường)
 3. [Dùng thử hệ thống](#2-dùng-thử-hệ-thống) · [Tạo tài khoản](#tạo-tài-khoản) · [Dữ liệu demo](#dữ-liệu-demo) · [Thử trụ sạc ảo (OCPP)](#thử-trụ-sạc-ảo-ocpp)
 4. [Kiểm thử](#3-kiểm-thử)
 5. [Staging trên Render](#4-staging-trên-render)
@@ -42,16 +42,31 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 
 ## Trạng thái dự án (03/10)
 
-*Cập nhật 03/10/2026, khớp `main` sau PR #74. Trạng thái Done chính thức theo Jira (bảng GYM, **chưa đối chiếu bằng API** trong lần cập nhật này); bảng đầy đủ: [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md).*
+*Cập nhật 03/10/2026 23:50, khớp `main` = `dbecd10` (sau PR #76). Đã kiểm lại bằng server thật cùng ngày (báo cáo lần 7 lưu ở Project, chưa đưa vào repo). Trạng thái Done chính thức theo Jira (bảng GYM, **chưa đối chiếu bằng API**); bảng đầy đủ: [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md).*
 
 | Hạng mục | Tình trạng |
 |---|---|
 | Sprint 1 (21–28/9) | **12/12 SP xong**: khung dự án, đăng nhập, phân quyền, trạm/trụ/đầu nối, spike OCPP |
-| Sprint 2 (28/9–5/10), 20 SP | **Đã có trên `main`:** S-06 (trụ kết nối, trụ lạ bị từ chối), S-07 (đọc/ghi khung OCPP), S-08 (BootNotification, khoá trạm), S-09 (Heartbeat, `last_seen_at`), S-10 (StatusNotification), S-11 (màn hình trạng thái mọi trụ, đẩy bằng SSE), S-13 (trùng mã trụ đóng kết nối cũ), cờ ngoại tuyến theo nhịp tim (S-12), tắt máy sạch (N4). **Chưa làm:** S-14 (chống xử lý tin trùng), S-15 (xác thực thẻ, `Authorize` còn là stub), S-16 (Reset từ xa) |
-| Chất lượng | Lint sạch · **280/280 test pass** (Linux, có Docker; chạy 3 lần liên tiếp không chập chờn) · CI: `lint-and-test` (Ubuntu) + `test-windows` |
-| Chạy được ngay | Đăng nhập, 5 workspace theo vai trò, quản lý trạm/trụ, bảng điều khiển Vận hành với trạng thái trụ cập nhật tức thời, khoá/mở khoá trạm, trụ ảo kết nối được |
+| Sprint 2 (28/9–5/10), 20 SP | **Có trên `main` (17 SP):** S-06 (trụ kết nối, trụ lạ bị từ chối), S-07 (khung OCPP), S-08 (BootNotification, khoá trạm), S-09 (Heartbeat, `last_seen_at`), S-10 (StatusNotification, lỗi mức đầu nối và mức trụ), S-11 (màn hình trạng thái mọi trụ, SSE), S-12 (job quá hạn nhịp tim → ngoại tuyến), S-13 (trùng mã trụ đóng kết nối cũ), S-14 (chống xử lý tin trùng `messageId`, bảng `ocpp_messages`). **Chưa làm (3 SP):** S-15 (xác thực thẻ, `Authorize` còn là stub), S-16 (Reset từ xa) |
+| Chất lượng | Lint sạch · **402 test** (387 pass, 14 `todo` của S-15/S-16, 1 bỏ qua vì S-09 T-19 cần Docker); chạy `npm test` 3 lần liên tiếp trên Node 22 + PostgreSQL 16: 0 fail cả 3 lần (04/10/2026) · migration 001–015 lên/xuống/lên sạch · CI: `lint-and-test` (Ubuntu) + `test-windows` |
+| Chạy được ngay | Đăng nhập, 5 workspace theo vai trò, quản lý trạm/trụ, bảng trạng thái trụ cập nhật tức thời, khoá/mở khoá trạm, tắt máy sạch, trụ ảo kết nối được |
 | Chưa có | Phiên sạc thật, tính tiền, ví, phân bổ công suất, đặt chỗ, đối soát (Sprint 3–8) |
-| Còn mở | B5 (trụ chưa xác thực), staging 50 trụ ảo, tile bản đồ thật: xem [Giới hạn đã biết](#giới-hạn-đã-biết) |
+| Còn mở | S-15, S-16 (kế hoạch: [`docs/design/S15-S16-ke-hoach.md`](docs/design/S15-S16-ke-hoach.md)), B5 (trụ chưa xác thực), chạy 50 trụ ảo trên máy chủ nhóm, tile bản đồ thật: xem [Giới hạn đã biết](#giới-hạn-đã-biết) |
+
+### Việc còn lại để đóng Sprint 2 (hạn 5/10)
+
+| # | Việc | Ước lượng | Ghi chú |
+|---|---|---|---|
+| 1 | **S-15 `Authorize`** (Must; đã tách `handlers/authorize.js`, chưa đổi hành vi): bảng `id_tags` (migration 016), hàm kiểm thẻ thuần trả `Accepted`/`Blocked`/`Expired`/`Invalid`, trạm tạm ngừng/bảo trì/khoá → `Blocked`, log chỉ 4 ký tự cuối của thẻ, thẻ demo cho tài xế | 2 SP | Chưa bắt đầu. Sprint 3 (S-17) dùng lại hàm kiểm thẻ. Cần Nguyễn Văn Hữu review (migration) |
+| 2 | **S-16 `Reset` từ xa** (Should; đã tách `commands.js`, 14 test `todo`): API `POST /api/charge-points/:id/reset` (chỉ Vận hành/Quản trị, có audit), nút trên giao diện, timeout 30 giây, trụ ngoại tuyến báo lỗi ngay | 1 SP | Chưa bắt đầu. `sendCall` đã có trong `message-handler.js` nhưng chưa nối vào server. Cắt đầu tiên nếu trễ |
+| 3 | **F8** chỉ phát lại tin trùng khi cùng `messageId`, cùng hành động và cùng nội dung trong cửa sổ `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` | Xong | Có test viết trước, thấy FAIL trên code cũ rồi PASS; Heartbeat không còn lưu chống trùng (F11). Xem [Giới hạn đã biết](#giới-hạn-đã-biết) |
+| 4 | **F9** job S-12 và Heartbeat dùng chung hằng số trạng thái; Heartbeat đưa trụ về `ONLINE` thì tính lại trạng thái đầu nối từ `ocpp_status` đã lưu | Xong | Test đơn vị + test server thật (`ocpp-heartbeat-recovery*.test.js`) |
+| 5 | **F10** `lock_timeout` 5 giây (`OCPP_LOCK_TIMEOUT_SECONDS`) chỉ cho truy vấn của handler OCPP (pool riêng `ocppPool`) | Xong | Test server thật: khoá hàng 8 giây thì handler trả lỗi sau khoảng 5 giây, Heartbeat không bị chặn |
+| 6 | `tools/simulate-fleet.js` (50 trụ ảo, 6 kịch bản, ngưỡng định sẵn) | Xong trên laptop | Chạy trên DB `_chk` ở localhost: 11/11 PASS. **Chưa chạy trên máy chủ nhóm/ngrok** (xem [`docs/OPERATIONS.md`](docs/OPERATIONS.md)) |
+| 7 | Cập nhật Jira (S-08…S-14), xoá nhánh đã merge | 1–2 giờ | |
+| 8 | **Quyết định PO:** B5 (Basic Auth hay chấp nhận rủi ro), quy tắc `messageId`, lỗi mức trụ có đổi trạng thái tổng không, nhãn "Ngoại tuyến" cho trụ có mọi đầu nối tạm ngừng | — | Chốt trước demo |
+
+Ước lượng giờ là của người soạn tài liệu, không phải số liệu từ Jira. Thứ tự cắt nếu trễ: S-16 → S-15 (đã thống nhất với PO).
 
 ---
 
@@ -76,6 +91,37 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 | `python test.py` | Lint + toàn bộ test (mục [Kiểm thử](#3-kiểm-thử)) |
 
 **Sửa code:** `python run.py down` → sửa → `python run.py`. Container chạy ảnh đã build (giống staging), không tự tải lại code.
+
+### Chạy trên máy chủ nhóm (homelab Linux)
+
+Máy chủ cần Git, Docker (kèm Compose) và Python 3.8+. Mọi thứ chạy trong Docker; dữ liệu Postgres nằm trong volume nên dựng lại image không mất dữ liệu.
+
+```bash
+python3 run.py                 # build, chạy nền, đợi /api/health xanh, tạo admin + demo
+python3 run.py status          # địa chỉ, sức khoẻ, đã có dữ liệu chưa
+python3 run.py logs            # xem log của ứng dụng (Ctrl+C thoát, app vẫn chạy)
+python3 run.py down            # tắt, GIỮ dữ liệu
+python3 run.py reset           # tắt và XOÁ cả dữ liệu (hỏi xác nhận)
+python3 test.py                # lint + toàn bộ test trong Docker (có cả S-09 T-19)
+```
+
+Cập nhật bản mới: `git pull` rồi `python3 run.py down` và `python3 run.py`. Migration chạy tự động khi app khởi động. Máy chủ nên tắt chế độ ngủ và gập màn hình; sao lưu bằng `docker compose exec db pg_dump -U csms csms > backup.sql`.
+
+### Cho người khác thử qua Internet (công khai tạm)
+
+```bash
+python3 run.py --public-url https://abc.ngrok.dev        # bật chế độ công khai (trên máy chủ)
+ngrok config add-authtoken <TOKEN>                       # một lần, lấy token ở trang quản lý ngrok
+ngrok http 3000 --url https://abc.ngrok.dev              # mở tunnel, chạy ở cửa sổ khác trên cùng máy
+python3 run.py --local                                   # quay về chế độ chạy trên máy này
+```
+
+Chế độ này bật cookie `Secure` (`NODE_ENV=production`), đặt `TRUST_PROXY=1`, sinh **mật khẩu ngẫu nhiên** cho admin và tài khoản demo (in một lần), ép cổng ứng dụng và Postgres chỉ mở cho `127.0.0.1`, và **từ chối khởi động nếu DB còn tài khoản mật khẩu mặc định** (`admin/admin`, `demo12345`): khi đó chạy `python3 run.py reset --yes` rồi chạy lại. Chi tiết: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) mục 3.
+
+- **Tên miền ngrok:** tài khoản miễn phí có 1 tên miền "development"; đuôi tên miền có thể là `ngrok.dev` hoặc `ngrok-free.app`, `run.py` nhận mọi địa chỉ `https://` gốc. Cú pháp `--url` theo [tài liệu ngrok](https://ngrok.com/docs/agent/cli/) (`--domain` đã bị đánh dấu lỗi thời); kiểm bằng `ngrok http --help`.
+- **Giới hạn gói miễn phí ngrok** ([nguồn](https://ngrok.com/docs/pricing-limits/free-plan-limits)): 20.000 yêu cầu HTTP, 1 GB dữ liệu ra và 5.000 kết nối TCP mỗi tháng; trang cảnh báo chỉ hiện với trình duyệt. Chưa kiểm chứng WebSocket OCPP qua ngrok thật: thử 1 trụ ảo bằng `wss://` trước.
+- **Trụ ảo nên chạy ngay trên máy chủ** (gọi `localhost`), chỉ cho 1–3 trụ đi qua tunnel để kiểm đường TLS và `TRUST_PROXY`.
+- ⚠️ **B5:** khi mở ra Internet, ai biết mã trụ cũng có thể đá trụ thật khỏi kết nối. Dùng mã trụ khó đoán cho môi trường công khai và không nạp dữ liệu thật.
 
 ### Tài khoản có sẵn
 
@@ -105,7 +151,9 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `OCPP_PING_INTERVAL` | Chu kỳ WebSocket Ping giữ kết nối OCPP (B9) | Giây | `30` |
 | `OCPP_RATE_LIMIT_MAX` | Giới hạn tần suất tin nhắn mỗi kết nối OCPP (B3) | Tin/giây | `50` |
 | `OCPP_ERROR_DEDUP_SECONDS` | Bỏ qua lỗi đầu nối y hệt (cùng đầu nối, `errorCode`, `vendorErrorCode`, trạng thái không đổi) đã ghi trong N giây gần nhất; `0` = tắt | Giây | `60` |
-| `OCPP_MESSAGE_RETENTION_DAYS` | Số ngày giữ câu trả lời đã gửi để nhận ra tin OCPP trùng `messageId` (S-14); mặc định `7`. Job dọn chạy khi khởi động và mỗi giờ. |
+| `OCPP_MESSAGE_RETENTION_DAYS` | Số ngày giữ câu trả lời đã gửi để nhận ra tin OCPP trùng `messageId` (S-14). Job dọn chạy khi khởi động và mỗi giờ | Ngày | `7` |
+| `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` | Cửa sổ phát lại tin trùng: chỉ phát lại câu cũ khi cùng `messageId`, hành động, nội dung và chưa quá N giây (F8) | Giây | `600` |
+| `OCPP_LOCK_TIMEOUT_SECONDS` | `lock_timeout` cho truy vấn của handler OCPP; API, migration và job không bị ảnh hưởng (F10) | Giây | `5` |
 | `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | Số lần gọi `GET /api/charge-points/check-code` mỗi tài khoản (quá mức trả 429 + `Retry-After`) | Lần/phút | `30` |
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
 | `OCPP_HANDSHAKE_LIMIT_PER_10S` | Số lần bắt tay WebSocket mỗi cặp (IP, mã trụ), kiểm tra trước khi truy vấn DB; quá mức trả 429 | Lần/10 giây | `5` |
@@ -272,7 +320,7 @@ Công nghệ: Node ≥ 22.7 · Express 5 · PostgreSQL 16 · Zod · argon2id · 
 
 ### Luồng trạng thái trụ
 
-- `charge_points.status`: `UNKNOWN` (mới tạo, mất kết nối, bị khoá hoặc dọn khi khởi động) → `ONLINE` (đã `BootNotification` được chấp nhận). Quá `2 × heartbeat_interval` không liên lạc thì giao diện coi là **ngoại tuyến** (suy từ `last_seen_at`, không cần job nền).
+- `charge_points.status`: `UNKNOWN` (mới tạo, mất kết nối, bị khoá hoặc dọn khi khởi động) → `ONLINE` (đã `BootNotification` được chấp nhận). Quá `2 × heartbeat_interval` không liên lạc thì giao diện coi là **ngoại tuyến** (suy từ `last_seen_at`, không cần job nền). Job S-12 ghi `OFFLINE` cho trụ quá hạn nhịp tim mà kết nối còn mở; Heartbeat kế tiếp đưa về `ONLINE` và tính lại trạng thái đầu nối.
 - `connectors.status`: `AVAILABLE`, `OCCUPIED`, `RESERVED`, `ERROR`, `UNAVAILABLE` (OCPP `Unavailable`, hiển thị "Tạm ngừng"), `UNKNOWN`. Trạng thái OCPP gốc luôn lưu nguyên ở `connectors.ocpp_status`; trạng thái OCPP lạ xếp vào `ERROR` kèm cảnh báo gom.
 - Trụ mất kết nối thì mọi đầu nối của nó về `UNKNOWN` (giữ `ocpp_status` làm "trạng thái cuối biết được").
 - Tắt server bằng `SIGTERM`/`SIGINT`: đóng WebSocket bằng mã 1001, ghi `UNKNOWN`, thoát mã 0. Khởi động lại dọn mọi trụ `ONLINE` mồ côi về `UNKNOWN` trước khi mở cổng.
@@ -282,7 +330,7 @@ Công nghệ: Node ≥ 22.7 · Express 5 · PostgreSQL 16 · Zod · argon2id · 
 | Sprint | Mục tiêu | Trạng thái |
 |---|---|---|
 | 1 (21–28/9) | Khai báo trạm, trụ, đầu nối; cả nhóm chạy được dự án | **Xong** (12 SP) |
-| 2 (28/9–5/10) | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ | S-06…S-11, S-13 và cờ ngoại tuyến (S-12) đã có trên `main`; còn S-14, S-15, S-16. Kế hoạch: [`docs/SPRINT_2_PLAN.md`](docs/SPRINT_2_PLAN.md) |
+| 2 (28/9–5/10) | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ | S-06…S-14 đã có trên `main` (17 SP); còn S-15, S-16 (3 SP). Kế hoạch: [`docs/SPRINT_2_PLAN.md`](docs/SPRINT_2_PLAN.md) |
 | 3 | Một phiên sạc trọn vẹn, kWh đúng dù trụ mất kết nối | Chưa |
 | 4 | Tính đúng tiền theo biểu giá nhiều khung giờ | Chưa |
 | 5 | Nạp ví (sandbox), tự trừ tiền | Chưa; **chưa có hồ sơ sandbox thanh toán** |
@@ -302,11 +350,15 @@ Các mục dưới đây là hiện trạng thật trên `main`, không phải l
 |---|---|---|
 | **B5** | **Trụ chưa được xác thực.** WebSocket `/ocpp/:mã` chỉ kiểm tra mã trụ tồn tại và trạm không bị khoá. Kết nối ẩn danh biết mã trụ có thể thay thế (đá) trụ thật theo logic S-13. **Rủi ro được ghi nhận và chấp nhận tạm cho demo/staging (03/10/2026); không dùng nguyên trạng cho production.** | Đề xuất thiết kế, chưa có code, chờ PO chọn phương án: [`docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`](docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md) |
 | — | **Giới hạn tần suất (#10, #22, #28, #29) lưu trong bộ nhớ một tiến trình**: mất khi khởi động lại, không chia sẻ giữa nhiều bản server. `POST /api/auth/register` vẫn trả 409 "Email đã tồn tại" nên còn dò được email từ nhiều IP khác nhau (mỗi IP bị chặn sau 5 lần/giờ); bắt tay OCPP bị giới hạn theo (IP, mã trụ) chứ không theo riêng mã trụ, để kẻ lạ không khoá được trụ thật. IP lấy theo `TRUST_PROXY` (giá trị đúng trên Render chưa kiểm chứng). | Cần kho dùng chung (DB/Redis) trước khi mở rộng ngang; B5 mới là biện pháp chặn giả mạo trụ |
-| **K-01** | **Đã xử lý (S-14):** tin trùng (cùng trụ, cùng `messageId`) nhận lại đúng câu cũ, lưu ở bảng `ocpp_messages` nên khởi động lại vẫn nhận ra. Ngoại lệ: `BootNotification` vẫn xử lý lại (ghi `ONLINE`, đánh dấu kết nối; xử lý lại vô hại). Chỉ lưu khi handler thành công; `messageId` dài hơn 64 ký tự bỏ qua chống trùng. Tin đang xử lý bị bỏ rơi quá 30 giây thì được xử lý lại. | Cần PO xác nhận ngoại lệ Boot |
+| **K-01** | **Đã xử lý (S-14):** tin trùng (cùng trụ, cùng `messageId`) nhận lại đúng câu cũ, lưu ở bảng `ocpp_messages` nên khởi động lại vẫn nhận ra. Ngoại lệ: `BootNotification` và `Heartbeat` không lưu chống trùng (Boot ghi `ONLINE` và đánh dấu kết nối; Heartbeat vốn idempotent, F11). Chỉ lưu khi handler thành công; `messageId` dài hơn 64 ký tự bỏ qua chống trùng. Tin đang xử lý bị bỏ rơi quá 30 giây thì được xử lý lại. | Cần PO xác nhận ngoại lệ Boot/Heartbeat; xem F8 |
 | — | **Trạng thái mức trụ (F5, `connectorId = 0`) đã được lưu** vào `charge_points.ocpp_status`, `last_error_code`, `status_updated_at`; lỗi vào `connector_errors` (cột `charge_point_id`, `connector_id` để trống). Trạng thái `ONLINE` của trụ **không đổi** theo lỗi mức trụ, giao diện chỉ thêm huy hiệu "Lỗi mức trụ". Quy tắc ảnh hưởng đến trạng thái tổng của trụ và trạm chưa có, chờ PO. Huy hiệu mới chưa kiểm bằng trình duyệt. | Chờ PO/QA xác nhận |
+| **F8** | **Đã xử lý.** Chỉ phát lại câu cũ khi cùng `messageId`, cùng hành động, cùng nội dung và còn trong cửa sổ `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` (600 giây). Trụ khởi động lại và đếm lại `messageId` với nội dung khác được xử lý như tin mới (`Faulted` được ghi). Giới hạn còn lại: trụ gửi lại đúng nội dung cũ sau khi khởi động lại, trong cửa sổ, vẫn nhận câu cũ. | Cần PO xác nhận quy tắc |
+| **F9** | **Đã xử lý.** Trụ có hai trạng thái ngừng: `OFFLINE` (job S-12 thấy quá hạn nhịp tim, kết nối có thể còn mở) và `UNKNOWN` (mất kết nối, bị khoá hoặc chưa từng online); hằng số dùng chung. Heartbeat đưa trụ về `ONLINE` thì đầu nối được tính lại từ `ocpp_status` đã lưu. | — |
+| **F10** | **Đã xử lý.** Truy vấn của handler OCPP dùng pool riêng với `lock_timeout` 5 giây (`OCPP_LOCK_TIMEOUT_SECONDS`); hết hạn thì trụ nhận `InternalError` thay vì chờ vô hạn. | — |
+| — | Server đòi `BootNotification` ở mỗi kết nối mới (tin khác bị `SecurityError`). Trụ nối lại sau khi rớt mạng mà không Boot sẽ bị từ chối cho tới khi Boot. Chưa kiểm với trụ thật. | Chờ PO/trụ thật xác nhận |
 | — | `Authorize` còn là stub (trả `Accepted` nếu có `idTag`, chưa kiểm thẻ). `errorCode` ngoài 16 mã OCPP 1.6 được lưu `OtherError` (mã gốc giữ ở `vendor_error_code`). | S-15 |
 | — | **Tắt máy sạch (N4) chỉ đúng với một tiến trình server.** Khởi động sau sẽ đánh dấu nhầm trụ đang kết nối ở bản kia nếu chạy nhiều bản cùng một DB. `SIGKILL` không chạy được handler tắt máy: trụ `ONLINE` mồ côi chỉ được dọn ở lần khởi động kế tiếp. | Cần cơ chế theo phiên trước khi mở rộng ngang |
-| — | **Quy tắc hiển thị:** trụ `ONLINE` mà đầu nối chưa báo trạng thái (`UNKNOWN`) vẫn hiện "Sẵn sàng" (xanh); trụ `ONLINE` có toàn đầu nối `UNAVAILABLE` hiện "Ngoại tuyến / chưa rõ". | Chờ PO/QA xác nhận |
+| — | **Quy tắc hiển thị:** trụ `ONLINE` mà đầu nối chưa báo trạng thái (`UNKNOWN`) vẫn hiện "Sẵn sàng" (xanh); trụ `ONLINE` có toàn đầu nối `UNAVAILABLE` hiện "Trực tuyến – tạm ngừng" (thống nhất ở trang "Trụ sạc" và "Trạng thái trụ"; cờ `offline` của API giữ nguyên). | Chờ PO/QA xác nhận |
 | — | Hai test N4 bỏ qua trên Windows (xem [Kiểm thử](#3-kiểm-thử)); đường tắt máy bằng `taskkill` trên Windows chưa kiểm. | Khởi động lại sẽ tự dọn trụ mồ côi |
 | #25 | **Đăng xuất thu hồi mọi phiên của tài khoản** (kể cả thiết bị khác): `users.token_version` tăng lên, token cũ bị `authenticate` từ chối (401). Mỗi yêu cầu có xác thực tốn thêm một truy vấn khoá chính. Luồng SSE `/api/fleet-status/events` đã mở **không bị đóng ngay** khi đăng xuất, kết thúc khi JWT hết hạn. | Đóng luồng SSE theo `token_version` nếu PO yêu cầu |
 | — | **Chưa kiểm chứng:** staging với 50 trụ ảo (thiếu URL staging), tile bản đồ OSM thật (kiểm thử giao diện dùng tile giả), trạng thái Jira bằng API (thiếu token). | Xem [`docs/testing/BAO-CAO-VONG-6.md`](docs/testing/BAO-CAO-VONG-6.md) |
