@@ -14,12 +14,14 @@ router.get('/fleet-status/events', { access: access('stations:read') }, (req, re
   const seesAllStations = roles.includes('ADMIN') || roles.includes('OPERATOR');
   let closed = false;
   let heartbeat;
+  let expiry;
   let unsubscribe;
 
   const cleanup = () => {
     if (closed) return;
     closed = true;
     clearInterval(heartbeat);
+    clearTimeout(expiry);
     unsubscribe?.();
   };
 
@@ -49,6 +51,10 @@ router.get('/fleet-status/events', { access: access('stations:read') }, (req, re
     send(`data: ${data}\n\n`);
   });
   heartbeat = setInterval(() => send(': keep-alive\n\n'), 20000);
+  // Luồng đã mở không được sống lâu hơn phiên đăng nhập: JWT hết hạn thì đóng, EventSource nối lại sẽ bị từ chối 401.
+  if (Number.isFinite(req.user.exp)) {
+    expiry = setTimeout(() => { cleanup(); res.end(); }, Math.min(Math.max(req.user.exp * 1000 - Date.now(), 0), 2 ** 31 - 1));
+  }
   res.on('close', cleanup);
   res.on('error', cleanup);
   res.flushHeaders();

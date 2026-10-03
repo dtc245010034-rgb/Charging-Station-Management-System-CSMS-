@@ -5,7 +5,7 @@ const findById = (id) => prepare('SELECT * FROM users WHERE id = ?').get(id);
 
 const listRoles = () => prepare('SELECT id, code, name, description, created_at FROM roles ORDER BY id ASC').all();
 const roleCodesOf = async (userId) => {
-  const rows = await prepare('SELECT r.code FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ?').all(userId);
+  const rows = await prepare('SELECT r.code FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ? ORDER BY r.id ASC').all(userId);
   return rows.map((r) => r.code);
 };
 
