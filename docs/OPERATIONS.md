@@ -72,6 +72,8 @@ Lưu ý gói ngrok miễn phí: khoảng 20.000 yêu cầu HTTP và 1 GB băng t
 
 **Quy trình sửa code:** `python run.py down` → sửa → `python run.py`. Container chạy ảnh đã build (giống staging) nên không tự tải lại code.
 
+**Tắt máy sạch (N4):** khi nhận `SIGTERM`/`SIGINT` (kể cả `docker stop`), server đóng các kết nối OCPP bằng mã 1001, chuyển trụ và đầu nối về `UNKNOWN` rồi thoát với mã 0 (chờ tối đa ~5 giây). Nếu bị `kill -9`/mất điện thì lúc khởi động lại, trước khi mở cổng, server tự chuyển mọi trụ còn `ONLINE` (và đầu nối của chúng) về `UNKNOWN`; trụ phải kết nối lại và Boot mới thành `ONLINE`. Cách dọn này chỉ đúng khi chạy **một** tiến trình server (sổ kết nối OCPP nằm trong bộ nhớ); chạy nhiều bản song song sẽ phải thiết kế lại.
+
 Cổng vẫn bị chiếm sau khi tắt (process mồ côi): `lsof -i :3000` (Linux) hoặc `netstat -ano | findstr :3000` (Windows) rồi kết thúc process. `down` không xoá `.env`; chỉ `reset` xoá dữ liệu Postgres.
 
 ## 5. Lệnh Docker tương đương (khi cần làm tay)
