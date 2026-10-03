@@ -84,10 +84,10 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(statusLabel('ERROR'), 'Lỗi');
   });
 
-  it('F4: đầu nối UNAVAILABLE thuộc nhóm ngoại tuyến, nhãn "Không khả dụng"', async () => {
+  it('F4: đầu nối UNAVAILABLE thuộc nhóm ngoại tuyến, nhãn "Tạm ngừng"', async () => {
     const { groupOf, statusLabel } = await load('app/status.js');
     assert.strictEqual(groupOf('UNAVAILABLE'), 'offline');
-    assert.strictEqual(statusLabel('UNAVAILABLE'), 'Không khả dụng');
+    assert.strictEqual(statusLabel('UNAVAILABLE'), 'Tạm ngừng');
   });
 
   it('F2: màu đại diện của trụ ONLINE lấy theo đầu nối nặng nhất; trụ không ONLINE không bị đầu nối kéo lên', async () => {

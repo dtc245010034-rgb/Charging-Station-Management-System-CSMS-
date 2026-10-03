@@ -30,7 +30,7 @@ export const CONNECTOR_STATUS_LABELS = {
   OCCUPIED: 'Bận',
   RESERVED: 'Đặt chỗ',
   ERROR: 'Lỗi',
-  UNAVAILABLE: 'Không khả dụng',
+  UNAVAILABLE: 'Tạm ngừng',
 };
 
 export function statusLabel(status, group = groupOf(status)) {
