@@ -5,8 +5,12 @@ const assert = require('node:assert/strict');
 const { WebSocket, WebSocketServer } = require('ws');
 const { createOcppMessageHandler, OcppCallError } = require('../../src/modules/ocpp/message-handler');
 const { createOcppUpgradeHandler } = require('../../src/modules/ocpp/ocpp-upgrade');
+const { createStatusNotificationHandler } = require('../../src/modules/ocpp/handlers/status-notification');
 
 const CHARGE_POINT_CODE = 'S07-INTEGRATION-CP';
+const connector = { status: 'UNKNOWN', ocpp_status: null };
+const declaredConnectors = [{ connector_no: 1 }, { connector_no: 2 }];
+const connectorErrors = [];
 
 describe('OCPP message handler', () => {
 	let server;
@@ -30,6 +34,28 @@ describe('OCPP message handler', () => {
 		ocppMessages = createOcppMessageHandler({
 			handlers: {
 				Heartbeat: async () => ({ currentTime: '2026-10-01T00:00:00.000Z' }),
+				StatusNotification: createStatusNotificationHandler({
+					pool: {
+						query: async (sql, params) => {
+							if (sql.includes('UPDATE connectors')) {
+								if (!declaredConnectors.some(({ connector_no }) => connector_no === params[3])) {
+									return { rowCount: 0 };
+								}
+								connector.status = params[0];
+								connector.ocpp_status = params[1];
+							} else if (sql.includes('INSERT INTO connector_errors')) {
+								connectorErrors.push({
+									error_code: params[0],
+									vendor_error_code: params[1],
+									occurred_at: params[2],
+									connector_id: 1,
+								});
+							}
+							return { rowCount: 1 };
+						},
+					},
+					logWarning: (message) => logs.push(message),
+				}),
 				FailWithPostgres: async () => {
 					const error = new Error('relation "users" does not exist; password=secret123 host=db.internal:5432');
 					error.code = '42P01';
@@ -67,6 +93,76 @@ describe('OCPP message handler', () => {
 		client = new WebSocket(`${url}/ocpp/${CHARGE_POINT_CODE}`, ['ocpp1.6']);
 		await once(client, 'open');
 		assert.equal(client.protocol, 'ocpp1.6');
+	});
+
+	it('persists a virtual connector status before acknowledging StatusNotification', async () => {
+		connector.status = 'UNKNOWN';
+		connector.ocpp_status = null;
+		connectorErrors.length = 0;
+		const startedAt = Date.now();
+		const response = receiveFrame();
+		client.send(JSON.stringify([2, 'status-1', 'StatusNotification', {
+			connectorId: 1,
+			errorCode: 'NoError',
+			status: 'Charging',
+		}]));
+
+		assert.deepEqual(await response, [3, 'status-1', {}]);
+		assert.deepEqual(connector, { status: 'OCCUPIED', ocpp_status: 'Charging' });
+		assert.ok(Date.now() - startedAt < 1000, 'connector status should update within one second');
+	});
+
+	it('appends a Faulted connector error and retains it after a later Available notification', async () => {
+		connectorErrors.length = 0;
+		const faulted = receiveFrame();
+		client.send(JSON.stringify([2, 'status-faulted', 'StatusNotification', {
+			connectorId: 1,
+			errorCode: 'GroundFailure',
+			vendorErrorCode: 'VENDOR-42',
+			status: 'Faulted',
+			timestamp: '2026-10-03T04:00:00.000Z',
+		}]));
+		assert.deepEqual(await faulted, [3, 'status-faulted', {}]);
+		assert.deepEqual(connectorErrors, [{
+			error_code: 'GroundFailure',
+			vendor_error_code: 'VENDOR-42',
+			occurred_at: '2026-10-03T04:00:00.000Z',
+			connector_id: 1,
+		}]);
+
+		const available = receiveFrame();
+		client.send(JSON.stringify([2, 'status-available', 'StatusNotification', {
+			connectorId: 1,
+			errorCode: 'NoError',
+			status: 'Available',
+		}]));
+		assert.deepEqual(await available, [3, 'status-available', {}]);
+		assert.equal(connector.status, 'AVAILABLE');
+		assert.equal(connectorErrors.length, 1);
+	});
+
+	it('ignores an undeclared connector, warns once per charge point, and returns an empty CALLRESULT', async () => {
+		const warningPrefix = 'StatusNotification: Không tìm thấy đầu nối của trụ';
+		const warningCountBefore = logs.filter((message) => message.includes(warningPrefix)).length;
+		connectorErrors.length = 0;
+
+		for (let index = 0; index < 5; index += 1) {
+			const messageId = `undeclared-${index}`;
+			const response = receiveFrame();
+			client.send(JSON.stringify([2, messageId, 'StatusNotification', {
+				connectorId: 3,
+				errorCode: 'GroundFailure',
+				status: 'Faulted',
+			}]));
+			assert.deepEqual(await response, [3, messageId, {}]);
+		}
+
+		const warnings = logs.filter((message) => message.includes(warningPrefix));
+		assert.equal(warnings.length - warningCountBefore, 1);
+		assert.ok(warnings.at(-1).includes(CHARGE_POINT_CODE));
+		assert.ok(warnings.at(-1).includes('connectorId: 3'));
+		assert.equal(declaredConnectors.length, 2);
+		assert.equal(connectorErrors.length, 0);
 	});
 
 	after(async () => {

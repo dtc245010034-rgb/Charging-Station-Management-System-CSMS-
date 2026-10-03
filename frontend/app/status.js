@@ -17,11 +17,19 @@ const GROUP_OF = {
   Charging: 'charging', SuspendedEV: 'charging', SuspendedEVSE: 'charging', Finishing: 'charging',
   Faulted: 'fault',
   Unavailable: 'offline',
+  AVAILABLE: 'ready', OCCUPIED: 'charging', RESERVED: 'ready', ERROR: 'fault',
 };
 
 // Trụ mới đăng ký có trạng thái 'UNKNOWN' cho tới khi nhận StatusNotification → nhóm offline.
+// Trạng thái nội bộ của đầu nối dùng cùng các nhóm hiển thị mà không đổi nhóm OCPP của trụ.
 // Nhóm 'warning' không suy ra được từ trạng thái; nó đến từ cảnh báo theo business rule (S-46), chưa có nguồn.
 export const groupOf = (status) => GROUP_OF[status] ?? 'offline';
+export const CONNECTOR_STATUS_LABELS = {
+  AVAILABLE: 'Rảnh',
+  OCCUPIED: 'Bận',
+  RESERVED: 'Đặt chỗ',
+  ERROR: 'Lỗi',
+};
 
 // Thứ tự nặng → nhẹ, dùng để chọn màu đại diện của một trạm gồm nhiều trụ.
 const SEVERITY = ['fault', 'warning', 'charging', 'ready', 'offline'];

@@ -59,11 +59,19 @@ describe('S-02 frontend: router', () => {
   });
 
   it('status: gom 9 trạng thái OCPP vào nhóm hiển thị, trạng thái lạ/UNKNOWN là offline, giá trị gốc không đổi', async () => {
-    const { groupOf, OCPP_STATUSES, worstGroup, countByGroup } = await load('app/status.js');
+    const { groupOf, OCPP_STATUSES, CONNECTOR_STATUS_LABELS, worstGroup, countByGroup } = await load('app/status.js');
     assert.strictEqual(OCPP_STATUSES.length, 9);
     assert.ok(OCPP_STATUSES.every((s) => ['ready', 'charging', 'fault', 'offline'].includes(groupOf(s))));
     assert.strictEqual(groupOf('UNKNOWN'), 'offline');
     assert.strictEqual(groupOf('Faulted'), 'fault');
+    assert.deepStrictEqual(
+      ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'ERROR'].map((status) => CONNECTOR_STATUS_LABELS[status]),
+      ['Rảnh', 'Bận', 'Đặt chỗ', 'Lỗi']
+    );
+    assert.deepStrictEqual(
+      ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'ERROR'].map(groupOf),
+      ['ready', 'charging', 'ready', 'fault']
+    );
     assert.strictEqual(worstGroup(['Available', 'Faulted', 'Charging']), 'fault');
     assert.deepStrictEqual(countByGroup(['Available', 'Charging', 'UNKNOWN']), { ready: 1, charging: 1, warning: 0, fault: 0, offline: 1 });
   });

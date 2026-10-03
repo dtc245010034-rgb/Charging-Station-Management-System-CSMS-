@@ -8,6 +8,7 @@ const connections = require('./modules/charge-points/connection-registry');
 const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
 const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
+const { statusNotificationHandler } = require('./modules/ocpp/handlers/status-notification');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
@@ -28,7 +29,7 @@ const ocppMessages = createOcppMessageHandler({
 	handlers: {
 		BootNotification: bootNotificationHandler,
 		Heartbeat: async () => ({ currentTime: now() }),
-		StatusNotification: async () => ({}),
+		StatusNotification: statusNotificationHandler,
 		Authorize: async (payload) => ({ idTagInfo: { status: payload.idTag ? 'Accepted' : 'Invalid' } }),
 	},
 	updateLastSeen: updateChargePointLastSeen,
