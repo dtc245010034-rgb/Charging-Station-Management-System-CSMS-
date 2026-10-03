@@ -1,0 +1,88 @@
+{
+  "options": {
+    "url": "http://localhost:3999",
+    "count": 50,
+    "duration": 30,
+    "prefix": "SIM-",
+    "scenarios": [
+      "load",
+      "skew",
+      "clock",
+      "netcut",
+      "lock",
+      "restart"
+    ],
+    "counterIds": false,
+    "out": "/tmp/sim-out"
+  },
+  "startedAt": "2026-10-03T18:13:08.288Z",
+  "checks": [
+    {
+      "name": "load: p95 OCPP < 500 ms",
+      "ok": true,
+      "detail": "2918 lời gọi, p50=15.0 p95=31.4 p99=53.9 ms, lỗi=0"
+    },
+    {
+      "name": "load: snapshot 50 trụ < 2 s",
+      "ok": true,
+      "detail": "8 ms"
+    },
+    {
+      "name": "load: SSE tới trình duyệt ≤ 1 s sau StatusNotification",
+      "ok": true,
+      "detail": "5 ms"
+    },
+    {
+      "name": "skew: lệch last_seen_at so với lúc gửi Heartbeat < 2 s",
+      "ok": true,
+      "detail": "lệch lớn nhất 27 ms trên 50 trụ"
+    },
+    {
+      "name": "clock: đồng hồ trụ lệch +5 giờ vẫn được nhận",
+      "ok": true,
+      "detail": "50/50 CALLRESULT"
+    },
+    {
+      "name": "clock: last_seen_at dùng giờ máy chủ, không dùng giờ của trụ",
+      "ok": true,
+      "detail": "lệch lớn nhất 18 ms so với giờ thật"
+    },
+    {
+      "name": "netcut: 10 trụ bị cắt mạng chuyển khỏi ONLINE",
+      "ok": true,
+      "detail": "10 ms"
+    },
+    {
+      "name": "netcut: nối lại (backoff) và trở về ONLINE",
+      "ok": true,
+      "detail": "21 ms, số lần thử lớn nhất 1"
+    },
+    {
+      "name": "netcut: sau Heartbeat đầu nối khôi phục trạng thái trước khi mất kết nối (F9)",
+      "ok": true,
+      "detail": "khớp trạng thái trước khi cắt"
+    },
+    {
+      "name": "lock: khoá trạm đóng mọi socket với mã 1008 trong ≤ 5 s",
+      "ok": true,
+      "detail": "HTTP 200, 5 socket, mã đóng 1008, 59 ms"
+    },
+    {
+      "name": "restart: trụ khởi động lại, đếm lại messageId từ \"1\", trạng thái mới vẫn được ghi (F8)",
+      "ok": true,
+      "detail": "5/5 trụ ghi Faulted"
+    }
+  ],
+  "metrics": {
+    "latencyMs": {
+      "calls": 2918,
+      "p50": 14.964623,
+      "p95": 31.429445,
+      "p99": 53.878424,
+      "errors": 0
+    },
+    "snapshotMs": 8,
+    "sseMs": 5,
+    "lastSeenSkewMs": 27
+  }
+}
