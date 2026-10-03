@@ -27,7 +27,7 @@ async function updateChargePointLastSeen(connection) {
 	const code = connection?.chargePointCode || connection?.chargePoint?.code;
 	if (!code || connection?.isStationLocked) return;
 	try {
-		await markChargePointSeen(pool, code);
+		await markChargePointSeen(pool, code, { recover: Boolean(connection.isBootAccepted) });
 	} catch (error) {
 		console.warn(`[OCPP] Failed to update last_seen_at for ${safeLog(code)}: ${sanitizeErrorMessage(error?.message || error)}`);
 	}
@@ -88,7 +88,7 @@ async function purgeOldMessages() {
 	}
 }
 
-const shutdown = createShutdown({ server, wss, pool: { end: () => Promise.all([pool.end(), ocppPool.end()]) } });
+const shutdown = createShutdown({ server, wss, pool: { query: (...args) => pool.query(...args), end: () => Promise.all([pool.end(), ocppPool.end()]) } });
 let stopChargePointOfflineJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();

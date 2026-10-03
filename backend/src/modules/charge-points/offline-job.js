@@ -8,9 +8,9 @@ async function scanStaleChargePoints(db) {
   const result = await database.query(
     `WITH offline AS (
        UPDATE charge_points cp
-       SET status = $2,
+       SET status = '${CHARGE_POINT_STALE_STATUS}',
            updated_at = CURRENT_TIMESTAMP
-       WHERE cp.status = $1
+       WHERE cp.status = '${CHARGE_POINT_ONLINE_STATUS}'
          AND (
            cp.last_seen_at IS NULL
            OR cp.last_seen_at <= CURRENT_TIMESTAMP - (COALESCE(cp.heartbeat_interval, 60) * INTERVAL '2 seconds')
@@ -19,17 +19,16 @@ async function scanStaleChargePoints(db) {
      ),
      connectors_offline AS (
        UPDATE connectors c
-       SET status = $3,
+       SET status = '${CHARGE_POINT_OFFLINE_STATUS}',
            updated_at = CURRENT_TIMESTAMP
        FROM offline o
        WHERE c.charge_point_id = o.id
-         AND c.status <> $3
+         AND c.status <> '${CHARGE_POINT_OFFLINE_STATUS}'
        RETURNING c.id
      )
      SELECT o.id AS charge_point_id, o.station_id, s.owner_id
      FROM offline o
-     JOIN stations s ON s.id = o.station_id`,
-    [CHARGE_POINT_ONLINE_STATUS, CHARGE_POINT_STALE_STATUS, CHARGE_POINT_OFFLINE_STATUS]
+     JOIN stations s ON s.id = o.station_id`
   );
   for (const point of result.rows || []) {
     publish({
