@@ -58,19 +58,21 @@ describe('StatusNotification handler', () => {
 
   it('appends error code, vendor code, and reported time for connector errors', async () => {
     const queries = [];
+    const reportedAt = '2026-10-04T05:00:00.000Z';
     const handler = createStatusNotificationHandler({
       pool: { query: async (sql, params) => { queries.push({ sql, params }); return { rowCount: 1 }; } },
+      now: () => Date.parse('2026-10-04T05:30:00.000Z'),
     });
     await handler({
       connectorId: 1,
       status: 'Faulted',
       errorCode: 'GroundFailure',
       vendorErrorCode: 'VENDOR-42',
-      timestamp: '2026-10-03T04:00:00.000Z',
+      timestamp: reportedAt,
     }, { connection: { chargePointCode: 'CP-TEST' } });
     assert.equal(queries.length, 2);
     assert.match(queries[1].sql, /INSERT INTO connector_errors/);
-    assert.deepEqual(queries[1].params, ['GroundFailure', 'VENDOR-42', '2026-10-03T04:00:00.000Z', 'CP-TEST', 1, 60, false]);
+    assert.deepEqual(queries[1].params, ['GroundFailure', 'VENDOR-42', reportedAt, 'CP-TEST', 1, 60, false]);
   });
 
   it('does not append NoError or delete existing error history', async () => {

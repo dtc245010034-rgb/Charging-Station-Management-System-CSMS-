@@ -113,19 +113,20 @@ describe('OCPP message handler', () => {
 
 	it('appends a Faulted connector error and retains it after a later Available notification', async () => {
 		connectorErrors.length = 0;
+		const reportedAt = new Date().toISOString();
 		const faulted = receiveFrame();
 		client.send(JSON.stringify([2, 'status-faulted', 'StatusNotification', {
 			connectorId: 1,
 			errorCode: 'GroundFailure',
 			vendorErrorCode: 'VENDOR-42',
 			status: 'Faulted',
-			timestamp: '2026-10-03T04:00:00.000Z',
+			timestamp: reportedAt,
 		}]));
 		assert.deepEqual(await faulted, [3, 'status-faulted', {}]);
 		assert.deepEqual(connectorErrors, [{
 			error_code: 'GroundFailure',
 			vendor_error_code: 'VENDOR-42',
-			occurred_at: '2026-10-03T04:00:00.000Z',
+			occurred_at: reportedAt,
 			connector_id: 1,
 		}]);
 
