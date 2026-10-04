@@ -1,0 +1,77 @@
+const { CHARGE_POINT_CODE_PATTERN, safeLog, sanitizeErrorMessage } = require('../../lib/constants');
+
+const SUPPORTED_PROTOCOL = 'ocpp1.6';
+
+function rejectHandshake(socket, statusCode, statusText) {
+	if (socket.destroyed) return;
+	socket.end(`HTTP/1.1 ${statusCode} ${statusText}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
+}
+
+function protocolsFromHeader(header) {
+	return String(header || '').split(',').map((protocol) => protocol.trim()).filter(Boolean);
+}
+
+function createOcppUpgradeHandler({ wss, lookupChargePoint, handshakeLimiter = null, clientIpOf = (request) => request.socket.remoteAddress, logWarning = console.warn, logError = console.error }) {
+	return async (request, socket, head) => {
+		let pathname;
+		try {
+			pathname = new URL(request.url, 'http://localhost').pathname;
+		} catch {
+			socket.destroy();
+			return;
+		}
+
+		const match = pathname.match(/^\/ocpp\/([^/]+)$/);
+		if (!match) {
+			if (pathname.startsWith('/ocpp/')) rejectHandshake(socket, 400, 'Bad Request');
+			else socket.destroy();
+			return;
+		}
+
+		let code;
+		try {
+			code = decodeURIComponent(match[1]).trim().toUpperCase();
+		} catch {
+			rejectHandshake(socket, 400, 'Bad Request');
+			return;
+		}
+		if (!CHARGE_POINT_CODE_PATTERN.test(code)) {
+			rejectHandshake(socket, 400, 'Bad Request');
+			return;
+		}
+
+		if (!protocolsFromHeader(request.headers['sec-websocket-protocol']).includes(SUPPORTED_PROTOCOL)) {
+			rejectHandshake(socket, 400, 'Bad Request');
+			return;
+		}
+
+		if (handshakeLimiter && !handshakeLimiter.take(`${clientIpOf(request) || 'unknown'}|${code}`).allowed) {
+			rejectHandshake(socket, 429, 'Too Many Requests');
+			return;
+		}
+
+		let chargePoint;
+		try {
+			chargePoint = await lookupChargePoint(code);
+		} catch (error) {
+			logError('[OCPP] Charge point lookup failed:', sanitizeErrorMessage(error.message));
+			rejectHandshake(socket, 503, 'Service Unavailable');
+			return;
+		}
+
+		if (!chargePoint) {
+			const clientIp = clientIpOf(request) || 'UNKNOWN_IP';
+			logWarning(`[SECURITY_WARN] Unauthorized WebSocket attempt | IP: ${clientIp} | ChargePointCode: ${safeLog(code)}`);
+			rejectHandshake(socket, 403, 'Forbidden');
+			return;
+		}
+
+		wss.handleUpgrade(request, socket, head, (ws) => {
+			ws.chargePoint = chargePoint;
+			ws.stationStatus = chargePoint.station_status;
+			wss.emit('connection', ws, code);
+		});
+	};
+}
+
+module.exports = { createOcppUpgradeHandler };

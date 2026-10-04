@@ -1,0 +1,42 @@
+# Audit Project Configuration Binding
+# Copy this file to audit_config.yaml in the target project root or audit folder.
+
+project_name: "target-application"
+version: "1.0.0"
+audit_run_id: "RUN-2026-09-29-01"
+
+# Applicability Mode:
+# - AUDIT_ONLY: Gate decision is ADVISORY (default for manual AI code reviews)
+# - RELEASE_GATING: Gate decision is BINDING on CI/CD pipeline
+mode: "AUDIT_ONLY"
+
+# Operational Profile:
+# - C: Solo / Developer (Advisory, minimal SoD)
+# - B: Agile Team (CI verification, Lead review)
+# - A: Enterprise (Strict SoD, Cryptographic signatures)
+profile: "C"
+
+# Scope Definition
+scope:
+  include_paths:
+    - "src/**"
+    - "api/**"
+    - "config/**"
+    - "package.json"
+    - "Dockerfile"
+  exclude_paths:
+    - "tests/**"
+    - "docs/**"
+    - "node_modules/**"
+    - "dist/**"
+
+# Freshness Configuration
+freshness:
+  max_age_days: 30
+  commit_hash: "auto" # or specify exact Git commit hash
+
+# Quality Gate Thresholds
+thresholds:
+  allow_critical: 0
+  allow_high: 0
+  allow_unverified_endpoints: 0 # Requires Discovery Debt if > 0

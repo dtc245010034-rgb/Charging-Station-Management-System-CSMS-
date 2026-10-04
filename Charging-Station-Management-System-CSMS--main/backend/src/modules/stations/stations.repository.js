@@ -1,0 +1,40 @@
+const { prepare } = require('../../db/pool');
+const { scopeByOwner } = require('../../db/scope');
+
+const list = (actor) => {
+  const scope = scopeByOwner(actor, 's');
+  return prepare(`SELECT s.*, COUNT(cp.id)::int AS charge_point_count FROM stations s LEFT JOIN charge_points cp ON cp.station_id = s.id WHERE ${scope.sql} GROUP BY s.id ORDER BY s.id DESC`).all(...scope.params);
+};
+const findById = (actor, id) => {
+  const scope = scopeByOwner(actor, 's');
+  return prepare(`SELECT s.* FROM stations s WHERE s.id = ? AND ${scope.sql}`).get(id, ...scope.params);
+};
+// Không lọc sở hữu: chỉ để phân biệt "của người khác" (403) với "không tồn tại" (404).
+const existsById = async (id) => Boolean(await prepare('SELECT 1 FROM stations WHERE id = ?').get(id));
+const chargePointsOf = (stationId) => prepare('SELECT * FROM charge_points WHERE station_id = ? ORDER BY id').all(stationId);
+const connectorsOf = (chargePointId) => prepare('SELECT * FROM connectors WHERE charge_point_id = ? ORDER BY connector_no').all(chargePointId);
+const insertForIdempotency = async (client, actor, station) => {
+  const result = await client.query(
+    'INSERT INTO stations (name, address, latitude, longitude, owner_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+    [station.name, station.address, station.latitude, station.longitude, actor.id]
+  );
+  return result.rows[0];
+};
+
+const UPDATABLE = ['name', 'address', 'latitude', 'longitude', 'status'];
+const update = (id, fields) => {
+  const keys = UPDATABLE.filter((key) => fields[key] !== undefined);
+  return prepare(`UPDATE stations SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+    .run(...keys.map((key) => fields[key]), id);
+};
+
+const setLock = (id, locked, actorId) => {
+  if (locked) {
+    return prepare('UPDATE stations SET locked_at = CURRENT_TIMESTAMP, locked_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(actorId, id);
+  }
+  return prepare('UPDATE stations SET locked_at = NULL, locked_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run(id);
+};
+
+module.exports = { list, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, setLock, UPDATABLE };

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSMS | Đăng nhập hệ thống quản lý trạm sạc</title>
+    <script src="/app/theme-boot.js"></script>
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/styles/themes.css" />
+    <link rel="stylesheet" href="/styles/reset.css" />
+    <link rel="stylesheet" href="/styles/layout.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
+  </head>
+  <body>
+    <div class="auth-page">
+      <!-- CỘT TRÁI: THỂ HIỆN BẢN SẮC CSMS & MẠNG LƯỚI TRẠM SẠC EV -->
+      <aside class="auth-brand">
+        <div class="auth-brand__wrapper">
+          <header class="auth-brand__header">
+            <div class="brand" style="padding: 0">
+              <span class="brand__mark" data-icon="bolt"></span>
+              CSMS
+            </div>
+            <div class="auth-brand__badge">
+              <span class="auth-brand__pulse"></span>
+              <span>Hạ tầng sạc EV</span>
+            </div>
+          </header>
+
+          <!-- KHỐI NỘI DUNG TRUNG TÂM (ĐỘ RỘNG THỐNG NHẤT VỚI HÌNH XE VÀ 4 THẺ) -->
+          <div class="auth-brand__container">
+            <div>
+              <p class="eyebrow" style="margin-bottom: 2px;">Charging Station Management System</p>
+              <h1 class="auth-brand__title">Quản lý toàn bộ mạng lưới trạm sạc trong một không gian.</h1>
+              <p class="auth-brand__sub">
+                Nền tảng tập trung kết nối trạm sạc, giám sát thiết bị thời gian thực và phân quyền vận hành đa vai trò.
+              </p>
+            </div>
+
+            <!-- VISUAL ILLUSTRATION: EV -> CHARGING STATION -> CSMS -> NETWORK -->
+            <div class="auth-visual" aria-hidden="true">
+              <svg viewBox="0 0 640 230" fill="none">
+                <defs>
+                  <linearGradient id="evStationGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#1e293b" />
+                    <stop offset="100%" stop-color="#0f172a" />
+                  </linearGradient>
+                  <linearGradient id="evAccentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#22d3ee" />
+                    <stop offset="100%" stop-color="#3b82f6" />
+                  </linearGradient>
+                  <linearGradient id="evCarGrad" x1="0%" y1="0%" x2="100%" y2="50%">
+                    <stop offset="0%" stop-color="#1e293b" />
+                    <stop offset="100%" stop-color="#091122" />
+                  </linearGradient>
+                  <radialGradient id="evGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.38" />
+                    <stop offset="100%" stop-color="#22d3ee" stop-opacity="0" />
+                  </radialGradient>
+                  <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3.5" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
+
+                <!-- Mạng lưới kết nối nền (Network grid & connection nodes) -->
+                <g stroke="rgba(148, 170, 210, 0.16)" stroke-width="1.2" stroke-dasharray="4 4">
+                  <line x1="95" y1="45" x2="320" y2="22" />
+                  <line x1="320" y1="22" x2="570" y2="36" />
+                  <line x1="95" y1="45" x2="95" y2="85" />
+                </g>
+
+                <!-- Node CSMS Cloud Server ở trên -->
+                <g transform="translate(320, 22)">
+                  <circle cx="0" cy="0" r="15" fill="#0f172a" stroke="#22d3ee" stroke-width="1.8" />
+                  <circle cx="0" cy="0" r="24" fill="url(#evGlow)" />
+                  <path d="M-6 -3 C-6 -8, 6 -8, 6 -3 C10 -3, 11 2, 8 5 L-8 5 C-11 2, -10 -3, -6 -3 Z" fill="#22d3ee" />
+                  <text x="0" y="24" text-anchor="middle" fill="#22d3ee" font-size="9" font-weight="700" letter-spacing="0.6">CSMS CLOUD · OCPP 1.6J</text>
+                </g>
+
+                <!-- Trạm sạc phụ vệ tinh bên phải (Network node) -->
+                <g transform="translate(570, 36)">
+                  <circle cx="0" cy="0" r="7" fill="#1e293b" stroke="#3b82f6" stroke-width="1.8" />
+                  <text x="0" y="16" text-anchor="middle" fill="#8194b5" font-size="8" font-weight="600">TRẠM VỆ TINH</text>
+                </g>
+
+                <!-- Trụ sạc EV (EV Charging Station / Charge Point CS-01) -->
+                <g transform="translate(40, 26)">
+                  <!-- Bóng chân trụ sạc -->
+                  <ellipse cx="40" cy="172" rx="34" ry="5" fill="rgba(0, 0, 0, 0.5)" />
+
+                  <!-- Thân trụ sạc to vững chãi -->
+                  <rect x="12" y="14" width="56" height="156" rx="8" fill="url(#evStationGrad)" stroke="rgba(148, 170, 210, 0.28)" stroke-width="1.8" />
+                  
+                  <!-- Dải LED nhận diện trên nóc trụ sạc -->
+                  <rect x="18" y="20" width="44" height="4.5" rx="2" fill="url(#evAccentGrad)" />
+                  
+                  <!-- Màn hình kỹ thuật số trụ sạc lớn -->
+                  <rect x="20" y="32" width="40" height="34" rx="5" fill="#060c19" stroke="rgba(34, 211, 238, 0.35)" stroke-width="1.2" />
+                  <path d="M38 37 L33 47 L41 47 L36 56 L45 45 L39 45 Z" fill="#22d3ee" />
+                  <text x="40" y="61" text-anchor="middle" fill="#22d3ee" font-size="6.5" font-weight="800">60 kW</text>
+
+                  <!-- Đèn báo trạng thái sạc (LED Status indicator) -->
+                  <circle cx="40" cy="76" r="4.2" fill="#22c55e" filter="url(#softGlow)" />
+
+                  <!-- Ổ cắm và chi tiết kỹ thuật trụ -->
+                  <rect x="24" y="88" width="32" height="14" rx="3.5" fill="#131e33" stroke="rgba(148, 170, 210, 0.22)" stroke-width="1.2" />
+                  <circle cx="33" cy="95" r="2.5" fill="#22d3ee" />
+                  <circle cx="47" cy="95" r="2.5" fill="#3b82f6" />
+                  <rect x="20" y="112" width="40" height="32" rx="3" fill="#091122" />
+                  <line x1="25" y1="120" x2="55" y2="120" stroke="rgba(148,170,210,0.22)" stroke-width="1.2" />
+                  <line x1="25" y1="126" x2="48" y2="126" stroke="rgba(148,170,210,0.22)" stroke-width="1.2" />
+                  <line x1="25" y1="132" x2="52" y2="132" stroke="rgba(148,170,210,0.22)" stroke-width="1.2" />
+
+                  <!-- Badge nổi: Trụ sạc CS-01 · 60kW -->
+                  <g transform="translate(-14, -10)">
+                    <rect x="0" y="0" width="108" height="22" rx="11" fill="#0d1729" stroke="rgba(34, 211, 238, 0.45)" stroke-width="1.2" />
+                    <circle cx="11" cy="11" r="4" fill="#22c55e" />
+                    <text x="21" y="14" fill="#e9effa" font-size="8.5" font-weight="700">TRỤ CS-01 · 60kW</text>
+                  </g>
+                </g>
+
+                <!-- Dây cáp sạc nối từ Trụ sạc tới Cổng sạc Xe điện -->
+                <g>
+                  <path d="M 96 122 C 114 182, 178 196, 238 132" fill="none" stroke="#0f172a" stroke-width="8" stroke-linecap="round" />
+                  <path d="M 96 122 C 114 182, 178 196, 238 132" fill="none" stroke="#22d3ee" stroke-width="2.8" stroke-linecap="round" />
+                  <path d="M 96 122 C 114 182, 178 196, 238 132" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-dasharray="4 8" stroke-linecap="round" opacity="0.85" />
+                  
+                  <!-- Tay sạc (Connector Gun) cắm vào xe -->
+                  <g transform="translate(235, 126) rotate(16)">
+                    <rect x="-4" y="-3.5" width="10" height="7" rx="2" fill="#3b82f6" stroke="#22d3ee" stroke-width="1.2" />
+                    <circle cx="1.5" cy="0" r="5" fill="url(#evGlow)" />
+                  </g>
+                </g>
+
+                <!-- Xe điện thể thao hiện đại (Electric Vehicle) -->
+                <g transform="translate(225, 66)">
+                  <!-- Bóng gầm xe -->
+                  <ellipse cx="185" cy="132" rx="170" ry="9" fill="rgba(0, 0, 0, 0.6)" />
+
+                  <!-- Thân xe lớn, khí động học -->
+                  <path d="M 18 108 
+                           C 14 86, 28 70, 54 66 
+                           L 96 58 
+                           C 118 36, 154 24, 205 24 
+                           L 280 28 
+                           C 316 44, 338 62, 348 84 
+                           L 358 94 
+                           C 364 100, 360 110, 350 112 
+                           L 316 112 
+                           C 312 96, 296 86, 276 86 
+                           C 256 86, 240 96, 236 112 
+                           L 128 112 
+                           C 124 96, 108 86, 88 86 
+                           C 68 86, 52 96, 48 112 
+                           L 22 112 
+                           Z" 
+                        fill="url(#evCarGrad)" stroke="rgba(148, 170, 210, 0.35)" stroke-width="1.8" />
+
+                  <!-- Kính chắn gió và cửa sổ tối màu có vệt sáng phản chiếu -->
+                  <path d="M 102 58 L 194 30 L 260 32 C 292 45, 305 58, 314 68 L 102 68 Z" fill="#0d1b33" stroke="rgba(34, 211, 238, 0.3)" stroke-width="1.2" />
+                  <path d="M 194 31 L 198 67" stroke="rgba(148, 170, 210, 0.25)" stroke-width="1.2" />
+
+                  <!-- Đường gân khí động học trên thân xe (Cyan neon streak) -->
+                  <path d="M 36 84 Q 160 76 335 78" fill="none" stroke="url(#evAccentGrad)" stroke-width="2.2" opacity="0.95" />
+
+                  <!-- Đèn pha trước (LED Headlight) lớn và phát sáng -->
+                  <path d="M 342 86 L 358 94 L 340 96 Z" fill="#22d3ee" filter="url(#softGlow)" />
+                  <polygon points="358,92 400,84 400,100 358,96" fill="url(#evGlow)" opacity="0.65" />
+
+                  <!-- Đèn hậu sau (LED Taillight) đỏ neon -->
+                  <rect x="16" y="80" width="4.5" height="14" rx="2" fill="#ef4444" opacity="0.9" />
+
+                  <!-- Bánh xe trước & sau hợp kim phay lớn (Alloy Wheels) -->
+                  <!-- Bánh sau (bên trái) -->
+                  <g transform="translate(88, 112)">
+                    <circle cx="0" cy="0" r="22" fill="#080e1a" stroke="rgba(148, 170, 210, 0.35)" stroke-width="2.5" />
+                    <circle cx="0" cy="0" r="14" fill="#131e33" stroke="#22d3ee" stroke-width="1.2" />
+                    <circle cx="0" cy="0" r="4.5" fill="#3b82f6" />
+                  </g>
+                  <!-- Bánh trước (bên phải) -->
+                  <g transform="translate(276, 112)">
+                    <circle cx="0" cy="0" r="22" fill="#080e1a" stroke="rgba(148, 170, 210, 0.35)" stroke-width="2.5" />
+                    <circle cx="0" cy="0" r="14" fill="#131e33" stroke="#22d3ee" stroke-width="1.2" />
+                    <circle cx="0" cy="0" r="4.5" fill="#3b82f6" />
+                  </g>
+
+                  <!-- Cổng sạc xe đang nhận điện -->
+                  <g transform="translate(20, 62)">
+                    <circle cx="0" cy="0" r="6.5" fill="#060c19" stroke="#22d3ee" stroke-width="1.8" />
+                    <circle cx="0" cy="0" r="2.8" fill="#22c55e" />
+                  </g>
+
+                  <!-- Badge nổi trên xe: Trạng thái đang sạc -->
+                  <g transform="translate(130, -2)">
+                    <rect x="0" y="0" width="122" height="22" rx="11" fill="#0d1729" stroke="rgba(59, 130, 246, 0.45)" stroke-width="1.2" />
+                    <circle cx="11" cy="11" r="4" fill="#3b82f6" />
+                    <text x="21" y="14" fill="#e9effa" font-size="8.5" font-weight="700">ĐANG SẠC · 48 kW</text>
+                  </g>
+                </g>
+
+                <!-- Mặt đất công nghệ (Tech floor grid line) -->
+                <line x1="20" y1="200" x2="620" y2="200" stroke="rgba(148, 170, 210, 0.2)" stroke-width="1.2" />
+              </svg>
+            </div>
+
+            <!-- CÁC TÍNH NĂNG THỰC TẾ TRONG PROJECT CSMS (RỘNG ĐÚNG BẰNG KHUNG XE) -->
+            <ul class="auth-brand__points">
+              <li class="auth-brand__point-item">
+                <span class="auth-brand__point-icon" data-icon="station"></span>
+                <div class="auth-brand__point-text">
+                  <span class="auth-brand__point-title">Trạm &amp; Trụ sạc</span>
+                  <span class="auth-brand__point-desc">Khai báo trạm, trụ sạc và đầu nối</span>
+                </div>
+              </li>
+              <li class="auth-brand__point-item">
+                <span class="auth-brand__point-icon" data-icon="activity"></span>
+                <div class="auth-brand__point-text">
+                  <span class="auth-brand__point-title">Giám sát thiết bị</span>
+                  <span class="auth-brand__point-desc">Theo dõi trạng thái &amp; công suất tức thời</span>
+                </div>
+              </li>
+              <li class="auth-brand__point-item">
+                <span class="auth-brand__point-icon" data-icon="users"></span>
+                <div class="auth-brand__point-text">
+                  <span class="auth-brand__point-title">Năm vai trò phân quyền</span>
+                  <span class="auth-brand__point-desc">Quản trị, Chủ trạm, Vận hành, Kế toán, Tài xế</span>
+                </div>
+              </li>
+              <li class="auth-brand__point-item">
+                <span class="auth-brand__point-icon" data-icon="radio"></span>
+                <div class="auth-brand__point-text">
+                  <span class="auth-brand__point-title">Chuẩn OCPP 1.6J</span>
+                  <span class="auth-brand__point-desc">Kết nối mở hai chiều qua WebSocket</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <footer class="auth-brand__footer">
+            <span>CSMS Enterprise Platform</span>
+            <span>Phiên bản v1.0 · Chuẩn OCPP 1.6J</span>
+          </footer>
+        </div>
+      </aside>
+
+      <!-- CỘT PHẢI: KHU VỰC AUTHENTICATION (LOGIN / REGISTER) -->
+      <section class="panel">
+        <div class="top">
+          <div class="secure"><i><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2ed3a0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></i>Kết nối bảo mật</div>
+          <div class="top-r">
+            <a href="#" style="color:inherit;text-decoration:none">Trung tâm hỗ trợ</a>
+            <div class="theme" role="group" aria-label="Giao diện">
+              <button class="on" type="button" data-t="light">☀ Sáng</button>
+              <button type="button" data-t="dark">☾ Tối</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="center">
+          <div class="card">
+            <!-- Mobile Brand Title (chỉ hiển thị khi màn hình hẹp ẩn cột bên trái) -->
+            <div class="auth-mobile-header">
+              <div class="brand" style="padding: 0; display: inline-flex; align-items: center; gap: 8px;">
+                <span class="brand__mark" data-icon="bolt"></span>
+                <strong>CSMS</strong>
+              </div>
+              <p class="sub" style="margin-bottom: 12px;">Hệ thống Quản lý &amp; Vận hành Trạm sạc Xe điện</p>
+            </div>
+
+            <!-- TABS ĐĂNG NHẬP / TẠO TÀI KHOẢN -->
+            <div class="tabs" role="tablist" aria-label="Đăng nhập hoặc tạo tài khoản">
+              <button class="on" type="button" role="tab" id="tab-login" aria-controls="pane-login" data-tab="login" data-go="login" aria-selected="true">Đăng nhập</button>
+              <button type="button" role="tab" id="tab-register" aria-controls="pane-register" data-tab="register" data-go="register" aria-selected="false">Tạo tài khoản</button>
+            </div>
+
+            <!-- THÔNG BÁO LỖI CHUNG (401, 429, MẠNG) -->
+            <div id="authAlert" class="form-alert" role="alert" hidden></div>
+
+            <!-- PANEL ĐĂNG NHẬP -->
+            <div id="pane-login" role="tabpanel" aria-labelledby="tab-login" data-form="login">
+              <div class="eyebrow">Truy cập hệ thống</div>
+              <h2>Chào mừng quay trở lại</h2>
+              <p class="sub">Đăng nhập để tiếp tục quản lý mạng lưới trạm sạc của bạn.</p>
+
+              <form id="loginForm" novalidate>
+                <label for="loginEmail">Email</label>
+                <div class="field">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                  <input id="loginEmail" type="email" placeholder="owner2@demo.csms.local" required autocomplete="username">
+                </div>
+                <p class="field__error" data-error-for="loginEmail" role="alert" hidden></p>
+
+                <label for="loginPassword">Mật khẩu</label>
+                <div class="field">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                  <input id="loginPassword" type="password" required autocomplete="current-password">
+                  <button type="button" class="show password-toggle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Hiện</span></button>
+                </div>
+                <p class="field__error" data-error-for="loginPassword" role="alert" hidden></p>
+
+                <div class="row">
+                  <label class="check" style="margin:0;font-weight:400"><input type="checkbox" checked>Ghi nhớ đăng nhập</label>
+                  <a href="#" tabindex="-1">Quên mật khẩu?</a>
+                </div>
+
+                <button class="submit" id="loginSubmitBtn" type="submit">Đăng nhập &nbsp;→</button>
+              </form>
+
+              <p class="alt">Chưa có tài khoản? <a href="#" data-tab="register" data-go="register">Tạo tài khoản ngay</a></p>
+            </div>
+
+            <!-- PANEL ĐĂNG KÝ -->
+            <div id="pane-register" role="tabpanel" aria-labelledby="tab-register" data-form="register" hidden>
+              <div class="eyebrow">Đăng ký tài khoản</div>
+              <h2>Tạo tài khoản tài xế</h2>
+              <p class="sub">Tài khoản đăng ký công khai luôn là Tài xế. Các vai trò khác do Quản trị viên tạo.</p>
+
+              <form id="registerForm" novalidate>
+                <label for="regName">Họ và tên</label>
+                <div class="field">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                  <input id="regName" type="text" placeholder="Nguyễn Văn A" required autocomplete="name">
+                </div>
+                <p class="field__error" data-error-for="regName" role="alert" hidden></p>
+
+                <label for="regEmail">Email</label>
+                <div class="field">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                  <input id="regEmail" type="email" placeholder="ten@congty.vn" required autocomplete="email">
+                </div>
+                <p class="field__error" data-error-for="regEmail" role="alert" hidden></p>
+
+                <label for="regPassword">Mật khẩu</label>
+                <div class="field">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                  <input id="regPassword" type="password" placeholder="Tối thiểu 8 ký tự" required minlength="8" autocomplete="new-password">
+                  <button type="button" class="show password-toggle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Hiện</span></button>
+                </div>
+                <p class="field__error" data-error-for="regPassword" role="alert" hidden></p>
+
+                <button class="submit" id="regSubmitBtn" type="submit" style="margin-top:6px">Tạo tài khoản &nbsp;→</button>
+              </form>
+
+              <p class="alt">Đã có tài khoản? <a href="#" data-tab="login" data-go="login" style="font-weight:600">Đăng nhập</a></p>
+            </div>
+
+            <p class="tls">🔒 Dữ liệu được bảo vệ bằng mã hóa TLS 1.3</p>
+          </div>
+        </div>
+
+        <div class="foot">
+          <span>© 2026 CSMS. All rights reserved.</span>
+          <nav><a href="#">Điều khoản</a><a href="#">Bảo mật</a></nav>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="/pages/auth/login.js"></script>
+  </body>
+</html>

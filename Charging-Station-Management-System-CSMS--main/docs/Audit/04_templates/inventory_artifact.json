@@ -1,0 +1,61 @@
+{
+  "inventory_id": "INV-2026-09-29-01",
+  "project_name": "target-application",
+  "generated_at": "2026-09-29T09:00:00Z",
+  "target_scope_hash": "git:a1b2c3d4e5f6",
+  "tech_stack": {
+    "languages": ["TypeScript", "Python"],
+    "frameworks": ["FastAPI", "React"],
+    "databases": ["PostgreSQL", "Redis"],
+    "infrastructure": ["Docker", "Kubernetes"]
+  },
+  "endpoints": [
+    {
+      "endpoint_id": "EP-01",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "handler": "src/controllers/auth.py:login",
+      "auth_required": false,
+      "roles_allowed": ["anonymous"],
+      "trust_boundary": "External -> Internal",
+      "verification_status": "DYNAMIC_VERIFIED"
+    },
+    {
+      "endpoint_id": "EP-02",
+      "method": "GET",
+      "path": "/api/v1/users/{id}",
+      "handler": "src/controllers/user.py:get_user",
+      "auth_required": true,
+      "roles_allowed": ["member", "admin"],
+      "trust_boundary": "Authenticated User -> User DB",
+      "verification_status": "STATIC_VERIFIED"
+    }
+  ],
+  "critical_data_flows": [
+    {
+      "flow_id": "FLOW-01",
+      "name": "User Authentication & JWT Issuance",
+      "source": "POST /api/v1/auth/login",
+      "sink": "Database query -> bcrypt check -> JWT signed",
+      "assets_involved": ["credentials", "jwt_secret"]
+    }
+  ],
+  "coverage_statistics": {
+    "total_in_scope_assets": 12,
+    "total_testable_assets": 12,
+    "verified_assets": 10,
+    "unknown_assets": 2,
+    "coverage_inventory_percent": 83.3,
+    "coverage_testable_percent": 83.3
+  },
+  "discovery_debts": [
+    {
+      "debt_id": "DD-001",
+      "title": "Uninspected GraphQL internal queries",
+      "severity": "MEDIUM",
+      "reason": "Schema generated dynamically without static file",
+      "owner": "team-api",
+      "blocking_effect": "NONE"
+    }
+  ]
+}

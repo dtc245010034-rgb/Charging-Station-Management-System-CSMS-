@@ -1,0 +1,33 @@
+/* Light mode: chỉ đổi giá trị token, không đổi tên. Bật bằng <html data-theme="light">. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-primary: #f2f5fa;
+  --bg-secondary: #e9eff8;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-hover: #eef3fb;
+
+  --border-subtle: rgba(15, 30, 60, 0.08);
+  --border-default: rgba(15, 30, 60, 0.15);
+  --border-strong: rgba(15, 30, 60, 0.3);
+
+  --text-primary: #0d1b33;
+  --text-secondary: #40537a;
+  --text-muted: #566a8c;
+  --text-disabled: #9aa8c2;
+
+  --brand-primary: #0787a8;
+  --brand-secondary: #2563eb;
+  --brand-gradient: linear-gradient(135deg, #0787a8, #2563eb);
+  --on-brand: #ffffff;
+
+  --success: #15803d;
+  --info: #2563eb;
+  --warning: #b45309;
+  --danger: #dc2626;
+  --neutral: #64748b;
+
+  --shadow-sm: 0 1px 2px rgba(15, 30, 60, 0.08);
+  --shadow-md: 0 12px 32px rgba(15, 30, 60, 0.16);
+}
