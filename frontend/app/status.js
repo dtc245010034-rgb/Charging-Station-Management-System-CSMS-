@@ -49,9 +49,20 @@ export function pointGroup(point) {
 }
 
 // Nhãn của trụ dùng đúng tên nhóm trong chú giải; nhãn riêng "Chưa rõ" chỉ dành cho đầu nối.
+export const ONLINE_PAUSED_LABEL = 'Trực tuyến – tạm ngừng';
+
 export function pointLabel(status, group = groupOf(status)) {
   if (status === 'UNKNOWN' || !status) return GROUPS.offline.label;
+  if (status === 'ONLINE' && group === 'offline') return ONLINE_PAUSED_LABEL;
   return statusLabel(status, group);
+}
+
+// Nhãn và màu trụ ở trang "Trạng thái trụ"; trụ trực tuyến mà mọi đầu nối tạm ngừng dùng cùng nhãn với trang "Trụ sạc".
+export function fleetPointLabel(point) {
+  if (point.offline) return { label: 'Ngoại tuyến', tone: 'offline' };
+  if (point.status !== 'ONLINE') return { label: 'Chưa rõ', tone: 'offline' };
+  const group = pointGroup({ status: point.status, connector_statuses: (point.connectors ?? []).map((c) => c.status) });
+  return group === 'offline' ? { label: ONLINE_PAUSED_LABEL, tone: 'offline' } : { label: 'Trực tuyến', tone: 'ready' };
 }
 
 // Thứ tự nặng → nhẹ, dùng để chọn màu đại diện của một trạm gồm nhiều trụ.

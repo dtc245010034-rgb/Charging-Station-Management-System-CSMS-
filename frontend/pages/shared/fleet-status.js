@@ -1,6 +1,7 @@
 import { h } from '../../app/dom.js';
 import { formatDateTime } from '../../app/format.js';
 import { WORKSPACES } from '../../app/workspace.js';
+import { fleetPointLabel } from '../../app/status.js';
 import { statusBadge, stationBadge, stationLevelErrorBadge } from '../../components/badge.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
 import { icon } from '../../components/icons.js';
@@ -9,9 +10,7 @@ import * as csms from '../../services/csms.js';
 import { subscribe } from '../../services/realtime.js';
 
 function chargePointBadge(point) {
-  const online = !point.offline && point.status === 'ONLINE';
-  const label = point.offline ? 'Ngoại tuyến' : online ? 'Trực tuyến' : 'Chưa rõ';
-  const tone = online ? 'ready' : 'offline';
+  const { label, tone } = fleetPointLabel(point);
   return h('span', { class: `badge badge--${tone}` },
     h('span', { class: `dot dot--${tone}`, 'aria-hidden': 'true' }), label);
 }

@@ -11,7 +11,7 @@
 | Product Goal | Nắm mọi phiên sạc thời gian thực qua OCPP 1.6J, tính đúng tiền theo biểu giá nhiều khung giờ, không để trạm vượt công suất, đối soát doanh thu khớp kWh |
 | Thời gian | 21/9 – 26/10/2026, sprint 1 tuần (5 ngày làm việc), đơn vị ước lượng story point |
 | Sprint 1 (21–28/9) | **12/12 SP hoàn thành** trên Jira (trừ việc chuẩn bị demo GYM-14 đang làm). Demo Thứ Tư 30/9 |
-| Sprint 2 (28/9–5/10) | Kế hoạch 20 SP, 11 story (GYM-32…42). **Đã có trên `main`:** S-06…S-11, S-13 và cờ ngoại tuyến (S-12). **Chưa làm:** S-14, S-15, S-16 (5 SP). Xem mục 4 |
+| Sprint 2 (28/9–5/10) | Kế hoạch 20 SP, 11 story (GYM-32…42). **Đã có trên `main`:** S-06…S-11, S-13 và cờ ngoại tuyến (S-12). S-14 (chống tin trùng `messageId`) đã có trên `main`. **Chưa làm:** S-15, S-16 (3 SP; kế hoạch: `docs/design/S15-S16-ke-hoach.md`). Nhánh `phuc/GYM-XX-fix-cap-nhat` (chưa merge) vá thêm F8–F12. Xem mục 4 |
 | Chất lượng hiện tại | Lint sạch · **280/280 test pass, 3 lần liên tiếp** (104,4 s; 114,4 s; 115,0 s; gồm S-09 T-19 cần Docker) · CI xanh trên `main` (job Ubuntu + job Windows) |
 | Cảnh báo lịch | Backlog có 8 sprint nhưng dự án kết thúc 26/10 (còn khoảng 3 tuần): thực tế tới Sprint 5. Phạm vi cuối do PO chốt |
 
@@ -42,7 +42,7 @@
 | Nền tảng | Express 5 + PostgreSQL 16, Docker Compose, migration 001–015 (tiến/lùi), CI (Ubuntu + Windows), Dockerfile chạy user thường + healthcheck, blueprint Render, tắt máy sạch (N4) | Staging chạy thật được kiểm với 50 trụ ảo, sao lưu tự động (S-62), thống kê sức khoẻ (S-63) |
 | Tài khoản & quyền | Đăng ký công khai (luôn Tài xế), Quản trị tạo mọi vai trò, đăng nhập, khoá tạm, RBAC 5 vai trò, cô lập dữ liệu theo chủ trạm, audit truy cập trái phép | Danh sách/khoá tài khoản (S-61), đổi/quên mật khẩu |
 | Trạm – trụ – đầu nối | API tạo/sửa/xem (lọc theo chủ sở hữu), mã trụ duy nhất, toạ độ, chống bấm hai lần, **khoá/mở khoá trạm** (đóng kết nối trụ bằng mã 1008) | Chặn đổi mã khi có phiên sạc |
-| OCPP | `ws://…/ocpp/<mã>`: xác thực mã trụ + subprotocol, khung CALL/CALLRESULT/CALLERROR, `BootNotification`, `Heartbeat` (`last_seen_at` theo giờ DB), `StatusNotification` (lưu trạng thái, lỗi có khử trùng, giới hạn độ dài), thay thế kết nối trùng (S-13), rate limit, ping giữ kết nối | `Authorize` (còn là stub, S-15), chống xử lý tin trùng `messageId` (S-14), Reset từ xa (S-16), xác thực trụ (B5), phiên sạc (Sprint 3) |
+| OCPP | `ws://…/ocpp/<mã>`: xác thực mã trụ + subprotocol, khung CALL/CALLRESULT/CALLERROR, `BootNotification`, `Heartbeat` (`last_seen_at` theo giờ DB), `StatusNotification` (lưu trạng thái, lỗi có khử trùng, giới hạn độ dài), thay thế kết nối trùng (S-13), rate limit, ping giữ kết nối | `Authorize` (còn là stub, S-15), Reset từ xa (S-16), xác thực trụ (B5), phiên sạc (Sprint 3) |
 | Trạng thái trụ thời gian thực | `GET /api/fleet-status` (cây trạm–trụ–đầu nối, cờ `offline`), SSE `/api/fleet-status/events` (chủ trạm chỉ nhận sự kiện của mình), giao diện tự nối lại và đồng bộ lại snapshot | Quy tắc để lỗi mức trụ ảnh hưởng trạng thái tổng của trụ/trạm (chờ PO) |
 | Giao diện | Đăng nhập/đăng ký; workspace Vận hành (bảng điều khiển trạng thái tức thời), Chủ trạm, Quản trị, Kế toán (khung), Tài xế (khung, mobile) | Cảnh báo, phiên sạc, điều khiển từ xa, ví, hoá đơn, đặt chỗ, đối soát |
 | Tiền, ví, biểu giá, công suất, đặt chỗ, đối soát | — | Sprint 4–8 |
@@ -63,7 +63,7 @@ Phụ thuộc và mức ưu tiên **theo file backlog của PO**. Cột “Trên
 | GYM-37 | S-11 Màn hình trạng thái mọi trụ | 3 | Must | S-10 | **Có** (#70, #72) | Xem “S-11 đã làm gì” bên dưới |
 | GYM-38 | S-12 Quá hạn nhịp tim → ngoại tuyến | 2 | Must | S-09 | **Có** (cờ `offline` trong fleet-status) | Suy từ `last_seen_at`, không phụ thuộc job |
 | GYM-39 | S-13 Trùng mã trụ → đóng kết nối cũ | 1 | Must | S-06 | **Có** (#56) | Registry giữ socket, đóng kết nối cũ |
-| GYM-40 | S-14 Tin trùng mã nhận lại câu trả lời cũ | 2 | Must | S-08 | **Chưa** | **Bằng chứng K-01 §4**: gửi lại cùng `messageId` làm handler chạy lại và cấp 2 `transactionId` |
+| GYM-40 | S-14 Tin trùng mã nhận lại câu trả lời cũ | 2 | Must | S-08 | **Có** (bảng `ocpp_messages`; F8 trên nhánh `phuc/GYM-XX-fix-cap-nhat`) | **Bằng chứng K-01 §4**: gửi lại cùng `messageId` làm handler chạy lại và cấp 2 `transactionId` |
 | GYM-41 | S-15 Xác thực thẻ qua `Authorize` | 2 | **Must** | S-08 | **Chưa** (`Authorize` là stub) | `idTag` ≤ 20 ký tự; log chỉ 4 ký tự cuối; Sprint 3 (S-17) dùng lại |
 | GYM-42 | S-16 Reset từ xa | 1 | **Should** | S-11 | **Chưa** | Chỉ Should duy nhất; cần hàm gửi lệnh từ máy chủ xuống trụ |
 

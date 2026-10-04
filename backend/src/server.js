@@ -3,7 +3,7 @@ const { WebSocketServer } = require('ws');
 const env = require('./config/env');
 const app = require('./app');
 const { migrate } = require('./db/migrate');
-const { pool } = require('./db/pool');
+const { pool, ocppPool } = require('./db/pool');
 const connections = require('./modules/charge-points/connection-registry');
 const { createRateLimiter } = require('./lib/rate-limit');
 const { clientIpOf } = require('./lib/client-ip');
@@ -11,9 +11,10 @@ const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
 const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
 const { createHeartbeatHandler } = require('./modules/ocpp/handlers/heartbeat');
+const { createAuthorizeHandler } = require('./modules/ocpp/handlers/authorize');
 const { createStatusNotificationHandler } = require('./modules/ocpp/handlers/status-notification');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
-const { markAllChargePointsOffline } = require('./modules/charge-points/presence');
+const { markAllChargePointsOffline, markChargePointSeen } = require('./modules/charge-points/presence');
 const { startChargePointOfflineJob } = require('./modules/charge-points/offline-job');
 const { createShutdown } = require('./modules/ocpp/shutdown');
 const { createMessageStore } = require('./modules/ocpp/messages.repository');
@@ -26,32 +27,19 @@ async function updateChargePointLastSeen(connection) {
 	const code = connection?.chargePointCode || connection?.chargePoint?.code;
 	if (!code || connection?.isStationLocked) return;
 	try {
-		// SKIP LOCKED: hàng đang bị giao dịch khác giữ thì bỏ qua lần này, không để Heartbeat chờ khoá và giữ kết nối pool.
-		await pool.query(
-			`WITH target AS (
-			   SELECT cp.id FROM charge_points cp JOIN stations s ON s.id = cp.station_id
-			   WHERE cp.code = $1 AND s.locked_at IS NULL
-			   FOR UPDATE OF cp SKIP LOCKED
-			 )
-			 UPDATE charge_points
-			 SET last_seen_at = CURRENT_TIMESTAMP,
-			     status = CASE WHEN charge_points.status IN ('OFFLINE', 'UNKNOWN') THEN 'ONLINE' ELSE charge_points.status END
-			 FROM target
-			 WHERE charge_points.id = target.id`,
-			[code]
-		);
+		await markChargePointSeen(pool, code, { notify: Boolean(connection.isBootAccepted) });
 	} catch (error) {
 		console.warn(`[OCPP] Failed to update last_seen_at for ${safeLog(code)}: ${sanitizeErrorMessage(error?.message || error)}`);
 	}
 }
 
-const messageStore = createMessageStore(pool);
+const messageStore = createMessageStore(pool, { replayWindowSeconds: env.OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS });
 const ocppMessages = createOcppMessageHandler({
 	handlers: {
 		BootNotification: bootNotificationHandler,
 		Heartbeat: createHeartbeatHandler({ now }),
-		StatusNotification: createStatusNotificationHandler({ pool, errorDedupSeconds: env.OCPP_ERROR_DEDUP_SECONDS }),
-		Authorize: async (payload) => ({ idTagInfo: { status: payload.idTag ? 'Accepted' : 'Invalid' } }),
+		StatusNotification: createStatusNotificationHandler({ pool: ocppPool, errorDedupSeconds: env.OCPP_ERROR_DEDUP_SECONDS }),
+		Authorize: createAuthorizeHandler(),
 	},
 	updateLastSeen: updateChargePointLastSeen,
 	messageStore,
@@ -100,7 +88,7 @@ async function purgeOldMessages() {
 	}
 }
 
-const shutdown = createShutdown({ server, wss, pool });
+const shutdown = createShutdown({ server, wss, pool: { query: (...args) => pool.query(...args), end: () => Promise.all([pool.end(), ocppPool.end()]) } });
 let stopChargePointOfflineJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();

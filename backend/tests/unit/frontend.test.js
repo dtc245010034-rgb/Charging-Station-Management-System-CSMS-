@@ -129,16 +129,30 @@ describe('S-02 frontend: router', () => {
     assert.deepStrictEqual(countByGroup(points, pointGroup), { ready: 1, charging: 0, warning: 0, fault: 0, offline: 1 });
   });
 
-  it('nhãn trạng thái trụ khớp chú giải: UNKNOWN và ONLINE-toàn-đầu-nối-tạm-ngừng là "Ngoại tuyến / chưa rõ"; nhãn đầu nối giữ nguyên', async () => {
+  it('nhãn trạng thái trụ khớp chú giải: UNKNOWN là "Ngoại tuyến / chưa rõ", ONLINE-toàn-đầu-nối-tạm-ngừng là "Trực tuyến – tạm ngừng"; nhãn đầu nối giữ nguyên', async () => {
     const { pointLabel, pointGroup, statusLabel } = await load('app/status.js');
     assert.strictEqual(pointLabel('UNKNOWN', 'offline'), 'Ngoại tuyến / chưa rõ');
     assert.strictEqual(pointLabel(undefined, 'offline'), 'Ngoại tuyến / chưa rõ');
     const idle = { status: 'ONLINE', connector_statuses: ['UNAVAILABLE'] };
-    assert.strictEqual(pointLabel(idle.status, pointGroup(idle)), 'Ngoại tuyến / chưa rõ');
+    assert.strictEqual(pointLabel(idle.status, pointGroup(idle)), 'Trực tuyến – tạm ngừng');
     assert.strictEqual(pointLabel('ONLINE', 'ready'), 'Sẵn sàng');
     assert.strictEqual(pointLabel('ONLINE', 'fault'), 'Lỗi');
     assert.strictEqual(statusLabel('UNKNOWN'), 'Chưa rõ');
     assert.strictEqual(statusLabel('UNAVAILABLE'), 'Tạm ngừng');
+  });
+});
+
+describe('F12: nhãn trạng thái trụ thống nhất giữa trang Trụ sạc và Trạng thái trụ', () => {
+  it('fleetPointLabel: cùng một trụ cho cùng một nhãn và màu ở cả hai trang', async () => {
+    const { fleetPointLabel, pointLabel, pointGroup } = await load('app/status.js');
+    const idle = { status: 'ONLINE', offline: false, connectors: [{ status: 'UNAVAILABLE' }, { status: 'UNAVAILABLE' }] };
+    assert.deepStrictEqual(fleetPointLabel(idle), { label: 'Trực tuyến – tạm ngừng', tone: 'offline' });
+    const asPoint = { status: idle.status, connector_statuses: idle.connectors.map((c) => c.status) };
+    assert.strictEqual(fleetPointLabel(idle).label, pointLabel(asPoint.status, pointGroup(asPoint)));
+    assert.deepStrictEqual(fleetPointLabel({ status: 'ONLINE', offline: false, connectors: [{ status: 'AVAILABLE' }] }), { label: 'Trực tuyến', tone: 'ready' });
+    assert.deepStrictEqual(fleetPointLabel({ status: 'ONLINE', offline: false, connectors: [] }), { label: 'Trực tuyến', tone: 'ready' });
+    assert.deepStrictEqual(fleetPointLabel({ status: 'OFFLINE', offline: true, connectors: [{ status: 'UNAVAILABLE' }] }), { label: 'Ngoại tuyến', tone: 'offline' });
+    assert.deepStrictEqual(fleetPointLabel({ status: 'UNKNOWN', offline: false, connectors: [] }), { label: 'Chưa rõ', tone: 'offline' });
   });
 });
 
