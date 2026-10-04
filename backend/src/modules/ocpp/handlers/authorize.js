@@ -73,7 +73,7 @@ function createAuthorizeHandler({
     try {
       if (db) {
         const tagResult = await db.query(
-          'SELECT id, tag, status, expires_at, user_id FROM id_tags WHERE tag = $1 LIMIT 1',
+          'SELECT id, tag, status, expires_at, user_id FROM id_tags WHERE UPPER(tag) = UPPER($1) LIMIT 1',
           [idTag]
         );
         tagRecord = tagResult.rows[0] || null;
@@ -83,7 +83,7 @@ function createAuthorizeHandler({
             `SELECT s.id, s.status, s.locked_at
              FROM stations s
              JOIN charge_points cp ON cp.station_id = s.id
-             WHERE cp.code = $1 LIMIT 1`,
+             WHERE UPPER(cp.code) = UPPER($1) LIMIT 1`,
             [code]
           );
           station = stationResult.rows[0] || null;

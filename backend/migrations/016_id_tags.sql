@@ -8,5 +8,5 @@ CREATE TABLE IF NOT EXISTS id_tags (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS id_tags_tag_key ON id_tags (tag);
+CREATE UNIQUE INDEX IF NOT EXISTS id_tags_tag_key ON id_tags (UPPER(tag));
 CREATE INDEX IF NOT EXISTS idx_id_tags_user_id ON id_tags (user_id);
