@@ -39,7 +39,7 @@ const ocppMessages = createOcppMessageHandler({
 		BootNotification: bootNotificationHandler,
 		Heartbeat: createHeartbeatHandler({ now }),
 		StatusNotification: createStatusNotificationHandler({ pool: ocppPool, errorDedupSeconds: env.OCPP_ERROR_DEDUP_SECONDS }),
-		Authorize: createAuthorizeHandler(),
+		Authorize: createAuthorizeHandler({ pool: ocppPool }),
 	},
 	updateLastSeen: updateChargePointLastSeen,
 	messageStore,

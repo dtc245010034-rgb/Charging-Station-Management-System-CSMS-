@@ -21,6 +21,9 @@ describe('migration 015: ocpp_messages', () => {
   });
 
   it('down xoá bảng; up lại sạch', async () => {
+    while ((await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1')).rows[0].version !== '015_ocpp_messages.sql') {
+      assert.strictEqual(run('src/db/migrate.js', ['down']).status, 0);
+    }
     const down = run('src/db/migrate.js', ['down']);
     assert.strictEqual(down.status, 0, down.stderr);
     assert.equal(await table(), null);

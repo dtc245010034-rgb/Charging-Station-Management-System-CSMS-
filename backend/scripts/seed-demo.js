@@ -90,14 +90,34 @@ async function seedStations(client, ownerIds) {
   return { stations, points };
 }
 
+async function seedIdTags(client, ids) {
+  const driverId = ids.driver;
+  const demoTags = [
+    { tag: 'TAG-DEMO-01', user_id: driverId, status: 'ACTIVE', expires_at: null },
+    { tag: 'TAG-BLOCKED-01', user_id: driverId, status: 'BLOCKED', expires_at: null },
+    { tag: 'TAG-EXPIRED-01', user_id: driverId, status: 'ACTIVE', expires_at: '2025-01-01T00:00:00Z' },
+  ];
+  let tags = 0;
+  for (const item of demoTags) {
+    if ((await client.query('SELECT 1 FROM id_tags WHERE tag = $1', [item.tag])).rowCount) continue;
+    await client.query(
+      'INSERT INTO id_tags (tag, user_id, status, expires_at) VALUES ($1, $2, $3, $4)',
+      [item.tag, item.user_id, item.status, item.expires_at]
+    );
+    tags += 1;
+  }
+  return tags;
+}
+
 (async () => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const { ids, created } = await seedUsers(client);
     const counts = await seedStations(client, ids);
+    const tagCount = await seedIdTags(client, ids);
     await client.query('COMMIT');
-    console.log(`Seed demo xong: ${created.length} tài khoản mới, ${counts.stations} trạm mới, ${counts.points} trụ mới.`);
+    console.log(`Seed demo xong: ${created.length} tài khoản mới, ${counts.stations} trạm mới, ${counts.points} trụ mới, ${tagCount} thẻ demo mới.`);
     console.log(`Tài khoản demo (mật khẩu = giá trị DEMO_PASSWORD): ${ACCOUNTS.map((a) => emailOf(a.key)).join(', ')}`);
   } catch (error) {
     await client.query('ROLLBACK');
