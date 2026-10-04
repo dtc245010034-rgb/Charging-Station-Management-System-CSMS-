@@ -114,6 +114,10 @@ function createOcppMessageHandler({
 			logInfo(`[OCPP] Duplicate CALL, replaying stored response | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 			return begun.response;
 		}
+		if (begun.state === 'conflict') {
+			logWarning(`[OCPP] Conflicting CALL reused messageId; replaying stored response | messageId: ${safeLog(request.messageId)} | storedAction: ${safeLog(begun.storedAction)} | action: ${safeLog(request.action)}`);
+			return begun.response;
+		}
 
 		let payload;
 		try {

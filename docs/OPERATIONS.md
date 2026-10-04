@@ -186,7 +186,6 @@ Kiểm tra nhanh sau mỗi lần deploy: `/api/health` → `"ok":true`; đăng n
 | `OCPP_RATE_LIMIT_MAX` | cả hai | Không | `50` tin/giây; giới hạn tần suất tin nhắn cho mỗi kết nối OCPP (B3) |
 | `OCPP_ERROR_DEDUP_SECONDS` | cả hai | Không | `60` giây; bỏ qua lỗi đầu nối y hệt trong N giây (`0` = tắt khử trùng) |
 | `OCPP_MESSAGE_RETENTION_DAYS` | cả hai | Không | `7` ngày; giữ câu trả lời OCPP để nhận ra tin trùng `messageId`, job dọn chạy mỗi giờ |
-| `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` | cả hai | Không | `600` giây; chỉ phát lại câu cũ khi cùng `messageId`, hành động, nội dung và chưa quá cửa sổ này (F8) |
 | `OCPP_LOCK_TIMEOUT_SECONDS` | cả hai | Không | `5` giây; `lock_timeout` chỉ cho truy vấn của handler OCPP (F10) |
 | `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | cả hai | Không | `30` lần/phút/tài khoản cho `check-code` (429 + `Retry-After`) |
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | cả hai | Không | `5` lần dò email trùng/giờ/IP; vượt thì đăng ký từ IP đó trả 429. IP lấy theo `TRUST_PROXY` |

@@ -33,7 +33,7 @@ async function updateChargePointLastSeen(connection) {
 	}
 }
 
-const messageStore = createMessageStore(pool, { replayWindowSeconds: env.OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS });
+const messageStore = createMessageStore(pool);
 const ocppMessages = createOcppMessageHandler({
 	handlers: {
 		BootNotification: bootNotificationHandler,

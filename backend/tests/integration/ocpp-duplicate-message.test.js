@@ -87,14 +87,15 @@ describe('S-14 / K-01: tin trùng messageId nhận lại đúng câu trả lời
     assert.equal(new Set(connection.sent.map((frame) => frame[2].transactionId)).size, 1);
   });
 
-  it('cùng messageId khác nội dung: xử lý như tin mới (F8), không lộ payload trong log', async () => {
+  it('cùng messageId khác nội dung: phát lại câu đầu, cảnh báo mà không lộ payload', async () => {
     const counter = { n: 0, boot: 0, fail: 0 };
     const server = makeServer({ counter });
     const connection = makeConnection();
     await server.handleMessage(connection, call('diff-1', 'StartTransaction', { idTag: 'AAA' }));
     await server.handleMessage(connection, call('diff-1', 'StartTransaction', { idTag: 'SECRET-TAG' }));
-    assert.equal(counter.n, 2);
-    assert.notDeepEqual(connection.sent[1][2], connection.sent[0][2]);
+    assert.equal(counter.n, 1);
+    assert.deepEqual(connection.sent[1][2], connection.sent[0][2]);
+    assert.ok(logs.some((line) => line.includes('Conflicting CALL reused messageId')));
     assert.ok(!logs.join('\n').includes('SECRET-TAG'));
   });
 

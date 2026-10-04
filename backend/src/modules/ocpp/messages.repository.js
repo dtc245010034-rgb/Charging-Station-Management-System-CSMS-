@@ -9,8 +9,7 @@ function hashCall(action, payload) {
 }
 
 // pollMs/waitMs: chờ tin trùng đang được xử lý ở nơi khác; staleMs: sau ngần ấy thì coi tin đang xử lý là bị bỏ rơi và xử lý lại.
-// replayWindowSeconds: chỉ tin cùng hành động, cùng nội dung và còn trong cửa sổ này mới nhận lại câu cũ; ngoài ra là tin mới (trụ khởi động lại đếm lại messageId).
-function createMessageStore(pool, { pollMs = 25, waitMs = 10000, staleMs = 30000, replayWindowSeconds = 600 } = {}) {
+function createMessageStore(pool, { pollMs = 25, waitMs = 10000, staleMs = 30000 } = {}) {
   async function begin(code, messageId, action, payloadHash) {
     const deadline = Date.now() + waitMs;
     for (;;) {
@@ -23,26 +22,15 @@ function createMessageStore(pool, { pollMs = 25, waitMs = 10000, staleMs = 30000
 
       const current = await pool.query(
         `SELECT action, payload_hash, response, (response IS NOT NULL) AS done,
-                created_at < CURRENT_TIMESTAMP - make_interval(secs => $3::float8) AS stale,
-                created_at < CURRENT_TIMESTAMP - make_interval(secs => $4::float8) AS expired
+          created_at < CURRENT_TIMESTAMP - make_interval(secs => $3::float8) AS stale
          FROM ocpp_messages WHERE charge_point_code = $1 AND message_id = $2`,
-        [code, messageId, staleMs / 1000, replayWindowSeconds]
+        [code, messageId, staleMs / 1000]
       );
       const row = current.rows[0];
       if (!row) continue;
       if (row.done) {
         const sameCall = row.action === action && row.payload_hash === payloadHash;
-        if (sameCall && !row.expired) return { state: 'replay', response: row.response };
-        // Một UPDATE duy nhất để chỉ một bên thắng; bên thua quay lại vòng lặp và thấy tin đang xử lý.
-        const reused = await pool.query(
-          `UPDATE ocpp_messages SET created_at = CURRENT_TIMESTAMP, action = $3, payload_hash = $4, response = NULL
-           WHERE charge_point_code = $1 AND message_id = $2 AND response IS NOT NULL
-             AND (action <> $3 OR payload_hash <> $4 OR created_at < CURRENT_TIMESTAMP - make_interval(secs => $5::float8))
-           RETURNING 1`,
-          [code, messageId, action, payloadHash, replayWindowSeconds]
-        );
-        if (reused.rowCount > 0) return { state: 'run' };
-        continue;
+        return { state: sameCall ? 'replay' : 'conflict', response: row.response, storedAction: row.action };
       }
       if (row.stale) {
         const taken = await pool.query(
