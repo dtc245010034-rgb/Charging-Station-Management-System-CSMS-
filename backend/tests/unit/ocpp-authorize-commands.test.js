@@ -1,15 +1,65 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { createAuthorizeHandler } = require('../../src/modules/ocpp/handlers/authorize');
+const { createAuthorizeHandler, evaluateIdTag, maskIdTag } = require('../../src/modules/ocpp/handlers/authorize');
 const { createCommandSender, OcppCommandError } = require('../../src/modules/ocpp/commands');
+const { OcppCallError } = require('../../src/modules/ocpp/frames');
 
-describe('Authorize (ghim hành vi hiện tại trước khi S-15 thay bằng tra bảng id_tags)', () => {
-  const authorize = createAuthorizeHandler();
+describe('S-15 Authorize unit tests', () => {
+  const mockPool = {
+    query: async (sql, params) => {
+      if (sql.includes('FROM id_tags')) {
+        const tag = params[0];
+        if (tag === 'ACTIVE-TAG') return { rows: [{ id: 1, tag, status: 'ACTIVE', expires_at: null }] };
+        if (tag === 'BLOCKED-TAG') return { rows: [{ id: 2, tag, status: 'BLOCKED', expires_at: null }] };
+        if (tag === 'EXPIRED-TAG') return { rows: [{ id: 3, tag, status: 'ACTIVE', expires_at: '2020-01-01T00:00:00Z' }] };
+        return { rows: [] };
+      }
+      if (sql.includes('FROM stations')) {
+        return { rows: [{ id: 10, status: 'ACTIVE', locked_at: null }] };
+      }
+      return { rows: [] };
+    },
+  };
 
-  it('có idTag thì Accepted, thiếu hoặc rỗng thì Invalid', async () => {
-    assert.deepEqual(await authorize({ idTag: 'ABC123' }), { idTagInfo: { status: 'Accepted' } });
-    assert.deepEqual(await authorize({ idTag: '' }), { idTagInfo: { status: 'Invalid' } });
-    assert.deepEqual(await authorize({}), { idTagInfo: { status: 'Invalid' } });
+  const handler = createAuthorizeHandler({ pool: mockPool, logWarning: () => {}, logInfo: () => {}, logError: () => {} });
+
+  it('thẻ hợp lệ trả về Accepted', async () => {
+    assert.deepEqual(await handler({ idTag: 'ACTIVE-TAG' }), { idTagInfo: { status: 'Accepted' } });
+  });
+
+  it('thẻ bị khoá trả về Blocked', async () => {
+    assert.deepEqual(await handler({ idTag: 'BLOCKED-TAG' }), { idTagInfo: { status: 'Blocked' } });
+  });
+
+  it('thẻ quá hạn trả về Expired', async () => {
+    assert.deepEqual(await handler({ idTag: 'EXPIRED-TAG' }), { idTagInfo: { status: 'Expired' } });
+  });
+
+  it('thẻ không có trong DB hoặc thiếu idTag trả về Invalid', async () => {
+    assert.deepEqual(await handler({ idTag: 'UNKNOWN-TAG' }), { idTagInfo: { status: 'Invalid' } });
+    assert.deepEqual(await handler({ idTag: '' }), { idTagInfo: { status: 'Invalid' } });
+    assert.deepEqual(await handler({}), { idTagInfo: { status: 'Invalid' } });
+  });
+
+  it('thẻ dài hơn 20 ký tự ném OcppCallError FormationViolation', async () => {
+    await assert.rejects(
+      () => handler({ idTag: 'A'.repeat(21) }),
+      (err) => err instanceof OcppCallError && err.code === 'FormationViolation'
+    );
+  });
+
+  it('maskIdTag che giấu thông tin thẻ, chỉ hiện tối đa 4 ký tự cuối', () => {
+    assert.equal(maskIdTag('12345678'), '****5678');
+    assert.equal(maskIdTag('1234'), '1234');
+    assert.equal(maskIdTag('99'), '99');
+  });
+
+  it('evaluateIdTag là hàm thuần xuất ra được', () => {
+    assert.equal(typeof evaluateIdTag, 'function');
+    assert.equal(evaluateIdTag({ tagRecord: { status: 'ACTIVE' }, station: { status: 'ACTIVE' } }), 'Accepted');
+    assert.equal(evaluateIdTag({ tagRecord: { status: 'BLOCKED' }, station: { status: 'ACTIVE' } }), 'Blocked');
+    assert.equal(evaluateIdTag({ tagRecord: { status: 'ACTIVE' }, station: { status: 'INACTIVE' } }), 'Blocked');
+    assert.equal(evaluateIdTag({ tagRecord: null }), 'Invalid');
   });
 });
 

@@ -59,6 +59,7 @@ describe('StatusNotification handler', () => {
   it('appends error code, vendor code, and reported time for connector errors', async () => {
     const queries = [];
     const handler = createStatusNotificationHandler({
+      now: () => Date.parse('2026-10-03T05:00:00.000Z'),
       pool: { query: async (sql, params) => { queries.push({ sql, params }); return { rowCount: 1 }; } },
     });
     await handler({
