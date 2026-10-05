@@ -1,6 +1,6 @@
 # Tình trạng dự án và sprint — CSMS
 
-> Cập nhật: **03/10/2026**, khớp `main` sau PR #74 (`8008b45`). Nguồn: lịch sử PR trên GitHub, mã nguồn và kết quả chạy thật (`npm run lint`, `npm test`). **Trạng thái thẻ Jira chưa đối chiếu bằng API** (không có token): cột “Jira” của Sprint 2 dưới đây là “code đạt trên `main`”, không phải trạng thái Done chính thức.
+> Cập nhật: **05/10/2026**, khớp `main` sau PR #85 (S-15) và commit S-16 `6e74180` (**commit S-16 mới có trên `main` cục bộ, chưa qua PR**). Nguồn: lịch sử PR trên GitHub, mã nguồn và kết quả chạy thật (`python test.py`). **Trạng thái thẻ Jira chưa đối chiếu bằng API** (không có token): cột “Jira” của Sprint 2 dưới đây là “code đạt trên `main`”, không phải trạng thái Done chính thức.
 > Định nghĩa Done chính thức theo Jira và Definition of Done trong backlog; tài liệu này ghi thêm **bằng chứng** và **chỗ chưa đạt**.
 
 ## 1. Tóm tắt một trang
@@ -11,8 +11,8 @@
 | Product Goal | Nắm mọi phiên sạc thời gian thực qua OCPP 1.6J, tính đúng tiền theo biểu giá nhiều khung giờ, không để trạm vượt công suất, đối soát doanh thu khớp kWh |
 | Thời gian | 21/9 – 26/10/2026, sprint 1 tuần (5 ngày làm việc), đơn vị ước lượng story point |
 | Sprint 1 (21–28/9) | **12/12 SP hoàn thành** trên Jira (trừ việc chuẩn bị demo GYM-14 đang làm). Demo Thứ Tư 30/9 |
-| Sprint 2 (28/9–5/10) | Kế hoạch 20 SP, 11 story (GYM-32…42). **Đã có trên `main`:** S-06…S-11, S-13 và cờ ngoại tuyến (S-12). S-14 (chống tin trùng `messageId`) đã có trên `main`. **Chưa làm:** S-15, S-16 (3 SP; kế hoạch: `docs/design/S15-S16-ke-hoach.md`). Nhánh `phuc/GYM-XX-fix-cap-nhat` (chưa merge) vá thêm F8–F12. Xem mục 4 |
-| Chất lượng hiện tại | Lint sạch · **280/280 test pass, 3 lần liên tiếp** (104,4 s; 114,4 s; 115,0 s; gồm S-09 T-19 cần Docker) · CI xanh trên `main` (job Ubuntu + job Windows) |
+| Sprint 2 (28/9–5/10) | Kế hoạch 20 SP, 11 story (GYM-32…42). **Code đạt AC đủ 11 story (20 SP):** S-06…S-14 và S-15 đã merge (S-15 ở PR #85); S-16 có trên `main` cục bộ. **S-16 chưa Done:** NFR “ghi vết ai bấm” mới ghi log ứng dụng, chưa ghi `audit_logs`; chưa qua PR/review. Xem mục 4 |
+| Chất lượng hiện tại | Lint sạch · **425/425 test pass, 0 fail** (`python test.py`, 05/10/2026, 205 s, **một lần**; lần chạy 3 lần liên tiếp gần nhất: 04/10, 402 test) · kết quả CI trên GitHub cho PR #85 **chưa xem lại** trong lần cập nhật này; commit S-16 chưa chạy CI |
 | Cảnh báo lịch | Backlog có 8 sprint nhưng dự án kết thúc 26/10 (còn khoảng 3 tuần): thực tế tới Sprint 5. Phạm vi cuối do PO chốt |
 
 ## 2. Sprint 1 — “Chủ trạm khai báo được trạm, trụ và đầu nối; cả nhóm chạy được dự án”
@@ -35,25 +35,25 @@
 - **Sửa lỗi test đỏ** trên máy dev có `backend/.env`.
 - **Dữ liệu demo**, cấu hình staging, quét phụ thuộc trong CI, tài liệu vận hành.
 
-## 3. Hệ thống hiện có gì (03/10/2026)
+## 3. Hệ thống hiện có gì (05/10/2026)
 
 | Lớp | Có | Chưa có |
 |---|---|---|
-| Nền tảng | Express 5 + PostgreSQL 16, Docker Compose, migration 001–015 (tiến/lùi), CI (Ubuntu + Windows), Dockerfile chạy user thường + healthcheck, blueprint Render, tắt máy sạch (N4) | Staging chạy thật được kiểm với 50 trụ ảo, sao lưu tự động (S-62), thống kê sức khoẻ (S-63) |
+| Nền tảng | Express 5 + PostgreSQL 16, Docker Compose, migration 001–016 (tiến/lùi), CI (Ubuntu + Windows), Dockerfile chạy user thường + healthcheck, blueprint Render, tắt máy sạch (N4) | Staging chạy thật được kiểm với 50 trụ ảo, sao lưu tự động (S-62), thống kê sức khoẻ (S-63) |
 | Tài khoản & quyền | Đăng ký công khai (luôn Tài xế), Quản trị tạo mọi vai trò, đăng nhập, khoá tạm, RBAC 5 vai trò, cô lập dữ liệu theo chủ trạm, audit truy cập trái phép | Danh sách/khoá tài khoản (S-61), đổi/quên mật khẩu |
 | Trạm – trụ – đầu nối | API tạo/sửa/xem (lọc theo chủ sở hữu), mã trụ duy nhất, toạ độ, chống bấm hai lần, **khoá/mở khoá trạm** (đóng kết nối trụ bằng mã 1008) | Chặn đổi mã khi có phiên sạc |
-| OCPP | `ws://…/ocpp/<mã>`: xác thực mã trụ + subprotocol, khung CALL/CALLRESULT/CALLERROR, `BootNotification`, `Heartbeat` (`last_seen_at` theo giờ DB), `StatusNotification` (lưu trạng thái, lỗi có khử trùng, giới hạn độ dài), thay thế kết nối trùng (S-13), rate limit, ping giữ kết nối | `Authorize` (còn là stub, S-15), Reset từ xa (S-16), xác thực trụ (B5), phiên sạc (Sprint 3) |
+| OCPP | `ws://…/ocpp/<mã>`: xác thực mã trụ + subprotocol, khung CALL/CALLRESULT/CALLERROR, `BootNotification`, `Heartbeat` (`last_seen_at` theo giờ DB), `StatusNotification` (lưu trạng thái, lỗi có khử trùng, giới hạn độ dài), chống tin trùng `messageId` (S-14), `Authorize` kiểm thẻ qua `id_tags` (S-15), gửi lệnh máy chủ → trụ dùng chung + `Reset` (S-16), thay thế kết nối trùng (S-13), rate limit, ping giữ kết nối | Xác thực trụ (B5), phiên sạc (Sprint 3), lệnh từ xa khác (S-23/S-24) |
 | Trạng thái trụ thời gian thực | `GET /api/fleet-status` (cây trạm–trụ–đầu nối, cờ `offline`), SSE `/api/fleet-status/events` (chủ trạm chỉ nhận sự kiện của mình), giao diện tự nối lại và đồng bộ lại snapshot | Quy tắc để lỗi mức trụ ảnh hưởng trạng thái tổng của trụ/trạm (chờ PO) |
-| Giao diện | Đăng nhập/đăng ký; workspace Vận hành (bảng điều khiển trạng thái tức thời), Chủ trạm, Quản trị, Kế toán (khung), Tài xế (khung, mobile) | Cảnh báo, phiên sạc, điều khiển từ xa, ví, hoá đơn, đặt chỗ, đối soát |
+| Giao diện | Đăng nhập/đăng ký; workspace Vận hành (bảng điều khiển trạng thái tức thời, nút Reset trụ cho Vận hành/Quản trị), Chủ trạm, Quản trị, Kế toán (khung), Tài xế (khung, mobile) | Cảnh báo, phiên sạc, điều khiển từ xa ngoài Reset, ví, hoá đơn, đặt chỗ, đối soát |
 | Tiền, ví, biểu giá, công suất, đặt chỗ, đối soát | — | Sprint 4–8 |
 
 Chi tiết từng màn hình và ai thao tác được: xem README mục 2 và ảnh chụp trong `docs/design/screenshots/`.
 
 ## 4. Sprint 2 — “Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ” (28/9 – 5/10, 20 SP)
 
-Phụ thuộc và mức ưu tiên **theo file backlog của PO**. Cột “Trên `main`” là bằng chứng từ PR đã merge (03/10/2026); trạng thái Jira chưa kiểm bằng API.
+Phụ thuộc và mức ưu tiên **theo file backlog của PO**. Cột “Trên `main`” là bằng chứng từ PR đã merge (cập nhật 05/10/2026); trạng thái Jira chưa kiểm bằng API.
 
-| Jira | Story | SP | Ưu tiên | Phụ thuộc | Trên `main` (03/10) | Ghi chú từ K-01 / hiện trạng |
+| Jira | Story | SP | Ưu tiên | Phụ thuộc | Trên `main` (05/10) | Ghi chú từ K-01 / hiện trạng |
 |---|---|---|---|---|---|---|
 | GYM-32 | S-06 Trụ đã đăng ký kết nối, trụ lạ bị từ chối | 2 | Must | S-05, K-01 | **Có** (#55) | Tự kiểm subprotocol `ocpp1.6` (thư viện mặc định không chặn); tra mã chữ hoa; mã lạ → HTTP 404 lúc bắt tay |
 | GYM-33 | S-07 Đọc/ghi đúng ba loại khung | 2 | Must | S-06 | **Có** (#58, #59) | Khung sai schema → `CALLERROR`, không đóng kết nối. Triển khai bằng `ws` + bộ khung tự viết, không dùng `ocpp-rpc` |
@@ -63,9 +63,9 @@ Phụ thuộc và mức ưu tiên **theo file backlog của PO**. Cột “Trên
 | GYM-37 | S-11 Màn hình trạng thái mọi trụ | 3 | Must | S-10 | **Có** (#70, #72) | Xem “S-11 đã làm gì” bên dưới |
 | GYM-38 | S-12 Quá hạn nhịp tim → ngoại tuyến | 2 | Must | S-09 | **Có** (cờ `offline` trong fleet-status) | Suy từ `last_seen_at`, không phụ thuộc job |
 | GYM-39 | S-13 Trùng mã trụ → đóng kết nối cũ | 1 | Must | S-06 | **Có** (#56) | Registry giữ socket, đóng kết nối cũ |
-| GYM-40 | S-14 Tin trùng mã nhận lại câu trả lời cũ | 2 | Must | S-08 | **Có** (bảng `ocpp_messages`; F8 trên nhánh `phuc/GYM-XX-fix-cap-nhat`) | **Bằng chứng K-01 §4**: gửi lại cùng `messageId` làm handler chạy lại và cấp 2 `transactionId` |
-| GYM-41 | S-15 Xác thực thẻ qua `Authorize` | 2 | **Must** | S-08 | **Chưa** (`Authorize` là stub) | `idTag` ≤ 20 ký tự; log chỉ 4 ký tự cuối; Sprint 3 (S-17) dùng lại |
-| GYM-42 | S-16 Reset từ xa | 1 | **Should** | S-11 | **Chưa** | Chỉ Should duy nhất; cần hàm gửi lệnh từ máy chủ xuống trụ |
+| GYM-40 | S-14 Tin trùng mã nhận lại câu trả lời cũ | 2 | Must | S-08 | **Có** (bảng `ocpp_messages`, F8 ở #82, hồ sơ kiểm thử ở #85) | **Bằng chứng K-01 §4**: gửi lại cùng `messageId` làm handler chạy lại và cấp 2 `transactionId`. Hồ sơ: `testing/stories/S/kiem-thu-S-14.md` |
+| GYM-41 | S-15 Xác thực thẻ qua `Authorize` | 2 | **Must** | S-08 | **Có** (#85) | Bảng `id_tags` (migration 016, unique `UPPER(tag)`); hàm thuần `evaluateIdTag` cho S-17; log chỉ 4 ký tự cuối; `idTag` > 20 ký tự → `FormationViolation`. Hồ sơ: `testing/stories/S/kiem-thu-S-15.md` |
+| GYM-42 | S-16 Reset từ xa | 1 | **Should** | S-11 | **Có trên `main` cục bộ** (`6e74180`), **chưa qua PR** | AC chức năng đạt (6 ca acceptance trên server thật). **Chưa đạt:** NFR “ghi vết ai bấm” mới ghi log ứng dụng, chưa ghi `audit_logs`; commit không theo quy ước `CONTRIBUTING.md`. Hồ sơ: `testing/stories/S/kiem-thu-S-16.md` |
 
 > **Quyết định (29/9):** PO chọn **phương án A, cam kết đủ 20 SP**. Trưởng nhóm kỹ thuật ban đầu chốt `ocpp-rpc`, nhưng bản triển khai trên `main` dùng **`ws` thuần + bộ khung tự viết** (`backend/src/modules/ocpp/`); `SPRINT_2_PLAN.md` ghi kế hoạch gốc nên còn nhắc `ocpp-rpc`. Kế hoạch chi tiết: [`SPRINT_2_PLAN.md`](./SPRINT_2_PLAN.md).
 
@@ -133,13 +133,13 @@ Thứ tự cắt nếu trễ (chốt sớm với PO, ví dụ tối Thứ Tư 30
 
 | Mục DoD | Trạng thái |
 |---|---|
-| Review bởi người khác | Mỗi PR đã merge có ít nhất một người khác tác giả review (theo quy ước `CONTRIBUTING.md`) |
-| Unit test cho nhánh logic mới | Đạt: **280 test**, 3 lần liên tiếp không chập chờn |
+| Review bởi người khác | Mỗi PR đã merge có ít nhất một người khác tác giả review (theo quy ước `CONTRIBUTING.md`). **Ngoại lệ đang mở:** commit S-16 `6e74180` nằm thẳng trên `main` cục bộ, chưa có PR/review |
+| Unit test cho nhánh logic mới | Đạt: **425 test** pass (05/10, một lần); lần gần nhất chạy 3 lần liên tiếp không chập chờn là 04/10 (402 test) |
 | CI xanh (build, lint, test) | Đạt trên `main`: job `lint-and-test` (Ubuntu) và `test-windows`. **Chưa có `typecheck`** (dự án JS thuần). Hai test N4 (tín hiệu `SIGTERM`/`SIGINT`) bỏ qua trên Windows, chạy ở job Ubuntu |
 | Quét phụ thuộc sạch | Đạt: `npm audit --omit=dev --audit-level=high` trong CI |
 | AC pass trên staging với trụ ảo chạy thật | **Chưa đạt**: chưa kiểm staging với 50 trụ ảo (thiếu URL staging); đã kiểm bằng server thật trên DB thử cục bộ (93 ok, 0 FAIL) |
-| Không log dữ liệu định danh / mã thẻ | Đạt với mã hiện có; đã vá rò `host:port` trong log tắt máy (vòng 6) |
-| README cập nhật | Đạt (03/10) |
+| Không log dữ liệu định danh / mã thẻ | Đạt với mã hiện có; đã vá rò `host:port` trong log tắt máy (vòng 6); `Authorize` chỉ log 4 ký tự cuối của thẻ (S-15, có test) |
+| README cập nhật | Đạt (05/10) |
 
 ## 8. Các PR đã merge vào `main` từ 29/9
 
@@ -168,9 +168,7 @@ Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VON
 
 | Mã | Việc | Người/nơi quyết |
 |---|---|---|
-| S-14 / K-01 | Chống xử lý trùng `messageId` | Dev, Sprint 2 phần còn lại |
-| S-15 | `Authorize` kiểm thẻ thật | Dev |
-| S-16 | Reset từ xa | Dev (Should) |
+| S-16 | Ghi vết Reset vào `audit_logs` (`audit.record(...)`, có assert trong `S-16.reset.test.js`); đưa commit `6e74180` qua PR có review, sửa thông điệp commit theo `CONTRIBUTING.md`; kiểm nút Reset trên trình duyệt | Dev + người review |
 | B5 | Xác thực trụ. Rủi ro ghi nhận và chấp nhận tạm cho demo/staging; đề xuất thiết kế ở [`B5-xac-thuc-tru-de-xuat-thiet-ke.md`](B5-xac-thuc-tru-de-xuat-thiet-ke.md) | PO Lê Đình Tuấn |
 | F5 | Đã lưu trạng thái mức trụ (migration 013); còn quy tắc ảnh hưởng trạng thái tổng của trụ/trạm | PO |
 | Hiển thị | Trụ `ONLINE` có đầu nối `UNKNOWN` hiện “Sẵn sàng” (xanh) | PO / QA (Nguyễn Hà Nam) |
