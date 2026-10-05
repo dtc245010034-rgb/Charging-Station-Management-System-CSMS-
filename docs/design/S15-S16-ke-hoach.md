@@ -1,16 +1,16 @@
 # Kế hoạch S-15 (Authorize) và S-16 (Reset từ xa)
 
-Trạng thái: **chưa làm tính năng**; đã chuẩn bị nền (không đổi hành vi). Nguồn AC: `docs/SPRINT_2_PLAN.md` mục S-15, S-16. Cần trưởng dev review vì có migration và phân quyền.
+Trạng thái: **S-16 backend Reset từ xa đã triển khai**; giao diện Reset và S-15 còn lại chưa làm. Nguồn AC: `docs/SPRINT_2_PLAN.md` mục S-15, S-16.
 
 ## 1. Đã sẵn sàng trong repo
 
 | Phần | Vị trí | Ghi chú |
 |---|---|---|
 | Handler `Authorize` tách riêng | `backend/src/modules/ocpp/handlers/authorize.js` | Hành vi cũ giữ nguyên: có `idTag` thì `Accepted`, không thì `Invalid` (chấp nhận mọi thẻ, đây là giới hạn đã biết). Test ghim: `tests/unit/ocpp-authorize-commands.test.js`. |
-| Gửi lệnh server → trụ | `backend/src/modules/ocpp/commands.js` (`createCommandSender`) | Trụ không có kết nối thì lỗi `OFFLINE` ngay; có kết nối thì dùng `ocppMessages.sendCall` (khớp CALLRESULT theo mã, timeout mặc định 30 s, không chặn tin khác). **Chưa nối vào `server.js`.** |
+| Gửi lệnh server → trụ | `backend/src/modules/ocpp/commands.js` (`createCommandSender`) | Đã nối vào `server.js` và endpoint Reset. Trụ offline báo lỗi ngay; CALLRESULT/CALLERROR ghép theo messageId; timeout cấu hình bằng `OCPP_COMMAND_TIMEOUT_SECONDS` (mặc định 30 giây); không chặn tin khác. |
 | `sendCall` có timeout | `message-handler.js` | Sẵn từ S-07. |
 | Sổ kết nối | `charge-points/connection-registry.js` (`getConnection`, `isConnected`) | Sẵn từ S-08. |
-| Test chờ | `tests/acceptance/S-15.authorize.test.js`, `S-16.reset.test.js` | `test.todo` theo từng AC; chuyển thành test thật khi làm. |
+| Kiểm thử tính năng | `tests/acceptance/S-15.authorize.test.js`, `S-16.reset.test.js` | Các ca acceptance của Reset backend đã được viết; cần chạy với PostgreSQL test và Docker/server. |
 
 ## 2. S-15: xác thực thẻ
 
@@ -42,10 +42,10 @@ OCPP 1.6 giới hạn `idTag` 20 ký tự (CiString20Type): handler từ chối 
 
 ## 3. S-16: Reset từ xa
 
-1. `reset` service: kiểm quyền, `commands.send(code, 'Reset', { type })` với `type` ∈ `Soft | Hard`, ghi `audit_logs` (ai bấm, trụ nào, loại) trước khi gửi.
-2. Route `POST /api/charge-points/:id/reset` body `{ type }`. Quyền mới `charge-points:reset` = `ADMIN`, `OPERATOR` (không cho `STATION_OWNER`, theo AC "chỉ Vận hành viên và Quản trị"). Lọc phạm vi theo `db/scope.js`.
-3. Lỗi: `OFFLINE` → HTTP 409 "Trụ không có kết nối"; hết thời gian → HTTP 504; `Rejected` từ trụ → HTTP 422 kèm trạng thái.
-4. Giao diện: nút ở `frontend/pages/shared/charge-points.js` drawer, ẩn với vai trò không có quyền (backend vẫn kiểm).
+1. **Đã làm:** reset service kiểm quyền/phạm vi, ghi nhật ký thao tác vào log ứng dụng (chờ chuẩn hoá ở T-57), rồi gọi `commands.send(code, 'Reset', { type })` (`type` ∈ `Soft | Hard`).
+2. **Đã làm:** `POST /api/charge-points/:id/reset`, quyền `charge-points:reset` = `ADMIN`, `OPERATOR`; lọc phạm vi trụ theo actor.
+3. **Đã làm:** `OFFLINE` → HTTP 409 ngay, không gửi CALL; hết thời gian → HTTP 504; `CALLERROR` hoặc trạng thái `Rejected` từ trụ → HTTP 422.
+4. **Còn lại:** giao diện nút Reset ở `frontend/pages/shared/charge-points.js` drawer, ẩn với vai trò không có quyền (backend vẫn kiểm).
 5. Khi trụ reset nó đóng socket và Boot lại: F9 (`markChargePointSeen`) và Boot lo phần khôi phục trạng thái, không cần code thêm.
 
 ## 4. Danh sách test (đối chiếu AC)

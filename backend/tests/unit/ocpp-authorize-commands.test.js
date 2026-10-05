@@ -77,6 +77,16 @@ describe('commands: gửi lệnh từ server xuống trụ (nền cho S-16)', ()
     assert.equal(called, false);
   });
 
+  it('socket đã đóng: báo OFFLINE và không gửi CALL xuống trụ', async () => {
+    let called = false;
+    const sender = createCommandSender({
+      getConnection: () => ({ readyState: 3 }),
+      sendCall: async () => { called = true; },
+    });
+    await assert.rejects(() => sender.send('CP-1', 'Reset', { type: 'Soft' }), (error) => error.code === 'OFFLINE');
+    assert.equal(called, false);
+  });
+
   it('trụ đang kết nối: chuyển đúng kết nối, hành động, nội dung và thời gian chờ', async () => {
     const connection = { id: 'ws-1' };
     const seen = [];

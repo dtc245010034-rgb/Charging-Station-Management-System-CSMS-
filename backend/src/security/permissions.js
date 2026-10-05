@@ -16,6 +16,7 @@ const permissions = {
   'stations:write': WRITE_OPERATIONS,
   'charge-points:read': READ_OPERATIONS,
   'charge-points:write': WRITE_OPERATIONS,
+  'charge-points:reset': ['ADMIN', 'OPERATOR'],
 };
 
 function access(key) {

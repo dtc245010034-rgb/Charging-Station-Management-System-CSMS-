@@ -53,6 +53,7 @@ describe('S-01 env: cấu hình bắt buộc', () => {
     assert.strictEqual(cfg.OCPP_HEARTBEAT_INTERVAL, 60);
     assert.strictEqual(cfg.OCPP_PING_INTERVAL, 30);
     assert.strictEqual(cfg.OCPP_RATE_LIMIT_MAX, 50);
+    assert.strictEqual(cfg.OCPP_COMMAND_TIMEOUT_SECONDS, 30);
   });
 
   it('cấu hình OCPP_HEARTBEAT_INTERVAL tuỳ chỉnh được nạp đúng', () => {
@@ -68,5 +69,11 @@ describe('S-01 env: cấu hình bắt buộc', () => {
     const cfg = JSON.parse(r.stdout);
     assert.strictEqual(cfg.OCPP_PING_INTERVAL, 15);
     assert.strictEqual(cfg.OCPP_RATE_LIMIT_MAX, 100);
+  });
+
+  it('cấu hình thời gian chờ CALL OCPP tuỳ chỉnh được nạp đúng', () => {
+    const r = load({ ...valid, OCPP_COMMAND_TIMEOUT_SECONDS: '7' });
+    assert.strictEqual(r.status, 0, r.stderr);
+    assert.strictEqual(JSON.parse(r.stdout).OCPP_COMMAND_TIMEOUT_SECONDS, 7);
   });
 });

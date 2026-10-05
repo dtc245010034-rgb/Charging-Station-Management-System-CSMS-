@@ -27,4 +27,8 @@ const updateBody = z.object({
   power_kw: powerKw.optional(),
 });
 
-module.exports = { createBody, updateBody };
+const resetBody = z.object({
+  type: z.enum(['Soft', 'Hard'], { message: 'type phải là Soft hoặc Hard' }),
+});
+
+module.exports = { createBody, updateBody, resetBody };

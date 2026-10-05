@@ -21,6 +21,15 @@ class NotFoundError extends AppError {
 class ConflictError extends AppError {
   constructor(message = 'Dữ liệu đã tồn tại') { super(409, 'CONFLICT', message); }
 }
+class UnprocessableEntityError extends AppError {
+  constructor(message = 'Trụ sạc từ chối lệnh') { super(422, 'CHARGE_POINT_REJECTED', message); }
+}
+class GatewayTimeoutError extends AppError {
+  constructor(message = 'Trụ sạc không phản hồi kịp thời') { super(504, 'OCPP_CALL_TIMEOUT', message); }
+}
+class ServiceUnavailableError extends AppError {
+  constructor(message = 'Chức năng hiện không khả dụng') { super(503, 'SERVICE_UNAVAILABLE', message); }
+}
 
 class TooManyRequestsError extends AppError {
   constructor(retryAfterSec, message = 'Quá nhiều yêu cầu, vui lòng thử lại sau') {
@@ -29,4 +38,15 @@ class TooManyRequestsError extends AppError {
   }
 }
 
-module.exports = { TooManyRequestsError, AppError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError };
+module.exports = {
+  TooManyRequestsError,
+  AppError,
+  BadRequestError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+  UnprocessableEntityError,
+  GatewayTimeoutError,
+  ServiceUnavailableError,
+};

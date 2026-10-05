@@ -184,6 +184,7 @@ Kiểm tra nhanh sau mỗi lần deploy: `/api/health` → `"ok":true`; đăng n
 | `OCPP_HEARTBEAT_INTERVAL` | cả hai | Không | `60` giây; khoảng thời gian nhịp tim gửi cho trụ trong BootNotificationResponse |
 | `OCPP_PING_INTERVAL` | cả hai | Không | `30` giây; chu kỳ gửi WebSocket Ping giữ kết nối OCPP (B9) |
 | `OCPP_RATE_LIMIT_MAX` | cả hai | Không | `50` tin/giây; giới hạn tần suất tin nhắn cho mỗi kết nối OCPP (B3) |
+| `OCPP_COMMAND_TIMEOUT_SECONDS` | cả hai | Không | `30` giây; thời gian chờ phản hồi CALL từ trụ (ví dụ Reset) |
 | `OCPP_ERROR_DEDUP_SECONDS` | cả hai | Không | `60` giây; bỏ qua lỗi đầu nối y hệt trong N giây (`0` = tắt khử trùng) |
 | `OCPP_MESSAGE_RETENTION_DAYS` | cả hai | Không | `7` ngày; giữ câu trả lời OCPP để nhận ra tin trùng `messageId`, job dọn chạy mỗi giờ |
 | `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` | cả hai | Không | `600` giây; chỉ phát lại câu cũ khi cùng `messageId`, hành động, nội dung và chưa quá cửa sổ này (F8) |
