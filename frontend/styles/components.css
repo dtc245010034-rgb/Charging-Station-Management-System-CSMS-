@@ -408,5 +408,6 @@ button.legend__row:hover { background: var(--surface-hover); }
 .fleet-status__code { min-width: 0; overflow-wrap: anywhere; font-weight: 700; }
 .fleet-status__last-seen { color: var(--text-secondary); font-size: 11.5px; overflow-wrap: anywhere; }
 .fleet-status__connectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin: 0; padding: 0; list-style: none; }
+.fleet-status__point-actions { display: flex; justify-content: flex-end; }
 .fleet-status__connector { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; font-size: 12px; }
 .fleet-status__connector .badge { gap: 4px; padding: 1px 5px; font-size: 10.5px; }

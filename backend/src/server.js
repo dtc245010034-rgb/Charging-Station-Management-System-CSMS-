@@ -1,7 +1,7 @@
 const http = require('node:http');
 const { WebSocketServer } = require('ws');
 const env = require('./config/env');
-const app = require('./app');
+const { createApp } = require('./app');
 const { migrate } = require('./db/migrate');
 const { pool, ocppPool } = require('./db/pool');
 const connections = require('./modules/charge-points/connection-registry');
@@ -18,10 +18,10 @@ const { markAllChargePointsOffline, markChargePointSeen } = require('./modules/c
 const { startChargePointOfflineJob } = require('./modules/charge-points/offline-job');
 const { createShutdown } = require('./modules/ocpp/shutdown');
 const { createMessageStore } = require('./modules/ocpp/messages.repository');
+const { createCommandSender } = require('./modules/ocpp/commands');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
-const server = http.createServer(app);
 const now = () => new Date().toISOString();
 async function updateChargePointLastSeen(connection) {
 	const code = connection?.chargePointCode || connection?.chargePoint?.code;
@@ -43,7 +43,15 @@ const ocppMessages = createOcppMessageHandler({
 	},
 	updateLastSeen: updateChargePointLastSeen,
 	messageStore,
+	callTimeoutMs: env.OCPP_COMMAND_TIMEOUT_SECONDS * 1000,
 });
+
+const commandSender = createCommandSender({
+	getConnection: connections.getConnection,
+	sendCall: (...args) => ocppMessages.sendCall(...args),
+	timeoutMs: env.OCPP_COMMAND_TIMEOUT_SECONDS * 1000,
+});
+const server = http.createServer(createApp({ commandSender }));
 
 const wss = new WebSocketServer({
 	noServer: true,

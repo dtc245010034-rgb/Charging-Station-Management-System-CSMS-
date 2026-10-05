@@ -4,6 +4,7 @@ const { after, before, describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { WebSocket, WebSocketServer } = require('ws');
 const { createOcppMessageHandler, OcppCallError } = require('../../src/modules/ocpp/message-handler');
+const { createCommandSender } = require('../../src/modules/ocpp/commands');
 const { createOcppUpgradeHandler } = require('../../src/modules/ocpp/ocpp-upgrade');
 const { createStatusNotificationHandler } = require('../../src/modules/ocpp/handlers/status-notification');
 
@@ -23,6 +24,14 @@ describe('OCPP message handler', () => {
 
 	function receiveFrame() {
 		return new Promise((resolve) => client.once('message', (raw) => resolve(JSON.parse(raw.toString()))));
+	}
+
+	function createTestCommandSender(timeoutMs = 1000) {
+		return createCommandSender({
+			getConnection: (code) => code === CHARGE_POINT_CODE ? serverConnection : undefined,
+			sendCall: (...args) => ocppMessages.sendCall(...args),
+			timeoutMs,
+		});
 	}
 
 	before(async () => {
@@ -256,6 +265,46 @@ describe('OCPP message handler', () => {
 		client.send(JSON.stringify([3, firstCall[1], { status: 'Rejected' }]));
 		assert.deepEqual(await secondPromise, { status: 'Accepted' });
 		assert.deepEqual(await firstPromise, { status: 'Rejected' });
+	});
+
+	it('sends Reset through the shared command sender and matches the virtual charge point CALLRESULT', async () => {
+		let resetCount = 0;
+		const resetPromise = createTestCommandSender().send(CHARGE_POINT_CODE, 'Reset', { type: 'Soft' });
+		const call = await receiveFrame();
+
+		assert.equal(call[0], 2);
+		assert.match(call[1], /^[0-9a-f-]{36}$/i);
+		assert.deepEqual(call.slice(2), ['Reset', { type: 'Soft' }]);
+
+		// The WebSocket client acts as the virtual charge point and replies to the received CALL.
+		resetCount += 1;
+		client.send(JSON.stringify([3, call[1], { status: 'Accepted' }]));
+
+		assert.deepEqual(await resetPromise, { status: 'Accepted' });
+		assert.equal(resetCount, 1);
+	});
+
+	it('processes another charge point CALL while an unanswered Reset is pending', async () => {
+		let resetSettled = false;
+		const resetPromise = createTestCommandSender(1000)
+			.send(CHARGE_POINT_CODE, 'Reset', { type: 'Hard' })
+			.then(
+				(value) => { resetSettled = true; return value; },
+				(error) => { resetSettled = true; throw error; }
+			);
+		const timeoutAssertion = assert.rejects(resetPromise, /OCPP call timed out: Reset/);
+		const resetCall = await receiveFrame();
+		assert.deepEqual(resetCall.slice(2), ['Reset', { type: 'Hard' }]);
+
+		const heartbeatResponse = receiveFrame();
+		client.send(JSON.stringify([2, 'heartbeat-while-reset-pending', 'Heartbeat', {}]));
+
+		assert.deepEqual(
+			await heartbeatResponse,
+			[3, 'heartbeat-while-reset-pending', { currentTime: '2026-10-01T00:00:00.000Z' }]
+		);
+		assert.equal(resetSettled, false);
+		await timeoutAssertion;
 	});
 
 	it('rejects an outgoing CALL with the matching remote CALLERROR', async () => {

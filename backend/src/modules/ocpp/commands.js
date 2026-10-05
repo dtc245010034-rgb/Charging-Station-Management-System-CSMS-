@@ -12,6 +12,9 @@ function createCommandSender({ getConnection, sendCall, timeoutMs = 30000 }) {
     async send(code, action, payload) {
       const connection = getConnection(code);
       if (!connection) throw new OcppCommandError('OFFLINE', 'Trụ sạc không có kết nối OCPP');
+      if (connection.readyState !== undefined && connection.readyState !== 1) {
+        throw new OcppCommandError('OFFLINE', 'Trụ sạc không có kết nối OCPP');
+      }
       return sendCall(connection, action, payload, { timeoutMs });
     },
   };
