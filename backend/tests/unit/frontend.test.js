@@ -66,8 +66,17 @@ describe('S-02 frontend: router', () => {
 
     assert.ok(pages('operator').includes('fleet-status'));
     assert.ok(pages('owner').includes('fleet-status'));
+    assert.ok(pages('admin').includes('fleet-status'), 'admin cần vào được trang có nút Khởi động lại (charge-points:reset)');
     assert.strictEqual(PAGE_NEEDS['fleet-status'], 'charge-points:read');
     assert.strictEqual(typeof pageLoader('fleet-status', 'operator'), 'function');
+  });
+
+  it('quyền nút trên giao diện: Reset cho Admin/Operator, khoá trạm chỉ Admin', async () => {
+    const { can } = await load('app/permissions.js');
+    assert.ok(can('ADMIN', 'charge-points:reset') && can('OPERATOR', 'charge-points:reset'));
+    assert.ok(!can('STATION_OWNER', 'charge-points:reset') && !can('DRIVER', 'charge-points:reset'));
+    assert.ok(can('ADMIN', 'stations:lock'));
+    for (const role of ['OPERATOR', 'STATION_OWNER', 'ACCOUNTANT', 'DRIVER']) assert.ok(!can(role, 'stations:lock'), role);
   });
 
   it('status: gom 9 trạng thái OCPP vào nhóm hiển thị, trạng thái lạ/UNKNOWN là offline, giá trị gốc không đổi', async () => {

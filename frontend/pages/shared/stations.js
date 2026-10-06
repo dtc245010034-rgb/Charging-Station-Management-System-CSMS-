@@ -42,7 +42,7 @@ export function render(ctx) {
     selectedId = id;
     silentHash(routeFor(ctx.workspace, 'stations', id));
     drawer = openStationDrawer({
-      id, canWrite,
+      id, canWrite, canLock: ctx.can('stations:lock'),
       onChanged: () => fleet.refresh(),
       onOpenChargePoint: (cpId) => { location.hash = routeFor(ctx.workspace, 'charge-points', cpId); },
       onClose: () => { selectedId = null; drawer = null; silentHash(routeFor(ctx.workspace, 'stations')); paint(fleet.store.get()); },

@@ -61,6 +61,7 @@ export const WORKSPACES = {
         items: [
           { page: 'stations', label: 'Trạm sạc', icon: 'station', enabled: true, needs: 'stations:read' },
           { page: 'charge-points', label: 'Trụ sạc', icon: 'charger', enabled: true, needs: 'charge-points:read' },
+          { page: 'fleet-status', label: 'Trạng thái trụ', icon: 'charger', enabled: true, needs: 'charge-points:read' },
           { page: 'map', label: 'Bản đồ', icon: 'map', enabled: true, needs: 'stations:read' },
           { page: 'users', label: 'Tạo tài khoản', icon: 'users', enabled: true, needs: 'users:create' },
           { page: 'system-log', label: 'Nhật ký hệ thống', icon: 'log', enabled: false, since: 'S-56' },

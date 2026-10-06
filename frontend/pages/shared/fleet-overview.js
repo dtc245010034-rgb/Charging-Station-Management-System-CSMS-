@@ -23,7 +23,7 @@ export function render(ctx) {
     onSelectStation: (id) => {
       drawer?.close();
       drawer = openStationDrawer({
-        id, canWrite, onChanged: () => fleet.refresh(), onClose: () => { drawer = null; },
+        id, canWrite, canLock: ctx.can('stations:lock'), onChanged: () => fleet.refresh(), onClose: () => { drawer = null; },
         onOpenChargePoint: (cpId) => { location.hash = routeFor(ctx.workspace, 'charge-points', cpId); },
       });
     },
