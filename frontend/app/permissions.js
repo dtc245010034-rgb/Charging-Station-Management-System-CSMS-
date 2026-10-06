@@ -12,6 +12,7 @@ export const PERMISSIONS = {
   'charge-points:read': READ,
   'charge-points:write': WRITE,
   'charge-points:reset': ['ADMIN', 'OPERATOR'],
+  'stations:lock': ADMIN,
 };
 
 export const can = (role, key) => (PERMISSIONS[key] ?? []).includes(role);

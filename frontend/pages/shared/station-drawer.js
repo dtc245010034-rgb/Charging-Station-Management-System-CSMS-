@@ -1,7 +1,7 @@
 import { h } from '../../app/dom.js';
 import { coordinate } from '../../app/format.js';
 import * as csms from '../../services/csms.js';
-import { openDrawer } from '../../components/modal.js';
+import { openDrawer, openModal } from '../../components/modal.js';
 import { pointStatusBadge, stationBadge } from '../../components/badge.js';
 import { pointGroup } from '../../app/status.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
@@ -65,7 +65,43 @@ function chargePointForm(station, canWrite, reload) {
   error);
 }
 
-function render(station, { canWrite, onEdit, reload, onOpenChargePoint }) {
+function lockSection(station, reload) {
+  const locked = Boolean(station.locked_at);
+  const error = h('p', { class: 'form-alert', role: 'alert', hidden: true });
+
+  async function apply(next, button) {
+    button.disabled = true;
+    error.hidden = true;
+    try {
+      await csms.stations.setLock(station.id, next);
+      toast(next ? `Đã khoá trạm ${station.name}.` : `Đã mở khoá trạm ${station.name}.`);
+      await reload();
+    } catch (e) { error.textContent = e.message; error.hidden = false; button.disabled = false; }
+  }
+
+  function confirmLock(button) {
+    const cancel = h('button', { class: 'btn', type: 'button' }, 'Huỷ');
+    const ok = h('button', { class: 'btn btn--primary', type: 'button' }, icon('alert'), 'Khoá trạm');
+    const modal = openModal({
+      title: `Khoá trạm ${station.name}?`,
+      body: h('p', {}, 'Mọi trụ của trạm đang kết nối sẽ bị ngắt, và trụ không thể khởi động lại (Boot) cho tới khi mở khoá.'),
+      footer: [cancel, ok],
+    });
+    cancel.addEventListener('click', () => modal.close());
+    ok.addEventListener('click', async () => { ok.disabled = true; modal.close(); await apply(true, button); });
+  }
+
+  const button = h('button', { class: 'btn', type: 'button' }, icon(locked ? 'refresh' : 'alert'), locked ? 'Mở khoá trạm' : 'Khoá trạm');
+  button.addEventListener('click', () => (locked ? apply(false, button) : confirmLock(button)));
+  return h('section', { class: 'stack' },
+    h('div', { class: 'section-title' }, 'Khoá trạm (Quản trị)'),
+    h('p', { class: 'field__hint' }, locked
+      ? `Trạm đang bị khoá từ ${new Date(station.locked_at).toLocaleString('vi-VN')}: trụ không kết nối được.`
+      : 'Trạm đang hoạt động bình thường. Khoá trạm sẽ ngắt kết nối các trụ và từ chối Boot.'),
+    button, error);
+}
+
+function render(station, { canWrite, canLock, onEdit, reload, onOpenChargePoint }) {
   const points = station.charge_points ?? [];
   return [
     h('dl', { class: 'kv' },
@@ -83,11 +119,12 @@ function render(station, { canWrite, onEdit, reload, onOpenChargePoint }) {
         : emptyState({ iconName: 'charger', title: 'Trạm chưa có trụ sạc', text: canWrite ? 'Thêm trụ đầu tiên ở bên dưới.' : undefined })),
     chargePointForm(station, canWrite, reload),
     canWrite && h('div', {}, h('button', { class: 'btn', type: 'button', onclick: onEdit }, icon('edit'), 'Sửa thông tin trạm')),
+    canLock && lockSection(station, reload),
   ];
 }
 
 // Drawer chi tiết trạm: mở từ bản đồ, danh sách hoặc tìm kiếm mà không rời trang hiện tại.
-export function openStationDrawer({ id, canWrite, onChanged, onClose, onOpenChargePoint }) {
+export function openStationDrawer({ id, canWrite, canLock = false, onChanged, onClose, onOpenChargePoint }) {
   const drawer = openDrawer({ title: 'Chi tiết trạm', body: loadingState(3), onClose });
 
   async function load() {
@@ -95,7 +132,7 @@ export function openStationDrawer({ id, canWrite, onChanged, onClose, onOpenChar
       const station = await csms.stations.get(id);
       drawer.setTitle(station.name, h('div', { style: 'margin-top:6px' }, stationBadge(station.status)));
       drawer.setBody(...render(station, {
-        canWrite,
+        canWrite, canLock,
         reload: async () => { await load(); onChanged?.(); },
         onEdit: () => openStationForm({ station, onSaved: async () => { await load(); onChanged?.(); } }),
         onOpenChargePoint: (cpId) => { drawer.close(); onOpenChargePoint?.(cpId); },
