@@ -9,10 +9,7 @@ const { createRateLimiter } = require('./lib/rate-limit');
 const { clientIpOf } = require('./lib/client-ip');
 const { createOcppUpgradeHandler } = require('./modules/ocpp/ocpp-upgrade');
 const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
-const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
-const { createHeartbeatHandler } = require('./modules/ocpp/handlers/heartbeat');
-const { createAuthorizeHandler } = require('./modules/ocpp/handlers/authorize');
-const { createStatusNotificationHandler } = require('./modules/ocpp/handlers/status-notification');
+const { createOcppHandlers } = require('./modules/ocpp/handlers');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
 const { markAllChargePointsOffline, markChargePointSeen } = require('./modules/charge-points/presence');
 const { startChargePointOfflineJob } = require('./modules/charge-points/offline-job');
@@ -35,12 +32,7 @@ async function updateChargePointLastSeen(connection) {
 
 const messageStore = createMessageStore(pool, { replayWindowSeconds: env.OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS });
 const ocppMessages = createOcppMessageHandler({
-	handlers: {
-		BootNotification: bootNotificationHandler,
-		Heartbeat: createHeartbeatHandler({ now }),
-		StatusNotification: createStatusNotificationHandler({ pool: ocppPool, errorDedupSeconds: env.OCPP_ERROR_DEDUP_SECONDS }),
-		Authorize: createAuthorizeHandler({ pool: ocppPool }),
-	},
+	handlers: createOcppHandlers({ ocppPool, env, now }),
 	updateLastSeen: updateChargePointLastSeen,
 	messageStore,
 	callTimeoutMs: env.OCPP_COMMAND_TIMEOUT_SECONDS * 1000,

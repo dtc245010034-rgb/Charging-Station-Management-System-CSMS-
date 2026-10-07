@@ -2,7 +2,7 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
 const { run, query, resetSchema } = require('../helpers/db');
 
-const TABLES = ['audit_logs', 'charge_points', 'connector_errors', 'connectors', 'id_tags', 'idempotency_keys', 'login_throttle', 'ocpp_messages', 'roles', 'stations', 'user_roles', 'users'];
+const TABLES = ['audit_logs', 'charge_points', 'charging_sessions', 'connector_errors', 'connectors', 'id_tags', 'idempotency_keys', 'login_throttle', 'meter_values', 'ocpp_messages', 'orphan_messages', 'roles', 'stations', 'user_roles', 'users'];
 
 async function tables() {
   const r = await query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name <> 'schema_migrations' ORDER BY 1");
@@ -83,7 +83,7 @@ describe('S-01 migrate: baseline up/down/up', () => {
     assert.ok(!await index('stations_owner_id_idx') && !await index('charge_points_station_id_idx'));
     assert.deepStrictEqual(
       await tables(),
-      TABLES.filter((table) => !['connector_errors', 'id_tags', 'idempotency_keys', 'ocpp_messages'].includes(table))
+      TABLES.filter((table) => !['charging_sessions', 'connector_errors', 'id_tags', 'idempotency_keys', 'meter_values', 'ocpp_messages', 'orphan_messages'].includes(table))
     );
     assert.strictEqual(run('src/db/migrate.js').status, 0);
   });

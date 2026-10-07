@@ -1,7 +1,10 @@
-const { pool } = require('./pool');
+function getDefaultPool() {
+  return require('./pool').pool;
+}
 
-async function withTransaction(fn) {
-  const client = await pool.connect();
+async function withTransaction(fn, poolInstance = null) {
+  const db = poolInstance || getDefaultPool();
+  const client = await db.connect();
   try {
     await client.query('BEGIN');
     const result = await fn(client);
