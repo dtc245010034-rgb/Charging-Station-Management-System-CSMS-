@@ -130,4 +130,19 @@ describe('S-17: StartTransaction creates charging sessions', () => {
     const count = await query("SELECT count(*)::int AS count FROM charging_sessions WHERE started_at = '2026-10-07T10:05:00Z'");
     assert.equal(count.rows[0].count, 1);
   });
+
+  it('AC5: the same StartTransaction payload after the duplicate window still reuses the original transactionId', async () => {
+    logs = [];
+    const connection = makeConnection();
+    const server = makeServer();
+    const sameSession = payload({ connectorId: 1, idTag: VALID_TAG, meterStart: 2000, timestamp: '2026-10-07T10:06:00Z' });
+
+    await server.handleMessage(connection, call('s17-natural-window-1', sameSession));
+    await server.handleMessage(connection, call('s17-natural-window-2', sameSession));
+
+    const transactionId = connection.sent[0][2].transactionId;
+    assert.equal(connection.sent[1][2].transactionId, transactionId);
+    const count = await query('SELECT count(*)::int AS count FROM charging_sessions WHERE id = $1', [transactionId]);
+    assert.equal(count.rows[0].count, 1);
+  });
 });

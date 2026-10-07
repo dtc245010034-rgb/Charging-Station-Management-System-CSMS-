@@ -69,6 +69,22 @@ function createStartTransactionHandler({
         const reviewReason = idTagStatus === 'Accepted' ? null : `ID_TAG_${idTagStatus.toUpperCase()}`;
         const sessionStatus = reviewReason ? 'NEEDS_REVIEW' : 'CHARGING';
 
+        const existingSession = await client.query(
+          `SELECT id
+           FROM charging_sessions
+           WHERE charge_point_id = $1
+             AND connector_id = $2
+             AND connector_no = $3
+             AND id_tag_masked = $4
+             AND meter_start = $5
+             AND started_at = $6
+           LIMIT 1`,
+          [chargePoint.charge_point_id, connector.id, payload.connectorId, maskedTag, payload.meterStart, startedAt]
+        );
+        if (existingSession.rowCount > 0) {
+          return { transactionId: existingSession.rows[0].id, idTagStatus, reviewReason, replaced: false, deduplicated: true };
+        }
+
         const previous = await client.query(
           `UPDATE charging_sessions
            SET status = 'ABNORMAL', stopped_at = $2,
@@ -84,13 +100,30 @@ function createStartTransactionHandler({
              (charge_point_id, connector_id, connector_no, id_tag_id, id_tag_masked, driver_id,
               meter_start, started_at, status, review_reason)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           ON CONFLICT (charge_point_id, connector_no, id_tag_masked, meter_start, started_at)
+           DO NOTHING
            RETURNING id`,
           [chargePoint.charge_point_id, connector.id, payload.connectorId, tagRecord?.id || null,
             maskedTag, tagRecord?.user_id || null, payload.meterStart, startedAt,
             sessionStatus, reviewReason]
         );
 
-        return { transactionId: sessionResult.rows[0].id, idTagStatus, reviewReason, replaced: previous.rowCount > 0 };
+        const fallbackSession = sessionResult.rows[0]?.id
+          ? sessionResult.rows[0].id
+          : (await client.query(
+              `SELECT id
+               FROM charging_sessions
+               WHERE charge_point_id = $1
+                 AND connector_id = $2
+                 AND connector_no = $3
+                 AND id_tag_masked = $4
+                 AND meter_start = $5
+                 AND started_at = $6
+               LIMIT 1`,
+              [chargePoint.charge_point_id, connector.id, payload.connectorId, maskedTag, payload.meterStart, startedAt]
+            )).rows[0]?.id;
+
+        return { transactionId: fallbackSession, idTagStatus, reviewReason, replaced: previous.rowCount > 0, deduplicated: false };
       }, database);
     } catch (error) {
       if (error instanceof OcppCallError) throw error;

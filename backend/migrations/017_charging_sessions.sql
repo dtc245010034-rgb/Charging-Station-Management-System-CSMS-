@@ -1,7 +1,7 @@
 CREATE TABLE charging_sessions (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  charge_point_id BIGINT NOT NULL REFERENCES charge_points(id) ON DELETE RESTRICT,
-  connector_id BIGINT NOT NULL REFERENCES connectors(id) ON DELETE RESTRICT,
+  charge_point_id BIGINT NOT NULL REFERENCES charge_points(id) ON DELETE CASCADE,
+  connector_id BIGINT NOT NULL REFERENCES connectors(id) ON DELETE CASCADE,
   connector_no INTEGER NOT NULL,
   id_tag_id BIGINT REFERENCES id_tags(id) ON DELETE SET NULL,
   id_tag_masked VARCHAR(20) NOT NULL,
@@ -20,6 +20,9 @@ CREATE TABLE charging_sessions (
 CREATE UNIQUE INDEX charging_sessions_one_open_per_connector
   ON charging_sessions (connector_id)
   WHERE status IN ('CHARGING', 'NEEDS_REVIEW');
+
+CREATE UNIQUE INDEX charging_sessions_start_transaction_key
+  ON charging_sessions (charge_point_id, connector_no, id_tag_masked, meter_start, started_at);
 
 CREATE INDEX charging_sessions_driver_status_idx ON charging_sessions (driver_id, status);
 CREATE INDEX charging_sessions_status_updated_idx ON charging_sessions (status, updated_at);
