@@ -32,4 +32,26 @@ describe('calculateEnergyKwh', () => {
       );
     });
   }
+
+  it('hỗ trợ string số nguyên từ PostgreSQL driver', () => {
+    assert.equal(calculateEnergyKwh('12000', '18500'), 6.5);
+    assert.equal(calculateEnergyKwh('1000', '1000'), 0);
+    assert.equal(calculateEnergyKwh('18500', '12000'), null);
+  });
+
+  it('hỗ trợ BigInt', () => {
+    assert.equal(calculateEnergyKwh(12000n, 18500n), 6.5);
+  });
+
+  it('trả về null khi phiên chưa chốt meterStopWh (null hoặc undefined)', () => {
+    assert.equal(calculateEnergyKwh(12000, null), null);
+    assert.equal(calculateEnergyKwh('12000', undefined), null);
+  });
+
+  it('từ chối đầu vào không hợp lệ bằng TypeError', () => {
+    assert.throws(() => calculateEnergyKwh('abc', 1000), TypeError);
+    assert.throws(() => calculateEnergyKwh(-1, 1000), TypeError);
+    assert.throws(() => calculateEnergyKwh(1000, -1), TypeError);
+    assert.throws(() => calculateEnergyKwh(10.5, 1000), TypeError);
+  });
 });

@@ -128,6 +128,23 @@ describe('S-18 StopTransaction handler', () => {
     assert.equal(orphanCount, 1);
   });
 
+  it('chấp nhận lý do DeAuthorized chuẩn OCPP 1.6', async () => {
+    let update;
+    const handler = createStopTransactionHandler({
+      pool: {
+        query: async (sql, params) => {
+          update = { sql, params };
+          return { rowCount: 1, rows: [{ meter_start: '1000' }] };
+        },
+      },
+      now: () => NOW,
+      logError: () => {},
+    });
+
+    assert.deepEqual(await handler(validPayload({ reason: 'DeAuthorized' }), { connection: CONNECTION }), {});
+    assert.equal(update.params[3], 'DeAuthorized');
+  });
+
   it('payload sai và lý do ngoài OCPP trả PropertyConstraintViolation', async () => {
     const handler = createStopTransactionHandler({ pool: { query: async () => assert.fail('không được truy vấn DB') } });
     await assert.rejects(

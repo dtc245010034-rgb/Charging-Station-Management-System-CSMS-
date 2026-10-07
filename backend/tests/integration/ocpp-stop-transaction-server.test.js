@@ -134,6 +134,30 @@ describe('S-18 StopTransaction trên WebSocket server thật', () => {
     assert.ok(!JSON.stringify(orphan.payload).includes(idTag));
   });
 
+  it('chốt phiên với reason DeAuthorized chuẩn OCPP 1.6', async () => {
+    const deauthTxId = (await query(
+      `INSERT INTO charging_sessions (charge_point_id, connector_id, connector_no, id_tag_masked, meter_start, started_at, status)
+       VALUES ($1, $2, 1, '***0003', 2000, CURRENT_TIMESTAMP, 'CHARGING')
+       RETURNING id`,
+      [chargePointId, connectorId]
+    )).rows[0].id;
+
+    const response = await sendCall(client, 'stop-tx-deauth', 'StopTransaction', {
+      transactionId: deauthTxId,
+      meterStop: 2200,
+      timestamp: new Date().toISOString(),
+      reason: 'DeAuthorized',
+    });
+    assert.deepEqual(response, [3, 'stop-tx-deauth', {}]);
+
+    const session = (await query(
+      'SELECT status, stop_reason FROM charging_sessions WHERE id = $1',
+      [deauthTxId]
+    )).rows[0];
+    assert.equal(session.status, 'COMPLETED');
+    assert.equal(session.stop_reason, 'DeAuthorized');
+  });
+
   it('reason ngoài đặc tả trả CALLERROR PropertyConstraintViolation', async () => {
     const response = await sendCall(client, 'stop-tx-invalid-reason', 'StopTransaction', {
       transactionId,

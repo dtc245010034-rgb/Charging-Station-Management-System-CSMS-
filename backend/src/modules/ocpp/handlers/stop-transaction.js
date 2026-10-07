@@ -6,6 +6,7 @@ const MAX_TRANSACTION_ID = 2147483647;
 const MAX_ID_TAG_LENGTH = 20;
 const MAX_CLOCK_SKEW_MS = 24 * 60 * 60 * 1000;
 const STOP_REASONS = new Set([
+  'DeAuthorized',
   'EmergencyStop',
   'EVDisconnected',
   'HardReset',
