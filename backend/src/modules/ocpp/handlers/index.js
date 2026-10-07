@@ -3,6 +3,7 @@ const { createHeartbeatHandler } = require('./heartbeat');
 const { createAuthorizeHandler } = require('./authorize');
 const { createStatusNotificationHandler } = require('./status-notification');
 const { createStartTransactionHandler } = require('./start-transaction');
+const { createStopTransactionHandler } = require('./stop-transaction');
 
 function createOcppHandlers({ ocppPool, env, now }) {
   return {
@@ -14,6 +15,7 @@ function createOcppHandlers({ ocppPool, env, now }) {
     }),
     Authorize: createAuthorizeHandler({ pool: ocppPool }),
     StartTransaction: createStartTransactionHandler({ pool: ocppPool }),
+    StopTransaction: createStopTransactionHandler({ pool: ocppPool }),
   };
 }
 
@@ -24,4 +26,5 @@ module.exports = {
   createAuthorizeHandler,
   createStatusNotificationHandler,
   createStartTransactionHandler,
+  createStopTransactionHandler,
 };
