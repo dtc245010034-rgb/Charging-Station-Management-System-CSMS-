@@ -7,6 +7,8 @@ process.env.APP_ORIGIN ||= 'http://localhost:3000';
 const {
   createMeterValuesHandler,
   validatePayload,
+  MAX_METER_VALUES,
+  MAX_SAMPLED_VALUES,
 } = require('../../src/modules/ocpp/handlers/meter-values');
 const { createOcppHandlers } = require('../../src/modules/ocpp/handlers');
 const { createOcppMessageHandler } = require('../../src/modules/ocpp/message-handler');
@@ -34,10 +36,6 @@ const samplePayload = {
   ],
 };
 
-function flushDeferredWork() {
-  return new Promise((resolve) => setImmediate(resolve));
-}
-
 describe('MeterValues handler (T-41)', () => {
   it('is registered as an OCPP handler', () => {
     const handler = createOcppHandlers({
@@ -48,7 +46,7 @@ describe('MeterValues handler (T-41)', () => {
   });
 
   it('validates and parses both meterValue and sampledValue levels', () => {
-    const readings = validatePayload(samplePayload);
+    const readings = validatePayload(samplePayload, () => Date.parse('2026-09-28T20:31:27.905Z'));
     assert.deepEqual(readings, [
       {
         sampledAt: '2026-09-28T20:31:27.905Z',
@@ -77,7 +75,7 @@ describe('MeterValues handler (T-41)', () => {
     ]);
   });
 
-  it('returns CALLRESULT before looking up the connector and inserts supported samples in one bulk query', async () => {
+  it('synchronously looks up connector and inserts supported samples in one bulk query before returning CALLRESULT (D5)', async () => {
     const calls = [];
     const handler = createMeterValuesHandler({
       pool: {
@@ -87,15 +85,13 @@ describe('MeterValues handler (T-41)', () => {
           return { rowCount: 4, rows: [] };
         },
       },
+      now: () => Date.parse('2026-09-28T20:31:27.905Z'),
     });
 
     assert.deepEqual(
       await handler(samplePayload, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } }),
       {}
     );
-    assert.deepEqual(calls, []);
-
-    await flushDeferredWork();
     assert.equal(calls.length, 2);
     assert.match(calls[0].sql, /LEFT JOIN charging_sessions/);
     assert.deepEqual(calls[0].params, [8, 1, 1000]);
@@ -114,17 +110,16 @@ describe('MeterValues handler (T-41)', () => {
           return { rowCount: 1, rows: [] };
         },
       },
+      now: () => Date.parse('2026-09-28T20:31:27.905Z'),
     });
     const connection = { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } };
 
     await handler(samplePayload, { connection });
-    await flushDeferredWork();
     await handler(samplePayload, { connection });
-    await flushDeferredWork();
     assert.equal(batchInserts, 2);
   });
 
-  it('starts database work only after the CALLRESULT is sent, including with message deduplication', async () => {
+  it('executes database work synchronously before CALLRESULT is sent (D5)', async () => {
     const events = [];
     const handlers = {
       MeterValues: createMeterValuesHandler({
@@ -137,6 +132,7 @@ describe('MeterValues handler (T-41)', () => {
             return { rowCount: 1, rows: [] };
           },
         },
+        now: () => Date.parse('2026-09-28T20:31:27.905Z'),
       }),
     };
     const messageHandler = createOcppMessageHandler({
@@ -165,14 +161,14 @@ describe('MeterValues handler (T-41)', () => {
       JSON.stringify([2, 'meter-values-1', 'MeterValues', samplePayload])
     );
     assert.deepEqual(events, [
+      'database lookup',
       'dedupe save started',
       'dedupe save completed',
       'CALLRESULT sent',
-      'database lookup',
     ]);
   });
 
-  it('writes readings for an idle connector to orphan_messages after acknowledging the call', async () => {
+  it('writes readings for an idle connector to orphan_messages synchronously before acknowledging (D5)', async () => {
     const calls = [];
     const handler = createMeterValuesHandler({
       pool: {
@@ -183,6 +179,7 @@ describe('MeterValues handler (T-41)', () => {
             : { rowCount: 1, rows: [] };
         },
       },
+      now: () => Date.parse('2026-09-28T20:31:27.905Z'),
       logWarning: () => {},
     });
 
@@ -190,15 +187,70 @@ describe('MeterValues handler (T-41)', () => {
       await handler(samplePayload, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } }),
       {}
     );
-    assert.deepEqual(calls, []);
-    await flushDeferredWork();
-    assert.equal(calls.length, 2);
-    assert.match(calls[1].sql, /INSERT INTO orphan_messages/);
-    assert.equal(calls[1].params[2], 'NO_ACTIVE_SESSION');
-    assert.equal(JSON.parse(calls[1].params[1]).meterValue.length, 2);
+    assert.equal(calls.length, 3);
+    assert.match(calls[2].sql, /INSERT INTO orphan_messages/);
+    assert.equal(calls[2].params[2], 'NO_ACTIVE_SESSION');
+    assert.equal(JSON.parse(calls[2].params[1]).meterValue.length, 2);
   });
 
-  it('rejects malformed payloads with OCPP constraint errors', () => {
+  it('enforces D6 clock skew: replaces timestamp > 24h with receivedAt and flags needs_review', async () => {
+    const calls = [];
+    const fixedNow = new Date('2026-10-07T12:00:00.000Z');
+    const handler = createMeterValuesHandler({
+      pool: {
+        async query(sql, params) {
+          calls.push({ sql, params });
+          if (sql.includes('FROM connectors c')) return { rowCount: 1, rows: [{ connector_id: 3, session_id: 44 }] };
+          return { rowCount: 1, rows: [] };
+        },
+      },
+      now: () => fixedNow,
+    });
+
+    const skewedPayload = {
+      connectorId: 1,
+      transactionId: 1000,
+      meterValue: [
+        {
+          timestamp: '1970-01-01T00:00:00.000Z',
+          sampledValue: [{ value: '500', measurand: 'Energy.Active.Import.Register', unit: 'Wh' }],
+        },
+      ],
+    };
+
+    await handler(skewedPayload, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } });
+    assert.equal(calls.length, 3);
+    // call 1: select connector
+    // call 2: insert meter_values with fixedNow time
+    assert.match(calls[1].sql, /INSERT INTO meter_values/);
+    assert.equal(calls[1].params[1], fixedNow.toISOString());
+    // call 3: update charging_sessions with needs_review and CLOCK_SKEW
+    assert.match(calls[2].sql, /UPDATE charging_sessions\s+SET needs_review = TRUE/);
+    assert.deepEqual(calls[2].params, [44]);
+  });
+
+  it('records CHARGE_POINT_MISMATCH when transaction belongs to another charge point (D12)', async () => {
+    const calls = [];
+    const handler = createMeterValuesHandler({
+      pool: {
+        async query(sql, params) {
+          calls.push({ sql, params });
+          if (sql.includes('FROM connectors c')) return { rowCount: 1, rows: [{ connector_id: 3, session_id: null }] };
+          if (sql.includes('SELECT charge_point_id FROM charging_sessions')) return { rowCount: 1, rows: [{ charge_point_id: 99 }] };
+          return { rowCount: 1, rows: [] };
+        },
+      },
+      now: () => Date.parse('2026-09-28T20:31:27.905Z'),
+      logWarning: () => {},
+    });
+
+    await handler(samplePayload, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } });
+    assert.equal(calls.length, 3);
+    assert.match(calls[2].sql, /INSERT INTO orphan_messages/);
+    assert.equal(calls[2].params[2], 'CHARGE_POINT_MISMATCH');
+  });
+
+  it('rejects malformed payloads with OCPP constraint errors and respects array size limits', () => {
     assert.throws(
       () => validatePayload({ ...samplePayload, connectorId: -1 }),
       (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
@@ -211,6 +263,24 @@ describe('MeterValues handler (T-41)', () => {
       () => validatePayload({
         ...samplePayload,
         meterValue: [{ timestamp: '2026-09-28T20:31:27.905Z', sampledValue: [{ value: 'NaN' }] }],
+      }),
+      (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
+    );
+    // Overflow meterValue length
+    const tooManyMeterValues = Array(MAX_METER_VALUES + 1).fill({
+      timestamp: '2026-09-28T20:31:27.905Z',
+      sampledValue: [{ value: '1' }],
+    });
+    assert.throws(
+      () => validatePayload({ ...samplePayload, meterValue: tooManyMeterValues }),
+      (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
+    );
+    // Overflow sampledValue length
+    const tooManySamples = Array(MAX_SAMPLED_VALUES + 1).fill({ value: '1' });
+    assert.throws(
+      () => validatePayload({
+        ...samplePayload,
+        meterValue: [{ timestamp: '2026-09-28T20:31:27.905Z', sampledValue: tooManySamples }],
       }),
       (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
     );

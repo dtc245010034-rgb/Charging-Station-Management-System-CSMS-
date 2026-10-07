@@ -5,6 +5,9 @@ const { recordMeterValues } = require('../../sessions/meter-values.repository');
 const MAX_CONNECTOR_ID = 2147483647;
 const MAX_TRANSACTION_ID = 2147483647;
 const MAX_UNIT_LENGTH = 20;
+const MAX_METER_VALUES = 100;
+const MAX_SAMPLED_VALUES = 50;
+const MAX_CLOCK_SKEW_MS = 24 * 60 * 60 * 1000;
 const SUPPORTED_MEASURANDS = new Set([
   'Energy.Active.Import.Register',
   'Power.Active.Import',
@@ -25,7 +28,7 @@ function violation(message) {
   return new OcppCallError('PropertyConstraintViolation', message);
 }
 
-function validatePayload(payload) {
+function validatePayload(payload, now = Date.now) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw new OcppCallError('FormationViolation', 'Payload must be an object');
   }
@@ -39,14 +42,38 @@ function validatePayload(payload) {
   if (!Array.isArray(payload.meterValue) || payload.meterValue.length === 0) {
     throw violation('meterValue must be a non-empty array');
   }
+  if (payload.meterValue.length > MAX_METER_VALUES) {
+    throw violation(`meterValue array must contain at most ${MAX_METER_VALUES} items`);
+  }
 
+  const currentTime = typeof now === 'function' ? now() : Date.now();
+  const receivedAt = currentTime instanceof Date
+    ? currentTime.getTime()
+    : (typeof currentTime === 'string' && Number.isFinite(Date.parse(currentTime))
+      ? Date.parse(currentTime)
+      : Number(currentTime));
+
+  let hasClockSkew = false;
   const readings = [];
+
   for (const meterValue of payload.meterValue) {
     if (!meterValue || typeof meterValue !== 'object' || Array.isArray(meterValue)
       || typeof meterValue.timestamp !== 'string' || !Number.isFinite(Date.parse(meterValue.timestamp))
       || !Array.isArray(meterValue.sampledValue)) {
       throw violation('Each meterValue must contain a valid timestamp and sampledValue array');
     }
+    if (meterValue.sampledValue.length > MAX_SAMPLED_VALUES) {
+      throw violation(`sampledValue array must contain at most ${MAX_SAMPLED_VALUES} items`);
+    }
+
+    const reportedAt = Date.parse(meterValue.timestamp);
+    const isSkewed = Math.abs(reportedAt - receivedAt) > MAX_CLOCK_SKEW_MS;
+    if (isSkewed) {
+      hasClockSkew = true;
+    }
+    const sampledAt = isSkewed
+      ? new Date(receivedAt).toISOString()
+      : new Date(reportedAt).toISOString();
 
     for (const sampledValue of meterValue.sampledValue) {
       if (!sampledValue || typeof sampledValue !== 'object' || Array.isArray(sampledValue)) {
@@ -64,23 +91,31 @@ function validatePayload(payload) {
         throw violation(`sampledValue.unit must be a string of at most ${MAX_UNIT_LENGTH} characters`);
       }
       readings.push({
-        sampledAt: new Date(meterValue.timestamp).toISOString(),
+        sampledAt,
         measurand,
         value: sampledValue.value,
         unit,
       });
     }
   }
+
+  Object.defineProperty(readings, 'hasClockSkew', {
+    value: hasClockSkew,
+    enumerable: false,
+    writable: true,
+    configurable: true,
+  });
   return readings;
 }
 
 function createMeterValuesHandler({
   pool = null,
+  now = Date.now,
   logWarning = console.warn,
   logError = console.error,
 } = {}) {
-  return async function handleMeterValues(payload, { connection, afterResponse } = {}) {
-    const readings = validatePayload(payload);
+  return async function handleMeterValues(payload, { connection } = {}) {
+    const readings = validatePayload(payload, now);
     if (readings.length === 0) return {};
 
     const chargePointId = connection?.chargePoint?.id;
@@ -90,28 +125,32 @@ function createMeterValuesHandler({
       throw new OcppCallError('InternalError', 'Charge point not identified');
     }
 
-      const defer = afterResponse || ((callback) => setImmediate(callback));
-      defer(() => {
-        void persistMeterValues({
-          db: pool || getDefaultPool(),
-          chargePointId,
-          code,
-          payload,
-          readings,
-          logWarning,
-          logError,
-        }).catch((error) => {
-          logError(
-            `[OCPP] MeterValues: Lỗi khởi chạy lưu số đo của trụ ${safeLog(code)}:`,
-            sanitizeErrorMessage(error?.message || error)
-          );
-        });
-      });
-      return {};
+    // D5: Ghi đồng bộ bằng một câu INSERT nhiều dòng rồi mới trả lời (không "trả lời trước, ghi sau")
+    await persistMeterValues({
+      db: pool || getDefaultPool(),
+      chargePointId,
+      code,
+      payload,
+      readings,
+      hasClockSkew: readings.hasClockSkew,
+      logWarning,
+      logError,
+    });
+
+    return {};
   };
 }
 
-async function persistMeterValues({ db, chargePointId, code, payload, readings, logWarning, logError }) {
+async function persistMeterValues({
+  db,
+  chargePointId,
+  code,
+  payload,
+  readings,
+  hasClockSkew,
+  logWarning,
+  logError,
+}) {
   try {
     const connector = await db.query(
       `SELECT c.id AS connector_id, cs.id AS session_id
@@ -128,7 +167,16 @@ async function persistMeterValues({ db, chargePointId, code, payload, readings, 
     const sessionId = connector.rows[0]?.session_id;
 
     if (!sessionId) {
-      const reason = connector.rowCount === 0 ? 'UNDECLARED_CONNECTOR' : 'NO_ACTIVE_SESSION';
+      let reason = connector.rowCount === 0 ? 'UNDECLARED_CONNECTOR' : 'NO_ACTIVE_SESSION';
+      if (payload.transactionId !== undefined && connector.rowCount > 0) {
+        const checkTx = await db.query(
+          `SELECT charge_point_id FROM charging_sessions WHERE id = $1`,
+          [payload.transactionId]
+        );
+        if (checkTx.rows?.[0] && String(checkTx.rows[0].charge_point_id) !== String(chargePointId)) {
+          reason = 'CHARGE_POINT_MISMATCH';
+        }
+      }
       await db.query(
         `INSERT INTO orphan_messages (charge_point_id, action, payload, reason)
          VALUES ($1, 'MeterValues', $2::jsonb, $3)`,
@@ -141,12 +189,36 @@ async function persistMeterValues({ db, chargePointId, code, payload, readings, 
     }
 
     await recordMeterValues(db, sessionId, readings);
+
+    // D6: Nếu có lệch đồng hồ > 24h, bật cờ needs_review trên phiên sạc
+    if (hasClockSkew) {
+      await db.query(
+        `UPDATE charging_sessions
+         SET needs_review = TRUE,
+             review_reason = concat_ws('; ', NULLIF(review_reason, ''), 'CLOCK_SKEW'),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [sessionId]
+      );
+      logWarning(
+        `[OCPP] MeterValues lệch giờ > 24h, bật needs_review | chargePoint: ${safeLog(code)} | session: ${sessionId}`
+      );
+    }
   } catch (error) {
+    if (error instanceof OcppCallError) throw error;
     logError(
       `[OCPP] MeterValues: Lỗi lưu số đo của trụ ${safeLog(code)} | connectorId: ${payload.connectorId}:`,
       sanitizeErrorMessage(error?.message || error)
     );
+    throw new OcppCallError('InternalError', 'Internal error');
   }
 }
 
-module.exports = { createMeterValuesHandler, validatePayload, SUPPORTED_MEASURANDS };
+module.exports = {
+  createMeterValuesHandler,
+  validatePayload,
+  SUPPORTED_MEASURANDS,
+  MAX_METER_VALUES,
+  MAX_SAMPLED_VALUES,
+  MAX_CLOCK_SKEW_MS,
+};
