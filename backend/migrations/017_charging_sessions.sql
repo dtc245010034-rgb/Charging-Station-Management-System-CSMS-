@@ -1,8 +1,8 @@
 -- S-17 (T-36): Bảng phiên sạc charging_sessions
 CREATE TABLE IF NOT EXISTS charging_sessions (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  charge_point_id BIGINT NOT NULL REFERENCES charge_points(id) ON DELETE CASCADE,
-  connector_id BIGINT NOT NULL REFERENCES connectors(id) ON DELETE CASCADE,
+  charge_point_id BIGINT NOT NULL REFERENCES charge_points(id) ON DELETE RESTRICT,
+  connector_id BIGINT NOT NULL REFERENCES connectors(id) ON DELETE RESTRICT,
   connector_no INTEGER NOT NULL,
   id_tag_id BIGINT REFERENCES id_tags(id) ON DELETE SET NULL,
   id_tag_masked VARCHAR(20) NOT NULL,

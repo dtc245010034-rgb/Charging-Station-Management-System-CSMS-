@@ -227,4 +227,47 @@ describe('S-17 StartTransaction trên WebSocket server thật (GYM-43)', () => {
     assert.strictEqual(savedPayload.idTag, maskIdTag(rawTag), 'Mã thẻ trong orphan_messages phải được che');
     assert.ok(!JSON.stringify(savedPayload).includes(rawTag), 'Không được lưu mã thẻ thô');
   });
+
+  it('meterStart vượt quá safe integer (1e20) -> trả CALLERROR FormationViolation', async () => {
+    const res = await sendCall(client, 'msg-start-huge-meter', 'StartTransaction', {
+      connectorId: 1,
+      idTag: TAG_ACTIVE,
+      meterStart: 1e20,
+      timestamp: startTime,
+    });
+
+    assert.strictEqual(res[0], 4, 'Phải là CALLERROR');
+    assert.strictEqual(res[2], 'FormationViolation');
+  });
+
+  it('D6 + D4: Đồng hồ trụ về 1970 rồi gửi lại với messageId mới không sinh phiên ma', async () => {
+    const timestamp1970 = '1970-01-01T00:00:00.000Z';
+    // Lần 1 trên connector 2
+    const res1 = await sendCall(client, 'msg-start-1970-1', 'StartTransaction', {
+      connectorId: 2,
+      idTag: TAG_ACTIVE,
+      meterStart: 0,
+      timestamp: timestamp1970,
+    });
+    assert.strictEqual(res1[0], 3);
+    const tx1 = res1[2].transactionId;
+
+    // Lần 2 với messageId mới
+    const res2 = await sendCall(client, 'msg-start-1970-2', 'StartTransaction', {
+      connectorId: 2,
+      idTag: TAG_ACTIVE,
+      meterStart: 0,
+      timestamp: timestamp1970,
+    });
+    assert.strictEqual(res2[0], 3);
+    assert.strictEqual(res2[2].transactionId, tx1, 'Phải nhận lại đúng transactionId ban đầu');
+
+    // Kiểm tra DB chỉ có 1 phiên có started_at = 1970
+    const countRes = await query(
+      "SELECT COUNT(*) AS total FROM charging_sessions WHERE started_at = '1970-01-01 00:00:00+00'",
+      []
+    );
+    assert.strictEqual(Number(countRes.rows[0].total), 1, 'Không được tạo phiên ma thứ 2');
+  });
 });
+

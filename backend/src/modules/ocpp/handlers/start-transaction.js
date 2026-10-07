@@ -37,8 +37,8 @@ function validateStartTransactionPayload(payload) {
     throw new OcppCallError('FormationViolation', `idTag exceeds maximum length of ${MAX_ID_TAG_LENGTH} characters`);
   }
 
-  if (!Number.isInteger(meterStart) || meterStart < 0) {
-    throw new OcppCallError('PropertyConstraintViolation', 'meterStart must be a non-negative integer');
+  if (typeof meterStart !== 'number' || !Number.isSafeInteger(meterStart) || meterStart < 0) {
+    throw new OcppCallError('FormationViolation', 'meterStart must be a valid non-negative safe integer');
   }
 
   if (typeof timestamp !== 'string' || Number.isNaN(Date.parse(timestamp))) {
@@ -111,14 +111,12 @@ function createStartTransactionHandler({
     let needsReview = false;
     const reviewReasons = [];
 
-    let startedAt;
+    // Chống trùng tự nhiên (D4) theo mốc nguyên văn của tin
+    const startedAt = new Date(reportedMs).toISOString();
     if (isClockSkewed) {
-      startedAt = new Date(currentMs).toISOString();
       needsReview = true;
       reviewReasons.push('Timestamp skewed by more than 24 hours');
       logWarning(`[OCPP] StartTransaction: Đồng hồ trụ ${safeLog(code)} lệch quá 24h (báo ${payload.timestamp}, hiện tại ${new Date(currentMs).toISOString()})`);
-    } else {
-      startedAt = new Date(reportedMs).toISOString();
     }
 
     // 4. Tra cứu thẻ và đánh giá trạng thái bằng evaluateIdTag (S-15)

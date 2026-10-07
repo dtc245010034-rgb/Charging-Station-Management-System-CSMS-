@@ -42,10 +42,11 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
       assert.throws(() => validateStartTransactionPayload({ ...valid, idTag: 'A'.repeat(21) }), (e) => e instanceof OcppCallError && e.code === 'FormationViolation');
     });
 
-    it('meterStart không phải số nguyên >= 0 ném PropertyConstraintViolation', () => {
-      assert.throws(() => validateStartTransactionPayload({ ...valid, meterStart: -5 }), (e) => e instanceof OcppCallError && e.code === 'PropertyConstraintViolation');
-      assert.throws(() => validateStartTransactionPayload({ ...valid, meterStart: 12.34 }), (e) => e instanceof OcppCallError && e.code === 'PropertyConstraintViolation');
-      assert.throws(() => validateStartTransactionPayload({ ...valid, meterStart: '100' }), (e) => e instanceof OcppCallError && e.code === 'PropertyConstraintViolation');
+    it('meterStart không phải safe integer >= 0 (âm, số thực, 1e20) ném FormationViolation', () => {
+      assert.throws(() => validateStartTransactionPayload({ ...valid, meterStart: -5 }), (e) => e instanceof OcppCallError && e.code === 'FormationViolation');
+      assert.throws(() => validateStartTransactionPayload({ ...valid, meterStart: 12.34 }), (e) => e instanceof OcppCallError && e.code === 'FormationViolation');
+      assert.throws(() => validateStartTransactionPayload({ ...valid, meterStart: '100' }), (e) => e instanceof OcppCallError && e.code === 'FormationViolation');
+      assert.throws(() => validateStartTransactionPayload({ ...valid, meterStart: 1e20 }), (e) => e instanceof OcppCallError && e.code === 'FormationViolation');
     });
 
     it('timestamp không hợp lệ ném PropertyConstraintViolation', () => {
@@ -332,7 +333,7 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
       const session = dbCalls.insertedSessions[0];
       assert.strictEqual(session.needs_review, true);
       assert.match(session.review_reason, /Timestamp skewed by more than 24 hours/);
-      assert.strictEqual(session.started_at, fixedNow.toISOString());
+      assert.strictEqual(session.started_at, '2026-10-05T12:00:00.000Z');
     });
 
     it('D4 bug fix: Gửi lại tin StartTransaction cũ (cùng started_at, meter_start, thẻ) không bị đóng thành ABNORMAL', async () => {
@@ -362,6 +363,60 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
       assert.strictEqual(dbCalls.closedSessions.length, 0, 'Tin trùng tự nhiên tuyệt đối không được đóng phiên cũ thành ABNORMAL');
       assert.strictEqual(dbCalls.insertedSessions.length, 0, 'Không insert dòng mới khi đã có phiên trùng tự nhiên');
       assert.strictEqual(dbCalls.locks.length, 1, 'Đầu nối phải được khoá bằng SELECT FOR UPDATE');
+    });
+
+    it('D6 + D4: Đồng hồ trụ về 1970 rồi gửi lại với messageId mới không sinh phiên ma', async () => {
+      const reported1970 = '1970-01-01T00:00:00.000Z';
+      const { mockPool, dbCalls } = createMockEnvironment();
+      const fixedNow = new Date('2026-10-07T12:00:00.000Z');
+      const handler = createStartTransactionHandler({
+        pool: mockPool,
+        now: () => fixedNow,
+        logInfo: () => {},
+        logWarning: () => {},
+        logError: () => {},
+      });
+
+      // Lần 1: gửi tin mốc 1970
+      const res1 = await handler(
+        {
+          connectorId: 1,
+          idTag: 'TAG-VALID',
+          meterStart: 0,
+          timestamp: reported1970,
+        },
+        { connection: { chargePoint: { id: 1, code: 'CP-01' } } }
+      );
+      assert.strictEqual(res1.idTagInfo.status, 'Accepted');
+      const tx1 = res1.transactionId;
+      assert.strictEqual(dbCalls.insertedSessions[0].started_at, reported1970);
+      assert.strictEqual(dbCalls.insertedSessions[0].needs_review, true);
+
+      // Lần 2: 15 phút sau trụ gửi lại cùng tin (mốc 1970) với messageId mới
+      const naturalSession = { ...dbCalls.insertedSessions[0], id: tx1 };
+      const { mockPool: replayPool, dbCalls: replayCalls } = createMockEnvironment({
+        existingNaturalSession: naturalSession,
+      });
+      const replayHandler = createStartTransactionHandler({
+        pool: replayPool,
+        now: () => new Date('2026-10-07T12:15:00.000Z'),
+        logInfo: () => {},
+        logWarning: () => {},
+        logError: () => {},
+      });
+
+      const res2 = await replayHandler(
+        {
+          connectorId: 1,
+          idTag: 'TAG-VALID',
+          meterStart: 0,
+          timestamp: reported1970,
+        },
+        { connection: { chargePoint: { id: 1, code: 'CP-01' } } }
+      );
+
+      assert.strictEqual(res2.transactionId, tx1, 'Phải nhận lại đúng transactionId ban đầu');
+      assert.strictEqual(replayCalls.closedSessions.length, 0, 'Không được đóng phiên lần 1 thành ABNORMAL');
     });
   });
 });
