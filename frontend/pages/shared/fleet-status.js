@@ -56,11 +56,8 @@ function openResetDialog(point, onRequested) {
   cancel.addEventListener('click', () => modal.close());
 }
 
-function chargePointCard(point, station, { canReset, onReset } = {}) {
+function chargePointCard(point, { canReset, onReset } = {}) {
   return h('article', { class: 'fleet-status__point' },
-    h('div', { class: 'fleet-status__station-line' },
-      h('p', { class: 'fleet-status__station-name' }, station.name),
-      stationBadge(station.status)),
     h('header', { class: 'fleet-status__point-head' },
       h('h3', { class: 'fleet-status__code mono' }, point.code),
       chargePointBadge(point)),
@@ -71,7 +68,7 @@ function chargePointCard(point, station, { canReset, onReset } = {}) {
     point.connectors.length
       ? h('ul', { class: 'fleet-status__connectors', 'aria-label': `Đầu nối của trụ ${point.code}` },
         point.connectors.map((connector) => h('li', { class: 'fleet-status__connector' },
-          h('span', {}, `Đ${connector.connector_no}`),
+          h('span', { class: 'fleet-status__connector-no' }, `Đầu nối ${connector.connector_no}`),
           statusBadge(connector.status, connector.ocpp_status))))
       : h('p', { class: 'field__hint' }, 'Chưa có đầu nối'),
     canReset && h('div', { class: 'fleet-status__point-actions' },
@@ -80,6 +77,17 @@ function chargePointCard(point, station, { canReset, onReset } = {}) {
         type: 'button',
         onclick: () => openResetDialog(point, () => onReset(point)),
       }, icon('refresh'), 'Khởi động lại')));
+}
+
+function stationSection(station, options) {
+  const heading = `fleet-station-${station.id}`;
+  return h('section', { class: 'fleet-status__station', 'aria-labelledby': heading },
+    h('header', { class: 'fleet-status__station-head' },
+      h('h2', { class: 'fleet-status__station-name', id: heading }, station.name),
+      stationBadge(station.status),
+      h('span', { class: 'fleet-status__station-count' }, `${station.charge_points.length} trụ`)),
+    h('div', { class: 'fleet-status__grid' },
+      station.charge_points.map((point) => chargePointCard(point, options))));
 }
 
 export function render(ctx) {
@@ -112,11 +120,9 @@ export function render(ctx) {
     const points = stations.flatMap((station) => station.charge_points);
     count.textContent = `${points.length} trụ · ${stations.length} trạm`;
     body.replaceChildren(points.length
-      ? h('div', { class: 'fleet-status__grid' }, stations.flatMap((station) =>
-        station.charge_points.map((point) => chargePointCard(point, station, {
-          canReset,
-          onReset: () => realtime.refresh(),
-        }))))
+      ? h('div', { class: 'fleet-status__stations' }, stations
+        .filter((station) => station.charge_points.length)
+        .map((station) => stationSection(station, { canReset, onReset: () => realtime.refresh() })))
       : emptyState({ iconName: 'charger', title: 'Chưa có trụ sạc', text: 'Các trụ thuộc phạm vi của bạn sẽ xuất hiện tại đây.' }));
   }
 
