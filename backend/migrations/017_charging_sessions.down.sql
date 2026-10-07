@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS charging_sessions;
+DROP TABLE IF EXISTS charging_sessions CASCADE;

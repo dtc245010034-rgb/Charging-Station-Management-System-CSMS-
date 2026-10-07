@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS orphan_messages;
+DROP TABLE IF EXISTS orphan_messages CASCADE;
