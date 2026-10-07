@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS orphan_messages (
+  id BIGSERIAL PRIMARY KEY,
+  charge_point_id BIGINT REFERENCES charge_points(id) ON DELETE SET NULL,
+  action VARCHAR(50) NOT NULL,
+  payload JSONB NOT NULL,
+  reason TEXT NOT NULL,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS orphan_messages_received_at_idx
+  ON orphan_messages (received_at);

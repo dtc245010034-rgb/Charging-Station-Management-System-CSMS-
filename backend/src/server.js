@@ -12,6 +12,7 @@ const { createOcppMessageHandler } = require('./modules/ocpp/message-handler');
 const { bootNotificationHandler } = require('./modules/ocpp/handlers/boot-notification');
 const { createHeartbeatHandler } = require('./modules/ocpp/handlers/heartbeat');
 const { createAuthorizeHandler } = require('./modules/ocpp/handlers/authorize');
+const { createStopTransactionHandler } = require('./modules/ocpp/handlers/stop-transaction');
 const { createStatusNotificationHandler } = require('./modules/ocpp/handlers/status-notification');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
 const { markAllChargePointsOffline, markChargePointSeen } = require('./modules/charge-points/presence');
@@ -40,6 +41,7 @@ const ocppMessages = createOcppMessageHandler({
 		Heartbeat: createHeartbeatHandler({ now }),
 		StatusNotification: createStatusNotificationHandler({ pool: ocppPool, errorDedupSeconds: env.OCPP_ERROR_DEDUP_SECONDS }),
 		Authorize: createAuthorizeHandler({ pool: ocppPool }),
+		StopTransaction: createStopTransactionHandler({ pool: ocppPool }),
 	},
 	updateLastSeen: updateChargePointLastSeen,
 	messageStore,
