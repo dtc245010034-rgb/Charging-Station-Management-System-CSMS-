@@ -1,6 +1,9 @@
 """Kiểm thử phần logic thuần của run.py (không cần Docker). Chạy: python -m unittest discover -s tools"""
+import os
+import socket
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -133,6 +136,25 @@ class PublicMode(unittest.TestCase):
 
 
 class Ports(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "TIME_WAIT chỉ chặn bind trên Linux/macOS")
+    def test_port_busy_ignores_time_wait_but_sees_listener(self):
+        probe = socket.socket()
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+        probe.close()
+        server = socket.socket()
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind(("127.0.0.1", port))
+        server.listen()
+        self.assertTrue(run.port_busy(port))
+        client = socket.create_connection(("127.0.0.1", port))
+        conn, _ = server.accept()
+        conn.close()  # bên server đóng trước nên TIME_WAIT nằm ở cổng server
+        time.sleep(0.1)
+        client.close()
+        server.close()
+        self.assertFalse(run.port_busy(port))
+
     def test_chon_cong_ke_tiep_khi_ban(self):
         self.assertEqual(run.pick_port(3000, is_busy=lambda p: p in (3000, 3001)), 3002)
 

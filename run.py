@@ -196,6 +196,10 @@ def port_busy(port, host="127.0.0.1"):
         if probe.connect_ex((host, port)) == 0:
             return True
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        if os.name != "nt":
+            # Không có cờ này, kết nối TIME_WAIT (~60 giây sau khi app tắt) làm cổng cũ bị coi là bận và cổng nhảy +1 mỗi lần chạy lại.
+            # Windows thì không dùng: ở đó SO_REUSEADDR cho bind chồng lên cổng đang có người nghe.
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             probe.bind(("0.0.0.0", port))
         except OSError:
@@ -496,8 +500,14 @@ def cmd_reset(docker, args):
 
 def cmd_logs(docker, args):
     docker.ensure_ready()
+    # docker-compose 1.x + Docker engine mới: `compose logs -f` in traceback KeyError 'id' (sự kiện không còn trường id).
+    # Đọc thẳng log của container thì không bị; không tìm được container thì dùng compose như cũ.
+    ids = (docker.c("ps", "-q", args.service, check=False, capture=True).stdout or "").split()
     try:
-        docker.c("logs", "-f", "--tail", "100", args.service, check=False)
+        if ids:
+            run(["docker", "logs", "-f", "--tail", "100", ids[0]], check=False)
+        else:
+            docker.c("logs", "-f", "--tail", "100", args.service, check=False)
     except KeyboardInterrupt:
         pass
 
