@@ -43,7 +43,7 @@ describe('S-17: StartTransaction creates charging sessions', () => {
     connectorId: 1,
     idTag: VALID_TAG,
     meterStart: 123456,
-    timestamp: '2026-10-07T10:00:00.000Z',
+    timestamp: '2030-10-07T10:00:00.000Z',
     ...overrides,
   });
 
@@ -79,7 +79,7 @@ describe('S-17: StartTransaction creates charging sessions', () => {
     const session = await query('SELECT * FROM charging_sessions WHERE id = $1', [response[2].transactionId]);
     assert.equal(session.rows[0].connector_id, connectorId);
     assert.equal(Number(session.rows[0].meter_start), 123456);
-    assert.equal(new Date(session.rows[0].started_at).toISOString(), '2026-10-07T10:00:00.000Z');
+    assert.equal(new Date(session.rows[0].started_at).toISOString(), '2030-10-07T10:00:00.000Z');
     assert.equal(session.rows[0].status, 'CHARGING');
   });
 
@@ -106,9 +106,10 @@ describe('S-17: StartTransaction creates charging sessions', () => {
     await server.handleMessage(connection, call('s17-replace-1', payload({ timestamp: '2026-10-07T10:03:00Z' })));
     await server.handleMessage(connection, call('s17-replace-2', payload({ timestamp: '2026-10-07T10:04:00Z', meterStart: 123500 })));
 
+    const transactionIds = connection.sent.map((frame) => frame[2].transactionId);
     const rows = await query(
-      "SELECT status, meter_stop, stop_reason FROM charging_sessions WHERE connector_id = $1 AND started_at >= '2026-10-07T10:03:00Z' ORDER BY id",
-      [connectorId]
+      'SELECT status, meter_stop, stop_reason FROM charging_sessions WHERE id = ANY($1::int[]) ORDER BY id',
+      [transactionIds]
     );
     assert.deepEqual(rows.rows.map((row) => row.status), ['ABNORMAL', 'CHARGING']);
     assert.equal(rows.rows[0].meter_stop, null);

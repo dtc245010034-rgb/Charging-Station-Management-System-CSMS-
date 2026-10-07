@@ -3,8 +3,6 @@ const { withTransaction } = require('../../../db/tx');
 const { OcppCallError } = require('../frames');
 const { evaluateIdTag, maskIdTag, MAX_ID_TAG_LENGTH } = require('./authorize');
 
-const MAX_CLOCK_SKEW_MS = 24 * 60 * 60 * 1000;
-
 function getDefaultPool() {
   return require('../../../db/pool').ocppPool;
 }
@@ -35,8 +33,7 @@ function createStartTransactionHandler({
 
     const database = pool || getDefaultPool();
     const receivedAt = now();
-    const clockSkewed = Math.abs(chargerTime.getTime() - receivedAt.getTime()) > MAX_CLOCK_SKEW_MS;
-    const startedAt = clockSkewed ? receivedAt : chargerTime;
+    const startedAt = chargerTime;
     const idTag = payload.idTag.trim();
     const maskedTag = maskIdTag(idTag);
     let result;
@@ -69,7 +66,7 @@ function createStartTransactionHandler({
         );
         const tagRecord = tagResult.rows[0] || null;
         const idTagStatus = evaluateIdTag({ tagRecord, station: chargePoint, now: receivedAt });
-        const reviewReason = clockSkewed ? 'CHARGER_CLOCK_SKEW' : idTagStatus === 'Accepted' ? null : `ID_TAG_${idTagStatus.toUpperCase()}`;
+        const reviewReason = idTagStatus === 'Accepted' ? null : `ID_TAG_${idTagStatus.toUpperCase()}`;
         const sessionStatus = reviewReason ? 'NEEDS_REVIEW' : 'CHARGING';
 
         const previous = await client.query(
@@ -112,4 +109,4 @@ function createStartTransactionHandler({
   };
 }
 
-module.exports = { createStartTransactionHandler, MAX_CLOCK_SKEW_MS };
+module.exports = { createStartTransactionHandler };
