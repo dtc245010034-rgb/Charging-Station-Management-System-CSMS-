@@ -18,6 +18,18 @@ describe('migration 017-019: charging_sessions, meter_values, orphan_messages', 
     assert.ok(await tableMeterValues(), 'Bảng meter_values phải tồn tại');
     assert.ok(await tableOrphanMessages(), 'Bảng orphan_messages phải tồn tại');
 
+    const meterValuesColumns = await query(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'meter_values'"
+    );
+    assert.deepEqual(
+      meterValuesColumns.rows.map((row) => row.column_name).sort(),
+      ['created_at', 'id', 'measurand', 'raw_unit', 'sampled_at', 'session_id', 'unit', 'value'].sort()
+    );
+    const meterValuesIndex = await query(
+      "SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_meter_values_session_sampled_desc'"
+    );
+    assert.match(meterValuesIndex.rows[0].indexdef, /\(session_id, sampled_at DESC\)/);
+
     // Kiểm tra các index quan trọng của charging_sessions
     const idx = await query("SELECT indexname FROM pg_indexes WHERE tablename = 'charging_sessions'");
     const names = idx.rows.map((r) => r.indexname);

@@ -100,8 +100,8 @@ function createOcppMessageHandler({
 	}
 
 	// Tin trùng (cùng trụ, cùng messageId) nhận lại đúng câu trả lời đã lưu và không chạy handler lần hai (K-01).
-	async function runOnce(connection, request, handler) {
-		const invoke = () => handler(request.payload, { messageId: request.messageId, connection });
+	async function runOnce(connection, request, handler, afterResponse) {
+		const invoke = () => handler(request.payload, { messageId: request.messageId, connection, afterResponse });
 		const code = connection?.chargePointCode || connection?.chargePoint?.code;
 		if (!messageStore || !code || dedupeSkipActions.includes(request.action)) return invoke();
 		if (request.messageId.length > MAX_MESSAGE_ID_LENGTH) {
@@ -178,10 +178,28 @@ function createOcppMessageHandler({
 		try {
 			await updateLastSeen(connection);
 			logInfo(`[OCPP] Calling handler | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
-			const payload = await runOnce(connection, request, handler);
+			const afterResponseCallbacks = [];
+			const afterResponse = (callback) => {
+				if (typeof callback !== 'function') throw new TypeError('afterResponse callback must be a function');
+				afterResponseCallbacks.push(callback);
+			};
+			const flushAfterResponseCallbacks = () => {
+				for (const callback of afterResponseCallbacks) {
+					try {
+						callback();
+					} catch (error) {
+						logError('[OCPP] Post-response task failed:', sanitizeErrorMessage(error?.message || error));
+					}
+				}
+			};
+			const payload = await runOnce(connection, request, handler, afterResponse);
 			const response = encodeCallResult(request.messageId, payload);
 			logInfo(`[OCPP] Created CALLRESULT | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
-			await sendFrame(connection, response);
+			try {
+				await sendFrame(connection, response);
+			} finally {
+				flushAfterResponseCallbacks();
+			}
 		} catch (error) {
 			const isOcppCallError = error instanceof OcppCallError || error?.name === 'OcppCallError';
 			const errorCode = isOcppCallError && typeof error.code === 'string' && error.code ? error.code : 'InternalError';
