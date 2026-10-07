@@ -39,14 +39,14 @@ describe('S-18 StopTransaction trên WebSocket server thật', () => {
     )).rows[0].id;
 
     transactionId = (await query(
-      `INSERT INTO charging_sessions (charge_point_id, connector_id, connector_no, meter_start, started_at, status)
-       VALUES ($1, $2, 1, 1000, CURRENT_TIMESTAMP, 'CHARGING')
+      `INSERT INTO charging_sessions (charge_point_id, connector_id, connector_no, id_tag_masked, meter_start, started_at, status)
+       VALUES ($1, $2, 1, '***0001', 1000, CURRENT_TIMESTAMP, 'CHARGING')
        RETURNING id`,
       [chargePointId, connectorId]
     )).rows[0].id;
     reviewTransactionId = (await query(
-      `INSERT INTO charging_sessions (charge_point_id, connector_id, connector_no, meter_start, started_at, status)
-       VALUES ($1, $2, 2, 1000, CURRENT_TIMESTAMP, 'CHARGING')
+      `INSERT INTO charging_sessions (charge_point_id, connector_id, connector_no, id_tag_masked, meter_start, started_at, status)
+       VALUES ($1, $2, 2, '***0002', 1000, CURRENT_TIMESTAMP, 'CHARGING')
        RETURNING id`,
       [chargePointId, secondConnectorId]
     )).rows[0].id;
