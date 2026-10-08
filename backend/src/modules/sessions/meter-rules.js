@@ -1,7 +1,10 @@
 const ENERGY_MEASURAND = 'Energy.Active.Import.Register';
 const DECIMAL_VALUE = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE]([+-]?\d+))?$/;
 const MAX_DECIMAL_VALUE_LENGTH = 128;
+const MAX_STORED_DECIMAL_LENGTH = 4096;
 const MAX_DECIMAL_EXPONENT = 1000;
+const MIN_METER_VALUE = '0.000000000001';
+const MAX_METER_VALUE = '1000000000000';
 
 function isValidMeterDecimal(value) {
   if (typeof value !== 'string' || value.length > MAX_DECIMAL_VALUE_LENGTH) return false;
@@ -13,15 +16,32 @@ function isValidMeterDecimal(value) {
     && Number.isFinite(Number(value));
 }
 
+function isPlausibleMeterValue(value, measurand, unit) {
+  if (!isValidMeterDecimal(value)) return false;
+  const parts = decimalParts(value);
+  if (parts.sign < 0) return false;
+  if (parts.sign !== 0 && compareDecimals(value, MIN_METER_VALUE) < 0) return false;
+
+  const maximum = measurand === ENERGY_MEASURAND && unit === 'kWh'
+    ? '1000000000'
+    : MAX_METER_VALUE;
+  return compareDecimals(value, maximum) <= 0;
+}
+
 function decimalParts(value) {
-  if (!isValidMeterDecimal(String(value))) {
+  const text = String(value);
+  if (text.length > MAX_STORED_DECIMAL_LENGTH || !DECIMAL_VALUE.test(text)) {
     throw new TypeError('meter value must be a decimal number');
   }
-  const match = /^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/.exec(String(value));
+  const match = /^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/.exec(text);
+  const exponent = Number(match[4] || 0);
+  if (!Number.isSafeInteger(exponent) || Math.abs(exponent) > MAX_DECIMAL_EXPONENT) {
+    throw new TypeError('meter value must be a decimal number');
+  }
 
   const sign = match[1] === '-' ? -1 : 1;
   let digits = `${match[2]}${match[3] || ''}`.replace(/^0+/, '') || '0';
-  let scale = (match[3] || '').length - Number(match[4] || 0);
+  let scale = (match[3] || '').length - exponent;
 
   if (scale < 0) {
     digits += '0'.repeat(-scale);
@@ -90,9 +110,15 @@ function evaluateMeterReading(previous, current) {
   }
 
   if (comparison !== null && comparison < 0) {
-    return { action: 'review', reason: 'METER_VALUE_DECREASE' };
+    if (current.measurand === ENERGY_MEASURAND) {
+      return { action: 'review', reason: 'METER_VALUE_DECREASE' };
+    }
   }
   return { action: 'save' };
 }
 
-module.exports = { evaluateMeterReading, isValidMeterDecimal };
+module.exports = {
+  evaluateMeterReading,
+  isPlausibleMeterValue,
+  isValidMeterDecimal,
+};

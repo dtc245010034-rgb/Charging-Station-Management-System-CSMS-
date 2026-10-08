@@ -117,7 +117,8 @@ Ký hiệu: **Cổng** = điều kiện để story sau ghép được. Tên fil
 ### S-20 · GYM-46 · 1 SP · Số đo lùi hoặc trùng mốc bị bỏ qua *(Must)*
 - **Làn:** L2 · **Xong:** T6 chiều · **Cổng:** S-21.
 - **Việc:** **T-42** `meter-rules.js` — ba quy tắc thành hàm thuần, đọc số đo mới nhất **trong cùng giao dịch** (khoá hàng phiên) để hai tin đến đồng thời không cùng lọt. **T-43** test mới → cũ → trùng: bảng chỉ giữ số đo mới; **đúng một cảnh báo** cho số đo lùi, không cảnh báo cho số đo trùng.
-- **AC:** mốc cũ hơn → bỏ qua + cảnh báo; mốc trùng + giá trị trùng → bỏ qua im lặng; mốc mới hơn nhưng giá trị nhỏ hơn → **lưu** + `needs_review`.
+- **AC:** mốc cũ hơn → bỏ qua + cảnh báo; mốc trùng + giá trị trùng → bỏ qua im lặng; Energy.Active.Import.Register mới hơn nhưng nhỏ hơn → **lưu** + `needs_review`. PO xác nhận Power/Current giảm là diễn biến vận hành bình thường, không bật `needs_review`.
+- **Giới hạn và mẫu đến lệch thứ tự:** từ chối số âm, trị tuyệt đối trên `1e12` (Energy tính theo Wh; kWh quy đổi), hoặc số khác 0 nhỏ hơn `1e-12`; sắp xếp các mẫu trong cùng payload theo `sampledAt`. Mẫu cũ đến trong một tin riêng sau đó vẫn bị bỏ qua; hiện không có kho lưu mẫu trễ để xử lý/xả bộ đệm S-21.
 - **Ca backlog bỏ ngỏ (Q7):** cùng mốc nhưng **khác giá trị** → đề xuất: giữ số đã có, cảnh báo, không ghi đè.
 
 ### S-21 · GYM-47 · 3 SP · Phiên đang dở được khôi phục đúng khi trụ nối lại *(Must — trái tim của Sprint Goal)*

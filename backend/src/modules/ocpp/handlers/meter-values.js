@@ -5,7 +5,10 @@ const {
   findLatestMeterValues,
   recordMeterValues,
 } = require('../../sessions/meter-values.repository');
-const { evaluateMeterReading, isValidMeterDecimal } = require('../../sessions/meter-rules');
+const {
+  evaluateMeterReading,
+  isPlausibleMeterValue,
+} = require('../../sessions/meter-rules');
 
 const MAX_CONNECTOR_ID = 2147483647;
 const MAX_TRANSACTION_ID = 2147483647;
@@ -84,8 +87,12 @@ function validatePayload(payload, now = Date.now) {
       }
       const measurand = sampledValue.measurand || 'Energy.Active.Import.Register';
       if (!SUPPORTED_MEASURANDS.has(measurand)) continue;
-      if (!isValidMeterDecimal(sampledValue.value)) {
-        throw violation('Supported sampledValue.value must be a finite numeric string');
+      if (!isPlausibleMeterValue(
+        sampledValue.value,
+        measurand,
+        sampledValue.unit || DEFAULT_UNITS[measurand]
+      )) {
+        throw violation('Supported sampledValue.value must be a plausible non-negative numeric string');
       }
       const unit = sampledValue.unit === undefined ? DEFAULT_UNITS[measurand] : sampledValue.unit;
       if (typeof unit !== 'string' || unit.length === 0 || unit.length > MAX_UNIT_LENGTH) {
@@ -220,7 +227,10 @@ async function persistMeterValues({
       const ignored = new Set();
       const reviewReasons = new Set();
 
-      for (const reading of readings) {
+      const readingsInTimeOrder = [...readings].sort(
+        (left, right) => Date.parse(left.sampledAt) - Date.parse(right.sampledAt)
+      );
+      for (const reading of readingsInTimeOrder) {
         const key = streamKey(reading);
         const decision = evaluateMeterReading(latestByStream.get(key), reading);
         if (decision.action === 'ignore') {

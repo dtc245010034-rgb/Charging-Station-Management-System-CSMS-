@@ -347,6 +347,116 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
     assert.match(session.review_reason, /METER_VALUE_DECREASE/);
   });
 
+  it('sắp xếp số đo đến không theo thứ tự thời gian trước khi áp dụng quy tắc S-20', async () => {
+    const baseTime = Date.now() - 5000;
+    const timestamp = (offset) => new Date(baseTime + offset).toISOString();
+    const res = await sendCall(client, 's20-out-of-order-batch', 'MeterValues', {
+      connectorId: 1,
+      transactionId,
+      meterValue: [
+        {
+          timestamp: timestamp(3000),
+          sampledValue: [{
+            value: '1300',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+        {
+          timestamp: timestamp(1000),
+          sampledValue: [{
+            value: '1000',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+        {
+          timestamp: timestamp(2000),
+          sampledValue: [{
+            value: '1100',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+      ],
+    });
+    assert.deepEqual(res, [3, 's20-out-of-order-batch', {}]);
+
+    const readings = (await query(
+      `SELECT value
+       FROM meter_values
+       WHERE session_id = $1 AND context = 'S-20.OutOfOrder'
+       ORDER BY sampled_at`,
+      [transactionId]
+    )).rows;
+    assert.deepEqual(readings.map((reading) => reading.value), ['1000', '1100', '1300']);
+  });
+
+  it('rejects extreme values and continues processing after legacy NUMERIC outliers', async () => {
+    const baseTime = Date.now() - 5000;
+    const streams = [
+      { context: 'S-20.LegacyHuge', value: '1e200' },
+      { context: 'S-20.LegacyTiny', value: '1e-130' },
+    ];
+
+    for (const { context, value } of streams) {
+      await query(
+        `INSERT INTO meter_values (
+           session_id, reported_at, sampled_at, measurand, value, unit, raw_unit, phase, context
+         ) VALUES ($1, $2, $2, 'Energy.Active.Import.Register', $3, 'Wh', 'Wh', '', $4)`,
+        [transactionId, new Date(baseTime).toISOString(), value, context]
+      );
+
+      const rejected = await sendCall(client, `s20-reject-${context}`, 'MeterValues', {
+        connectorId: 1,
+        transactionId,
+        meterValue: [{
+          timestamp: new Date(baseTime + 1000).toISOString(),
+          sampledValue: [{
+            value,
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context,
+          }],
+        }],
+      });
+      assert.equal(rejected[0], 4);
+      assert.equal(rejected[2], 'PropertyConstraintViolation');
+
+      for (const [index, normalValue] of ['1000', '1100'].entries()) {
+        const messageId = `s20-after-outlier-${context}-${index}`;
+        assert.deepEqual(await sendCall(client, messageId, 'MeterValues', {
+          connectorId: 1,
+          transactionId,
+          meterValue: [{
+            timestamp: new Date(baseTime + (index + 2) * 1000).toISOString(),
+            sampledValue: [{
+              value: normalValue,
+              measurand: 'Energy.Active.Import.Register',
+              unit: 'Wh',
+              context,
+            }],
+          }],
+        }), [3, messageId, {}]);
+      }
+    }
+
+    for (const { context } of streams) {
+      const readings = (await query(
+        `SELECT value
+         FROM meter_values
+         WHERE session_id = $1 AND context = $2
+         ORDER BY sampled_at DESC
+         LIMIT 2`,
+        [transactionId, context]
+      )).rows;
+      assert.deepEqual(readings.map((reading) => reading.value), ['1100', '1000']);
+    }
+  });
+
   it('giữ đủ các mẫu khác thời điểm gốc khi đồng hồ trụ lệch quá 24 giờ', async () => {
     const res = await sendCall(client, 's20-skewed-batch', 'MeterValues', {
       connectorId: 1,
@@ -385,7 +495,7 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
     assert.equal(readings[0].sampled_at.getTime(), readings[1].sampled_at.getTime());
   });
 
-  it('đánh dấu needs_review khi Power hoặc Current giảm tại mốc mới hơn', async () => {
+  it('không đánh dấu needs_review khi Power hoặc Current giảm tại mốc mới hơn', async () => {
     const connector2Id = (await query(
       'SELECT id FROM connectors WHERE charge_point_id = $1 AND connector_no = 2',
       [chargePointId]
@@ -433,8 +543,8 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
       'SELECT needs_review, review_reason FROM charging_sessions WHERE id = $1',
       [session2Id]
     )).rows[0];
-    assert.equal(session.needs_review, true);
-    assert.match(session.review_reason, /METER_VALUE_DECREASE/);
+    assert.equal(session.needs_review, false);
+    assert.doesNotMatch(session.review_reason || '', /METER_VALUE_DECREASE/);
   });
 
   it('từ chối payload sai định dạng hoặc vượt quá giới hạn mảng', async () => {

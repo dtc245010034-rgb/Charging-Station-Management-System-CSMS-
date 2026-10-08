@@ -2,6 +2,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   evaluateMeterReading,
+  isPlausibleMeterValue,
   isValidMeterDecimal,
 } = require('../../src/modules/sessions/meter-rules');
 
@@ -86,9 +87,8 @@ describe('S-20 meter reading rules', () => {
     );
   });
 
-  it('flags a newer decrease for every comparable supported measurand', () => {
+  it('flags only newer Energy decreases; Power and Current may taper down', () => {
     for (const [measurand, unit] of [
-      ['Energy.Active.Import.Register', 'Wh'],
       ['Power.Active.Import', 'W'],
       ['Current.Import', 'A'],
     ]) {
@@ -97,9 +97,16 @@ describe('S-20 meter reading rules', () => {
           { ...previous, measurand, value: '5000', unit },
           reading({ measurand, value: '4000', unit })
         ),
-        { action: 'review', reason: 'METER_VALUE_DECREASE' }
+        { action: 'save' }
       );
     }
+    assert.deepEqual(
+      evaluateMeterReading(
+        { ...previous, measurand: 'Energy.Active.Import.Register', value: '5000', unit: 'Wh' },
+        reading({ measurand: 'Energy.Active.Import.Register', value: '4000', unit: 'Wh' })
+      ),
+      { action: 'review', reason: 'METER_VALUE_DECREASE' }
+    );
   });
 
   it('accepts newer numeric values beyond JavaScript safe integer precision', () => {
@@ -116,5 +123,35 @@ describe('S-20 meter reading rules', () => {
     assert.equal(isValidMeterDecimal('1e-1000'), true);
     assert.equal(isValidMeterDecimal('1e-1000000000'), false);
     assert.equal(isValidMeterDecimal('1'.repeat(129)), false);
+  });
+
+  it('rejects implausible values while retaining ordinary meter readings', () => {
+    assert.equal(isPlausibleMeterValue('1e200', 'Energy.Active.Import.Register', 'Wh'), false);
+    assert.equal(isPlausibleMeterValue('1e-130', 'Energy.Active.Import.Register', 'Wh'), false);
+    assert.equal(isPlausibleMeterValue('-1', 'Power.Active.Import', 'W'), false);
+    assert.equal(isPlausibleMeterValue('1000000000001', 'Energy.Active.Import.Register', 'Wh'), false);
+    assert.equal(isPlausibleMeterValue('1000000000', 'Energy.Active.Import.Register', 'kWh'), true);
+    assert.equal(isPlausibleMeterValue('0', 'Current.Import', 'A'), true);
+    assert.equal(isPlausibleMeterValue('0.000000001', 'Current.Import', 'A'), true);
+    assert.equal(isPlausibleMeterValue('7000', 'Power.Active.Import', 'W'), true);
+  });
+
+  it('compares expanded PostgreSQL NUMERIC strings without the wire-input length limit', () => {
+    const oldHugeReading = '1' + '0'.repeat(200);
+    const oldTinyReading = `0.${'0'.repeat(129)}1`;
+    assert.deepEqual(
+      evaluateMeterReading(
+        { ...previous, value: oldHugeReading },
+        reading({ value: '7000' })
+      ),
+      { action: 'review', reason: 'METER_VALUE_DECREASE' }
+    );
+    assert.deepEqual(
+      evaluateMeterReading(
+        { ...previous, value: oldTinyReading },
+        reading({ value: '7000' })
+      ),
+      { action: 'save' }
+    );
   });
 });

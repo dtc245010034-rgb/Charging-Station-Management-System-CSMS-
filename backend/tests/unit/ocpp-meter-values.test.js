@@ -325,6 +325,60 @@ describe('MeterValues handler (T-41)', () => {
     assert.equal(warnings.some((message) => message.includes('reason: DUPLICATE')), false);
   });
 
+  it('processes samples inside a payload in sampled-time order', async () => {
+    const calls = [];
+    const handler = createMeterValuesHandler({
+      pool: transactionalPool(async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('FROM connectors c')) return { rowCount: 1, rows: [{ connector_id: 3, session_id: 44 }] };
+        if (sql.includes('FROM charging_sessions WHERE id = $1 AND status')) return { rowCount: 1, rows: [{ id: 44 }] };
+        if (sql.includes('DISTINCT ON (measurand, phase, context)')) return { rowCount: 0, rows: [] };
+        return { rowCount: 3, rows: [] };
+      }),
+      now: () => Date.parse('2026-10-08T10:05:00.000Z'),
+    });
+
+    await handler({
+      connectorId: 1,
+      transactionId: 1000,
+      meterValue: [
+        {
+          timestamp: '2026-10-08T10:03:00.000Z',
+          sampledValue: [{
+            value: '1300',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+        {
+          timestamp: '2026-10-08T10:01:00.000Z',
+          sampledValue: [{
+            value: '1000',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+        {
+          timestamp: '2026-10-08T10:02:00.000Z',
+          sampledValue: [{
+            value: '1100',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+      ],
+    }, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } });
+
+    const insert = calls.find((call) => call.sql.includes('INSERT INTO meter_values'));
+    assert.deepEqual(
+      insert.params.filter((_, index) => index % 10 === 4),
+      ['1000', '1100', '1300']
+    );
+  });
+
   it('records CHARGE_POINT_MISMATCH when transaction belongs to another charge point (D12)', async () => {
     const calls = [];
     const handler = createMeterValuesHandler({
@@ -370,6 +424,22 @@ describe('MeterValues handler (T-41)', () => {
       }),
       (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
     );
+    for (const value of ['1e200', '1e-130', '-1', '1000000000001']) {
+      assert.throws(
+        () => validatePayload({
+          ...samplePayload,
+          meterValue: [{
+            timestamp: '2026-09-28T20:31:27.905Z',
+            sampledValue: [{
+              value,
+              measurand: 'Energy.Active.Import.Register',
+              unit: 'Wh',
+            }],
+          }],
+        }),
+        (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
+      );
+    }
     // Overflow meterValue length
     const tooManyMeterValues = Array(MAX_METER_VALUES + 1).fill({
       timestamp: '2026-09-28T20:31:27.905Z',
