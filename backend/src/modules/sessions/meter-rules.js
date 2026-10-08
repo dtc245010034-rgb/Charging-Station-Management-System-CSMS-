@@ -100,6 +100,11 @@ function parseToScaledBigInt(value, targetScale = 0) {
   return parts.coefficient * factor * BigInt(parts.sign);
 }
 
+/**
+ * Chuyển đổi timestamp từ nhiều định dạng (Date instance, ISO string, epoch number) sang mili-giây nguyên.
+ * @param {Date|string|number} timestamp - Mốc thời gian cần chuyển đổi
+ * @returns {number} - Timestamp tính bằng mili-giây
+ */
 function toEpochMs(timestamp) {
   if (timestamp instanceof Date) return timestamp.getTime();
   if (typeof timestamp === 'number' && Number.isFinite(timestamp)) return timestamp;
