@@ -41,6 +41,11 @@ function isPlausibleMeterValue(value, measurand, unit) {
   return compareDecimals(value, maximum) <= 0;
 }
 
+/**
+ * Tách chuỗi số thập phân thành các thành phần: dấu (sign), hệ số nguyên (coefficient), và số chữ số thập phân (scale).
+ * @param {string|number} value - Chuỗi số cần bóc tách
+ * @returns {{sign: number, coefficient: bigint, scale: number}}
+ */
 function decimalParts(value) {
   const text = String(value);
   if (text.length > MAX_STORED_DECIMAL_LENGTH || !DECIMAL_VALUE.test(text)) {
