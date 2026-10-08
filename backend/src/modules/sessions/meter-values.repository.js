@@ -78,6 +78,11 @@ async function findLatestMeterValue(db, sessionId) {
   return result.rows[0] || null;
 }
 
+/**
+ * Chuyển đổi số đo Wh hoặc kWh sang đơn vị Wh nguyên, không bị sai số dấu phẩy động.
+ * @param {{value: string|number, unit: string}} param0 - Đối tượng số đo và đơn vị
+ * @returns {number} - Giá trị số đo tính theo Wh
+ */
 function meterValueToWh({ value, unit }) {
   const normUnit = normalizeUnit(unit);
   if (normUnit !== 'Wh' && normUnit !== 'kWh') {
