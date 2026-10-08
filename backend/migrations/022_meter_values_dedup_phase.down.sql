@@ -1,5 +1,6 @@
 DROP INDEX IF EXISTS idx_meter_values_session_reported_desc;
 DROP INDEX IF EXISTS idx_meter_values_session_reported_measurand_phase_context;
+DROP INDEX IF EXISTS idx_meter_values_stream_latest;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_meter_values_session_measurand_sampled
   ON meter_values (session_id, measurand, sampled_at);
