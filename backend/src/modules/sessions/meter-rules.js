@@ -6,6 +6,11 @@ const MAX_DECIMAL_EXPONENT = 1000;
 const MIN_METER_VALUE = '0.000000000001';
 const MAX_METER_VALUE = '1000000000000';
 
+/**
+ * Kiểm tra tính hợp lệ về cú pháp chuỗi số thập phân của số đo.
+ * @param {string} value - Chuỗi số cần kiểm tra
+ * @returns {boolean} - true nếu là số thập phân hợp lệ
+ */
 function isValidMeterDecimal(value) {
   if (typeof value !== 'string' || value.length > MAX_DECIMAL_VALUE_LENGTH) return false;
   const match = DECIMAL_VALUE.exec(value);
