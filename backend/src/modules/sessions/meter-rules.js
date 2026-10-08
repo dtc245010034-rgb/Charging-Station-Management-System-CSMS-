@@ -22,7 +22,8 @@ function isPlausibleMeterValue(value, measurand, unit) {
   if (parts.sign < 0) return false;
   if (parts.sign !== 0 && compareDecimals(value, MIN_METER_VALUE) < 0) return false;
 
-  const maximum = measurand === ENERGY_MEASURAND && unit === 'kWh'
+  const normUnit = normalizeUnit(unit);
+  const maximum = measurand === ENERGY_MEASURAND && normUnit === 'kWh'
     ? '1000000000'
     : MAX_METER_VALUE;
   return compareDecimals(value, maximum) <= 0;
@@ -68,6 +69,15 @@ function compareDecimals(left, right) {
   return (leftValue < rightValue ? -1 : 1) * a.sign;
 }
 
+function normalizeUnit(unit) {
+  if (typeof unit !== 'string') return unit;
+  const trimmed = unit.trim();
+  const upper = trimmed.toUpperCase();
+  if (upper === 'KWH') return 'kWh';
+  if (upper === 'WH') return 'Wh';
+  return trimmed;
+}
+
 function parseToScaledBigInt(value, targetScale = 0) {
   const parts = decimalParts(value);
   const scaleDiff = targetScale - parts.scale;
@@ -79,15 +89,6 @@ function parseToScaledBigInt(value, targetScale = 0) {
   return parts.coefficient * factor * BigInt(parts.sign);
 }
 
-function normalizeUnit(unit) {
-  if (typeof unit !== 'string') return unit;
-  const trimmed = unit.trim();
-  const upper = trimmed.toUpperCase();
-  if (upper === 'KWH') return 'kWh';
-  if (upper === 'WH') return 'Wh';
-  return trimmed;
-}
-
 function toEpochMs(timestamp) {
   if (timestamp instanceof Date) return timestamp.getTime();
   if (typeof timestamp === 'number' && Number.isFinite(timestamp)) return timestamp;
@@ -96,8 +97,8 @@ function toEpochMs(timestamp) {
 }
 
 function compareMeasurements(previous, current) {
-  const previousUnit = previous.unit || 'Wh';
-  const currentUnit = current.unit || 'Wh';
+  const previousUnit = normalizeUnit(previous.unit || 'Wh');
+  const currentUnit = normalizeUnit(current.unit || 'Wh');
 
   if (previous.measurand === ENERGY_MEASURAND
     && current.measurand === ENERGY_MEASURAND
@@ -125,8 +126,8 @@ function evaluateMeterReading(previous, current) {
   if (current.clockSkew) return { action: 'save' };
   if (!previous) return { action: 'save' };
 
-  const previousAt = Date.parse(previous.sampled_at || previous.sampledAt);
-  const currentAt = Date.parse(current.sampledAt);
+  const previousAt = toEpochMs(previous.sampled_at ?? previous.sampledAt);
+  const currentAt = toEpochMs(current.sampledAt ?? current.sampled_at);
   if (currentAt < previousAt) return { action: 'ignore', reason: 'OLDER_TIMESTAMP' };
 
   const comparison = compareMeasurements(previous, current);
@@ -145,7 +146,11 @@ function evaluateMeterReading(previous, current) {
 }
 
 module.exports = {
+  decimalParts,
   evaluateMeterReading,
   isPlausibleMeterValue,
   isValidMeterDecimal,
+  normalizeUnit,
+  parseToScaledBigInt,
+  toEpochMs,
 };
