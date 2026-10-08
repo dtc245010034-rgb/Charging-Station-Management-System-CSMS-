@@ -73,6 +73,12 @@ function decimalParts(value) {
   return { sign: digits === '0' ? 0 : sign, coefficient: BigInt(digits), scale };
 }
 
+/**
+ * So sánh chính xác hai chuỗi số thập phân không bị giới hạn bởi Number.MAX_SAFE_INTEGER.
+ * @param {string|number} left - Số thứ nhất
+ * @param {string|number} right - Số thứ hai
+ * @returns {number} - -1 nếu left < right, 0 nếu bằng nhau, 1 nếu left > right
+ */
 function compareDecimals(left, right) {
   const a = decimalParts(left);
   const b = decimalParts(right);
