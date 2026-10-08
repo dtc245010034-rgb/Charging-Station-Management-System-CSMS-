@@ -20,3 +20,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_meter_values_session_reported_measurand_ph
 
 CREATE INDEX IF NOT EXISTS idx_meter_values_session_reported_desc
   ON meter_values (session_id, reported_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_meter_values_stream_latest
+  ON meter_values (session_id, measurand, phase, context, sampled_at DESC, id DESC);
