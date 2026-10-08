@@ -60,6 +60,17 @@ describe('S-20 meter reading rules', () => {
     );
   });
 
+  it('reports conflicting value when previous.sampled_at is a Date object with ms', () => {
+    const pgDate = new Date('2026-10-08T10:00:00.123Z');
+    assert.deepEqual(
+      evaluateMeterReading(
+        { ...previous, sampled_at: pgDate, value: '1200' },
+        reading({ sampledAt: '2026-10-08T10:00:00.123Z', value: '1300' })
+      ),
+      { action: 'ignore', reason: 'CONFLICTING_TIMESTAMP' }
+    );
+  });
+
   it('ignores and reports a conflicting value at the same timestamp', () => {
     assert.deepEqual(
       evaluateMeterReading(previous, reading({ sampledAt: previous.sampled_at, value: '1201' })),
