@@ -68,6 +68,17 @@ function compareDecimals(left, right) {
   return (leftValue < rightValue ? -1 : 1) * a.sign;
 }
 
+function parseToScaledBigInt(value, targetScale = 0) {
+  const parts = decimalParts(value);
+  const scaleDiff = targetScale - parts.scale;
+  if (scaleDiff < 0) {
+    const divisor = 10n ** BigInt(-scaleDiff);
+    return (parts.coefficient / divisor) * BigInt(parts.sign);
+  }
+  const factor = 10n ** BigInt(scaleDiff);
+  return parts.coefficient * factor * BigInt(parts.sign);
+}
+
 function normalizeUnit(unit) {
   if (typeof unit !== 'string') return unit;
   const trimmed = unit.trim();
