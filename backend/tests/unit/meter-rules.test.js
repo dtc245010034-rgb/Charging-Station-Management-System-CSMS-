@@ -200,3 +200,15 @@ describe('normalizeUnit', () => {
     assert.equal(normalizeUnit('  Wh  '), 'Wh');
   });
 });
+
+describe('evaluateMeterReading with normalized units', () => {
+  it('accepts valid reading when unit is lowercase kwh or wh', () => {
+    assert.deepEqual(
+      evaluateMeterReading(
+        { ...previous, value: '1.5', unit: 'kwh' },
+        reading({ value: '1500', unit: 'wh' })
+      ),
+      { action: 'save' }
+    );
+  });
+});
