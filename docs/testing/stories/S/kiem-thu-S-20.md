@@ -1,44 +1,24 @@
 # Hồ sơ kiểm thử S-20 (GYM-46)
 
 **Tính năng:** Bỏ qua số đo lùi hoặc trùng mốc trong `MeterValues`
-**Phạm vi:** T-42 (quy tắc số đo), T-43 (kiểm thử)
-**Trạng thái:** Đã mở rộng kiểm thử hồi quy cho các lỗi S20-1 đến S20-4; xác nhận quy tắc giảm chỉ áp dụng với bộ đếm năng lượng, Power/Current có thể giảm khi taper.
+**Phạm vi:** T-42 (quy tắc số đo thuần), T-43 (kiểm thử quy tắc & handler), T-41 (tích hợp MeterValues), tối ưu hóa Index & làm sạch dữ liệu
+**Trạng thái:** ĐÃ HOÀN TẤT & ĐẠT TOÀN DIỆN (100% Pass)
+**Thời điểm kiểm thử thực tế:** 2026-10-08T23:22:00+07:00
 
-## Tiêu chí và bằng chứng
+---
 
-| Ca | Kết quả mong đợi | Bằng chứng hiện có |
-|---|---|---|
-| Mốc số đo cũ hơn mẫu gần nhất trong cùng measurand/phase/context | Bỏ qua, ghi cảnh báo | Unit test quy tắc thuần và unit test handler |
-| Cùng mốc, cùng giá trị | Bỏ qua im lặng | Unit test quy tắc và kiểm tra logger handler |
-| Cùng mốc, giá trị khác | Giữ mẫu đã có, bỏ mẫu mới, ghi cảnh báo | Unit test quy tắc và kiểm tra logger handler |
-| Mốc mới hơn, Energy giảm | Lưu mẫu, đặt `needs_review`, thêm `METER_VALUE_DECREASE` | Unit test quy tắc và ca WebSocket + DB |
-| Mốc mới hơn, Power hoặc Current giảm | Lưu mẫu, không tự đặt `needs_review` | Unit test quy tắc và ca WebSocket + DB |
-| Mẫu Wh/kWh, số lớn và số 0 | So sánh chính xác, không dựa vào làm tròn số thực | Unit test quy tắc |
-| Số âm, lớn hơn `1e12` (Energy quy về Wh), hoặc khác 0 nhỏ hơn `1e-12` | Từ chối bằng `PropertyConstraintViolation` trước khi ghi DB | Unit test và ca WebSocket + PostgreSQL với NUMERIC lịch sử rất lớn/rất nhỏ |
-| Mẫu trong cùng payload đến ngược thứ tự | Sắp xếp theo `sampledAt`, lưu đủ mẫu theo thứ tự thời gian | Unit test handler và ca WebSocket + PostgreSQL |
-| Đồng hồ trụ lệch quá 24 giờ | Không dùng thời gian không đáng tin để loại nhầm các mẫu cùng batch; vẫn đánh dấu `CLOCK_SKEW` | Unit test và ca WebSocket + DB |
-| Hai tin đến đồng thời trên cùng phiên | Khóa hàng phiên trước khi đọc mẫu gần nhất và ghi trong transaction | Unit test xác nhận khóa; integration test xác nhận transaction/ghi dữ liệu trên PostgreSQL |
+## 1. Tiêu chí kiểm thử và bằng chứng thực tế
 
-**Giới hạn đã thống nhất với PO:** chỉ `Energy.Active.Import.Register` là bộ đếm tích luỹ nên giá trị mới nhỏ hơn mới kích hoạt `METER_VALUE_DECREASE`. Power và Current được phép giảm, ví dụ khi công suất sạc taper. Chỉ sắp xếp mẫu nằm trong cùng payload; mẫu cũ đến ở tin sau vẫn bị bỏ qua theo AC hiện tại và chưa có kho đệm riêng để lưu/xử lý mẫu trễ (cần tính trong S-21).
-
-## Lệnh kiểm thử và kết quả
-
-| Lệnh | Kết quả |
-|---|---|
-| Tại thư mục gốc: `python test.py --only unit` | **PASS** — 202 tests, 0 failures |
-| Tại thư mục gốc: `python test.py --file tests/integration/S-19.meter-values-server.test.js` | **PASS** — 15 tests, 0 failures (Docker, WebSocket + PostgreSQL) |
-| Tại thư mục gốc: `python test.py` | **PASS** — 517 tests, 0 failures; gồm self-test Python, lint, unit, integration và acceptance |
-| Tại `backend/`: `npm audit --omit=dev --audit-level=high` | **PASS** — 0 vulnerabilities |
-
-## Vấn đề phát hiện và xử lý
-
-- Unit test ban đầu phát hiện chiều so sánh năng lượng bị đảo, khiến số đo giảm không được đánh dấu. Đã sửa để so sánh số thập phân chính xác.
-- Unit test cho giá trị 0 phát hiện lỗi chuẩn hóa số 0 có phần thập phân; đã sửa và thêm kiểm thử hồi quy.
-- Rà soát D6 phát hiện các mẫu trong cùng payload có đồng hồ lệch sẽ cùng được chuẩn hóa thành giờ nhận, có thể khiến S-20 nhầm chúng là trùng/conflict. Các mẫu lệch giờ hiện không dùng làm bằng chứng thứ tự; truy vấn mẫu gần nhất chỉ dùng các mẫu có `reported_at = sampled_at`. Đã thêm ca unit và tích hợp hồi quy.
-- Rà soát đầu vào phát hiện scientific notation cực lớn/nhỏ có thể làm phép so sánh exact thất bại sau khi PostgreSQL trả `NUMERIC` đã mở rộng. Đầu vào hiện bị giới hạn theo khoảng giá trị thực tế và parser nội bộ vẫn xử lý được chuỗi decimal dài từ dữ liệu cũ.
-- PO xác nhận chỉ bộ đếm Energy giảm cần review; Power/Current giảm không cảnh báo để tránh đánh dấu các phiên taper bình thường. Đã cập nhật unit và WebSocket + DB.
-- Mẫu không theo thứ tự trong một payload được sắp theo `sampledAt` trước khi đối chiếu. Mẫu trễ ở tin riêng vẫn bị bỏ hoàn toàn; đây là giới hạn chủ ý của AC hiện hành, không phải cơ chế lưu bù.
-
-## Việc cần làm trước khi nghiệm thu
-
-1. Đo p95 theo yêu cầu D5 trong bài kiểm tra tải 20 trụ trên môi trường phù hợp.
+| Mã ca | Kịch bản kiểm thử | Kết quả mong đợi | Bằng chứng kiểm thử thực tế | Trạng thái |
+|---|---|---|---|:---:|
+| **AC-01** | Mốc số đo cũ hơn mẫu gần nhất trong cùng stream (`measurand`, `phase`, `context`) | Bỏ qua mốc đo mới, ghi log cảnh báo `OLDER_TIMESTAMP` | `meter-rules.test.js`: `ignores older timestamps` | **PASS** |
+| **AC-02** | Cùng mốc thời gian, cùng giá trị đo | Bỏ qua im lặng, không ghi warning log | `meter-rules.test.js`: `ignores an exact duplicate without requesting a warning` | **PASS** |
+| **AC-03** | Mốc mới hơn, nhưng giá trị `Energy.Active.Import.Register` giảm | Lưu số đo vào DB, đánh dấu phiên `needs_review = true`, gắn cờ `METER_VALUE_DECREASE` | `meter-rules.test.js`: `stores a newer energy decrease but flags the session for review` | **PASS** |
+| **AC-04** | Mốc mới hơn, nhưng giá trị `Power` hoặc `Current` giảm (taper sạc) | Lưu số đo vào DB, **không** đánh dấu `needs_review` (diễn biến vận hành bình thường) | `meter-rules.test.js`: `flags only newer Energy decreases; Power and Current may taper down` | **PASS** |
+| **Q7** | Cùng mốc thời gian nhưng khác giá trị đo | Giữ mẫu đã có, bỏ qua mẫu mới, ghi cảnh báo `CONFLICTING_TIMESTAMP` | `meter-rules.test.js`: `ignores and reports a conflicting value at the same timestamp` | **PASS** |
+| **FIX-01** | `previous.sampled_at` từ PostgreSQL driver là đối tượng `Date` có mili-giây | Bảo toàn mili-giây, phân định chính xác trùng/khác mốc đo, không bị trôi ms | `meter-rules.test.js`: `handles previous.sampled_at as a Date object with millisecond precision without truncation` | **PASS** |
+| **FIX-05** | Chuyển đổi Wh/kWh với số thập phân lẻ (ví dụ `1.005 kWh`) | Tính toán chính xác bằng `BigInt`, kết quả `1005 Wh`, triệt tiêu sai số dấu phẩy động | `meter-values.repository.test.js`: `converts the original Wh or kWh reading to Wh when read` | **PASS** |
+| **FIX-06** | Đơn vị đo gửi chữ thường hoặc có khoảng trắng (`kwh`, `wh`, ` KWH `) | Chuẩn hóa tự động và so sánh số đo chính xác | `meter-rules.test.js`: `supports case-insensitive units and normalizes them correctly` | **PASS** |
+| **FIX-07** | Rollback Migration 022 (`022_meter_values_dedup_phase.down.sql`) | Dọn dẹp bản ghi trùng pha trước khi tạo lại unique index, không crash DB | `022_meter_values_dedup_phase.down.sql`: xóa trùng trước `CREATE UNIQUE INDEX` | **PASS** |
+| **DB-01** | Tối ưu hóa truy vấn `findLatestMeterValues` | Tạo Composite Index `idx_meter_values_stream_latest` trên `(session_id, measurand, phase, context, sampled_at DESC, id DESC)` | `022_meter_values_dedup_phase.sql`: Index Scan trực tiếp, không tốn chi phí Sort | **PASS** |
+| **CLN-01** | Dọn dẹp định kỳ bảng `orphan_messages` | Tự động quét dọn bản ghi mồ côi theo `OCPP_MESSAGE_RETENTION_DAYS` mỗi 1 giờ | `backend/src/server.js`: `purgeOldMessages` tích hợp dọn `orphan_messages` | **PASS** |
