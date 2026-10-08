@@ -188,3 +188,9 @@ describe('S-20 meter reading rules', () => {
     );
   });
 });
+
+describe('normalizeUnit', () => {
+  it('maps lowercase kwh to standard kWh', () => {
+    assert.equal(normalizeUnit('kwh'), 'kWh');
+  });
+});
