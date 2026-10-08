@@ -124,6 +124,7 @@ describe('meter values repository', () => {
   it('converts the original Wh or kWh reading to Wh when read', () => {
     assert.equal(meterValueToWh({ value: '1250', unit: 'Wh' }), 1250);
     assert.equal(meterValueToWh({ value: '1.25', unit: 'kWh' }), 1250);
+    // FIX-05 & FIX-06: chống trôi số float và hỗ trợ chữ thường kwh/wh
     assert.equal(meterValueToWh({ value: '1.005', unit: 'kWh' }), 1005);
     assert.equal(meterValueToWh({ value: '1.005', unit: 'kwh' }), 1005);
     assert.equal(meterValueToWh({ value: '250', unit: 'wh' }), 250);
