@@ -72,7 +72,11 @@ describe('S-17 StartTransaction trên WebSocket server thật (GYM-43)', () => {
   });
 
   let firstTxId;
-  const startTime = new Date('2026-10-07T10:00:00.000Z').toISOString();
+  const scenarioStartTime = Date.now() - 30 * 60 * 1000;
+  const scenarioTime = (minutesAfterStart) => new Date(
+    scenarioStartTime + minutesAfterStart * 60 * 1000
+  ).toISOString();
+  const startTime = scenarioTime(0);
 
   it('AC1: Thẻ hợp lệ + đầu nối rảnh -> phiên CHARGING, Accepted, cấp transactionId', async () => {
     const res = await sendCall(client, 'msg-start-01', 'StartTransaction', {
@@ -132,7 +136,7 @@ describe('S-17 StartTransaction trên WebSocket server thật (GYM-43)', () => {
   });
 
   it('AC2: Thẻ khoá (Blocked) -> vẫn cấp transactionId, idTagInfo: Blocked, needs_review = true', async () => {
-    const blockedStartTime = new Date('2026-10-07T10:10:00.000Z').toISOString();
+    const blockedStartTime = scenarioTime(10);
     const res = await sendCall(client, 'msg-start-blocked', 'StartTransaction', {
       connectorId: 2,
       idTag: TAG_BLOCKED,
@@ -152,7 +156,7 @@ describe('S-17 StartTransaction trên WebSocket server thật (GYM-43)', () => {
   });
 
   it('AC2: Thẻ không tồn tại (Invalid) -> vẫn cấp transactionId, idTagInfo: Invalid, needs_review = true', async () => {
-    const invalidStartTime = new Date('2026-10-07T10:15:00.000Z').toISOString();
+    const invalidStartTime = scenarioTime(15);
     const invalidTag = 'TAG-UNKNOWN-999';
     const res = await sendCall(client, 'msg-start-invalid', 'StartTransaction', {
       connectorId: 2,
@@ -176,7 +180,7 @@ describe('S-17 StartTransaction trên WebSocket server thật (GYM-43)', () => {
 
   it('AC3: Đầu nối còn phiên CHARGING cũ -> phiên cũ đóng ABNORMAL, phiên mới tạo CHARGING', async () => {
     // Connector 1 hiện đang có firstTxId ở trạng thái CHARGING
-    const newStartTime = new Date('2026-10-07T10:30:00.000Z').toISOString();
+    const newStartTime = scenarioTime(30);
     const res = await sendCall(client, 'msg-start-replace', 'StartTransaction', {
       connectorId: 1,
       idTag: TAG_ACTIVE,
@@ -270,4 +274,3 @@ describe('S-17 StartTransaction trên WebSocket server thật (GYM-43)', () => {
     assert.strictEqual(Number(countRes.rows[0].total), 1, 'Không được tạo phiên ma thứ 2');
   });
 });
-

@@ -1,4 +1,5 @@
 """Kiểm thử phần logic thuần của run.py (không cần Docker). Chạy: python -m unittest discover -s tools"""
+import io
 import os
 import socket
 import sys
@@ -6,6 +7,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import run  # noqa: E402
@@ -84,8 +86,9 @@ class MatEnv(unittest.TestCase):
         class Args: yes = False
         class D:
             def c(self, *a, **k): raise AssertionError("không được xoá khi chưa xác nhận")
-        with self.assertRaises(run.Fail):
-            run.wipe_stale_data(D(), Args(), "lý do")
+        with patch.object(run.sys, "stdin", io.StringIO("")):
+            with self.assertRaises(run.Fail):
+                run.wipe_stale_data(D(), Args(), "lý do")
 
     def test_yes_thi_xoa_va_tiep_tuc(self):
         calls = []
