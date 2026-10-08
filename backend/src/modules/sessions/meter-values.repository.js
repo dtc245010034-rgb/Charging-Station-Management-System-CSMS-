@@ -1,3 +1,5 @@
+const { parseToScaledBigInt, normalizeUnit } = require('./meter-rules');
+
 async function recordMeterValue(db, {
   sessionId,
   reportedAt,
