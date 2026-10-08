@@ -112,6 +112,12 @@ function toEpochMs(timestamp) {
   return NaN;
 }
 
+/**
+ * So sánh giá trị hai mẫu đo, hỗ trợ chuyển đổi linh hoạt giữa Wh và kWh.
+ * @param {object} previous - Mẫu đo trước đó
+ * @param {object} current - Mẫu đo mới
+ * @returns {number|null} - -1 (giảm), 0 (bằng nhau), 1 (tăng), hoặc null nếu không so sánh được
+ */
 function compareMeasurements(previous, current) {
   const previousUnit = normalizeUnit(previous.unit || 'Wh');
   const currentUnit = normalizeUnit(current.unit || 'Wh');
