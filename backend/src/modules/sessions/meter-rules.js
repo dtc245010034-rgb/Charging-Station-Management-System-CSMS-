@@ -138,6 +138,12 @@ function compareMeasurements(previous, current) {
   return compareDecimals(current.value, previous.value);
 }
 
+/**
+ * Đánh giá mẫu đo mới so với mẫu đo gần nhất theo quy tắc S-20.
+ * @param {object|null} previous - Mẫu đo trước đó từ cơ sở dữ liệu
+ * @param {object} current - Mẫu đo mới nhận từ gói tin MeterValues
+ * @returns {{action: 'save'|'ignore'|'review', reason?: string}} - Quyết định xử lý
+ */
 function evaluateMeterReading(previous, current) {
   if (current.clockSkew) return { action: 'save' };
   if (!previous) return { action: 'save' };
