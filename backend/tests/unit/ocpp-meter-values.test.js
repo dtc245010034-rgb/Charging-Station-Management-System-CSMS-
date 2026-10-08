@@ -49,28 +49,40 @@ describe('MeterValues handler (T-41)', () => {
     const readings = validatePayload(samplePayload, () => Date.parse('2026-09-28T20:31:27.905Z'));
     assert.deepEqual(readings, [
       {
+        reportedAt: '2026-09-28T20:31:27.905Z',
         sampledAt: '2026-09-28T20:31:27.905Z',
         measurand: 'Energy.Active.Import.Register',
         value: '61',
         unit: 'Wh',
+        phase: null,
+        context: 'Sample.Periodic',
       },
       {
+        reportedAt: '2026-09-28T20:31:27.905Z',
         sampledAt: '2026-09-28T20:31:27.905Z',
         measurand: 'Power.Active.Import',
         value: '22000',
         unit: 'W',
+        phase: null,
+        context: null,
       },
       {
+        reportedAt: '2026-09-28T20:31:27.905Z',
         sampledAt: '2026-09-28T20:31:27.905Z',
         measurand: 'Current.Import',
         value: '31.9',
         unit: 'A',
+        phase: null,
+        context: null,
       },
       {
+        reportedAt: '2026-09-28T20:31:37.905Z',
         sampledAt: '2026-09-28T20:31:37.905Z',
         measurand: 'Energy.Active.Import.Register',
         value: '71',
         unit: 'Wh',
+        phase: null,
+        context: null,
       },
     ]);
   });
@@ -95,9 +107,9 @@ describe('MeterValues handler (T-41)', () => {
     assert.equal(calls.length, 2);
     assert.match(calls[0].sql, /LEFT JOIN charging_sessions/);
     assert.deepEqual(calls[0].params, [8, 1, 1000]);
-    assert.equal((calls[1].sql.match(/\(\$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+\)/g) || []).length, 4);
-    assert.match(calls[1].sql, /ON CONFLICT \(session_id, measurand, sampled_at\) DO NOTHING/);
-    assert.deepEqual(calls[1].params.slice(0, 5), [44, '2026-09-28T20:31:27.905Z', 'Energy.Active.Import.Register', '61', 'Wh']);
+    assert.equal((calls[1].sql.match(/\(\$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+\)/g) || []).length, 4);
+    assert.match(calls[1].sql, /ON CONFLICT \(session_id, reported_at, measurand, phase, context\) DO NOTHING/);
+    assert.deepEqual(calls[1].params.slice(0, 6), [44, '2026-09-28T20:31:27.905Z', '2026-09-28T20:31:27.905Z', 'Energy.Active.Import.Register', '61', 'Wh']);
   });
 
   it('stores all samples from each periodic request with a separate batch insert', async () => {
@@ -221,9 +233,10 @@ describe('MeterValues handler (T-41)', () => {
     await handler(skewedPayload, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } });
     assert.equal(calls.length, 3);
     // call 1: select connector
-    // call 2: insert meter_values with fixedNow time
+    // call 2: insert meter_values with the original reported timestamp and normalized sampled_at
     assert.match(calls[1].sql, /INSERT INTO meter_values/);
-    assert.equal(calls[1].params[1], fixedNow.toISOString());
+    assert.equal(calls[1].params[1], '1970-01-01T00:00:00.000Z');
+    assert.equal(calls[1].params[2], fixedNow.toISOString());
     // call 3: update charging_sessions with needs_review and CLOCK_SKEW
     assert.match(calls[2].sql, /UPDATE charging_sessions\s+SET needs_review = TRUE/);
     assert.deepEqual(calls[2].params, [44]);

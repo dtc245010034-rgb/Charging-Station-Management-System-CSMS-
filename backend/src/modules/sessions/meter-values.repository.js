@@ -1,9 +1,22 @@
-async function recordMeterValue(db, { sessionId, sampledAt, measurand, value, unit }) {
+async function recordMeterValue(db, {
+  sessionId,
+  reportedAt,
+  sampledAt,
+  measurand,
+  value,
+  unit,
+  phase,
+  context,
+  sourceMessageId,
+}) {
   const result = await db.query(
-    `INSERT INTO meter_values (session_id, sampled_at, measurand, value, unit, raw_unit)
-     VALUES ($1, $2, $3, $4, $5, $5)
-     RETURNING id, session_id, sampled_at, measurand, value, COALESCE(raw_unit, unit) AS unit`,
-    [sessionId, sampledAt, measurand, value, unit]
+    `INSERT INTO meter_values (
+       session_id, reported_at, sampled_at, measurand, value, unit, raw_unit, phase, context, source_message_id
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9)
+     ON CONFLICT (session_id, reported_at, measurand, phase, context) DO NOTHING
+     RETURNING id, session_id, reported_at, sampled_at, measurand, value, COALESCE(raw_unit, unit) AS unit`,
+    [sessionId, reportedAt, sampledAt, measurand, value, unit, phase, context, sourceMessageId]
   );
   return result.rows[0];
 }
@@ -13,21 +26,26 @@ async function recordMeterValues(db, sessionId, meterValues) {
 
   const values = [];
   const rows = meterValues.map((meterValue, index) => {
-    const offset = index * 5;
+    const offset = index * 10;
     values.push(
       sessionId,
+      meterValue.reportedAt,
       meterValue.sampledAt,
       meterValue.measurand,
       meterValue.value,
-      meterValue.unit
+      meterValue.unit,
+      meterValue.phase,
+      meterValue.context,
+      meterValue.sourceMessageId
     );
-    return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 5})`;
+    return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9})`;
   });
 
   await db.query(
-    `INSERT INTO meter_values (session_id, sampled_at, measurand, value, unit, raw_unit)
-     VALUES ${rows.join(', ')}
-     ON CONFLICT (session_id, measurand, sampled_at) DO NOTHING`,
+    `INSERT INTO meter_values (
+       session_id, reported_at, sampled_at, measurand, value, unit, raw_unit, phase, context, source_message_id
+     ) VALUES ${rows.join(', ')}
+     ON CONFLICT (session_id, reported_at, measurand, phase, context) DO NOTHING`,
     values
   );
 }

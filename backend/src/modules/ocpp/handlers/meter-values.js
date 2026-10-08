@@ -90,11 +90,22 @@ function validatePayload(payload, now = Date.now) {
       if (typeof unit !== 'string' || unit.length === 0 || unit.length > MAX_UNIT_LENGTH) {
         throw violation(`sampledValue.unit must be a string of at most ${MAX_UNIT_LENGTH} characters`);
       }
+      const phase = sampledValue.phase === undefined ? null : sampledValue.phase;
+      const context = sampledValue.context === undefined ? null : sampledValue.context;
+      if (phase !== null && (typeof phase !== 'string' || phase.length === 0 || phase.length > 20)) {
+        throw violation('sampledValue.phase must be a non-empty string of at most 20 characters');
+      }
+      if (context !== null && (typeof context !== 'string' || context.length > 200)) {
+        throw violation('sampledValue.context must be a string of at most 200 characters');
+      }
       readings.push({
+        reportedAt: new Date(reportedAt).toISOString(),
         sampledAt,
         measurand,
         value: sampledValue.value,
         unit,
+        phase,
+        context,
       });
     }
   }
@@ -114,7 +125,7 @@ function createMeterValuesHandler({
   logWarning = console.warn,
   logError = console.error,
 } = {}) {
-  return async function handleMeterValues(payload, { connection } = {}) {
+  return async function handleMeterValues(payload, { connection, messageId } = {}) {
     const readings = validatePayload(payload, now);
     if (readings.length === 0) return {};
 
@@ -132,6 +143,7 @@ function createMeterValuesHandler({
       code,
       payload,
       readings,
+      sourceMessageId: messageId,
       hasClockSkew: readings.hasClockSkew,
       logWarning,
       logError,
@@ -147,6 +159,7 @@ async function persistMeterValues({
   code,
   payload,
   readings,
+  sourceMessageId,
   hasClockSkew,
   logWarning,
   logError,
@@ -188,7 +201,11 @@ async function persistMeterValues({
       return;
     }
 
-    await recordMeterValues(db, sessionId, readings);
+    await recordMeterValues(
+      db,
+      sessionId,
+      readings.map((reading) => ({ ...reading, sourceMessageId }))
+    );
 
     // D6: Nếu có lệch đồng hồ > 24h, bật cờ needs_review trên phiên sạc
     if (hasClockSkew) {

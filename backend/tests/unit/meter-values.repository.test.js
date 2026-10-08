@@ -7,7 +7,7 @@ const {
 } = require('../../src/modules/sessions/meter-values.repository');
 
 describe('meter values repository', () => {
-  it('stores the source unit unchanged for later conversion', async () => {
+  it('stores source metadata and preserves the original unit', async () => {
     const calls = [];
     const db = {
       async query(sql, values) {
@@ -18,20 +18,29 @@ describe('meter values repository', () => {
 
     const result = await recordMeterValue(db, {
       sessionId: 12,
-      sampledAt: '2026-10-07T10:00:00Z',
-      measurand: 'Energy.Active.Import.Register',
+      reportedAt: '2026-10-07T10:00:00Z',
+      sampledAt: '2026-10-07T10:00:00.500Z',
+      measurand: 'Current.Import',
       value: '1.25',
       unit: 'kWh',
+      phase: 'L1',
+      context: 'Sample.Periodic',
+      sourceMessageId: 'message-1',
     });
 
     assert.equal(result.unit, 'kWh');
-    assert.match(calls[0].sql, /unit, raw_unit/);
+    assert.match(calls[0].sql, /reported_at, sampled_at/);
+    assert.match(calls[0].sql, /ON CONFLICT \(session_id, reported_at, measurand, phase, context\)/);
     assert.deepEqual(calls[0].values, [
       12,
       '2026-10-07T10:00:00Z',
-      'Energy.Active.Import.Register',
+      '2026-10-07T10:00:00.500Z',
+      'Current.Import',
       '1.25',
       'kWh',
+      'L1',
+      'Sample.Periodic',
+      'message-1',
     ]);
   });
 
