@@ -51,6 +51,19 @@ async function recordMeterValues(db, sessionId, meterValues) {
   );
 }
 
+async function findLatestMeterValues(db, sessionId) {
+  const result = await db.query(
+    `SELECT DISTINCT ON (measurand, phase, context)
+       measurand, phase, context, sampled_at, value, COALESCE(raw_unit, unit) AS unit
+     FROM meter_values
+     WHERE session_id = $1
+       AND reported_at = sampled_at
+     ORDER BY measurand, phase, context, sampled_at DESC, id DESC`,
+    [sessionId]
+  );
+  return result.rows;
+}
+
 async function findLatestMeterValue(db, sessionId) {
   const result = await db.query(
     `SELECT id, session_id, sampled_at, measurand, value, COALESCE(raw_unit, unit) AS unit
@@ -74,4 +87,10 @@ function meterValueToWh({ value, unit }) {
   return unit === 'kWh' ? numericValue * 1000 : numericValue;
 }
 
-module.exports = { recordMeterValue, recordMeterValues, findLatestMeterValue, meterValueToWh };
+module.exports = {
+  recordMeterValue,
+  recordMeterValues,
+  findLatestMeterValues,
+  findLatestMeterValue,
+  meterValueToWh,
+};

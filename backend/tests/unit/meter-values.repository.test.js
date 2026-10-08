@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   recordMeterValue,
   recordMeterValues,
+  findLatestMeterValues,
   findLatestMeterValue,
   meterValueToWh,
 } = require('../../src/modules/sessions/meter-values.repository');
@@ -100,6 +101,23 @@ describe('meter values repository', () => {
     assert.match(calls[0].sql, /WHERE session_id = \$1/);
     assert.match(calls[0].sql, /ORDER BY sampled_at DESC, id DESC\s+LIMIT 1/);
     assert.match(calls[0].sql, /COALESCE\(raw_unit, unit\) AS unit/);
+    assert.deepEqual(calls[0].values, [12]);
+  });
+
+  it('fetches the latest value independently for every meter stream', async () => {
+    const calls = [];
+    const latest = [{ measurand: 'Energy.Active.Import.Register', phase: '', context: '' }];
+    const db = {
+      async query(sql, values) {
+        calls.push({ sql, values });
+        return { rows: latest };
+      },
+    };
+
+    assert.equal(await findLatestMeterValues(db, 12), latest);
+    assert.match(calls[0].sql, /DISTINCT ON \(measurand, phase, context\)/);
+    assert.match(calls[0].sql, /reported_at = sampled_at/);
+    assert.match(calls[0].sql, /ORDER BY measurand, phase, context, sampled_at DESC, id DESC/);
     assert.deepEqual(calls[0].values, [12]);
   });
 
