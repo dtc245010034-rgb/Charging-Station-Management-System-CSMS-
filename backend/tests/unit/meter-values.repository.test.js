@@ -125,6 +125,8 @@ describe('meter values repository', () => {
     assert.equal(meterValueToWh({ value: '1250', unit: 'Wh' }), 1250);
     assert.equal(meterValueToWh({ value: '1.25', unit: 'kWh' }), 1250);
     assert.equal(meterValueToWh({ value: '1.005', unit: 'kWh' }), 1005);
+    assert.equal(meterValueToWh({ value: '1.005', unit: 'kwh' }), 1005);
+    assert.equal(meterValueToWh({ value: '250', unit: 'wh' }), 250);
   });
 
   it('rejects invalid readings instead of silently miscalculating', () => {
