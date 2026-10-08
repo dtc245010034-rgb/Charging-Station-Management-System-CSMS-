@@ -79,3 +79,24 @@ Tất cả các lệnh dưới đây được chạy trực tiếp trên môi tr
 - **Lệnh thực thi:** `npm audit --omit=dev --audit-level=high` (tại `backend/`)
 - **Kết quả:** `found 0 vulnerabilities`
 - **Trạng thái:** **PASS**.
+
+---
+
+## 3. Các lỗi đã phát hiện và xử lý dứt điểm trong đợt tester này
+
+1. **Lỗi rụng mili-giây trên đối tượng `Date` của PostgreSQL driver (FIX-01)**:
+   - *Hiện tượng:* `Date.parse(previous.sampled_at)` ép kiểu `Date` thành chuỗi làm mất phần mili-giây, khiến các mẫu trùng mốc thời gian có ms bị coi là mốc mới hơn $\to$ bỏ lọt vi phạm.
+   - *Khắc phục:* Viết hàm `toEpochMs` kiểm tra `instanceof Date` và lấy trực tiếp `.getTime()`.
+2. **Lỗi sai số nhị phân dấu phẩy động JavaScript (FIX-05)**:
+   - *Hiện tượng:* `Number(value) * 1000` với giá trị `1.005 kWh` sinh ra `1004.9999999999999 Wh`.
+   - *Khắc phục:* Sử dụng hàm `parseToScaledBigInt(value, 3)` chuyển đổi số nguyên lớn chính xác tuyệt đối $\to$ `1005 Wh`.
+3. **Lỗi phân biệt hoa/thường đơn vị đo (FIX-06)**:
+   - *Hiện tượng:* Trụ sạc gửi đơn vị `kwh` hoặc `wh` chữ thường bị bỏ qua quy đổi hoặc văng `TypeError`.
+   - *Khắc phục:* Viết hàm `normalizeUnit` chuẩn hóa tự động các đơn vị đo điện năng.
+4. **Nguy cơ lỗi sập Rollback Migration 022 (FIX-07)**:
+   - *Hiện tượng:* Khi rollback, `022_meter_values_dedup_phase.down.sql` tạo lại unique index cũ trên `(session_id, measurand, sampled_at)`. Nếu đã có dữ liệu 3 pha (L1, L2, L3), lệnh sẽ crash vì trùng lặp.
+   - *Khắc phục:* Bổ sung câu lệnh deduplicate trước khi tái tạo index cũ.
+5. **Tối ưu tốc độ truy vấn cơ sở dữ liệu**:
+   - Bổ sung Composite Index `idx_meter_values_stream_latest` giúp `findLatestMeterValues` thực thi Index Scan trực tiếp.
+6. **Bổ sung dọn dẹp bảng mồ côi `orphan_messages`**:
+   - Tích hợp vào cron định kỳ 1 giờ một lần trong `server.js` theo `OCPP_MESSAGE_RETENTION_DAYS`.
