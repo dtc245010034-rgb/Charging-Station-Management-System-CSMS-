@@ -212,3 +212,11 @@ describe('evaluateMeterReading with normalized units', () => {
     );
   });
 });
+
+describe('parseToScaledBigInt', () => {
+  it('scales decimal numbers precisely without float drift', () => {
+    assert.equal(parseToScaledBigInt('1.005', 3), 1005n);
+    assert.equal(parseToScaledBigInt('1250', 0), 1250n);
+    assert.equal(parseToScaledBigInt('0.001', 3), 1n);
+  });
+});
