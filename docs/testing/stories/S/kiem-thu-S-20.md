@@ -19,8 +19,8 @@
 | **FIX-01** | `previous.sampled_at` từ PostgreSQL driver là đối tượng `Date` có mili-giây | Bảo toàn mili-giây, phân định chính xác trùng/khác mốc đo, không bị trôi ms | `meter-rules.test.js`: `handles previous.sampled_at as a Date object with millisecond precision without truncation` | **PASS** |
 | **FIX-05** | Chuyển đổi Wh/kWh với số thập phân lẻ (ví dụ `1.005 kWh`) | Tính toán chính xác bằng `BigInt`, kết quả `1005 Wh`, triệt tiêu sai số dấu phẩy động | `meter-values.repository.test.js`: `converts the original Wh or kWh reading to Wh when read` | **PASS** |
 | **FIX-06** | Đơn vị đo gửi chữ thường hoặc có khoảng trắng (`kwh`, `wh`, ` KWH `) | Chuẩn hóa tự động và so sánh số đo chính xác | `meter-rules.test.js`: `supports case-insensitive units and normalizes them correctly` | **PASS** |
-| **FIX-07** | Rollback Migration 022 (`022_meter_values_dedup_phase.down.sql`) | Dọn dẹp bản ghi trùng pha trước khi tạo lại unique index, không crash DB | `022_meter_values_dedup_phase.down.sql`: xóa trùng trước `CREATE UNIQUE INDEX` | **PASS** |
-| **DB-01** | Tối ưu hóa truy vấn `findLatestMeterValues` | Tạo Composite Index `idx_meter_values_stream_latest` trên `(session_id, measurand, phase, context, sampled_at DESC, id DESC)` | `022_meter_values_dedup_phase.sql`: Index Scan trực tiếp, không tốn chi phí Sort | **PASS** |
+| **FIX-07** | Rollback Migration 022 (`022_meter_values_dedup_phase.down.sql`) | Dọn dẹp bản ghi trùng pha trước khi tạo lại unique index, không crash DB | (đã hoàn tác) Down của 022 giữ nguyên bản gốc, không còn khối DELETE; xem mục 3.4 | **N/A** |
+| **DB-01** | Tối ưu hóa truy vấn `findLatestMeterValues` | Tạo Composite Index `idx_meter_values_stream_latest` trên `(session_id, measurand, phase, context, sampled_at DESC, id DESC)` | `024_meter_values_stream_latest_index.sql` (migration mới, không sửa 022 vì 022 đã áp dụng trên main). Chưa có kết quả `EXPLAIN` đi kèm nên chưa khẳng định Index Scan/không Sort | **CHƯA XÁC MINH** |
 | **CLN-01** | Dọn dẹp định kỳ bảng `orphan_messages` | Tự động quét dọn bản ghi mồ côi theo `OCPP_MESSAGE_RETENTION_DAYS` mỗi 1 giờ | `backend/src/server.js`: `purgeOldMessages` tích hợp dọn `orphan_messages` | **PASS** |
 
 ---
@@ -93,10 +93,15 @@ Tất cả các lệnh dưới đây được chạy trực tiếp trên môi tr
 3. **Lỗi phân biệt hoa/thường đơn vị đo (FIX-06)**:
    - *Hiện tượng:* Trụ sạc gửi đơn vị `kwh` hoặc `wh` chữ thường bị bỏ qua quy đổi hoặc văng `TypeError`.
    - *Khắc phục:* Viết hàm `normalizeUnit` chuẩn hóa tự động các đơn vị đo điện năng.
-4. **Nguy cơ lỗi sập Rollback Migration 022 (FIX-07)**:
-   - *Hiện tượng:* Khi rollback, `022_meter_values_dedup_phase.down.sql` tạo lại unique index cũ trên `(session_id, measurand, sampled_at)`. Nếu đã có dữ liệu 3 pha (L1, L2, L3), lệnh sẽ crash vì trùng lặp.
-   - *Khắc phục:* Bổ sung câu lệnh deduplicate trước khi tái tạo index cũ.
+4. **Rollback Migration 022 (FIX-07) – đã hoàn tác**:
+   - Khối `DELETE` dedup trong down của 022 sẽ xóa các mẫu 3 pha / khác context cùng mốc (chỉ giữ 1 dòng), và việc sửa trực tiếp 022 làm DB đã áp bản cũ lệch schema. Đã trả `022_*.sql` và `022_*.down.sql` về đúng bản trên main.
+   - Lưu ý: down của 022 gốc tạo lại unique index `(session_id, measurand, sampled_at)` nên có thể thất bại nếu đã có dữ liệu nhiều pha; cần xử lý thủ công trước khi rollback.
 5. **Tối ưu tốc độ truy vấn cơ sở dữ liệu**:
-   - Bổ sung Composite Index `idx_meter_values_stream_latest` giúp `findLatestMeterValues` thực thi Index Scan trực tiếp.
+   - Bổ sung Composite Index `idx_meter_values_stream_latest` trong migration mới `024_meter_values_stream_latest_index.sql` (kèm `.down.sql` chỉ `DROP INDEX IF EXISTS`). Số migration 022–024 nằm ngoài khoảng 017–021 của D13. Chưa có `EXPLAIN` xác nhận kế hoạch truy vấn.
 6. **Bổ sung dọn dẹp bảng mồ côi `orphan_messages`**:
    - Tích hợp vào cron định kỳ 1 giờ một lần trong `server.js` theo `OCPP_MESSAGE_RETENTION_DAYS`.
+
+## 4. Giới hạn đã biết
+
+- **`connectorId: 0` (MeterValues cấp trụ)**: gói có `connectorId = 0` hiện không khớp connector nào nên bị ghi vào `orphan_messages` với lý do `UNDECLARED_CONNECTOR` (chưa chính xác về mặt ngữ nghĩa; đúng ra là số đo cấp trạm). Chưa tra phiên theo `transactionId` cho trường hợp này. Đề xuất sau: tra theo `transactionId` (kiểm trụ sở hữu như D12), nếu không có thì ghi orphan với lý do riêng như `STATION_LEVEL_METER`.
+- **`meterValueToWh`**: chưa được gọi ở `src/` (chỉ có test). Hàm cắt bỏ phần dưới 1 Wh (1.0005 kWh → 1000) và kết quả đi qua `Number` nên mất chính xác với giá trị cực lớn (vd. 1e30 kWh).

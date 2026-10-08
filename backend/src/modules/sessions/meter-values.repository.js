@@ -80,6 +80,8 @@ async function findLatestMeterValue(db, sessionId) {
 
 /**
  * Chuyển đổi số đo Wh hoặc kWh sang đơn vị Wh nguyên, không bị sai số dấu phẩy động.
+ * Quy ước: phần dưới 1 Wh bị cắt bỏ (1.0005 kWh -> 1000) và kết quả đi qua `Number`
+ * nên mất chính xác với giá trị rất lớn (vd. 1e30 kWh). Hiện chưa được gọi trong src/.
  * @param {{value: string|number, unit: string}} param0 - Đối tượng số đo và đơn vị
  * @returns {number} - Giá trị số đo tính theo Wh
  */
