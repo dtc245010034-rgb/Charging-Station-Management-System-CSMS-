@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   recordMeterValue,
   recordMeterValues,
+  findLatestMeterValues,
   findLatestMeterValue,
   meterValueToWh,
 } = require('../../src/modules/sessions/meter-values.repository');
@@ -103,9 +104,30 @@ describe('meter values repository', () => {
     assert.deepEqual(calls[0].values, [12]);
   });
 
+  it('fetches the latest value independently for every meter stream', async () => {
+    const calls = [];
+    const latest = [{ measurand: 'Energy.Active.Import.Register', phase: '', context: '' }];
+    const db = {
+      async query(sql, values) {
+        calls.push({ sql, values });
+        return { rows: latest };
+      },
+    };
+
+    assert.equal(await findLatestMeterValues(db, 12), latest);
+    assert.match(calls[0].sql, /DISTINCT ON \(measurand, phase, context\)/);
+    assert.match(calls[0].sql, /reported_at = sampled_at/);
+    assert.match(calls[0].sql, /ORDER BY measurand, phase, context, sampled_at DESC, id DESC/);
+    assert.deepEqual(calls[0].values, [12]);
+  });
+
   it('converts the original Wh or kWh reading to Wh when read', () => {
     assert.equal(meterValueToWh({ value: '1250', unit: 'Wh' }), 1250);
     assert.equal(meterValueToWh({ value: '1.25', unit: 'kWh' }), 1250);
+    // FIX-05 & FIX-06: chống trôi số float và hỗ trợ chữ thường kwh/wh
+    assert.equal(meterValueToWh({ value: '1.005', unit: 'kWh' }), 1005);
+    assert.equal(meterValueToWh({ value: '1.005', unit: 'kwh' }), 1005);
+    assert.equal(meterValueToWh({ value: '250', unit: 'wh' }), 250);
   });
 
   it('rejects invalid readings instead of silently miscalculating', () => {

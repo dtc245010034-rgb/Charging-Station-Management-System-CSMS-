@@ -1,6 +1,14 @@
 const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
-const { recordMeterValues } = require('../../sessions/meter-values.repository');
+const { withTransaction } = require('../../../db/tx');
+const {
+  findLatestMeterValues,
+  recordMeterValues,
+} = require('../../sessions/meter-values.repository');
+const {
+  evaluateMeterReading,
+  isPlausibleMeterValue,
+} = require('../../sessions/meter-rules');
 
 const MAX_CONNECTOR_ID = 2147483647;
 const MAX_TRANSACTION_ID = 2147483647;
@@ -18,8 +26,6 @@ const DEFAULT_UNITS = {
   'Power.Active.Import': 'W',
   'Current.Import': 'A',
 };
-const DECIMAL_VALUE = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
-
 function getDefaultPool() {
   return require('../../../db/pool').ocppPool;
 }
@@ -81,10 +87,12 @@ function validatePayload(payload, now = Date.now) {
       }
       const measurand = sampledValue.measurand || 'Energy.Active.Import.Register';
       if (!SUPPORTED_MEASURANDS.has(measurand)) continue;
-      if (typeof sampledValue.value !== 'string'
-        || !DECIMAL_VALUE.test(sampledValue.value)
-        || !Number.isFinite(Number(sampledValue.value))) {
-        throw violation('Supported sampledValue.value must be a finite numeric string');
+      if (!isPlausibleMeterValue(
+        sampledValue.value,
+        measurand,
+        sampledValue.unit || DEFAULT_UNITS[measurand]
+      )) {
+        throw violation('Supported sampledValue.value must be a plausible non-negative numeric string');
       }
       const unit = sampledValue.unit === undefined ? DEFAULT_UNITS[measurand] : sampledValue.unit;
       if (typeof unit !== 'string' || unit.length === 0 || unit.length > MAX_UNIT_LENGTH) {
@@ -106,6 +114,9 @@ function validatePayload(payload, now = Date.now) {
         unit,
         phase,
         context,
+      });
+      Object.defineProperty(readings[readings.length - 1], 'clockSkew', {
+        value: isSkewed,
       });
     }
   }
@@ -165,60 +176,118 @@ async function persistMeterValues({
   logError,
 }) {
   try {
-    const connector = await db.query(
-      `SELECT c.id AS connector_id, cs.id AS session_id
-       FROM connectors c
-       LEFT JOIN charging_sessions cs
-         ON cs.connector_id = c.id
-        AND cs.status = 'CHARGING'
-        AND ($3::integer IS NULL OR cs.id = $3)
-       WHERE c.charge_point_id = $1
-         AND c.connector_no = $2
-       LIMIT 1`,
-      [chargePointId, payload.connectorId, payload.transactionId ?? null]
-    );
-    const sessionId = connector.rows[0]?.session_id;
+    const outcome = await withTransaction(async (client) => {
+      const connector = await client.query(
+        `SELECT c.id AS connector_id, cs.id AS session_id
+         FROM connectors c
+         LEFT JOIN charging_sessions cs
+           ON cs.connector_id = c.id
+          AND cs.status = 'CHARGING'
+          AND ($3::integer IS NULL OR cs.id = $3)
+         WHERE c.charge_point_id = $1
+           AND c.connector_no = $2
+         LIMIT 1
+         FOR UPDATE OF c`,
+        [chargePointId, payload.connectorId, payload.transactionId ?? null]
+      );
+      let sessionId = connector.rows[0]?.session_id;
 
-    if (!sessionId) {
-      let reason = connector.rowCount === 0 ? 'UNDECLARED_CONNECTOR' : 'NO_ACTIVE_SESSION';
-      if (payload.transactionId !== undefined && connector.rowCount > 0) {
-        const checkTx = await db.query(
-          `SELECT charge_point_id FROM charging_sessions WHERE id = $1`,
-          [payload.transactionId]
+      if (sessionId) {
+        const activeSession = await client.query(
+          `SELECT id FROM charging_sessions WHERE id = $1 AND status = 'CHARGING' FOR UPDATE`,
+          [sessionId]
         );
-        if (checkTx.rows?.[0] && String(checkTx.rows[0].charge_point_id) !== String(chargePointId)) {
-          reason = 'CHARGE_POINT_MISMATCH';
+        if (activeSession.rowCount === 0) sessionId = null;
+      }
+
+      if (!sessionId) {
+        let reason = connector.rowCount === 0 ? 'UNDECLARED_CONNECTOR' : 'NO_ACTIVE_SESSION';
+        if (payload.transactionId !== undefined && connector.rowCount > 0) {
+          const checkTx = await client.query(
+            `SELECT charge_point_id FROM charging_sessions WHERE id = $1`,
+            [payload.transactionId]
+          );
+          if (checkTx.rows?.[0] && String(checkTx.rows[0].charge_point_id) !== String(chargePointId)) {
+            reason = 'CHARGE_POINT_MISMATCH';
+          }
+        }
+        await client.query(
+          `INSERT INTO orphan_messages (charge_point_id, action, payload, reason)
+           VALUES ($1, 'MeterValues', $2::jsonb, $3)`,
+          [chargePointId, JSON.stringify(payload), reason]
+        );
+        return { orphanReason: reason, ignored: [], reviewReasons: [] };
+      }
+
+      const latestRows = await findLatestMeterValues(client, sessionId);
+      const latestByStream = new Map(
+        latestRows.map((row) => [streamKey(row), row])
+      );
+      const accepted = [];
+      const ignored = new Set();
+      const reviewReasons = new Set();
+
+      const readingsInTimeOrder = [...readings].sort(
+        (left, right) => Date.parse(left.sampledAt) - Date.parse(right.sampledAt)
+      );
+      for (const reading of readingsInTimeOrder) {
+        const key = streamKey(reading);
+        const decision = evaluateMeterReading(latestByStream.get(key), reading);
+        if (decision.action === 'ignore') {
+          if (decision.reason !== 'DUPLICATE') ignored.add(decision.reason);
+          continue;
+        }
+        if (decision.action === 'review') reviewReasons.add(decision.reason);
+
+        const storedReading = { ...reading, sourceMessageId };
+        accepted.push(storedReading);
+        if (!reading.clockSkew) {
+          latestByStream.set(key, {
+            ...storedReading,
+            sampled_at: storedReading.sampledAt,
+          });
         }
       }
-      await db.query(
-        `INSERT INTO orphan_messages (charge_point_id, action, payload, reason)
-         VALUES ($1, 'MeterValues', $2::jsonb, $3)`,
-        [chargePointId, JSON.stringify(payload), reason]
-      );
+
+      await recordMeterValues(client, sessionId, accepted);
+
+      const allReviewReasons = new Set(reviewReasons);
+      if (hasClockSkew) allReviewReasons.add('CLOCK_SKEW');
+      for (const reason of allReviewReasons) {
+        await client.query(
+          `UPDATE charging_sessions
+           SET needs_review = TRUE,
+               review_reason = CASE
+                 WHEN position($2 in COALESCE(review_reason, '')) > 0 THEN review_reason
+                 ELSE concat_ws('; ', NULLIF(review_reason, ''), $2)
+               END,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1`,
+          [sessionId, reason]
+        );
+      }
+      return { sessionId, ignored: [...ignored], reviewReasons: [...reviewReasons] };
+    }, db);
+
+    if (outcome.orphanReason) {
       logWarning(
-        `[OCPP] MeterValues bị cách ly | chargePoint: ${safeLog(code)} | connectorId: ${payload.connectorId} | reason: ${reason}`
+        `[OCPP] MeterValues bị cách ly | chargePoint: ${safeLog(code)} | connectorId: ${payload.connectorId} | reason: ${outcome.orphanReason}`
       );
       return;
     }
-
-    await recordMeterValues(
-      db,
-      sessionId,
-      readings.map((reading) => ({ ...reading, sourceMessageId }))
-    );
-
-    // D6: Nếu có lệch đồng hồ > 24h, bật cờ needs_review trên phiên sạc
-    if (hasClockSkew) {
-      await db.query(
-        `UPDATE charging_sessions
-         SET needs_review = TRUE,
-             review_reason = concat_ws('; ', NULLIF(review_reason, ''), 'CLOCK_SKEW'),
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $1`,
-        [sessionId]
-      );
+    for (const reason of outcome.ignored) {
       logWarning(
-        `[OCPP] MeterValues lệch giờ > 24h, bật needs_review | chargePoint: ${safeLog(code)} | session: ${sessionId}`
+        `[OCPP] MeterValues bị bỏ qua | chargePoint: ${safeLog(code)} | connectorId: ${payload.connectorId} | reason: ${reason}`
+      );
+    }
+    for (const reason of outcome.reviewReasons) {
+      logWarning(
+        `[OCPP] MeterValues cần xem xét | chargePoint: ${safeLog(code)} | session: ${outcome.sessionId} | reason: ${reason}`
+      );
+    }
+    if (hasClockSkew) {
+      logWarning(
+        `[OCPP] MeterValues lệch giờ > 24h, bật needs_review | chargePoint: ${safeLog(code)} | session: ${outcome.sessionId}`
       );
     }
   } catch (error) {
@@ -229,6 +298,14 @@ async function persistMeterValues({
     );
     throw new OcppCallError('InternalError', 'Internal error');
   }
+}
+
+function streamKey(reading) {
+  return JSON.stringify([
+    reading.measurand,
+    reading.phase || '',
+    reading.context || '',
+  ]);
 }
 
 module.exports = {

@@ -1,3 +1,5 @@
+const { parseToScaledBigInt, normalizeUnit } = require('./meter-rules');
+
 async function recordMeterValue(db, {
   sessionId,
   reportedAt,
@@ -51,6 +53,19 @@ async function recordMeterValues(db, sessionId, meterValues) {
   );
 }
 
+async function findLatestMeterValues(db, sessionId) {
+  const result = await db.query(
+    `SELECT DISTINCT ON (measurand, phase, context)
+       measurand, phase, context, sampled_at, value, COALESCE(raw_unit, unit) AS unit
+     FROM meter_values
+     WHERE session_id = $1
+       AND reported_at = sampled_at
+     ORDER BY measurand, phase, context, sampled_at DESC, id DESC`,
+    [sessionId]
+  );
+  return result.rows;
+}
+
 async function findLatestMeterValue(db, sessionId) {
   const result = await db.query(
     `SELECT id, session_id, sampled_at, measurand, value, COALESCE(raw_unit, unit) AS unit
@@ -63,15 +78,39 @@ async function findLatestMeterValue(db, sessionId) {
   return result.rows[0] || null;
 }
 
+/**
+ * Chuyển đổi số đo Wh hoặc kWh sang đơn vị Wh nguyên, không bị sai số dấu phẩy động.
+ * Quy ước: phần dưới 1 Wh bị cắt bỏ (1.0005 kWh -> 1000) và kết quả đi qua `Number`
+ * nên mất chính xác với giá trị rất lớn (vd. 1e30 kWh). Hiện chưa được gọi trong src/.
+ * @param {{value: string|number, unit: string}} param0 - Đối tượng số đo và đơn vị
+ * @returns {number} - Giá trị số đo tính theo Wh
+ */
 function meterValueToWh({ value, unit }) {
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) {
-    throw new TypeError('meter value must be a finite number');
-  }
-  if (unit !== 'Wh' && unit !== 'kWh') {
+  const normUnit = normalizeUnit(unit);
+  if (normUnit !== 'Wh' && normUnit !== 'kWh') {
     throw new TypeError(`Unsupported meter value unit: ${unit}`);
   }
-  return unit === 'kWh' ? numericValue * 1000 : numericValue;
+  try {
+    const whBigInt = normUnit === 'kWh'
+      ? parseToScaledBigInt(value, 3)
+      : parseToScaledBigInt(value, 0);
+    const num = Number(whBigInt);
+    if (!Number.isFinite(num)) {
+      throw new TypeError('meter value must be a finite number');
+    }
+    return num;
+  } catch (err) {
+    if (err instanceof TypeError) {
+      throw new TypeError('meter value must be a finite number');
+    }
+    throw err;
+  }
 }
 
-module.exports = { recordMeterValue, recordMeterValues, findLatestMeterValue, meterValueToWh };
+module.exports = {
+  recordMeterValue,
+  recordMeterValues,
+  findLatestMeterValues,
+  findLatestMeterValue,
+  meterValueToWh,
+};

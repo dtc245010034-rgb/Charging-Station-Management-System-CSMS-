@@ -83,8 +83,13 @@ async function purgeOldMessages() {
 	try {
 		const removed = await messageStore.purgeOlderThan(env.OCPP_MESSAGE_RETENTION_DAYS);
 		if (removed > 0) console.log(`[CSMS] Đã dọn ${removed} tin OCPP cũ hơn ${env.OCPP_MESSAGE_RETENTION_DAYS} ngày`);
+		const orphanPurged = await pool.query(
+			"DELETE FROM orphan_messages WHERE received_at < CURRENT_TIMESTAMP - make_interval(days => $1::int)",
+			[env.OCPP_MESSAGE_RETENTION_DAYS]
+		);
+		if (orphanPurged.rowCount > 0) console.log(`[CSMS] Đã dọn ${orphanPurged.rowCount} tin orphan_messages cũ hơn ${env.OCPP_MESSAGE_RETENTION_DAYS} ngày`);
 	} catch (error) {
-		console.error('[CSMS] Lỗi dọn bảng ocpp_messages:', sanitizeErrorMessage(error?.message || error));
+		console.error('[CSMS] Lỗi dọn bảng ocpp_messages / orphan_messages:', sanitizeErrorMessage(error?.message || error));
 	}
 }
 

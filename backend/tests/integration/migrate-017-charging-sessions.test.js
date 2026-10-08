@@ -6,7 +6,7 @@ const tableSessions = async () => (await query("SELECT to_regclass('public.charg
 const tableMeterValues = async () => (await query("SELECT to_regclass('public.meter_values') AS t")).rows[0].t;
 const tableOrphanMessages = async () => (await query("SELECT to_regclass('public.orphan_messages') AS t")).rows[0].t;
 
-describe('migration 017-023: charging_sessions, meter_values, orphan_messages, transaction_data', () => {
+describe('migration 017-024: charging_sessions, meter_values, orphan_messages, transaction_data', () => {
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
@@ -29,6 +29,10 @@ describe('migration 017-023: charging_sessions, meter_values, orphan_messages, t
       "SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_meter_values_session_reported_desc'"
     );
     assert.match(meterValuesIndex.rows[0].indexdef, /\(session_id, reported_at DESC\)/);
+    const streamLatestIndex = await query(
+      "SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_meter_values_stream_latest'"
+    );
+    assert.match(streamLatestIndex.rows[0].indexdef, /\(session_id, measurand, phase, context, sampled_at DESC, id DESC\)/);
 
     const transactionDataColumn = await query(
       "SELECT data_type FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name = 'transaction_data'"
@@ -54,8 +58,14 @@ describe('migration 017-023: charging_sessions, meter_values, orphan_messages, t
     );
   });
 
-  it('down: rollback lần lượt 023, 022, 019, 018, 017 và up lại sạch sẽ', async () => {
+  it('down: rollback lần lượt 024, 023, 022, 019, 018, 017 và up lại sạch sẽ', async () => {
     const rollbackChecks = [
+      { version: '024_meter_values_stream_latest_index', check: async () => {
+        const index = await query(
+          "SELECT indexname FROM pg_indexes WHERE indexname = 'idx_meter_values_stream_latest'"
+        );
+        assert.equal(index.rows.length, 0);
+      } },
       { version: '023_transaction_data', check: async () => {
         const column = await query(
           "SELECT column_name FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name = 'transaction_data'"

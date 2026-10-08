@@ -14,6 +14,14 @@ const { createOcppHandlers } = require('../../src/modules/ocpp/handlers');
 const { createOcppMessageHandler } = require('../../src/modules/ocpp/message-handler');
 const { OcppCallError } = require('../../src/modules/ocpp/frames');
 
+function transactionalPool(query) {
+  return {
+    async connect() {
+      return { query, release() {} };
+    },
+  };
+}
+
 const samplePayload = {
   connectorId: 1,
   transactionId: 1000,
@@ -90,13 +98,12 @@ describe('MeterValues handler (T-41)', () => {
   it('synchronously looks up connector and inserts supported samples in one bulk query before returning CALLRESULT (D5)', async () => {
     const calls = [];
     const handler = createMeterValuesHandler({
-      pool: {
-        async query(sql, params) {
+      pool: transactionalPool(async (sql, params) => {
           calls.push({ sql, params });
           if (sql.includes('FROM connectors c')) return { rowCount: 1, rows: [{ connector_id: 3, session_id: 44 }] };
+          if (sql.includes('FROM charging_sessions WHERE id = $1 AND status')) return { rowCount: 1, rows: [{ id: 44 }] };
           return { rowCount: 4, rows: [] };
-        },
-      },
+        }),
       now: () => Date.parse('2026-09-28T20:31:27.905Z'),
     });
 
@@ -104,24 +111,23 @@ describe('MeterValues handler (T-41)', () => {
       await handler(samplePayload, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } }),
       {}
     );
-    assert.equal(calls.length, 2);
-    assert.match(calls[0].sql, /LEFT JOIN charging_sessions/);
-    assert.deepEqual(calls[0].params, [8, 1, 1000]);
-    assert.equal((calls[1].sql.match(/\(\$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+\)/g) || []).length, 4);
-    assert.match(calls[1].sql, /ON CONFLICT \(session_id, reported_at, measurand, phase, context\) DO NOTHING/);
-    assert.deepEqual(calls[1].params.slice(0, 6), [44, '2026-09-28T20:31:27.905Z', '2026-09-28T20:31:27.905Z', 'Energy.Active.Import.Register', '61', 'Wh']);
+    const connectorCall = calls.find((call) => call.sql.includes('FROM connectors c'));
+    const insertCall = calls.find((call) => call.sql.includes('INSERT INTO meter_values'));
+    assert.deepEqual(connectorCall.params, [8, 1, 1000]);
+    assert.equal((insertCall.sql.match(/\(\$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+\)/g) || []).length, 4);
+    assert.match(insertCall.sql, /ON CONFLICT \(session_id, reported_at, measurand, phase, context\) DO NOTHING/);
+    assert.deepEqual(insertCall.params.slice(0, 6), [44, '2026-09-28T20:31:27.905Z', '2026-09-28T20:31:27.905Z', 'Energy.Active.Import.Register', '61', 'Wh']);
   });
 
   it('stores all samples from each periodic request with a separate batch insert', async () => {
     let batchInserts = 0;
     const handler = createMeterValuesHandler({
-      pool: {
-        async query(sql) {
+      pool: transactionalPool(async (sql) => {
           if (sql.includes('FROM connectors c')) return { rowCount: 1, rows: [{ connector_id: 3, session_id: 44 }] };
+          if (sql.includes('FROM charging_sessions WHERE id = $1 AND status')) return { rowCount: 1, rows: [{ id: 44 }] };
           if (sql.includes('INSERT INTO meter_values')) batchInserts += 1;
           return { rowCount: 1, rows: [] };
-        },
-      },
+        }),
       now: () => Date.parse('2026-09-28T20:31:27.905Z'),
     });
     const connection = { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } };
@@ -135,15 +141,15 @@ describe('MeterValues handler (T-41)', () => {
     const events = [];
     const handlers = {
       MeterValues: createMeterValuesHandler({
-        pool: {
-          async query(sql) {
+        pool: transactionalPool(async (sql) => {
+            if (sql === 'COMMIT') events.push('transaction committed');
             if (sql.includes('FROM connectors c')) {
               events.push('database lookup');
               return { rowCount: 1, rows: [{ connector_id: 3, session_id: 44 }] };
             }
+            if (sql.includes('FROM charging_sessions WHERE id = $1 AND status')) return { rowCount: 1, rows: [{ id: 44 }] };
             return { rowCount: 1, rows: [] };
-          },
-        },
+          }),
         now: () => Date.parse('2026-09-28T20:31:27.905Z'),
       }),
     };
@@ -174,6 +180,7 @@ describe('MeterValues handler (T-41)', () => {
     );
     assert.deepEqual(events, [
       'database lookup',
+      'transaction committed',
       'dedupe save started',
       'dedupe save completed',
       'CALLRESULT sent',
@@ -183,14 +190,12 @@ describe('MeterValues handler (T-41)', () => {
   it('writes readings for an idle connector to orphan_messages synchronously before acknowledging (D5)', async () => {
     const calls = [];
     const handler = createMeterValuesHandler({
-      pool: {
-        async query(sql, params) {
+      pool: transactionalPool(async (sql, params) => {
           calls.push({ sql, params });
           return sql.includes('FROM connectors c')
             ? { rowCount: 1, rows: [{ connector_id: 3, session_id: null }] }
             : { rowCount: 1, rows: [] };
-        },
-      },
+        }),
       now: () => Date.parse('2026-09-28T20:31:27.905Z'),
       logWarning: () => {},
     });
@@ -199,23 +204,22 @@ describe('MeterValues handler (T-41)', () => {
       await handler(samplePayload, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } }),
       {}
     );
-    assert.equal(calls.length, 3);
-    assert.match(calls[2].sql, /INSERT INTO orphan_messages/);
-    assert.equal(calls[2].params[2], 'NO_ACTIVE_SESSION');
-    assert.equal(JSON.parse(calls[2].params[1]).meterValue.length, 2);
+    const orphanCall = calls.find((call) => call.sql.includes('INSERT INTO orphan_messages'));
+    assert.ok(orphanCall);
+    assert.equal(orphanCall.params[2], 'NO_ACTIVE_SESSION');
+    assert.equal(JSON.parse(orphanCall.params[1]).meterValue.length, 2);
   });
 
   it('enforces D6 clock skew: replaces timestamp > 24h with receivedAt and flags needs_review', async () => {
     const calls = [];
     const fixedNow = new Date('2026-10-07T12:00:00.000Z');
     const handler = createMeterValuesHandler({
-      pool: {
-        async query(sql, params) {
+      pool: transactionalPool(async (sql, params) => {
           calls.push({ sql, params });
           if (sql.includes('FROM connectors c')) return { rowCount: 1, rows: [{ connector_id: 3, session_id: 44 }] };
+          if (sql.includes('FROM charging_sessions WHERE id = $1 AND status')) return { rowCount: 1, rows: [{ id: 44 }] };
           return { rowCount: 1, rows: [] };
-        },
-      },
+        }),
       now: () => fixedNow,
     });
 
@@ -231,36 +235,167 @@ describe('MeterValues handler (T-41)', () => {
     };
 
     await handler(skewedPayload, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } });
-    assert.equal(calls.length, 3);
-    // call 1: select connector
-    // call 2: insert meter_values with the original reported timestamp and normalized sampled_at
-    assert.match(calls[1].sql, /INSERT INTO meter_values/);
-    assert.equal(calls[1].params[1], '1970-01-01T00:00:00.000Z');
-    assert.equal(calls[1].params[2], fixedNow.toISOString());
-    // call 3: update charging_sessions with needs_review and CLOCK_SKEW
-    assert.match(calls[2].sql, /UPDATE charging_sessions\s+SET needs_review = TRUE/);
-    assert.deepEqual(calls[2].params, [44]);
+    const insertCall = calls.find((call) => call.sql.includes('INSERT INTO meter_values'));
+    const reviewCall = calls.find((call) => call.sql.includes('UPDATE charging_sessions'));
+    assert.equal(insertCall.params[1], '1970-01-01T00:00:00.000Z');
+    assert.equal(insertCall.params[2], fixedNow.toISOString());
+    assert.match(reviewCall.sql, /UPDATE charging_sessions\s+SET needs_review = TRUE/);
+    assert.deepEqual(reviewCall.params, [44, 'CLOCK_SKEW']);
+  });
+
+  it('applies S-20 in a locked session transaction and warns only for non-identical ignored samples', async () => {
+    const calls = [];
+    const warnings = [];
+    const fixedNow = Date.parse('2026-10-08T10:01:00.000Z');
+    const handler = createMeterValuesHandler({
+      pool: transactionalPool(async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('FROM connectors c')) return { rowCount: 1, rows: [{ connector_id: 3, session_id: 44 }] };
+        if (sql.includes('FROM charging_sessions WHERE id = $1 AND status')) return { rowCount: 1, rows: [{ id: 44 }] };
+        if (sql.includes('DISTINCT ON (measurand, phase, context)')) {
+          return {
+            rowCount: 1,
+            rows: [{
+              measurand: 'Energy.Active.Import.Register',
+              phase: '',
+              context: 'S-20.Unit',
+              sampled_at: '2026-10-08T10:00:00.000Z',
+              value: '1000',
+              unit: 'Wh',
+            }],
+          };
+        }
+        return { rowCount: 1, rows: [] };
+      }),
+      now: () => fixedNow,
+      logWarning: (message) => warnings.push(message),
+    });
+
+    await handler({
+      connectorId: 1,
+      transactionId: 1000,
+      meterValue: [
+        {
+          timestamp: '2026-10-08T09:59:00.000Z',
+          sampledValue: [{
+            value: '900',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.Unit',
+          }],
+        },
+        {
+          timestamp: '2026-10-08T10:00:00.000Z',
+          sampledValue: [{
+            value: '1000.0',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.Unit',
+          }],
+        },
+        {
+          timestamp: '2026-10-08T10:00:00.000Z',
+          sampledValue: [{
+            value: '1001',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.Unit',
+          }],
+        },
+        {
+          timestamp: '2026-10-08T10:00:30.000Z',
+          sampledValue: [{
+            value: '999',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.Unit',
+          }],
+        },
+      ],
+    }, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } });
+
+    const sessionLock = calls.find((call) => call.sql.includes("status = 'CHARGING' FOR UPDATE"));
+    assert.ok(sessionLock, 'session row must be locked before reading its latest values');
+    const insert = calls.find((call) => call.sql.includes('INSERT INTO meter_values'));
+    assert.equal((insert.sql.match(/\(\$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+\)/g) || []).length, 1);
+    assert.equal(insert.params[4], '999');
+    assert.equal(warnings.filter((message) => message.includes('reason: OLDER_TIMESTAMP')).length, 1);
+    assert.equal(warnings.filter((message) => message.includes('reason: CONFLICTING_TIMESTAMP')).length, 1);
+    assert.equal(warnings.filter((message) => message.includes('reason: METER_VALUE_DECREASE')).length, 1);
+    assert.equal(warnings.some((message) => message.includes('reason: DUPLICATE')), false);
+  });
+
+  it('processes samples inside a payload in sampled-time order', async () => {
+    const calls = [];
+    const handler = createMeterValuesHandler({
+      pool: transactionalPool(async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('FROM connectors c')) return { rowCount: 1, rows: [{ connector_id: 3, session_id: 44 }] };
+        if (sql.includes('FROM charging_sessions WHERE id = $1 AND status')) return { rowCount: 1, rows: [{ id: 44 }] };
+        if (sql.includes('DISTINCT ON (measurand, phase, context)')) return { rowCount: 0, rows: [] };
+        return { rowCount: 3, rows: [] };
+      }),
+      now: () => Date.parse('2026-10-08T10:05:00.000Z'),
+    });
+
+    await handler({
+      connectorId: 1,
+      transactionId: 1000,
+      meterValue: [
+        {
+          timestamp: '2026-10-08T10:03:00.000Z',
+          sampledValue: [{
+            value: '1300',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+        {
+          timestamp: '2026-10-08T10:01:00.000Z',
+          sampledValue: [{
+            value: '1000',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+        {
+          timestamp: '2026-10-08T10:02:00.000Z',
+          sampledValue: [{
+            value: '1100',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+      ],
+    }, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } });
+
+    const insert = calls.find((call) => call.sql.includes('INSERT INTO meter_values'));
+    assert.deepEqual(
+      insert.params.filter((_, index) => index % 10 === 4),
+      ['1000', '1100', '1300']
+    );
   });
 
   it('records CHARGE_POINT_MISMATCH when transaction belongs to another charge point (D12)', async () => {
     const calls = [];
     const handler = createMeterValuesHandler({
-      pool: {
-        async query(sql, params) {
+      pool: transactionalPool(async (sql, params) => {
           calls.push({ sql, params });
           if (sql.includes('FROM connectors c')) return { rowCount: 1, rows: [{ connector_id: 3, session_id: null }] };
           if (sql.includes('SELECT charge_point_id FROM charging_sessions')) return { rowCount: 1, rows: [{ charge_point_id: 99 }] };
           return { rowCount: 1, rows: [] };
-        },
-      },
+        }),
       now: () => Date.parse('2026-09-28T20:31:27.905Z'),
       logWarning: () => {},
     });
 
     await handler(samplePayload, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } });
-    assert.equal(calls.length, 3);
-    assert.match(calls[2].sql, /INSERT INTO orphan_messages/);
-    assert.equal(calls[2].params[2], 'CHARGE_POINT_MISMATCH');
+    const orphanCall = calls.find((call) => call.sql.includes('INSERT INTO orphan_messages'));
+    assert.ok(orphanCall);
+    assert.equal(orphanCall.params[2], 'CHARGE_POINT_MISMATCH');
   });
 
   it('rejects malformed payloads with OCPP constraint errors and respects array size limits', () => {
@@ -279,6 +414,32 @@ describe('MeterValues handler (T-41)', () => {
       }),
       (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
     );
+    assert.throws(
+      () => validatePayload({
+        ...samplePayload,
+        meterValue: [{
+          timestamp: '2026-09-28T20:31:27.905Z',
+          sampledValue: [{ value: '1e-1000000000' }],
+        }],
+      }),
+      (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
+    );
+    for (const value of ['1e200', '1e-130', '-1', '1000000000001']) {
+      assert.throws(
+        () => validatePayload({
+          ...samplePayload,
+          meterValue: [{
+            timestamp: '2026-09-28T20:31:27.905Z',
+            sampledValue: [{
+              value,
+              measurand: 'Energy.Active.Import.Register',
+              unit: 'Wh',
+            }],
+          }],
+        }),
+        (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
+      );
+    }
     // Overflow meterValue length
     const tooManyMeterValues = Array(MAX_METER_VALUES + 1).fill({
       timestamp: '2026-09-28T20:31:27.905Z',

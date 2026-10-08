@@ -304,6 +304,249 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
     assert.equal(checkDb.length, 1, 'Dữ liệu số đo phải được ghi đồng bộ trong DB trước khi nhận CALLRESULT');
   });
 
+  it('S-20 bỏ qua số đo cũ/trùng, giữ số đo cùng mốc đầu tiên và đánh dấu số đo năng lượng lùi', async () => {
+    const baseTime = Date.now() - 5000;
+    const timestamp = (offset) => new Date(baseTime + offset).toISOString();
+    const sendEnergy = (messageId, sampledAt, value) => sendCall(client, messageId, 'MeterValues', {
+      connectorId: 1,
+      transactionId,
+      meterValue: [{
+        timestamp: sampledAt,
+        sampledValue: [{
+          value: String(value),
+          measurand: 'Energy.Active.Import.Register',
+          unit: 'Wh',
+          context: 'S-20.Integration',
+        }],
+      }],
+    });
+
+    assert.deepEqual(await sendEnergy('s20-first', timestamp(0), 2000), [3, 's20-first', {}]);
+    assert.deepEqual(await sendEnergy('s20-older', timestamp(-1000), 1900), [3, 's20-older', {}]);
+    assert.deepEqual(await sendEnergy('s20-duplicate', timestamp(0), 2000), [3, 's20-duplicate', {}]);
+    assert.deepEqual(await sendEnergy('s20-conflict', timestamp(0), 2100), [3, 's20-conflict', {}]);
+    assert.deepEqual(await sendEnergy('s20-lower', timestamp(1000), 1999), [3, 's20-lower', {}]);
+
+    const readings = (await query(
+      `SELECT source_message_id, value
+       FROM meter_values
+       WHERE session_id = $1 AND context = 'S-20.Integration'
+       ORDER BY reported_at`,
+      [transactionId]
+    )).rows;
+    assert.deepEqual(readings, [
+      { source_message_id: 's20-first', value: '2000' },
+      { source_message_id: 's20-lower', value: '1999' },
+    ]);
+
+    const session = (await query(
+      'SELECT needs_review, review_reason FROM charging_sessions WHERE id = $1',
+      [transactionId]
+    )).rows[0];
+    assert.equal(session.needs_review, true);
+    assert.match(session.review_reason, /METER_VALUE_DECREASE/);
+  });
+
+  it('sắp xếp số đo đến không theo thứ tự thời gian trước khi áp dụng quy tắc S-20', async () => {
+    const baseTime = Date.now() - 5000;
+    const timestamp = (offset) => new Date(baseTime + offset).toISOString();
+    const res = await sendCall(client, 's20-out-of-order-batch', 'MeterValues', {
+      connectorId: 1,
+      transactionId,
+      meterValue: [
+        {
+          timestamp: timestamp(3000),
+          sampledValue: [{
+            value: '1300',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+        {
+          timestamp: timestamp(1000),
+          sampledValue: [{
+            value: '1000',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+        {
+          timestamp: timestamp(2000),
+          sampledValue: [{
+            value: '1100',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.OutOfOrder',
+          }],
+        },
+      ],
+    });
+    assert.deepEqual(res, [3, 's20-out-of-order-batch', {}]);
+
+    const readings = (await query(
+      `SELECT value
+       FROM meter_values
+       WHERE session_id = $1 AND context = 'S-20.OutOfOrder'
+       ORDER BY sampled_at`,
+      [transactionId]
+    )).rows;
+    assert.deepEqual(readings.map((reading) => reading.value), ['1000', '1100', '1300']);
+  });
+
+  it('rejects extreme values and continues processing after legacy NUMERIC outliers', async () => {
+    const baseTime = Date.now() - 5000;
+    const streams = [
+      { context: 'S-20.LegacyHuge', value: '1e200' },
+      { context: 'S-20.LegacyTiny', value: '1e-130' },
+    ];
+
+    for (const { context, value } of streams) {
+      await query(
+        `INSERT INTO meter_values (
+           session_id, reported_at, sampled_at, measurand, value, unit, raw_unit, phase, context
+         ) VALUES ($1, $2, $2, 'Energy.Active.Import.Register', $3, 'Wh', 'Wh', '', $4)`,
+        [transactionId, new Date(baseTime).toISOString(), value, context]
+      );
+
+      const rejected = await sendCall(client, `s20-reject-${context}`, 'MeterValues', {
+        connectorId: 1,
+        transactionId,
+        meterValue: [{
+          timestamp: new Date(baseTime + 1000).toISOString(),
+          sampledValue: [{
+            value,
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context,
+          }],
+        }],
+      });
+      assert.equal(rejected[0], 4);
+      assert.equal(rejected[2], 'PropertyConstraintViolation');
+
+      for (const [index, normalValue] of ['1000', '1100'].entries()) {
+        const messageId = `s20-after-outlier-${context}-${index}`;
+        assert.deepEqual(await sendCall(client, messageId, 'MeterValues', {
+          connectorId: 1,
+          transactionId,
+          meterValue: [{
+            timestamp: new Date(baseTime + (index + 2) * 1000).toISOString(),
+            sampledValue: [{
+              value: normalValue,
+              measurand: 'Energy.Active.Import.Register',
+              unit: 'Wh',
+              context,
+            }],
+          }],
+        }), [3, messageId, {}]);
+      }
+    }
+
+    for (const { context } of streams) {
+      const readings = (await query(
+        `SELECT value
+         FROM meter_values
+         WHERE session_id = $1 AND context = $2
+         ORDER BY sampled_at DESC
+         LIMIT 2`,
+        [transactionId, context]
+      )).rows;
+      assert.deepEqual(readings.map((reading) => reading.value), ['1100', '1000']);
+    }
+  });
+
+  it('giữ đủ các mẫu khác thời điểm gốc khi đồng hồ trụ lệch quá 24 giờ', async () => {
+    const res = await sendCall(client, 's20-skewed-batch', 'MeterValues', {
+      connectorId: 1,
+      transactionId,
+      meterValue: [
+        {
+          timestamp: '1970-01-01T00:00:00.000Z',
+          sampledValue: [{
+            value: '3000',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.ClockSkew',
+          }],
+        },
+        {
+          timestamp: '1970-01-01T00:00:10.000Z',
+          sampledValue: [{
+            value: '3010',
+            measurand: 'Energy.Active.Import.Register',
+            unit: 'Wh',
+            context: 'S-20.ClockSkew',
+          }],
+        },
+      ],
+    });
+    assert.deepEqual(res, [3, 's20-skewed-batch', {}]);
+
+    const readings = (await query(
+      `SELECT value, reported_at, sampled_at
+       FROM meter_values
+       WHERE session_id = $1 AND context = 'S-20.ClockSkew'
+       ORDER BY reported_at`,
+      [transactionId]
+    )).rows;
+    assert.deepEqual(readings.map((reading) => reading.value), ['3000', '3010']);
+    assert.equal(readings[0].sampled_at.getTime(), readings[1].sampled_at.getTime());
+  });
+
+  it('không đánh dấu needs_review khi Power hoặc Current giảm tại mốc mới hơn', async () => {
+    const connector2Id = (await query(
+      'SELECT id FROM connectors WHERE charge_point_id = $1 AND connector_no = 2',
+      [chargePointId]
+    )).rows[0].id;
+    const session2Id = (await query(
+      `INSERT INTO charging_sessions (charge_point_id, connector_id, connector_no, id_tag_masked, meter_start, started_at, status)
+       VALUES ($1, $2, 2, '***0002', 1000, CURRENT_TIMESTAMP, 'CHARGING')
+       RETURNING id`,
+      [chargePointId, connector2Id]
+    )).rows[0].id;
+    const timestamp = new Date(Date.now() - 3000).toISOString();
+    for (const [measurand, unit, firstValue, lowerValue] of [
+      ['Power.Active.Import', 'W', '5000', '4000'],
+      ['Current.Import', 'A', '32', '30'],
+    ]) {
+      assert.deepEqual(await sendCall(client, `s20-${measurand}-first`, 'MeterValues', {
+        connectorId: 2,
+        transactionId: session2Id,
+        meterValue: [{
+          timestamp,
+          sampledValue: [{ value: firstValue, measurand, unit, context: `S-20.${measurand}` }],
+        }],
+      }), [3, `s20-${measurand}-first`, {}]);
+      assert.deepEqual(await sendCall(client, `s20-${measurand}-lower`, 'MeterValues', {
+        connectorId: 2,
+        transactionId: session2Id,
+        meterValue: [{
+          timestamp: new Date(Date.parse(timestamp) + 1000).toISOString(),
+          sampledValue: [{ value: lowerValue, measurand, unit, context: `S-20.${measurand}` }],
+        }],
+      }), [3, `s20-${measurand}-lower`, {}]);
+    }
+
+    const readings = (await query(
+      'SELECT measurand, value FROM meter_values WHERE session_id = $1 ORDER BY measurand, sampled_at',
+      [session2Id]
+    )).rows;
+    assert.deepEqual(readings, [
+      { measurand: 'Current.Import', value: '32' },
+      { measurand: 'Current.Import', value: '30' },
+      { measurand: 'Power.Active.Import', value: '5000' },
+      { measurand: 'Power.Active.Import', value: '4000' },
+    ]);
+    const session = (await query(
+      'SELECT needs_review, review_reason FROM charging_sessions WHERE id = $1',
+      [session2Id]
+    )).rows[0];
+    assert.equal(session.needs_review, false);
+    assert.doesNotMatch(session.review_reason || '', /METER_VALUE_DECREASE/);
+  });
+
   it('từ chối payload sai định dạng hoặc vượt quá giới hạn mảng', async () => {
     const errNegativeConn = await sendCall(client, 'mv-err-conn', 'MeterValues', {
       connectorId: -1,
