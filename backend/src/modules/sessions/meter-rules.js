@@ -16,6 +16,13 @@ function isValidMeterDecimal(value) {
     && Number.isFinite(Number(value));
 }
 
+/**
+ * Kiểm tra xem giá trị số đo có nằm trong ngưỡng vật lý hợp lệ theo chuẩn OCPP không.
+ * @param {string} value - Chuỗi số đo
+ * @param {string} measurand - Loại đại lượng đo
+ * @param {string} unit - Đơn vị đo
+ * @returns {boolean} - true nếu hợp lệ
+ */
 function isPlausibleMeterValue(value, measurand, unit) {
   if (!isValidMeterDecimal(value)) return false;
   const parts = decimalParts(value);
