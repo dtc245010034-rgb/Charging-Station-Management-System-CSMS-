@@ -68,6 +68,15 @@ function compareDecimals(left, right) {
   return (leftValue < rightValue ? -1 : 1) * a.sign;
 }
 
+function normalizeUnit(unit) {
+  if (typeof unit !== 'string') return unit;
+  const trimmed = unit.trim();
+  const upper = trimmed.toUpperCase();
+  if (upper === 'KWH') return 'kWh';
+  if (upper === 'WH') return 'Wh';
+  return trimmed;
+}
+
 function toEpochMs(timestamp) {
   if (timestamp instanceof Date) return timestamp.getTime();
   if (typeof timestamp === 'number' && Number.isFinite(timestamp)) return timestamp;
