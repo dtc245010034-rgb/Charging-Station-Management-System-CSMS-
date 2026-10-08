@@ -193,4 +193,10 @@ describe('normalizeUnit', () => {
   it('maps lowercase kwh to standard kWh', () => {
     assert.equal(normalizeUnit('kwh'), 'kWh');
   });
+
+  it('maps lowercase wh to standard Wh and trims whitespace', () => {
+    assert.equal(normalizeUnit('wh'), 'Wh');
+    assert.equal(normalizeUnit(' KWH '), 'kWh');
+    assert.equal(normalizeUnit('  Wh  '), 'Wh');
+  });
 });
