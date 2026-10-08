@@ -79,14 +79,25 @@ async function findLatestMeterValue(db, sessionId) {
 }
 
 function meterValueToWh({ value, unit }) {
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) {
-    throw new TypeError('meter value must be a finite number');
-  }
-  if (unit !== 'Wh' && unit !== 'kWh') {
+  const normUnit = normalizeUnit(unit);
+  if (normUnit !== 'Wh' && normUnit !== 'kWh') {
     throw new TypeError(`Unsupported meter value unit: ${unit}`);
   }
-  return normUnit === 'kWh' ? numericValue * 1000 : numericValue;
+  try {
+    const whBigInt = normUnit === 'kWh'
+      ? parseToScaledBigInt(value, 3)
+      : parseToScaledBigInt(value, 0);
+    const num = Number(whBigInt);
+    if (!Number.isFinite(num)) {
+      throw new TypeError('meter value must be a finite number');
+    }
+    return num;
+  } catch (err) {
+    if (err instanceof TypeError) {
+      throw new TypeError('meter value must be a finite number');
+    }
+    throw err;
+  }
 }
 
 module.exports = {
