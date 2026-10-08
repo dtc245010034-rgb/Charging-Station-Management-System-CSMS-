@@ -26,7 +26,7 @@ async function recordMeterValues(db, sessionId, meterValues) {
 
   const values = [];
   const rows = meterValues.map((meterValue, index) => {
-    const offset = index * 9;
+    const offset = index * 10;
     values.push(
       sessionId,
       meterValue.reportedAt,
@@ -34,11 +34,12 @@ async function recordMeterValues(db, sessionId, meterValues) {
       meterValue.measurand,
       meterValue.value,
       meterValue.unit,
+      meterValue.unit,
       meterValue.phase,
       meterValue.context,
       meterValue.sourceMessageId
     );
-    return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9})`;
+    return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10})`;
   });
 
   await db.query(

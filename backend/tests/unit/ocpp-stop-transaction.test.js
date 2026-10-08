@@ -19,6 +19,7 @@ function validPayload(overrides = {}) {
 describe('S-18 StopTransaction handler', () => {
   it('chốt phiên theo transactionId/trụ, giữ số đo, timestamp và lý do', async () => {
     let update;
+    const transactionData = [{ timestamp: new Date(NOW).toISOString(), value: 1250, unit: 'Wh' }];
     const handler = createStopTransactionHandler({
       pool: {
         query: async (sql, params) => {
@@ -30,9 +31,9 @@ describe('S-18 StopTransaction handler', () => {
       logError: () => {},
     });
 
-    assert.deepEqual(await handler(validPayload(), { connection: CONNECTION }), {});
+    assert.deepEqual(await handler(validPayload({ transactionData }), { connection: CONNECTION }), {});
     assert.match(update.sql, /WHERE id = \$1\s+AND charge_point_id = \$6\s+AND status = 'CHARGING'/);
-    assert.deepEqual(update.params, [17, 1250, new Date(NOW).toISOString(), 'Remote', false, 42]);
+    assert.deepEqual(update.params, [17, 1250, new Date(NOW).toISOString(), 'Remote', false, 42, JSON.stringify(transactionData)]);
     assert.match(update.sql, /meter_start > \$2/);
     assert.match(update.sql, /status = 'COMPLETED'/);
   });

@@ -79,8 +79,8 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
     assert.deepEqual(res, [3, 'mv-supported', {}]);
 
     const readings = (await query(
-      'SELECT measurand, value, unit FROM meter_values WHERE session_id = $1 ORDER BY id ASC',
-      [transactionId]
+      'SELECT measurand, value, unit FROM meter_values WHERE session_id = $1 AND source_message_id = $2 ORDER BY id ASC',
+      [transactionId, 'mv-supported']
     )).rows;
 
     assert.equal(readings.length, 3);
@@ -111,8 +111,8 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
 
     assert.deepEqual(res, [3, 'mv-phases', {}]);
     const readings = (await query(
-      'SELECT phase, value FROM meter_values WHERE session_id = $1 ORDER BY phase',
-      [transactionId]
+      'SELECT phase, value FROM meter_values WHERE session_id = $1 AND source_message_id = $2 ORDER BY phase',
+      [transactionId, 'mv-phases']
     )).rows;
     assert.deepEqual(readings, [
       { phase: 'L1', value: '100' },
@@ -137,8 +137,8 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
     assert.deepEqual(first, [3, 'mv-duplicate-1', {}]);
     assert.deepEqual(second, [3, 'mv-duplicate-2', {}]);
     const readings = (await query(
-      'SELECT value, source_message_id FROM meter_values WHERE session_id = $1 AND measurand = $2',
-      [transactionId, 'Energy.Active.Import.Register']
+      'SELECT value, source_message_id FROM meter_values WHERE session_id = $1 AND source_message_id IN ($2, $3)',
+      [transactionId, 'mv-duplicate-1', 'mv-duplicate-2']
     )).rows;
     assert.deepEqual(readings, [{ value: '500', source_message_id: 'mv-duplicate-1' }]);
   });
@@ -159,8 +159,8 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
     assert.deepEqual(first, [3, 'mv-null-duplicate-1', {}]);
     assert.deepEqual(second, [3, 'mv-null-duplicate-2', {}]);
     const readings = (await query(
-      'SELECT value, phase, context, source_message_id FROM meter_values WHERE session_id = $1 AND measurand = $2',
-      [transactionId, 'Energy.Active.Import.Register']
+      'SELECT value, phase, context, source_message_id FROM meter_values WHERE session_id = $1 AND source_message_id IN ($2, $3)',
+      [transactionId, 'mv-null-duplicate-1', 'mv-null-duplicate-2']
     )).rows;
     assert.deepEqual(readings, [{
       value: '600',

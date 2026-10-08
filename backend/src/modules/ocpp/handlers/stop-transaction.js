@@ -99,6 +99,7 @@ function createStopTransactionHandler({
                WHEN $5::boolean THEN concat_ws('; ', NULLIF(review_reason, ''), 'CLOCK_SKEW')
                ELSE review_reason
              END,
+             transaction_data = $7::jsonb,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1
            AND charge_point_id = $6
@@ -111,6 +112,7 @@ function createStopTransactionHandler({
           stopReason,
           !timestampTrusted,
           chargePointId,
+          payload.transactionData == null ? null : JSON.stringify(payload.transactionData),
         ]
       );
 

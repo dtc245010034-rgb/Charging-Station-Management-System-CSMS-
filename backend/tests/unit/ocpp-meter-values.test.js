@@ -107,7 +107,7 @@ describe('MeterValues handler (T-41)', () => {
     assert.equal(calls.length, 2);
     assert.match(calls[0].sql, /LEFT JOIN charging_sessions/);
     assert.deepEqual(calls[0].params, [8, 1, 1000]);
-    assert.equal((calls[1].sql.match(/\(\$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+\)/g) || []).length, 4);
+    assert.equal((calls[1].sql.match(/\(\$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+\)/g) || []).length, 4);
     assert.match(calls[1].sql, /ON CONFLICT \(session_id, reported_at, measurand, phase, context\) DO NOTHING/);
     assert.deepEqual(calls[1].params.slice(0, 6), [44, '2026-09-28T20:31:27.905Z', '2026-09-28T20:31:27.905Z', 'Energy.Active.Import.Register', '61', 'Wh']);
   });

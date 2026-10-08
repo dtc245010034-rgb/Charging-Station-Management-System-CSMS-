@@ -6,14 +6,14 @@ const tableSessions = async () => (await query("SELECT to_regclass('public.charg
 const tableMeterValues = async () => (await query("SELECT to_regclass('public.meter_values') AS t")).rows[0].t;
 const tableOrphanMessages = async () => (await query("SELECT to_regclass('public.orphan_messages') AS t")).rows[0].t;
 
-describe('migration 017-019: charging_sessions, meter_values, orphan_messages', () => {
+describe('migration 017-023: charging_sessions, meter_values, orphan_messages, transaction_data', () => {
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
   });
   after(resetSchema);
 
-  it('up: tạo bảng charging_sessions, meter_values, orphan_messages với đầy đủ ràng buộc và index', async () => {
+  it('up: tạo bảng charging_sessions, meter_values, orphan_messages và cột transaction_data', async () => {
     assert.ok(await tableSessions(), 'Bảng charging_sessions phải tồn tại');
     assert.ok(await tableMeterValues(), 'Bảng meter_values phải tồn tại');
     assert.ok(await tableOrphanMessages(), 'Bảng orphan_messages phải tồn tại');
@@ -23,12 +23,17 @@ describe('migration 017-019: charging_sessions, meter_values, orphan_messages', 
     );
     assert.deepEqual(
       meterValuesColumns.rows.map((row) => row.column_name).sort(),
-      ['created_at', 'id', 'measurand', 'raw_unit', 'sampled_at', 'session_id', 'unit', 'value'].sort()
+      ['context', 'created_at', 'id', 'measurand', 'phase', 'raw_unit', 'reported_at', 'sampled_at', 'session_id', 'source_message_id', 'unit', 'value'].sort()
     );
     const meterValuesIndex = await query(
-      "SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_meter_values_session_sampled_desc'"
+      "SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_meter_values_session_reported_desc'"
     );
-    assert.match(meterValuesIndex.rows[0].indexdef, /\(session_id, sampled_at DESC\)/);
+    assert.match(meterValuesIndex.rows[0].indexdef, /\(session_id, reported_at DESC\)/);
+
+    const transactionDataColumn = await query(
+      "SELECT data_type FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name = 'transaction_data'"
+    );
+    assert.equal(transactionDataColumn.rows[0].data_type, 'jsonb');
 
     // Kiểm tra các index quan trọng của charging_sessions
     const idx = await query("SELECT indexname FROM pg_indexes WHERE tablename = 'charging_sessions'");
@@ -49,23 +54,31 @@ describe('migration 017-019: charging_sessions, meter_values, orphan_messages', 
     );
   });
 
-  it('down: rollback lần lượt các migration 019, 018, 017 và up lại sạch sẽ', async () => {
-    // Rollback 019
-    let down = run('src/db/migrate.js', ['down']);
-    assert.strictEqual(down.status, 0, down.stderr);
-    assert.equal(await tableOrphanMessages(), null, 'orphan_messages phải bị xoá');
-    assert.ok(await tableMeterValues(), 'meter_values vẫn còn trước khi rollback');
+  it('down: rollback lần lượt 023, 022, 019, 018, 017 và up lại sạch sẽ', async () => {
+    const rollbackChecks = [
+      { version: '023_transaction_data', check: async () => {
+        const column = await query(
+          "SELECT column_name FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name = 'transaction_data'"
+        );
+        assert.equal(column.rows.length, 0);
+      } },
+      { version: '022_meter_values_dedup_phase', check: async () => {
+        assert.ok(await tableMeterValues());
+        assert.equal((await query(
+          "SELECT column_name FROM information_schema.columns WHERE table_name = 'meter_values' AND column_name IN ('reported_at', 'phase', 'context', 'source_message_id')"
+        )).rows.length, 0);
+      } },
+      { version: '019_orphan_messages', check: async () => assert.equal(await tableOrphanMessages(), null) },
+      { version: '018_meter_values', check: async () => assert.equal(await tableMeterValues(), null) },
+      { version: '017_charging_sessions', check: async () => assert.equal(await tableSessions(), null) },
+    ];
 
-    // Rollback 018
-    down = run('src/db/migrate.js', ['down']);
-    assert.strictEqual(down.status, 0, down.stderr);
-    assert.equal(await tableMeterValues(), null, 'meter_values phải bị xoá');
-    assert.ok(await tableSessions(), 'charging_sessions vẫn còn trước khi rollback');
-
-    // Rollback 017
-    down = run('src/db/migrate.js', ['down']);
-    assert.strictEqual(down.status, 0, down.stderr);
-    assert.equal(await tableSessions(), null, 'charging_sessions phải bị xoá');
+    for (const { version, check } of rollbackChecks) {
+      const down = run('src/db/migrate.js', ['down']);
+      assert.strictEqual(down.status, 0, down.stderr);
+      await check();
+      console.log(`Verified rollback ${version}`);
+    }
 
     // Migrate up trở lại
     const up = run('src/db/migrate.js');

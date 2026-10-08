@@ -77,12 +77,12 @@ describe('meter values repository', () => {
     ]);
 
     assert.equal(calls.length, 1);
-    assert.match(calls[0].sql, /\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9\), \(\$10, \$11, \$12, \$13, \$14, \$15, \$16, \$17, \$18\)/);
+    assert.match(calls[0].sql, /\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9, \$10\), \(\$11, \$12, \$13, \$14, \$15, \$16, \$17, \$18, \$19, \$20\)/);
     assert.deepEqual(calls[0].values, [
       12, '2026-10-07T10:00:00Z', '2026-10-07T10:00:00.500Z',
-      'Energy.Active.Import.Register', '1', 'Wh', '', '', 'message-1',
+      'Energy.Active.Import.Register', '1', 'Wh', 'Wh', '', '', 'message-1',
       12, '2026-10-07T10:00:01Z', '2026-10-07T10:00:01.500Z',
-      'Energy.Active.Import.Register', '2', 'Wh', '', '', 'message-2',
+      'Energy.Active.Import.Register', '2', 'Wh', 'Wh', '', '', 'message-2',
     ]);
   });
 

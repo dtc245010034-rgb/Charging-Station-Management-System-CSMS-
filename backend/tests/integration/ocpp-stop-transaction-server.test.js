@@ -66,11 +66,16 @@ describe('S-18 StopTransaction trên WebSocket server thật', () => {
 
   it('chốt phiên với số đo, thời điểm, lý do và trạng thái; gọi lại không ghi đè', async () => {
     const timestamp = new Date().toISOString();
+    const transactionData = [
+      { timestamp: new Date().toISOString(), value: 1250, unit: 'Wh' },
+      { timestamp: new Date().toISOString(), value: 1250.5, unit: 'kWh' },
+    ];
     const first = await sendCall(client, 'stop-tx-first', 'StopTransaction', {
       transactionId,
       meterStop: 1250,
       timestamp,
       reason: 'Remote',
+      transactionData,
     });
     assert.deepEqual(first, [3, 'stop-tx-first', {}]);
 
@@ -83,7 +88,7 @@ describe('S-18 StopTransaction trên WebSocket server thật', () => {
     assert.deepEqual(second, [3, 'stop-tx-second', {}]);
 
     const session = (await query(
-      'SELECT meter_stop, stopped_at, stop_reason, status, needs_review FROM charging_sessions WHERE id = $1',
+      'SELECT meter_stop, stopped_at, stop_reason, status, needs_review, transaction_data FROM charging_sessions WHERE id = $1',
       [transactionId]
     )).rows[0];
     assert.equal(Number(session.meter_stop), 1250);
@@ -91,6 +96,31 @@ describe('S-18 StopTransaction trên WebSocket server thật', () => {
     assert.equal(session.stop_reason, 'Remote');
     assert.equal(session.status, 'COMPLETED');
     assert.equal(session.needs_review, false);
+    assert.deepEqual(session.transaction_data, transactionData);
+  });
+
+  it('lưu mảng rỗng như JSONB rỗng thay vì object rỗng', async () => {
+    const emptyTransactionId = (await query(
+      `INSERT INTO charging_sessions (charge_point_id, connector_id, connector_no, id_tag_masked, meter_start, started_at, status)
+       VALUES ($1, $2, 1, '***0004', 2000, CURRENT_TIMESTAMP, 'CHARGING')
+       RETURNING id`,
+      [chargePointId, connectorId]
+    )).rows[0].id;
+
+    const response = await sendCall(client, 'stop-tx-empty-data', 'StopTransaction', {
+      transactionId: emptyTransactionId,
+      meterStop: 2000,
+      timestamp: new Date().toISOString(),
+      reason: 'Remote',
+      transactionData: [],
+    });
+    assert.deepEqual(response, [3, 'stop-tx-empty-data', {}]);
+
+    const session = (await query(
+      'SELECT transaction_data FROM charging_sessions WHERE id = $1',
+      [emptyTransactionId]
+    )).rows[0];
+    assert.deepEqual(session.transaction_data, []);
   });
 
   it('số đo cuối thấp hơn số đầu đóng phiên nhưng bật needs_review', async () => {
