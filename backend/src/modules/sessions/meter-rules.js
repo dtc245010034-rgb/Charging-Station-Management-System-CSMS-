@@ -68,6 +68,13 @@ function compareDecimals(left, right) {
   return (leftValue < rightValue ? -1 : 1) * a.sign;
 }
 
+function toEpochMs(timestamp) {
+  if (timestamp instanceof Date) return timestamp.getTime();
+  if (typeof timestamp === 'number' && Number.isFinite(timestamp)) return timestamp;
+  if (typeof timestamp === 'string') return Date.parse(timestamp);
+  return NaN;
+}
+
 function compareMeasurements(previous, current) {
   const previousUnit = previous.unit || 'Wh';
   const currentUnit = current.unit || 'Wh';
