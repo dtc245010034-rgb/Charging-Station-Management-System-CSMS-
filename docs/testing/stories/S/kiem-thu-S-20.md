@@ -22,3 +22,60 @@
 | **FIX-07** | Rollback Migration 022 (`022_meter_values_dedup_phase.down.sql`) | Dọn dẹp bản ghi trùng pha trước khi tạo lại unique index, không crash DB | `022_meter_values_dedup_phase.down.sql`: xóa trùng trước `CREATE UNIQUE INDEX` | **PASS** |
 | **DB-01** | Tối ưu hóa truy vấn `findLatestMeterValues` | Tạo Composite Index `idx_meter_values_stream_latest` trên `(session_id, measurand, phase, context, sampled_at DESC, id DESC)` | `022_meter_values_dedup_phase.sql`: Index Scan trực tiếp, không tốn chi phí Sort | **PASS** |
 | **CLN-01** | Dọn dẹp định kỳ bảng `orphan_messages` | Tự động quét dọn bản ghi mồ côi theo `OCPP_MESSAGE_RETENTION_DAYS` mỗi 1 giờ | `backend/src/server.js`: `purgeOldMessages` tích hợp dọn `orphan_messages` | **PASS** |
+
+---
+
+## 2. Kết quả chạy lệnh kiểm thử thực tế (Evidence-First)
+
+Tất cả các lệnh dưới đây được chạy trực tiếp trên môi trường máy chủ kiểm thử:
+
+### Lệnh 1: Kiểm thử Lint mã nguồn
+- **Lệnh thực thi:** `npm run lint` (tại thư mục `backend/`)
+- **Kết quả:**
+  ```text
+  > csms-backend@1.0.0 lint
+  > cd .. && eslint backend frontend
+  ```
+- **Trạng thái:** **PASS** (0 lỗi cú pháp, 0 vi phạm coding standard).
+
+### Lệnh 2: Kiểm thử Unit Test các module của S-20
+- **Lệnh thực thi:** `node --test tests/unit/meter-rules.test.js tests/unit/meter-values.repository.test.js tests/unit/ocpp-meter-values.test.js` (tại `backend/`)
+- **Chi tiết các suite:**
+  - `S-20 meter reading rules`: 15/15 tests PASS
+  - `meter values repository`: 6/6 tests PASS
+  - `MeterValues handler (T-41)`: 11/11 tests PASS
+- **Kết quả tổng hợp:**
+  ```text
+  ℹ tests 32
+  ℹ suites 3
+  ℹ pass 32
+  ℹ fail 0
+  ℹ cancelled 0
+  ℹ skipped 0
+  ℹ todo 0
+  ℹ duration_ms 169.9ms
+  ```
+- **Trạng thái:** **PASS 100%**.
+
+### Lệnh 3: Kiểm thử toàn bộ Unit Test Backend qua Python Test Runner
+- **Lệnh thực thi:** `python test.py --only unit` (tại thư mục gốc dự án)
+- **Kết quả:**
+  ```text
+  ==> Chạy kiểm thử: nhóm unit
+  KẾT QUẢ: ĐẠT (205 test pass, 0 fail) — 11 giây
+  ```
+- **Trạng thái:** **PASS 100% (205/205 tests pass)**.
+
+### Lệnh 4: Kiểm thử Linter qua Python Test Runner
+- **Lệnh thực thi:** `python test.py --lint-only` (tại thư mục gốc dự án)
+- **Kết quả:**
+  ```text
+  ==> Chạy kiểm thử: chỉ lint
+  KẾT QUẢ: ĐẠT — 7 giây
+  ```
+- **Trạng thái:** **PASS**.
+
+### Lệnh 5: Quét lỗ hổng bảo mật phụ thuộc (npm audit)
+- **Lệnh thực thi:** `npm audit --omit=dev --audit-level=high` (tại `backend/`)
+- **Kết quả:** `found 0 vulnerabilities`
+- **Trạng thái:** **PASS**.
