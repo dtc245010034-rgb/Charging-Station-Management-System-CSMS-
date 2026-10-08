@@ -86,7 +86,7 @@ function meterValueToWh({ value, unit }) {
   if (unit !== 'Wh' && unit !== 'kWh') {
     throw new TypeError(`Unsupported meter value unit: ${unit}`);
   }
-  return unit === 'kWh' ? numericValue * 1000 : numericValue;
+  return normUnit === 'kWh' ? numericValue * 1000 : numericValue;
 }
 
 module.exports = {
