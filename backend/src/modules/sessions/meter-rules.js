@@ -69,6 +69,11 @@ function compareDecimals(left, right) {
   return (leftValue < rightValue ? -1 : 1) * a.sign;
 }
 
+/**
+ * Chuẩn hóa đơn vị đo điện năng về dạng chuẩn (kWh, Wh) không phân biệt hoa thường.
+ * @param {string} unit - Đơn vị đo cần chuẩn hóa
+ * @returns {string} - Đơn vị chuẩn hoặc giữ nguyên chuỗi đã trim
+ */
 function normalizeUnit(unit) {
   if (typeof unit !== 'string') return unit;
   const trimmed = unit.trim();
