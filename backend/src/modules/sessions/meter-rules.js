@@ -83,6 +83,12 @@ function normalizeUnit(unit) {
   return trimmed;
 }
 
+/**
+ * Chuyển đổi chuỗi số thập phân sang BigInt nhân với 10^targetScale mà không bị trôi số float.
+ * @param {string|number} value - Giá trị số đo cần dịch scale
+ * @param {number} targetScale - Số chữ số phần thập phân mục tiêu
+ * @returns {bigint} - Giá trị BigInt đã scale
+ */
 function parseToScaledBigInt(value, targetScale = 0) {
   const parts = decimalParts(value);
   const scaleDiff = targetScale - parts.scale;
