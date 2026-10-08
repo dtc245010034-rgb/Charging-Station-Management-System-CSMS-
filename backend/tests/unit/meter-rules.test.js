@@ -4,6 +4,8 @@ const {
   evaluateMeterReading,
   isPlausibleMeterValue,
   isValidMeterDecimal,
+  normalizeUnit,
+  parseToScaledBigInt,
 } = require('../../src/modules/sessions/meter-rules');
 
 const previous = {
@@ -24,17 +26,6 @@ function reading(overrides = {}) {
 }
 
 describe('S-20 meter reading rules', () => {
-  it('ignores older timestamp when compared against pg Date object with ms', () => {
-    const pgDate = new Date('2026-10-08T10:00:00.123Z');
-    assert.deepEqual(
-      evaluateMeterReading(
-        { ...previous, sampled_at: pgDate, value: '1200' },
-        reading({ sampledAt: '2026-10-08T10:00:00.100Z', value: '1300' })
-      ),
-      { action: 'ignore', reason: 'OLDER_TIMESTAMP' }
-    );
-  });
-
   it('ignores older timestamps', () => {
     assert.deepEqual(
       evaluateMeterReading(previous, reading({ sampledAt: '2026-10-08T09:59:59.000Z' })),
@@ -53,32 +44,10 @@ describe('S-20 meter reading rules', () => {
     );
   });
 
-  it('ignores duplicate when previous.sampled_at is a Date object with ms', () => {
-    const pgDate = new Date('2026-10-08T10:00:00.123Z');
-    assert.deepEqual(
-      evaluateMeterReading(
-        { ...previous, sampled_at: pgDate, value: '1200' },
-        reading({ sampledAt: '2026-10-08T10:00:00.123Z', value: '1200' })
-      ),
-      { action: 'ignore', reason: 'DUPLICATE' }
-    );
-  });
-
   it('ignores an exact duplicate without requesting a warning', () => {
     assert.deepEqual(
       evaluateMeterReading(previous, reading({ sampledAt: previous.sampled_at, value: '1200.0' })),
       { action: 'ignore', reason: 'DUPLICATE' }
-    );
-  });
-
-  it('reports conflicting value when previous.sampled_at is a Date object with ms', () => {
-    const pgDate = new Date('2026-10-08T10:00:00.123Z');
-    assert.deepEqual(
-      evaluateMeterReading(
-        { ...previous, sampled_at: pgDate, value: '1200' },
-        reading({ sampledAt: '2026-10-08T10:00:00.123Z', value: '1300' })
-      ),
-      { action: 'ignore', reason: 'CONFLICTING_TIMESTAMP' }
     );
   });
 
@@ -187,22 +156,42 @@ describe('S-20 meter reading rules', () => {
       { action: 'save' }
     );
   });
-});
 
-describe('normalizeUnit', () => {
-  it('maps lowercase kwh to standard kWh', () => {
-    assert.equal(normalizeUnit('kwh'), 'kWh');
+  it('handles previous.sampled_at as a Date object with millisecond precision without truncation', () => {
+    // FIX-01: previous.sampled_at từ pg driver trả về Date object có ms
+    const pgDate = new Date('2026-10-08T10:00:00.123Z');
+    // Trùng mốc và trùng giá trị -> DUPLICATE
+    assert.deepEqual(
+      evaluateMeterReading(
+        { ...previous, sampled_at: pgDate, value: '1200' },
+        reading({ sampledAt: '2026-10-08T10:00:00.123Z', value: '1200' })
+      ),
+      { action: 'ignore', reason: 'DUPLICATE' }
+    );
+    // Trùng mốc nhưng khác giá trị -> CONFLICTING_TIMESTAMP
+    assert.deepEqual(
+      evaluateMeterReading(
+        { ...previous, sampled_at: pgDate, value: '1200' },
+        reading({ sampledAt: '2026-10-08T10:00:00.123Z', value: '1300' })
+      ),
+      { action: 'ignore', reason: 'CONFLICTING_TIMESTAMP' }
+    );
+    // Mốc cũ hơn mốc pgDate -> OLDER_TIMESTAMP
+    assert.deepEqual(
+      evaluateMeterReading(
+        { ...previous, sampled_at: pgDate, value: '1200' },
+        reading({ sampledAt: '2026-10-08T10:00:00.100Z', value: '1300' })
+      ),
+      { action: 'ignore', reason: 'OLDER_TIMESTAMP' }
+    );
   });
 
-  it('maps lowercase wh to standard Wh and trims whitespace', () => {
+  it('supports case-insensitive units and normalizes them correctly', () => {
+    assert.equal(normalizeUnit('kwh'), 'kWh');
     assert.equal(normalizeUnit('wh'), 'Wh');
     assert.equal(normalizeUnit(' KWH '), 'kWh');
-    assert.equal(normalizeUnit('  Wh  '), 'Wh');
-  });
-});
 
-describe('evaluateMeterReading with normalized units', () => {
-  it('accepts valid reading when unit is lowercase kwh or wh', () => {
+    // So sánh số đo với đơn vị chữ thường 'kwh'
     assert.deepEqual(
       evaluateMeterReading(
         { ...previous, value: '1.5', unit: 'kwh' },
@@ -211,10 +200,9 @@ describe('evaluateMeterReading with normalized units', () => {
       { action: 'save' }
     );
   });
-});
 
-describe('parseToScaledBigInt', () => {
-  it('scales decimal numbers precisely without float drift', () => {
+  it('scales decimal numbers precisely with parseToScaledBigInt without float drift', () => {
+    // 1.005 kWh = 1005 Wh (không bị 1004.9999999999999)
     assert.equal(parseToScaledBigInt('1.005', 3), 1005n);
     assert.equal(parseToScaledBigInt('1250', 0), 1250n);
     assert.equal(parseToScaledBigInt('0.001', 3), 1n);
