@@ -143,6 +143,33 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
     assert.deepEqual(readings, [{ value: '500', source_message_id: 'mv-duplicate-1' }]);
   });
 
+  it('gửi hai lần cùng mốc, measurand và NULL phase/context thì chỉ lưu một dòng', async () => {
+    const timestamp = new Date().toISOString();
+    const first = await sendCall(client, 'mv-null-duplicate-1', 'MeterValues', {
+      connectorId: 1,
+      transactionId,
+      meterValue: [{ timestamp, sampledValue: [{ value: '600', measurand: 'Energy.Active.Import.Register', unit: 'Wh', phase: null, context: null }] }],
+    });
+    const second = await sendCall(client, 'mv-null-duplicate-2', 'MeterValues', {
+      connectorId: 1,
+      transactionId,
+      meterValue: [{ timestamp, sampledValue: [{ value: '999', measurand: 'Energy.Active.Import.Register', unit: 'Wh', phase: null, context: null }] }],
+    });
+
+    assert.deepEqual(first, [3, 'mv-null-duplicate-1', {}]);
+    assert.deepEqual(second, [3, 'mv-null-duplicate-2', {}]);
+    const readings = (await query(
+      'SELECT value, phase, context, source_message_id FROM meter_values WHERE session_id = $1 AND measurand = $2',
+      [transactionId, 'Energy.Active.Import.Register']
+    )).rows;
+    assert.deepEqual(readings, [{
+      value: '600',
+      phase: '',
+      context: '',
+      source_message_id: 'mv-null-duplicate-1',
+    }]);
+  });
+
   it('khớp phiên CHARGING của đầu nối khi MeterValues không gửi transactionId', async () => {
     const res = await sendCall(client, 'mv-no-tx', 'MeterValues', {
       connectorId: 1,

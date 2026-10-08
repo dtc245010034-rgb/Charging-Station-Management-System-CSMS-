@@ -26,7 +26,7 @@ async function recordMeterValues(db, sessionId, meterValues) {
 
   const values = [];
   const rows = meterValues.map((meterValue, index) => {
-    const offset = index * 10;
+    const offset = index * 9;
     values.push(
       sessionId,
       meterValue.reportedAt,

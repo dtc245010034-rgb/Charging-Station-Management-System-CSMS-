@@ -54,7 +54,7 @@ describe('MeterValues handler (T-41)', () => {
         measurand: 'Energy.Active.Import.Register',
         value: '61',
         unit: 'Wh',
-        phase: null,
+        phase: '',
         context: 'Sample.Periodic',
       },
       {
@@ -63,8 +63,8 @@ describe('MeterValues handler (T-41)', () => {
         measurand: 'Power.Active.Import',
         value: '22000',
         unit: 'W',
-        phase: null,
-        context: null,
+        phase: '',
+        context: '',
       },
       {
         reportedAt: '2026-09-28T20:31:27.905Z',
@@ -72,8 +72,8 @@ describe('MeterValues handler (T-41)', () => {
         measurand: 'Current.Import',
         value: '31.9',
         unit: 'A',
-        phase: null,
-        context: null,
+        phase: '',
+        context: '',
       },
       {
         reportedAt: '2026-09-28T20:31:37.905Z',
@@ -81,8 +81,8 @@ describe('MeterValues handler (T-41)', () => {
         measurand: 'Energy.Active.Import.Register',
         value: '71',
         unit: 'Wh',
-        phase: null,
-        context: null,
+        phase: '',
+        context: '',
       },
     ]);
   });
