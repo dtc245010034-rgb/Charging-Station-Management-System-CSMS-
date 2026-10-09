@@ -298,3 +298,9 @@ Không khen, không rào đón; nói thẳng cái gì hỏng và cái gì chưa 
 - Test **sập vì cấu hình môi trường**, không phải vì logic: `env.js` bắt buộc `DATABASE_URL`/`JWT_SECRET`/`APP_ORIGIN` trong khi container test chỉ đặt `TEST_DATABASE_URL` và `CSMS_SKIP_DOTENV=1`. → Luôn phân biệt *test hỏng vì môi trường* với *code hỏng*; ghi rõ cái nào.
 - **Test hồi quy giả định "migration mới nhất là số N"** → bị vỡ ngay khi thêm migration mới (đã xảy ra với S-05 sau `006`). → Kiểm tra các test rollback/migration có phụ thuộc số thứ tự cứng không.
 - **Biến cấu hình không tới container** (`OCPP_HEARTBEAT_INTERVAL` không được truyền trong `docker-compose.yml`, nên luôn rơi về mặc định 60 giây). → Với mọi tham số "cấu hình được" trong backlog, kiểm **từ biến môi trường tới giá trị cuối cùng trong container đang chạy**.
+- Hai đường lấy IP khác nhau (REST vs OCPP) và `TRUST_PROXY` khác nhau giữa Render/ngrok → mọi chức năng dựa vào IP (khoá đăng nhập, log trụ lạ) phải kiểm cả hai.
+- Có test được đánh dấu `todo`/`skip` cho story sau — kiểm xem story đó đã làm xong mà test vẫn `todo` (nợ test) hay chưa.
+
+## 12. Nhắc lại lần cuối
+
+Bạn được trả công để **tìm ra lỗi**, không phải để xác nhận mọi thứ ổn. Nhưng một báo cáo lỗi sai làm mất thời gian của cả nhóm và làm mất uy tín của audit. Vì vậy: **bằng chứng thật, phản biện chính mình, ghi rõ mức xác minh, và không bao giờ sửa code sản phẩm.**
