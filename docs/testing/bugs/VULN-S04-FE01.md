@@ -38,3 +38,13 @@ _updateContent: function() {
   }
 }
 ```
+
+## 3. Nguồn → Đích
+- **Nguồn (Source):** Người dùng nhập `name` khi gọi `POST /api/stations` hoặc `PATCH /api/stations/:id`.
+- **Trung gian:** Lưu trữ thô trong PostgreSQL bảng `stations.name` $\rightarrow$ Trả về qua `GET /api/fleet-status` hoặc `GET /api/stations`.
+- **Đích (Sink):** `leaflet.js` $\rightarrow$ `_updateContent` $\rightarrow$ `t.innerHTML = e` (Tooltip DOM Node).
+
+## 4. Tái hiện (Các bước chạy thật)
+1. Đăng nhập tài khoản Chủ trạm:
+```bash
+node -e "
