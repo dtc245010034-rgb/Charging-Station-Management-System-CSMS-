@@ -88,3 +88,13 @@ function makeTooltipNode(text) {
   span.textContent = text;
   return span;
 }
+
+// Thay thế dòng 80:
+existing.marker.setTooltipContent(makeTooltipNode(point.name));
+
+// Thay thế dòng 84:
+const marker = L.marker([point.lat, point.lng], { icon: pinIcon(L, point.group), title: point.name, keyboard: true })
+  .addTo(map).bindTooltip(makeTooltipNode(point.name)).on('click', () => onSelect(point.id));
+```
+Khi truyền `Node`, hàm `_updateContent` của Leaflet sẽ đi vào nhánh `t.appendChild(e)` thay vì `t.innerHTML = e`.
+
