@@ -58,3 +58,13 @@ Trình duyệt tải và hiển thị trang đăng nhập CSMS bên trong iframe
 - **Thực tế:** Không có header bảo vệ nào được gửi kèm; trang web có thể bị nhúng iframe và không có CSP.
 - **Mong đợi:** Trang web phải trả về đầy đủ các header bảo vệ tiêu chuẩn chống iframe embedding và MIME sniffing.
 
+## 5. Tác động
+- Nguy cơ Clickjacking trên các trang tương tác quản trị.
+- Gia tăng mức độ nghiêm trọng của các lỗ hổng XSS (do không có CSP kiềm toả).
+- Lộ thông tin công nghệ máy chủ.
+
+## 6. Đề xuất sửa
+Trong `backend/src/app.js`:
+1. Vô hiệu hoá header `X-Powered-By`:
+```javascript
+app.disable('x-powered-by');
