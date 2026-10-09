@@ -68,3 +68,13 @@ fetch('http://localhost:3000/api/auth/login', {
   console.log('Status:', res.status, await res.json());
 });"
 ```
+2. Kết quả máy chủ trả về: HTTP 201 Created.
+3. Đăng nhập tài khoản Vận hành viên (`operator@demo.csms.local`) và mở trình duyệt tới `/app.html#/operator/map`.
+4. Quan sát: Leaflet vẽ marker và bindTooltip. DOM của Tooltip chứa `<div class="leaflet-tooltip ..."><img src=x onerror=window.__xss_probe=1></div>`. Trình duyệt kích hoạt sự kiện `onerror` và gán `window.__xss_probe = 1`.
+
+## 5. Thực tế vs Mong đợi
+- **Thực tế:** Tên trạm được gán trực tiếp qua `innerHTML` của Leaflet Tooltip không qua bộ lọc thoát ký tự HTML, thực thi mã script.
+- **Mong đợi:** Tên trạm hiển thị an toàn dưới dạng văn bản thuần (`textContent`), hoặc được truyền dưới dạng `HTMLElement` an toàn cho Leaflet.
+
+## 6. Tác động
+- Kẻ tấn công (tài khoản chủ trạm bị chiếm đoạt hoặc độc hại) có thể chiếm quyền điều khiển phiên làm việc của Quản trị viên/Vận hành viên khi họ mở bản đồ.
