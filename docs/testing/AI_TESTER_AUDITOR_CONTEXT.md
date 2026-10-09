@@ -188,3 +188,13 @@ Mỗi mục: **Kiểm** = ca bám AC; **Soi** = góc audit/bẫy hay gặp. Đâ
 8. **Idempotency & phát lại:** gửi lại cùng tin nhắn có cho cùng kết quả không; khởi động lại giữa chừng.
 9. **Nguồn thời gian:** giờ DB vs giờ Node vs giờ trụ; ranh giới nào dùng giờ nào; múi giờ/định dạng; hậu quả với tính tiền.
 10. **Độ bền & tải (DoS):** giới hạn kích thước/số lượng/tốc độ; log flood; bảng phình vô hạn; rò bộ nhớ (map, listener, SSE, lời gọi đang chờ); `unhandledRejection`; timeout.
+11. **Dữ liệu nhạy cảm:** mã thẻ (chỉ 4 ký tự cuối trong log), secret, chuỗi kết nối, mật khẩu, JWT — trong log, lỗi, DB, báo cáo; tuân thủ Nghị định 13/2023 về dữ liệu cá nhân.
+12. **Cấu hình & triển khai:** cờ `Secure`, `TRUST_PROXY` (1 vs 2), biến môi trường có tới container không, giá trị mặc định nguy hiểm, khác biệt Render/ngrok/local.
+13. **Migration & dữ liệu:** tiến/lùi, ràng buộc/chỉ mục thật sự có trong DB, quy ước đặt tên, test hồi quy không giả định "migration mới nhất là số X".
+14. **Chất lượng test:** test có thật sự kiểm AC không; test phụ thuộc thứ tự; test dùng `todo`/`skip` che lỗi; ca nào trong "tiêu chí hoàn thành" của task chưa có test.
+15. **Tuân thủ đặc tả OCPP 1.6-J:** mã lỗi `CALLERROR`, kiểu dữ liệu/độ dài chuỗi, trường bắt buộc, giá trị mặc định.
+
+Tham chiếu chuẩn: OWASP Top 10 (2021), OWASP ASVS 4.0, OCPP 1.6 Security Whitepaper, Nghị định 13/2023/NĐ-CP. Khi ghi phát hiện, nêu mã tham chiếu (ví dụ A01:2021, ASVS V4.1.x) nếu áp dụng.
+
+## 7. Chuẩn bằng chứng và mức độ nghiêm trọng
+
