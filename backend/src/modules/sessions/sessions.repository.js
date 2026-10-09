@@ -1,9 +1,6 @@
 const { maskIdTag } = require('../ocpp/handlers/authorize');
 
 function getDefaultPool() {
-  if (!process.env.DATABASE_URL && process.env.CSMS_SKIP_DOTENV) {
-    return { query: async () => ({ rows: [] }) };
-  }
   return require('../../db/pool').pool;
 }
 

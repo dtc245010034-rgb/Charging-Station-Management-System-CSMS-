@@ -193,7 +193,7 @@ function createStartTransactionHandler({
       }, db);
 
       if (session?.id) {
-        publishSessionUpdateFromDb(session.id).catch(() => {});
+        publishSessionUpdateFromDb(session.id, { pool: db }).catch(() => {});
       }
 
       logInfo(

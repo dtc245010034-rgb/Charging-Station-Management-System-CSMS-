@@ -271,7 +271,7 @@ async function persistMeterValues({
     }, db);
 
     if (outcome?.sessionId) {
-      publishSessionUpdateFromDb(outcome.sessionId).catch(() => {});
+      publishSessionUpdateFromDb(outcome.sessionId, { pool: db }).catch(() => {});
     }
 
     if (outcome.orphanReason) {

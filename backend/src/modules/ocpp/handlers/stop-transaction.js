@@ -154,7 +154,7 @@ function createStopTransactionHandler({
       );
 
       if (updated.rowCount > 0) {
-        publishSessionUpdateFromDb(payload.transactionId).catch(() => {});
+        publishSessionUpdateFromDb(payload.transactionId, { pool: db }).catch(() => {});
         return {};
       }
 

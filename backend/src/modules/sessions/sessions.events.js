@@ -20,14 +20,10 @@ function publish(event) {
 }
 
 async function publishSessionUpdateFromDb(sessionId, { pool: poolInstance = null } = {}) {
+  if (subscribers.size === 0) return;
+
   try {
-    let client = poolInstance;
-    if (!client) {
-      if (!process.env.DATABASE_URL && process.env.CSMS_SKIP_DOTENV) {
-        return;
-      }
-      client = require('../../db/pool').pool;
-    }
+    const client = poolInstance || require('../../db/pool').pool;
     const session = await findSessionById(client, sessionId);
     if (!session || !session.driver_id) return;
     const formatted = formatSession(session);
