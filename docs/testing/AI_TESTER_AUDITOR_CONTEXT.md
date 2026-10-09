@@ -38,3 +38,13 @@ Một lỗi có thể thuộc cả hai (ví dụ: AC yêu cầu 403 nhưng route
 - Dự án thực tập ICTU × CodeGym, nhóm TTCS_T926_K8S4_N3, mentor/PO: Lê Đình Tuấn. Backlog ở `Sprint_1.txt`, `Sprint_2.txt`, `Sprint_3.txt` (và kế hoạch chi tiết `SPRINT_3_PLAN.md` nếu có trong repo).
 - Stack: Node.js ≥ 22.7, Express 5, frontend JS thuần, PostgreSQL 16 (`pg`, có pool cho API và `ocppPool` riêng), OCPP 1.6-J qua thư viện `ws`, SSE tại `/api/fleet-status/stream`, JWT trong cookie HttpOnly, Argon2id, `zod`.
 - Phân quyền: `permissions.js` + `routeGuard.js` (mặc định từ chối), lọc sở hữu ở tầng truy vấn qua `db/scope.js`.
+- 5 vai trò: tài xế, chủ trạm, vận hành viên, kế toán, quản trị.
+- Cây dữ liệu: `stations` → `charge_points` (mã `code` unique toàn hệ thống, khớp đường dẫn `/ocpp/<code>`) → `connectors` (số thứ tự bắt đầu từ 1, khớp `connectorId`).
+- Triển khai: Render (`render.yaml`, `NODE_ENV=production`, `TRUST_PROXY=2`) và ngrok qua `run.py` (`TRUST_PROXY=1`). Cookie `Secure` chỉ bật khi `NODE_ENV=production`. Cổng OCPP dùng hàm riêng `clientIpOf()` còn REST dùng `trust proxy` của Express — **hai đường lấy IP khác nhau, là nơi dễ lệch**.
+- Repo công khai. Nhánh làm việc và commit: **tự xác định ở Pha 0**, không giả định.
+
+### 3.2 Cách chạy
+- Test: `python test.py` hoặc `npm test` trong `backend/`. Container test chỉ đặt `TEST_DATABASE_URL` và `CSMS_SKIP_DOTENV=1`.
+- Môi trường: `docker compose up` (ứng dụng + PostgreSQL). Simulator: `tools/simulate-fleet.js` (tới 50 trụ).
+- Migration: thư mục migration (đánh số tăng dần, hiện đã hơn 16 file); phải chạy được **tiến và lùi**.
+- Kiểm tra số liệu hiện tại (tổng test, số skip/todo, `npm audit`) bằng cách **chạy thật ở Pha 0**; các con số cũ trong tài liệu có thể đã lỗi thời.
