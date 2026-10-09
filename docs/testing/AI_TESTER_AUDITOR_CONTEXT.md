@@ -138,3 +138,13 @@ Mỗi mục: **Kiểm** = ca bám AC; **Soi** = góc audit/bẫy hay gặp. Đâ
 - Kiểm: 20 trụ → đủ 20, tải < 2 giây; đổi trạng thái → màn hình đổi < 1 giây không cần tải lại; trụ ngoại tuyến → hiện rõ + thời điểm liên lạc cuối; **chủ trạm chỉ thấy trụ mình**; đứt kênh đẩy → trình duyệt tự nối lại + tải lại đầy đủ; trạng thái phân biệt **bằng chữ chứ không chỉ màu**.
 - Soi: **truy vấn cây ba tầng có đúng một câu** (không N+1) và < 200 ms với 50 trụ/200 đầu nối — đo thật; **rò dữ liệu qua SSE**: sự kiện của trạm A có tới trình duyệt chủ trạm B không (kiểm bằng hai phiên đồng thời); SSE sau khi **hết hạn phiên/đăng xuất/đổi quyền** có còn mở và còn nhận dữ liệu không; giới hạn số kết nối SSE cho mỗi người dùng; rò bộ nhớ khi trình duyệt đóng; XSS khi vẽ dữ liệu trụ; quyền của người dùng thay đổi khi kết nối đang mở.
 
+**S-12 Ngoại tuyến theo hạn nhịp tim**
+- Kiểm: quá 2× khoảng nhịp tim → ngoại tuyến + mọi đầu nối "không rõ"; nhịp tim lại → trực tuyến, đầu nối chờ `StatusNotification` kế tiếp; **tắt job vẫn hiển thị đúng** (suy ra từ `last_seen_at`, không phụ thuộc job); job chạy hai lần liên tiếp không đổi thêm gì.
+- Soi: so sánh thời gian bằng `now()` của DB; ngưỡng biên (đúng bằng 2× khoảng); khoảng nhịp tim theo cấu hình toàn cục hay theo từng trụ (đổi cấu hình giữa chừng); hai job chạy chồng nhau; job lỗi giữa chừng có để dữ liệu nửa vời; ngoại tuyến có **làm mất thông tin phiên đang sạc** không (S-21 cấm đóng phiên chỉ vì ngoại tuyến).
+
+**S-13 Một mã trụ – một kết nối sống**
+- Kiểm: kết nối thứ hai cùng mã → kết nối cũ bị đóng (mã đóng chuẩn), kết nối mới dùng được; kết nối cũ đã chết ngầm vẫn bị thay ngay; **câu trả lời của tin đang xử lý dở trên kết nối cũ không bị gửi vào kết nối mới**; bảng kết nối chỉ còn một mục; README ghi giới hạn "một tiến trình".
+- Soi: **bẫy kinh điển**: sự kiện `close` của kết nối cũ **xoá nhầm mục của kết nối mới** khỏi bảng; thay thế có nguyên tử không (hai kết nối cùng mã tới sát nhau); tin nhắn đến từ kết nối cũ sau khi bị thay có còn được xử lý không; kẻ biết mã trụ đá trụ thật liên tục (kết hợp B5 — chỉ ghi như khuếch đại rủi ro); dọn dẹp bộ đếm/lời gọi đang chờ gắn với kết nối cũ.
+
+**S-14 Chống xử lý trùng tin nhắn**
+- Kiểm: cùng `messageId` hai lần → trả đúng câu trả lời cũ và **handler không chạy lại**; khởi động lại giữa hai lần gửi vẫn nhận ra trùng (khoá lưu ở DB); khác nội dung cùng mã → trả câu trả lời tin đầu + cảnh báo; bản ghi > 7 ngày bị job dọn (số ngày cấu hình được); gửi lại 5 lần → một bản ghi hiệu ứng, năm lần cùng câu trả lời.
