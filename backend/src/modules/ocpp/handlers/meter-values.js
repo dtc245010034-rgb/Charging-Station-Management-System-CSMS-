@@ -9,6 +9,8 @@ const {
   evaluateMeterReading,
   isPlausibleMeterValue,
 } = require('../../sessions/meter-rules');
+const sessionsEvents = require('../../sessions/sessions.events');
+const { calculateEnergyKwh } = require('../../sessions/energy');
 
 const MAX_CONNECTOR_ID = 2147483647;
 const MAX_TRANSACTION_ID = 2147483647;
@@ -192,12 +194,17 @@ async function persistMeterValues({
       );
       let sessionId = connector.rows[0]?.session_id;
 
+      let sessionRow = null;
       if (sessionId) {
         const activeSession = await client.query(
-          `SELECT id FROM charging_sessions WHERE id = $1 AND status = 'CHARGING' FOR UPDATE`,
+          `SELECT id, driver_id, meter_start FROM charging_sessions WHERE id = $1 AND status = 'CHARGING' FOR UPDATE`,
           [sessionId]
         );
-        if (activeSession.rowCount === 0) sessionId = null;
+        if (activeSession.rowCount === 0) {
+          sessionId = null;
+        } else {
+          sessionRow = activeSession.rows[0];
+        }
       }
 
       if (!sessionId) {
@@ -266,8 +273,45 @@ async function persistMeterValues({
           [sessionId, reason]
         );
       }
-      return { sessionId, ignored: [...ignored], reviewReasons: [...reviewReasons] };
+      return {
+        sessionId,
+        driverId: sessionRow?.driver_id,
+        meterStart: sessionRow?.meter_start,
+        accepted,
+        ignored: [...ignored],
+        reviewReasons: [...reviewReasons],
+      };
     }, db);
+
+    if (outcome.sessionId && outcome.driverId && outcome.accepted?.length > 0) {
+      try {
+        const latestEnergy = outcome.accepted.filter((r) => r.measurand === 'Energy.Active.Import.Register').pop();
+        const latestPower = outcome.accepted.filter((r) => r.measurand === 'Power.Active.Import').pop();
+        const latestCurrent = outcome.accepted.filter((r) => r.measurand === 'Current.Import').pop();
+        const energyWh = latestEnergy ? Number(latestEnergy.value) : null;
+        const energyKwh = energyWh !== null && outcome.meterStart !== undefined
+          ? calculateEnergyKwh(outcome.meterStart, energyWh)
+          : null;
+        const powerW = latestPower ? Number(latestPower.value) : null;
+        const currentA = latestCurrent ? Number(latestCurrent.value) : null;
+
+        sessionsEvents.publish({
+          type: 'METER_VALUE',
+          sessionId: outcome.sessionId,
+          driverId: outcome.driverId,
+          chargePointCode: code,
+          connectorNo: payload.connectorId,
+          energy_wh: energyWh,
+          energy_kwh: energyKwh,
+          power_w: powerW,
+          power_kw: powerW !== null ? powerW / 1000 : null,
+          current_a: currentA,
+          sampled_at: (latestEnergy || latestPower || latestCurrent)?.sampledAt || new Date().toISOString(),
+        });
+      } catch (pubErr) {
+        logWarning(`[SSE] Lỗi publish sự kiện MeterValues: ${pubErr?.message || pubErr}`);
+      }
+    }
 
     if (outcome.orphanReason) {
       logWarning(
