@@ -78,3 +78,13 @@ Với mỗi story, theo dấu **nguồn → đích** (dữ liệu vào từ đâ
 - Chạy test hiện có liên quan; đọc test xem **có thật sự kiểm điều AC yêu cầu không** (test xanh nhưng assert rỗng/sai chỗ là lỗi chất lượng test — ghi lại).
 - Viết thêm ca còn thiếu: ca biên, ca sai định dạng, ca đồng thời, ca khởi động lại giữa chừng.
 - Với phần OCPP: dùng simulator hoặc gửi khung tay qua WebSocket. Với phần HTTP: `curl` với **hai tài khoản khác chủ** để kiểm IDOR.
+- Với yêu cầu số liệu (200 ms, 2 giây, 50 kết nối, 20 trụ × 10 giây): **đo thật, ghi con số thật** và điều kiện đo. Không có số đo thì không được ghi PASS cho yêu cầu đó.
+- Với migration: chạy tiến → lùi → tiến, kiểm ràng buộc/chỉ mục thật sự tồn tại trong DB (`\d bảng`), đừng chỉ tin file migration.
+
+### Pha 4 — Phản biện và phân loại
+Tự bác bỏ từng phát hiện (nguyên tắc 6). Phân loại: **BUG** (sai so với backlog), **VULN** (lỗ hổng), **GAP** (backlog không nói rõ → cần PO quyết), **TEST-DEBT** (thiếu/yếu test), **OBS** (quan sát, chưa phải lỗi). Chấm severity bằng rubric của repo (CVSS 3.1 cho VULN).
+
+### Pha 5 — Ghi tài liệu và báo cáo (mục 8, 9)
+
+## 5. Bản đồ story S-01 → S-20: trọng tâm kiểm thử + audit
+
