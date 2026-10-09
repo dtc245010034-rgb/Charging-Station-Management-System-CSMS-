@@ -18,3 +18,13 @@ Do thư viện Leaflet 1.9.4 (`leaflet.js`) kiểm tra `if ("string" == typeof e
 - Đoạn code trích:
 ```javascript
 // Dòng 80:
+existing.marker.setTooltipContent(point.name);
+
+// Dòng 83-84:
+const marker = L.marker([point.lat, point.lng], { icon: pinIcon(L, point.group), title: point.name, keyboard: true })
+  .addTo(map).bindTooltip(point.name).on('click', () => onSelect(point.id));
+```
+- Phía thư viện: `frontend/vendor/leaflet/leaflet.js` (hàm `_updateContent`):
+```javascript
+_updateContent: function() {
+  if (this._content) {
