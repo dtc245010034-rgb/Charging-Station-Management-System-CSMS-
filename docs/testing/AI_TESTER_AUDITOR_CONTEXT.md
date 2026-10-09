@@ -248,3 +248,13 @@ Test cũ liên quan còn xanh? Lỗi cũ đã sửa có quay lại không?
 
 ### 8.2 Mẫu file phát hiện (BUG / VULN)
 ```
+# <ID> — <tiêu đề>
+Loại: ... | Severity: ... (CVSS 3.1: <vector> nếu VULN) | Story/Task: S-XX / T-xx
+Mức xác minh: ĐÃ CHẠY | ĐỌC CODE | NGHI VẤN | Trạng thái: MỞ
+
+## Mô tả
+## Vị trí (file:dòng + đoạn code trích)
+## Nguồn → đích (VULN) / AC bị vi phạm (BUG)
+## Tái hiện (lệnh/PoC chạy được)
+## Thực tế vs mong đợi
+## Tác động
