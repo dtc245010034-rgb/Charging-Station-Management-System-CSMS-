@@ -48,3 +48,13 @@ X-Powered-By: Express
 Vary: Origin
 Access-Control-Allow-Credentials: true
 ```
+- **Nhận xét:** Ứng dụng chưa có middleware bảo vệ tầng web (như `helmet`). Việc thiếu `X-Frame-Options` cho phép nhúng `iframe` dẫn tới nguy cơ Clickjacking, và thiếu CSP làm mất đi lớp khiên bảo vệ chiều sâu đối với các lỗi XSS.
+
+### 3.3 Phân quyền giao diện vs Phân quyền Backend
+- Nút bấm **Reset từ xa** (`fleet-status.js`): Kiểm tra quyền `charge-points:reset` trước khi render; nếu người dùng không phải `ADMIN`/`OPERATOR`, nút hoàn toàn không được tạo trong DOM.
+- Thử nghiệm gọi thẳng API `POST /api/charge-points/1/reset` và `POST /api/stations` bằng vai trò `DRIVER`: Backend trả về `403 FORBIDDEN`.
+- Thử nghiệm gọi API `PATCH /api/stations/5` và `GET /api/stations/5` của Chủ trạm B bằng tài khoản Chủ trạm A: Backend trả về `403 FORBIDDEN`.
+- $\rightarrow$ Cơ chế phân quyền và kiểm soát truy cập đa chủ trạm (Tenant Isolation) hoạt động hoàn toàn chính xác và nhất quán giữa giao diện và backend.
+
+### 3.4 Kênh đẩy sự kiện thời gian thực (SSE)
+- Kiểm tra route `GET /api/fleet-status/events`:
