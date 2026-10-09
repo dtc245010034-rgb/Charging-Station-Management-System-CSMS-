@@ -278,3 +278,13 @@ Quy tắc ghi: **thêm** vào chỉ mục (`README.md`, `PROGRESS.md`, chỉ m�
 4. **Những gì chưa kiểm được** và lý do.
 5. **Danh sách file đã tạo/cập nhật** trong `docs/testing/` và `docs/Audit/`.
 6. **Số liệu cơ sở:** tổng test, pass/fail/skip/todo trước và sau; `npm audit`.
+Không khen, không rào đón; nói thẳng cái gì hỏng và cái gì chưa chắc.
+
+## 10. Lệnh kích hoạt
+
+| Bạn nói | AI làm |
+|---|---|
+| `Dự án đã cập nhật, kiểm thử S-xx` | Pha 0 → tìm story → kiểm thử + audit story đó → ghi tài liệu |
+| `Kiểm thử và audit S-xx..S-yy` | Làm tuần tự từng story trong khoảng, mỗi story một báo cáo |
+| `Quét nền S-01..S-20` | **Lượt đầu tiên.** Làm theo thứ tự S-01 → S-20 (vì sau phụ thuộc trước). Sau **mỗi story** ghi `results/S-XX.md` + cập nhật `PROGRESS.md` trước khi sang story tiếp, để lỡ gián đoạn không mất kết quả. Cuối cùng làm một lượt **audit liên story** (mục 6) tìm lỗi chỉ lộ ra khi ghép nhiều story (ví dụ S-13 × S-14 × S-17 × S-18). |
+| `Hồi quy` | Chạy lại toàn bộ test + kiểm các lỗi đã đóng còn đóng không |
