@@ -98,3 +98,13 @@ const marker = L.marker([point.lat, point.lng], { icon: pinIcon(L, point.group),
 ```
 Khi truyền `Node`, hàm `_updateContent` của Leaflet sẽ đi vào nhánh `t.appendChild(e)` thay vì `t.innerHTML = e`.
 
+## 8. Test hồi quy nên thêm
+Tạo test kiểm tra `createStationMap` với tên trạm chứa ký tự `<script>`, `<img onerror=...>` đảm bảo trong DOM Leaflet tooltip không sinh ra thẻ HTML lạ.
+
+## 9. Tham chiếu
+- OWASP Top 10:2021 — A03: Injection (Cross-Site Scripting - XSS)
+- CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')
+- ASVS 4.0: V5.3.1, V5.3.3
+
+## 10. Đã tự bác bỏ thế nào?
+- Đã kiểm tra xem `frontend/app/dom.js` có bảo vệ không: `dom.js` sử dụng `document.createTextNode` rất an toàn, nhưng đoạn code này nằm ở `station-map.js` gọi thẳng vào API của Leaflet (`bindTooltip`), hoàn toàn bỏ qua `dom.js`.
