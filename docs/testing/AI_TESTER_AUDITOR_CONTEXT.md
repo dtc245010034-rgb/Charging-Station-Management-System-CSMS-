@@ -148,3 +148,13 @@ Mỗi mục: **Kiểm** = ca bám AC; **Soi** = góc audit/bẫy hay gặp. Đâ
 
 **S-14 Chống xử lý trùng tin nhắn**
 - Kiểm: cùng `messageId` hai lần → trả đúng câu trả lời cũ và **handler không chạy lại**; khởi động lại giữa hai lần gửi vẫn nhận ra trùng (khoá lưu ở DB); khác nội dung cùng mã → trả câu trả lời tin đầu + cảnh báo; bản ghi > 7 ngày bị job dọn (số ngày cấu hình được); gửi lại 5 lần → một bản ghi hiệu ứng, năm lần cùng câu trả lời.
+- Soi: khoá là **cặp (mã trụ, mã tin nhắn)** — đúng chưa; tra bảng + chạy handler có **cùng một giao dịch** không (hai tin giống hệt tới đồng thời); handler **lỗi/rollback** thì câu trả lời có bị lưu nhầm không (lần gửi lại sau đó phải được xử lý lại chứ không nhận câu trả lời lỗi cũ — hoặc ngược lại, đây là quyết định cần ghi rõ); `CALLERROR` có được lưu như câu trả lời không; cửa sổ chống trùng 600 giây (F8) so với yêu cầu 7 ngày — hai cơ chế này có mâu thuẫn không; bảng phình khi kẻ gửi hàng loạt mã duy nhất; câu trả lời lưu trong DB có chứa dữ liệu nhạy cảm (mã thẻ) không.
+
+**S-15 `Authorize`**
+- Kiểm: thẻ hợp lệ → `Accepted`; khoá → `Blocked`; quá hạn → `Expired`; không tồn tại → `Invalid` + ghi nhật ký; trạm tạm ngừng + thẻ hợp lệ → `Blocked`; cấu trúc `idTagInfo` đúng đặc tả; **log chỉ hiện 4 ký tự cuối của thẻ**.
+- Soi: **tìm mọi nơi mã thẻ có thể lọt nguyên văn**: log ứng dụng, log lỗi, log truy vấn SQL, bảng `ocpp_messages` (lưu cả khung/câu trả lời), `orphan_messages`, `audit_logs`, thông báo lỗi trả về; ranh giới hạn dùng (đúng bằng thời điểm hết hạn); tài xế bị vô hiệu hoá nhưng thẻ còn → trạng thái gì; độ dài `idTag` (CiString20) và chữ hoa/thường; **dò thẻ bằng vũ lực** (không có giới hạn tốc độ cho `Invalid`?); `Invalid` vs `Blocked` có cho phép liệt kê thẻ tồn tại không (đặc tả đòi phân biệt, nhưng nên ghi nhận như rủi ro còn lại); `parentIdTag`.
+
+**S-16 `Reset` từ xa**
+- Kiểm: trụ trực tuyến → gửi `Reset`, hiện `Accepted` trong 5 giây; trụ ngoại tuyến → báo ngay, không treo; trụ im lặng 30 giây → lỗi hết thời gian và **lời gọi bị huỷ**; chỉ vận hành viên/quản trị thấy và gọi được; một lời gọi đang chờ không chặn tin nhắn khác trên cùng kết nối; kiểu mềm/cứng.
+- Soi: **CSRF** (lệnh POST bằng cookie — có `SameSite`/kiểm `Origin`/token không); IDOR (chọn trụ không thuộc phạm vi); `type` ngoài enum; **câu trả lời tới muộn sau khi hết thời gian** (không được làm sập, không được ghi nhầm); bảng lời gọi đang chờ dọn sạch sau hết thời gian/đứt kết nối; spam `Reset` (giới hạn tốc độ); nhật ký thao tác có người thực hiện không (tạm ở log, sẽ chuyển `audit_logs` ở T-57); một trụ ngoại tuyến bị `Reset` lặp lại gây tải.
+
