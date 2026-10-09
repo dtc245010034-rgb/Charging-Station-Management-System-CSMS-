@@ -48,3 +48,13 @@ _updateContent: function() {
 1. Đăng nhập tài khoản Chủ trạm:
 ```bash
 node -e "
+fetch('http://localhost:3000/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'owner@demo.csms.local', password: 'demo12345' })
+}).then(async r => {
+  const cookie = r.headers.get('set-cookie');
+  // Tạo trạm với payload XSS
+  const res = await fetch('http://localhost:3000/api/stations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Cookie': cookie, 'Idempotency-Key': 'xss-' + Date.now() },
