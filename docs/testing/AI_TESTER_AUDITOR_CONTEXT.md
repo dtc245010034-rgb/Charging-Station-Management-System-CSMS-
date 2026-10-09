@@ -98,3 +98,13 @@ Mỗi mục: **Kiểm** = ca bám AC; **Soi** = góc audit/bẫy hay gặp. Đâ
 
 **S-02 Đăng nhập, khoá tạm**
 - Kiểm: đúng → phiên + chuyển trang theo vai trò; sai → thông báo chung; sai 5 lần → lần 6 bị khoá 15 phút **kể cả nhập đúng**; phiên hết hạn → 401 + về trang đăng nhập; khoá còn sau khi khởi động lại (lưu ở DB).
+- Soi: lộ tồn tại email qua **thời gian phản hồi** hoặc qua mã/ký tự khác nhau giữa "email không có" và "sai mật khẩu"; **đua**: 20 yêu cầu sai song song có vượt giới hạn 5 không (read-modify-write bộ đếm); đếm **theo IP** có thật không và IP lấy từ đâu — giả `X-Forwarded-For` có né được khoá không (`lib/client-ip.js`, `TRUST_PROXY`); kẻ xấu cố tình khoá tài khoản nạn nhân (DoS theo tài khoản) có được giảm nhẹ không; cookie có `HttpOnly`, `SameSite`, `Secure` (production); JWT: thuật toán cố định, hạn, có thu hồi khi đăng xuất/đổi vai trò không; thông số Argon2id; mật khẩu có lọt vào log; đăng nhập bằng email viết hoa/thường/khoảng trắng/Unicode có tạo trùng tài khoản không; có kiểm tra CSRF cho các lệnh POST dùng cookie.
+
+**S-03 Phân quyền theo vai trò, lọc sở hữu**
+- Kiểm: chủ trạm chỉ thấy trạm mình; A gọi API trạm của B → 403 + có dòng nhật ký; tài xế gọi API vận hành viên → 403; **route mới chưa khai quyền → bị từ chối** (kể cả với quản trị).
+- Soi: **liệt kê toàn bộ route thật của app và đối chiếu với `permissions.js`** — route nào lọt (đặc biệt route thêm ở S-06→S-20, SSE, route phụ, `OPTIONS`/`HEAD`, static)? IDOR cho **mọi** phương thức (GET/PUT/PATCH/DELETE), cả ID trong path, query lẫn body; mass assignment (client gửi `owner_id`, `role`, `status`); điều kiện sở hữu có nằm đúng **một** hàm (`scope.js`) hay có truy vấn "chép tay" bỏ sót — grep mọi truy vấn vào `stations`/`charge_points`/`connectors`/`charging_sessions` xem truy vấn nào không đi qua `scope`; 403 vs 404 có lộ sự tồn tại của tài nguyên không.
+
+**S-04 Chủ trạm tạo/sửa trạm**
+- Kiểm: tạo trạm → trạng thái chưa hoạt động, gắn tài khoản mình; toạ độ ngoài dải → lỗi tại ô và không tạo bản ghi; sửa tên/địa chỉ hiện ngay; **bấm lưu hai lần → một trạm** (kiểm ở **máy chủ**, không chỉ nút bị vô hiệu).
+- Soi: toạ độ `NaN`, `Infinity`, chuỗi, `-0`, độ chính xác; chủ sở hữu lấy từ phiên chứ không từ body; độ dài tên/địa chỉ; **XSS lưu trữ** khi tên/địa chỉ hiển thị trong danh sách và màn hình theo dõi (JS thuần → `innerHTML`?); gửi lặp qua hai tab/hai yêu cầu song song (không chỉ bấm đúp).
+
