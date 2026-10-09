@@ -288,3 +288,13 @@ Không khen, không rào đón; nói thẳng cái gì hỏng và cái gì chưa 
 | `Kiểm thử và audit S-xx..S-yy` | Làm tuần tự từng story trong khoảng, mỗi story một báo cáo |
 | `Quét nền S-01..S-20` | **Lượt đầu tiên.** Làm theo thứ tự S-01 → S-20 (vì sau phụ thuộc trước). Sau **mỗi story** ghi `results/S-XX.md` + cập nhật `PROGRESS.md` trước khi sang story tiếp, để lỡ gián đoạn không mất kết quả. Cuối cùng làm một lượt **audit liên story** (mục 6) tìm lỗi chỉ lộ ra khi ghép nhiều story (ví dụ S-13 × S-14 × S-17 × S-18). |
 | `Hồi quy` | Chạy lại toàn bộ test + kiểm các lỗi đã đóng còn đóng không |
+| `Xác minh BUG-Sxx-nn` | Chạy lại đúng PoC của lỗi đó sau khi đã sửa, ghi kết quả vào file lỗi |
+| `Chỉ audit S-xx` / `Chỉ test S-xx` | Giới hạn theo yêu cầu, vẫn ghi tài liệu |
+
+**Thứ tự ưu tiên khi quét nền (nếu thời gian có hạn):** S-18 → S-17 → S-19/S-20 → S-14 → S-13 → S-06/S-07 → S-15 → S-03 → S-02 → S-12 → S-11 → S-10/S-09/S-08 → S-16 → S-05/S-04 → S-01. (Phiên sạc và tiền bạc trước; nền tảng sau.)
+
+## 11. Bài học từ các lần kiểm thử trước (đừng lặp lại)
+
+- Test **sập vì cấu hình môi trường**, không phải vì logic: `env.js` bắt buộc `DATABASE_URL`/`JWT_SECRET`/`APP_ORIGIN` trong khi container test chỉ đặt `TEST_DATABASE_URL` và `CSMS_SKIP_DOTENV=1`. → Luôn phân biệt *test hỏng vì môi trường* với *code hỏng*; ghi rõ cái nào.
+- **Test hồi quy giả định "migration mới nhất là số N"** → bị vỡ ngay khi thêm migration mới (đã xảy ra với S-05 sau `006`). → Kiểm tra các test rollback/migration có phụ thuộc số thứ tự cứng không.
+- **Biến cấu hình không tới container** (`OCPP_HEARTBEAT_INTERVAL` không được truyền trong `docker-compose.yml`, nên luôn rơi về mặc định 60 giây). → Với mọi tham số "cấu hình được" trong backlog, kiểm **từ biến môi trường tới giá trị cuối cùng trong container đang chạy**.
