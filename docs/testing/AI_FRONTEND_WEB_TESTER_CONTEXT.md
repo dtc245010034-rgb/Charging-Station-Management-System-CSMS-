@@ -68,3 +68,13 @@ S-22 (phiên đang sạc, **360px**, xoay ngang, kWh tăng trong 2 giây), S-23/
 ## 5. Lăng kính xuyên suốt cho frontend (áp cho mọi màn hình)
 
 1. **XSS**: bảng sink ở Pha 0 là danh mục việc cần làm — mỗi sink có một ca thử với payload ở mọi ngữ cảnh; kết luận dựa trên **kết quả thực chạy trong trình duyệt**.
+2. **Nội dung phản chiếu**: tham số URL/hash/query có được in lại vào trang không.
+3. **Lưu trữ phía client**: gì nằm trong `localStorage`/`sessionStorage`/cookie không-HttpOnly (token, vai trò, thông tin cá nhân)? **Vai trò lưu ở client chỉ để hiển thị — nếu có logic quyền dựa vào nó thì ghi lỗi.** Sửa giá trị đó trong DevTools thì mở được gì (chỉ giao diện, hay cả dữ liệu)?
+4. **Quyền trên giao diện ≠ quyền thật**: với mỗi nút/menu/trang bị ẩn theo vai trò, thử vào thẳng đường dẫn giao diện và gọi thẳng API bằng vai trò thấp.
+5. **Xử lý lỗi API**: 401 (về đăng nhập), 403 (thông báo, không trắng trang), 404, 409, 429, 500, mạng đứt, phản hồi không phải JSON, phản hồi chậm 30 giây — giao diện có treo/nuốt lỗi/hiện thông điệp kỹ thuật lộ chi tiết (stack trace, SQL) không.
+6. **Trạng thái chờ và chống gửi lặp**: mọi nút gây thay đổi dữ liệu có vô hiệu trong lúc chờ **và** máy chủ có chống lặp độc lập không.
+7. **Tính toàn vẹn dữ liệu hiển thị**: giá trị số (kWh, toạ độ, thời gian) định dạng đúng, không làm tròn sai, múi giờ hiển thị đúng (máy chủ UTC vs hiển thị địa phương Việt Nam), không hiện `null`/`undefined`/`NaN`.
+8. **Khả dụng**: tab được bằng bàn phím và thứ tự hợp lý; focus nhìn thấy; nhãn cho ô nhập (`label`/`aria-label`); thông báo lỗi có `aria-live`/gắn với ô; tương phản màu; **không chỉ dùng màu** để truyền trạng thái; 360px không cuộn ngang; phóng to 200%.
+9. **Hiệu năng**: thời gian tải trang; số yêu cầu; kích thước JS; danh sách 50 trụ/200 đầu nối vẽ lại toàn bộ mỗi lần có sự kiện (giật) hay cập nhật cục bộ.
+10. **Tương thích**: tối thiểu Chrome và Firefox (và Safari nếu có); điện thoại ở 360px.
+
