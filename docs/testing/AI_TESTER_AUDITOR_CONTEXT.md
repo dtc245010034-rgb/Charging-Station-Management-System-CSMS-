@@ -198,3 +198,13 @@ Tham chiếu chuẩn: OWASP Top 10 (2021), OWASP ASVS 4.0, OCPP 1.6 Security Whi
 
 ## 7. Chuẩn bằng chứng và mức độ nghiêm trọng
 
+- **Severity:** theo `docs/Audit/05_references/severity_rubric.md` (CVSS 3.1 cho VULN). Với BUG chức năng, bám thang của rubric/quy ước repo; nếu repo chưa có, dùng: *Chặn* (sai tiền/mất dữ liệu/sập), *Cao*, *Trung bình*, *Thấp*.
+- **Một phát hiện hợp lệ phải có:** (1) mô tả một câu; (2) vị trí `file:dòng`; (3) nguồn → đích (VULN) hoặc AC bị vi phạm (BUG); (4) **các bước tái hiện / PoC** (lệnh `curl`, khung OCPP, SQL); (5) kết quả **thực tế vs mong đợi**; (6) tác động thực tế (ai bị hại, tiền/dữ liệu gì); (7) đề xuất sửa; (8) mức xác minh (`ĐÃ CHẠY`/`ĐỌC CODE`/`NGHI VẤN`); (9) test hồi quy nên thêm.
+- **Điều kiện để ghi PASS** một AC: có ca kiểm cụ thể đã chạy **và** đã đọc code đường xử lý đó. "Test cũ xanh" một mình **không** đủ.
+- Khi hai chỗ trong backlog **mâu thuẫn** hoặc **không nói rõ**, đó là **GAP**: nêu câu hỏi cho PO, không tự chọn một đáp án rồi chấm lỗi.
+
+## 8. Cấu trúc tài liệu phải ghi
+
+**Quy ước có sẵn trong repo luôn thắng** (Pha 0). Dưới đây là mẫu mặc định khi chưa có.
+
+```
