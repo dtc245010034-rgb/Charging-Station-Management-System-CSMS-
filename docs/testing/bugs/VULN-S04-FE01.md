@@ -58,3 +58,13 @@ fetch('http://localhost:3000/api/auth/login', {
   const res = await fetch('http://localhost:3000/api/stations', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Cookie': cookie, 'Idempotency-Key': 'xss-' + Date.now() },
+    body: JSON.stringify({
+      name: '<img src=x onerror=window.__xss_probe=1>',
+      address: '123 Phố XSS, Hà Nội',
+      latitude: '21.0285',
+      longitude: '105.8542'
+    })
+  });
+  console.log('Status:', res.status, await res.json());
+});"
+```
