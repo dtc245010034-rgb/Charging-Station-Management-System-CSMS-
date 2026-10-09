@@ -58,3 +58,13 @@ Nếu một lỗi frontend thực chất do backend (API không kiểm tra) thì
 - Kiểm: 20 trụ trên một màn hình máy tính **không cuộn ngang**; trạng thái phân biệt **bằng nhãn chữ chứ không chỉ màu** (thử bộ lọc mô phỏng mù màu hoặc chuyển ảnh xám); trụ ngoại tuyến hiện thời điểm liên lạc cuối; đổi trạng thái đầu nối → màn hình đổi < 1 giây không tải lại; **tắt rồi bật lại máy chủ** → màn hình tự khôi phục, **tải lại đầy đủ** (không chỉ nhận sự kiện mới); chủ trạm chỉ thấy trụ mình.
 - Soi: **rò dữ liệu SSE** — mở hai trình duyệt (chủ trạm A, chủ trạm B) và một vận hành viên, gây sự kiện ở trạm A, quan sát tab Network/`EventSource` của B (dữ liệu **trong luồng**, không chỉ trên màn hình); sau **đăng xuất / hết hạn phiên / đổi vai trò** ở tab khác, luồng SSE còn mở và còn nhận dữ liệu không; nối lại tự động có **bão nối lại** (không giãn cách → tự DoS máy chủ) không; rò listener/bộ nhớ khi chuyển trang nhiều lần (đếm kết nối SSE phía máy chủ sau khi đóng tab); sự kiện tới **không đúng thứ tự** hoặc tới trước lúc tải đầy đủ xong (trạng thái cũ ghi đè mới); dữ liệu do trụ gửi (vendor/model/firmware/`errorCode`) hiển thị có bị XSS không — **đây là điểm tấn công thực tế nhất** vì kẻ lạ nối được trụ giả (B5); 20 → 50 trụ có giật/đơ giao diện không; tab ở chế độ nền lâu rồi quay lại.
 
+### 4.5 Nút khởi động lại trụ (S-16, T-35)
+- Kiểm: chỉ **vận hành viên và quản trị** thấy nút (thử 5 vai trò, kiểm cả **DOM** chứ không chỉ mắt nhìn: nút bị ẩn bằng CSS nhưng vẫn có trong DOM/có gọi được?); hộp chọn mềm/cứng; trụ ngoại tuyến → thông báo ngay; chờ → hết thời gian hiện lỗi; ô trụ chuyển ngoại tuyến → trực tuyến sau khi reset.
+- Soi: **CSRF thực tế** — dựng một trang HTML cục bộ ở miền khác gửi `POST` tới API reset trong lúc đang đăng nhập (`SameSite`, kiểm `Origin`/token) và ghi kết quả; xác nhận trước khi thực hiện lệnh phá hoại (bấm nhầm); bấm nhiều lần liên tiếp có gửi nhiều lệnh không (nút vô hiệu trong lúc chờ); người dùng không đủ quyền gọi thẳng API (đã thuộc file chính, ở đây chỉ **đối chiếu**: giao diện ẩn nút ≠ có quyền).
+
+### 4.6 Màn hình chưa có ở S-01…S-20 nhưng sẽ tới (khi story xong thì kiểm theo cùng mẫu)
+S-22 (phiên đang sạc, **360px**, xoay ngang, kWh tăng trong 2 giây), S-23/T-50 (nút dừng, ba thông báo khác nhau), S-24/T-52 (nút bắt đầu sạc, chờ 60 giây, nút vô hiệu), S-25/T-54 (danh sách phiên bất thường, đóng tay bắt buộc lý do), S-27/T-58 (nhật ký, ba bộ lọc, phân trang 50 dòng). Nếu code đã có ở nhánh hiện tại thì kiểm luôn.
+
+## 5. Lăng kính xuyên suốt cho frontend (áp cho mọi màn hình)
+
+1. **XSS**: bảng sink ở Pha 0 là danh mục việc cần làm — mỗi sink có một ca thử với payload ở mọi ngữ cảnh; kết luận dựa trên **kết quả thực chạy trong trình duyệt**.
