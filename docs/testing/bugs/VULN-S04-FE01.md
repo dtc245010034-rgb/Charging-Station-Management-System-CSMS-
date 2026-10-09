@@ -108,3 +108,6 @@ Tạo test kiểm tra `createStationMap` với tên trạm chứa ký tự `<scr
 
 ## 10. Đã tự bác bỏ thế nào?
 - Đã kiểm tra xem `frontend/app/dom.js` có bảo vệ không: `dom.js` sử dụng `document.createTextNode` rất an toàn, nhưng đoạn code này nằm ở `station-map.js` gọi thẳng vào API của Leaflet (`bindTooltip`), hoàn toàn bỏ qua `dom.js`.
+- Đã kiểm tra backend schema (`stations.schema.js`): `name` chỉ dùng `z.string().trim().min(1)`, không hề có kiểm tra hay sanitize mã HTML.
+- Đã kiểm tra CSP của máy chủ: Máy chủ không có header `Content-Security-Policy` nào để chặn inline execution.
+- **Kết luận:** Lỗ hổng tồn tại 100% trong runtime.
