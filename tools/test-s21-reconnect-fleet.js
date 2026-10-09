@@ -69,6 +69,13 @@ function optionsFromArgs(args) {
   }
   if (!options.url) throw new Error('Set STAGING_BASE_URL or pass --url');
   if (!process.env.STAGING_DATABASE_URL) throw new Error('Set STAGING_DATABASE_URL for read-only result verification');
+  if (
+    process.env.NODE_ENV === 'production' ||
+    /production|\bprod\b/i.test(options.url) ||
+    /production|\bprod\b/i.test(process.env.STAGING_DATABASE_URL)
+  ) {
+    throw new Error('Safety guardrail: Refusing to run fleet reconnect test against a production environment');
+  }
   if (!/^[A-Z0-9_-]{1,30}$/.test(options.prefix)) throw new Error('--prefix must use 1-30 letters, digits, "_" or "-"');
   if (!/^[A-Z0-9_-]{1,20}$/i.test(options.tag)) throw new Error('--tag must be a valid OCPP idTag (up to 20 characters)');
   if (options.count > 500) throw new Error('--count must not exceed 500');

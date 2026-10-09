@@ -1,25 +1,31 @@
 const { safeLog, sanitizeErrorMessage } = require('../../lib/constants');
 const { markChargePointOffline } = require('../charge-points/presence');
 
-function createConnectionRateLimiter({ maxMessagesPerSecond = 50, now = Date.now } = {}) {
-	let windowStart = now();
-	let count = 0;
+function createConnectionRateLimiter({
+	maxMessagesPerSecond = 50,
+	burstCapacity = maxMessagesPerSecond >= 50 ? 400 : maxMessagesPerSecond,
+	now = Date.now,
+} = {}) {
+	let tokens = burstCapacity;
+	let lastRefillTime = now();
 	let exceeded = false;
 
 	return {
 		checkLimit() {
 			if (exceeded) return false;
 			const currentTime = now();
-			if (currentTime - windowStart >= 1000) {
-				windowStart = currentTime;
-				count = 0;
+			const elapsedMs = Math.max(0, currentTime - lastRefillTime);
+			if (elapsedMs > 0) {
+				const addedTokens = (elapsedMs * maxMessagesPerSecond) / 1000;
+				tokens = Math.min(burstCapacity, tokens + addedTokens);
+				lastRefillTime = currentTime;
 			}
-			count += 1;
-			if (count > maxMessagesPerSecond) {
-				exceeded = true;
-				return false;
+			if (tokens >= 1) {
+				tokens -= 1;
+				return true;
 			}
-			return true;
+			exceeded = true;
+			return false;
 		},
 		isExceeded() {
 			return exceeded;
@@ -83,7 +89,12 @@ function registerOcppConnection(ws, code, {
 		ws.isAlive = true;
 	});
 
-	const rateLimiter = createConnectionRateLimiter({ maxMessagesPerSecond: rateLimitMax, now });
+	const burstCapacity = rateLimitMax >= 50 ? Math.max(rateLimitMax, 400) : rateLimitMax;
+	const rateLimiter = createConnectionRateLimiter({
+		maxMessagesPerSecond: rateLimitMax,
+		burstCapacity,
+		now,
+	});
 
 	connections.connect(code, ws, { stationId: ws.stationId });
 

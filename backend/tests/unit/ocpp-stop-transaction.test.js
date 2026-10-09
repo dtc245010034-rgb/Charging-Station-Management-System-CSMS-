@@ -52,9 +52,43 @@ describe('S-18 StopTransaction handler', () => {
       context: { connection: CONNECTION, messageId: 'stop-message-17' },
     });
     assert.match(update.sql, /WHERE id = \$1\s+AND charge_point_id = \$6\s+AND status = 'CHARGING'/);
-    assert.deepEqual(update.params, [17, 1250, new Date(NOW).toISOString(), 'Remote', false, 42, JSON.stringify(transactionData)]);
+    assert.deepEqual(update.params, [17, 1250, new Date(NOW).toISOString(), 'Remote', false, 42, JSON.stringify(transactionData), false]);
     assert.match(update.sql, /meter_start > \$2/);
     assert.match(update.sql, /status = 'COMPLETED'/);
+  });
+
+  it('transactionData bị lỗi vẫn chốt phiên COMPLETED và bật needs_review kèm lý do INVALID_TRANSACTION_DATA', async () => {
+    let update;
+    const warnings = [];
+    const transactionData = [{ bad: 'sample' }];
+    const handler = createStopTransactionHandler({
+      pool: {
+        query: async (sql, params) => {
+          if (sql.includes('SELECT connector_no')) {
+            return { rowCount: 1, rows: [{ connector_no: 1 }] };
+          }
+          update = { sql, params };
+          return { rowCount: 1, rows: [{ meter_start: '1000' }] };
+        },
+      },
+      now: () => NOW,
+      logWarning: (msg) => warnings.push(msg),
+      logError: () => {},
+      persistTransactionData: async () => {
+        throw new OcppCallError('PropertyConstraintViolation', 'Sample invalid');
+      },
+    });
+
+    const result = await handler(validPayload({ transactionData }), {
+      connection: CONNECTION,
+      messageId: 'stop-fault-17',
+    });
+    assert.deepEqual(result, {});
+    assert.match(update.sql, /status = 'COMPLETED'/);
+    assert.match(update.sql, /INVALID_TRANSACTION_DATA/);
+    assert.equal(update.params[7], true); // transactionDataFailed = true
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /Không thể lưu transactionData/);
   });
 
   it('mặc định reason là Local; số đo lùi đánh dấu needs_review', async () => {

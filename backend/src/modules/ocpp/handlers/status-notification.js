@@ -183,6 +183,24 @@ function createStatusNotificationHandler({
         connectorId: session.connector_id,
       }));
     }
+    if (status === 'Charging') {
+      const activeSession = await db.query(
+        `SELECT cs.id
+         FROM charging_sessions cs
+         JOIN connectors c ON c.id = cs.connector_id
+         JOIN charge_points cp ON cp.id = c.charge_point_id
+         WHERE cs.status = 'CHARGING'
+           AND cp.code = $1
+           AND c.connector_no = $2
+         LIMIT 1`,
+        [code, connectorId]
+      );
+      if (activeSession.rowCount === 0) {
+        logWarning(
+          `[OCPP] StatusNotification: Trụ báo Charging nhưng không có phiên mở | chargePoint: ${safeLog(code)} | connectorId: ${connectorId}`
+        );
+      }
+    }
     if (!Object.hasOwn(OCPP_CONNECTOR_STATUS_MAP, status)) {
       logAggregated(logWarning, 'unknown-status', code, `[OCPP] StatusNotification: Trạng thái OCPP chưa biết của trụ ${safeLog(code)} | status`, safeLog(status));
     }
