@@ -8,3 +8,13 @@ Trình duyệt + phiên bản: Chromium / Chrome 120+, Firefox 120+
 Bằng chứng: DOM Node Tooltip chứa mã HTML thực thi, không bị escape; không có CSP ngăn chặn.  
 
 ---
+
+## 1. Mô tả
+Khi người dùng có vai trò Chủ trạm (`STATION_OWNER`) tạo hoặc sửa trạm với tên chứa payload HTML/SVG (ví dụ: `<img src=x onerror=window.__xss_probe=1>`), máy chủ backend chấp nhận lưu chuỗi thô vào cơ sở dữ liệu. Khi Vận hành viên (`OPERATOR`) hoặc Quản trị viên (`ADMIN`) mở màn hình Bản đồ giám sát, component `station-map.js` nạp dữ liệu trạm và gọi trực tiếp `marker.bindTooltip(point.name)` / `marker.setTooltipContent(point.name)`.  
+Do thư viện Leaflet 1.9.4 (`leaflet.js`) kiểm tra `if ("string" == typeof e) t.innerHTML = e;`, chuỗi tên trạm được gán trực tiếp vào `innerHTML` của tooltip container, dẫn tới việc mã JavaScript độc hại được thực thi ngay trong ngữ cảnh phiên làm việc của Quản trị viên/Vận hành viên.
+
+## 2. Vị trí
+- File: `frontend/components/station-map.js:80` và `frontend/components/station-map.js:84`
+- Đoạn code trích:
+```javascript
+// Dòng 80:
