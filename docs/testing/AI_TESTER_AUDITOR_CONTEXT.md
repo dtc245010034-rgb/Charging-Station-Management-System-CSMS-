@@ -268,3 +268,13 @@ Quy tắc ghi: **thêm** vào chỉ mục (`README.md`, `PROGRESS.md`, chỉ m�
 
 ## 9. Báo cáo cuối mỗi lần chạy
 
+### 9.1 `results/PROGRESS.md` — ma trận cập nhật liên tục
+| Story | Task | Trạng thái | Lần kiểm cuối | Lỗi mở (BUG/VULN) | Ghi chú |
+
+### 9.2 Tin nhắn trả lời cuối (ngắn, tiếng Việt)
+1. **Kết luận một dòng** cho từng story đã kiểm: PASS / PARTIAL / FAIL / BLOCKED.
+2. **Top phát hiện** theo severity (ID + một câu + đường dẫn file đã ghi).
+3. **GAP cần PO quyết** (nếu có), mỗi câu hỏi một dòng.
+4. **Những gì chưa kiểm được** và lý do.
+5. **Danh sách file đã tạo/cập nhật** trong `docs/testing/` và `docs/Audit/`.
+6. **Số liệu cơ sở:** tổng test, pass/fail/skip/todo trước và sau; `npm audit`.
