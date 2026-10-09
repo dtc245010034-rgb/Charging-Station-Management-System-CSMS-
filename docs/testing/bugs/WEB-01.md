@@ -38,3 +38,13 @@ Content-Length: 22610
 Chạy lệnh kiểm tra header:
 ```bash
 curl.exe -i http://localhost:3000/
+curl.exe -i http://localhost:3000/api/health
+```
+Quan sát toàn bộ danh sách header không hề xuất hiện:
+- `Content-Security-Policy`
+- `X-Frame-Options`
+- `X-Content-Type-Options`
+- `Referrer-Policy`
+- `Permissions-Policy`
+
+Thử nghiệm Clickjacking:
