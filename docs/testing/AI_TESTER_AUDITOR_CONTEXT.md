@@ -108,3 +108,13 @@ Mỗi mục: **Kiểm** = ca bám AC; **Soi** = góc audit/bẫy hay gặp. Đâ
 - Kiểm: tạo trạm → trạng thái chưa hoạt động, gắn tài khoản mình; toạ độ ngoài dải → lỗi tại ô và không tạo bản ghi; sửa tên/địa chỉ hiện ngay; **bấm lưu hai lần → một trạm** (kiểm ở **máy chủ**, không chỉ nút bị vô hiệu).
 - Soi: toạ độ `NaN`, `Infinity`, chuỗi, `-0`, độ chính xác; chủ sở hữu lấy từ phiên chứ không từ body; độ dài tên/địa chỉ; **XSS lưu trữ** khi tên/địa chỉ hiển thị trong danh sách và màn hình theo dõi (JS thuần → `innerHTML`?); gửi lặp qua hai tab/hai yêu cầu song song (không chỉ bấm đúp).
 
+**S-05 Trụ và đầu nối, mã trụ duy nhất**
+- Kiểm: thêm trụ với 1–4 đầu nối → đúng số đầu nối, trạng thái chưa rõ; mã trùng ở **bất kỳ trạm nào** → chặn; sửa mã trụ **đã có phiên sạc** → chặn kèm lý do; ràng buộc unique **ở DB**; gửi thẳng API (bỏ qua form) vẫn bị từ chối.
+- Soi: unique có phân biệt hoa/thường, khoảng trắng đầu/cuối, Unicode giống nhau (homoglyph) không — hai mã nhìn giống nhau nhưng khác byte, hoặc khác nhau chỉ ở hoa/thường, sẽ gây nhầm trụ ở `/ocpp/<code>`; **ký tự đặc biệt trong mã** (`/`, `%2f`, `..`, khoảng trắng, CRLF, quá dài, null byte) → ảnh hưởng đường dẫn WebSocket và log; chủ trạm A thêm trụ vào trạm của B (IDOR); số đầu nối 0, 5, âm, thập phân, chuỗi; điều kiện "đã có phiên sạc" — **từ S-17 đã có phiên thật, hãy kiểm lại ca này bằng dữ liệu phiên thật**; hai yêu cầu tạo cùng mã song song.
+
+### Sprint 2 — OCPP lõi
+
+**S-06 Kết nối WebSocket, trụ lạ bị từ chối**
+- Kiểm: mã đã đăng ký → mở và **giữ ≥ 10 phút** không tự đứt; mã lạ → đóng **trong 1 giây** + đúng **một** dòng cảnh báo có mã lạ + IP; giao thức con khác `ocpp1.6` → từ chối khi bắt tay; trạm tạm ngừng → vẫn nối nhưng **không bắt đầu được phiên**; ≥ 50 kết nối đồng thời.
+- Soi: mã chỉ lấy từ đường dẫn, không tin gì trong thân; **log không chứa toàn bộ header** và không bị chèn dòng giả qua mã trụ có CRLF; IP trong log lấy đúng chưa (`clientIpOf()` vs `trust proxy`, giả header); kẻ lạ mở hàng loạt kết nối chưa xác thực có làm cạn kết nối/DB không (giới hạn số kết nối, `maxPayload`, ping/pong, timeout bắt tay, mỗi kết nối tốn một truy vấn DB?); giới hạn kích thước khung; kiểm `Origin`; **B5** (ghi trạng thái, không báo mới); thông tin lý do từ chối có lộ cho phía trụ không (AC bảo không trả lý do chi tiết).
+
