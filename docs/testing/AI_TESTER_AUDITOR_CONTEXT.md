@@ -228,3 +228,13 @@ docs/
 ```
 # S-XX — <tên story>
 Trạng thái: PASS | PARTIAL | FAIL | BLOCKED | CHƯA TRIỂN KHAI
+Nhánh/commit: <...>   Ngày: <...>   Người kiểm: AI tester/auditor
+
+## 1. Phạm vi & điều kiện
+Task kiểm: T-xx, T-yy. Môi trường (Docker/local), lệnh đã chạy.
+
+## 2. Ma trận AC
+| # | AC (tóm tắt) | Ca kiểm | Kết quả | Mức xác minh | Bằng chứng |
+## 3. Yêu cầu phi chức năng
+| Yêu cầu | Cách đo | Số đo thật | Đạt? |
+## 4. Tiêu chí hoàn thành của task
