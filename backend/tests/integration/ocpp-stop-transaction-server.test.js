@@ -1,5 +1,6 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const { once } = require('node:events');
 const { closePool } = require('../helpers/app');
 const { query, resetSchema, truncateAll, run: runScript } = require('../helpers/db');
 const { createUser } = require('../helpers/auth');
@@ -66,10 +67,10 @@ describe('S-18 StopTransaction trên WebSocket server thật', () => {
 
   it('chốt phiên với số đo, thời điểm, lý do và trạng thái; gọi lại không ghi đè', async () => {
     const timestamp = new Date().toISOString();
-    const transactionData = [
-      { timestamp: new Date().toISOString(), value: 1250, unit: 'Wh' },
-      { timestamp: new Date().toISOString(), value: 1250.5, unit: 'kWh' },
-    ];
+    const transactionData = [{
+      timestamp,
+      sampledValue: [{ value: '1250', measurand: 'Energy.Active.Import.Register', unit: 'Wh' }],
+    }];
     const first = await sendCall(client, 'stop-tx-first', 'StopTransaction', {
       transactionId,
       meterStop: 1250,
@@ -121,6 +122,72 @@ describe('S-18 StopTransaction trên WebSocket server thật', () => {
       [emptyTransactionId]
     )).rows[0];
     assert.deepEqual(session.transaction_data, []);
+  });
+
+  it('T-38/T-41: trụ nối lại chốt phiên ngoại tuyến theo timestamp và xả transactionData vào meter_values', async () => {
+    const offlineTransactionId = (await query(
+      `INSERT INTO charging_sessions (charge_point_id, connector_id, connector_no, id_tag_masked, meter_start, started_at, status)
+       VALUES ($1, $2, 1, '***0041', 1000, CURRENT_TIMESTAMP - INTERVAL '10 minutes', 'CHARGING')
+       RETURNING id`,
+      [chargePointId, connectorId]
+    )).rows[0].id;
+
+    const disconnected = once(client, 'close');
+    client.terminate();
+    await disconnected;
+    await query("UPDATE charge_points SET status = 'OFFLINE' WHERE id = $1", [chargePointId]);
+    await query("UPDATE connectors SET status = 'OFFLINE' WHERE charge_point_id = $1", [chargePointId]);
+
+    client = await bootChargePoint(server.wsUrl, CODE);
+    const stoppedAt = new Date(Date.now() - 90_000).toISOString();
+    const bufferedAt = new Date(Date.parse(stoppedAt) - 120_000).toISOString();
+    const transactionData = [
+      {
+        timestamp: bufferedAt,
+        sampledValue: [{ value: '2400', measurand: 'Energy.Active.Import.Register', unit: 'Wh' }],
+      },
+      {
+        timestamp: stoppedAt,
+        sampledValue: [{ value: '2500', measurand: 'Energy.Active.Import.Register', unit: 'Wh' }],
+      },
+    ];
+
+    const response = await sendCall(client, 'stop-tx-after-reconnect', 'StopTransaction', {
+      transactionId: offlineTransactionId,
+      meterStop: 2500,
+      timestamp: stoppedAt,
+      reason: 'PowerLoss',
+      transactionData,
+    });
+    assert.deepEqual(response, [3, 'stop-tx-after-reconnect', {}]);
+
+    const session = (await query(
+      'SELECT meter_start, meter_stop, stopped_at, status, transaction_data FROM charging_sessions WHERE id = $1',
+      [offlineTransactionId]
+    )).rows[0];
+    assert.equal(Number(session.meter_start), 1000);
+    assert.equal(Number(session.meter_stop), 2500);
+    assert.equal(new Date(session.stopped_at).toISOString(), stoppedAt);
+    assert.equal(session.status, 'COMPLETED');
+    assert.deepEqual(session.transaction_data, transactionData);
+    assert.equal((Number(session.meter_stop) - Number(session.meter_start)) / 1000, 1.5);
+
+    const meterRows = (await query(
+      `SELECT reported_at, sampled_at, value, unit
+       FROM meter_values
+       WHERE session_id = $1
+       ORDER BY reported_at`,
+      [offlineTransactionId]
+    )).rows;
+    assert.deepEqual(meterRows.map((row) => ({
+      reportedAt: new Date(row.reported_at).toISOString(),
+      sampledAt: new Date(row.sampled_at).toISOString(),
+      value: Number(row.value),
+      unit: row.unit,
+    })), [
+      { reportedAt: bufferedAt, sampledAt: bufferedAt, value: 2400, unit: 'Wh' },
+      { reportedAt: stoppedAt, sampledAt: stoppedAt, value: 2500, unit: 'Wh' },
+    ]);
   });
 
   it('số đo cuối thấp hơn số đầu đóng phiên nhưng bật needs_review', async () => {

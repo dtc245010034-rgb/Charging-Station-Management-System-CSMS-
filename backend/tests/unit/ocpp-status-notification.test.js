@@ -43,6 +43,27 @@ describe('StatusNotification handler', () => {
     assert.deepEqual(queries[0].params, ['OCCUPIED', 'Charging', 'CP-TEST', 2]);
   });
 
+  it('marks an open session for review on Available, but leaves it untouched on Charging', async () => {
+    const queries = [];
+    const handler = createStatusNotificationHandler({
+      pool: {
+        query: async (sql, params) => {
+          queries.push({ sql, params });
+          return { rowCount: 1, rows: [] };
+        },
+      },
+    });
+
+    await handler({ connectorId: 1, status: 'Charging' }, { connection: { chargePointCode: 'CP-TEST' } });
+    assert.equal(queries.length, 1);
+
+    await handler({ connectorId: 1, status: 'Available' }, { connection: { chargePointCode: 'CP-TEST' } });
+    assert.equal(queries.length, 3);
+    assert.match(queries[2].sql, /UPDATE charging_sessions/);
+    assert.match(queries[2].sql, /cs\.status = 'CHARGING'/);
+    assert.deepEqual(queries[2].params, ['CONNECTOR_AVAILABLE_WITH_OPEN_SESSION', 'CP-TEST', 1]);
+  });
+
   it('stores unknown statuses verbatim and acknowledges them', async () => {
     let params;
     const handler = createStatusNotificationHandler({

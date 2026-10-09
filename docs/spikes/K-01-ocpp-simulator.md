@@ -60,7 +60,7 @@ node run-all.js     # ghi lại session-log.json + findings.json, in kết quả
 | Mã trụ lạ (`/ocpp/KHONG-TON-TAI`) | Bị từ chối **HTTP 404 ngay lúc bắt tay**, không mở WebSocket; ghi được mã + IP | Đúng AC 2 của S-06 (T-13) |
 | Subprotocol sai (`ocpp2.0.1`) hoặc **không khai** | **Mặc định thư viện vẫn chấp nhận nâng cấp**, chỉ không chọn subprotocol nào. Phải tự chặn trong `auth` (`handshake.protocols`) → HTTP 400 | S-06 AC 3: **bắt buộc code kiểm `ocpp1.6` tường minh**, đừng tin mặc định |
 | Khung sai schema (thiếu `errorCode`) gửi thẳng | Máy chủ trả `CALLERROR OccurrenceConstraintViolation` kèm chi tiết, **không đóng kết nối** | Đúng AC 2 của S-07 |
-| Rớt mạng giữa phiên (terminate socket) | Thư viện **tự nối lại** cùng identity; máy chủ vẫn giữ `transactionId`; phiên tiếp tục với cùng `transactionId` sau khi trụ tự báo lại `Charging` + gửi tiếp `MeterValues` | Chỉ đúng nếu trụ làm thế. **Thư viện không tự khôi phục phiên**, đó là việc của trụ và của S-21: đừng đóng phiên chỉ vì mất kết nối |
+| Rớt mạng giữa phiên (terminate socket) | Simulator nối lại cùng identity; sau khi trụ tự báo lại `Charging`, nó gửi tiếp `MeterValues` với cùng `transactionId`; CSMS tiếp tục ghi vào phiên cũ | Mất kết nối không đóng phiên. Nếu trụ báo `Available` trong khi phiên vẫn mở, giữ phiên `CHARGING` nhưng bật `needs_review` để đối soát; không tạo phiên mới |
 | **Cùng `messageId` gửi hai lần** (`StartTransaction`) | Thư viện **chạy lại handler và cấp `transactionId` thứ hai (1002 rồi 1003)** | **Bằng chứng cho S-14**: không có chống trùng thì gửi lại = hai phiên = tính tiền đôi. Chống trùng phải ở DB (R-03), không trông vào thư viện |
 
 ## 5. Trường dữ liệu phải lưu (theo schema OCPP 1.6 đã kiểm bằng khung thật)

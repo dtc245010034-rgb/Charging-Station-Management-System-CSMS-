@@ -7,6 +7,7 @@ const MAX_TEXT_LENGTH = 50;
 const MAX_CONNECTOR_ID = 2147483647;
 const MAX_CLOCK_SKEW_MS = 24 * 3600 * 1000;
 const OTHER_ERROR = 'OtherError';
+const AVAILABLE_WITH_OPEN_SESSION = 'CONNECTOR_AVAILABLE_WITH_OPEN_SESSION';
 const OCPP_ERROR_CODES = new Set([
   'ConnectorLockFailure', 'EVCommunicationError', 'GroundFailure', 'HighTemperature', 'InternalError', 'LocalListConflict',
   'NoError', OTHER_ERROR, 'OverCurrentFailure', 'PowerMeterFailure', 'PowerSwitchFailure', 'ReaderFailure', 'ResetFailure',
@@ -154,6 +155,33 @@ function createStatusNotificationHandler({
         chargePointId: updated.charge_point_id,
         connectorId: updated.connector_id,
       });
+    }
+    if (status === 'Available') {
+      const sessions = await db.query(
+        `UPDATE charging_sessions cs
+         SET needs_review = TRUE,
+             review_reason = CASE
+               WHEN position($1 IN COALESCE(cs.review_reason, '')) > 0 THEN cs.review_reason
+               ELSE concat_ws('; ', NULLIF(cs.review_reason, ''), $1)
+             END,
+             updated_at = CURRENT_TIMESTAMP
+         FROM connectors c
+         JOIN charge_points cp ON cp.id = c.charge_point_id
+         JOIN stations s ON s.id = cp.station_id
+         WHERE cs.connector_id = c.id
+           AND cs.status = 'CHARGING'
+           AND cp.code = $2
+           AND c.connector_no = $3
+           AND (NOT cs.needs_review OR position($1 IN COALESCE(cs.review_reason, '')) = 0)
+         RETURNING cp.id AS charge_point_id, cp.station_id, s.owner_id, c.id AS connector_id`,
+        [AVAILABLE_WITH_OPEN_SESSION, code, connectorId]
+      );
+      (sessions.rows || []).forEach((session) => publish({
+        ownerId: session.owner_id,
+        stationId: session.station_id,
+        chargePointId: session.charge_point_id,
+        connectorId: session.connector_id,
+      }));
     }
     if (!Object.hasOwn(OCPP_CONNECTOR_STATUS_MAP, status)) {
       logAggregated(logWarning, 'unknown-status', code, `[OCPP] StatusNotification: Trạng thái OCPP chưa biết của trụ ${safeLog(code)} | status`, safeLog(status));

@@ -1,6 +1,7 @@
 const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
 const { maskIdTag } = require('./authorize');
+const { createMeterValuesHandler } = require('./meter-values');
 
 const MAX_TRANSACTION_ID = 2147483647;
 const MAX_ID_TAG_LENGTH = 20;
@@ -50,8 +51,12 @@ function createStopTransactionHandler({
   now = Date.now,
   logWarning = console.warn,
   logError = console.error,
+  persistTransactionData = null,
 } = {}) {
-  return async function handleStopTransaction(payload, { connection } = {}) {
+  const handleMeterValues = createMeterValuesHandler({ pool, now, logWarning, logError });
+  const saveTransactionData = persistTransactionData || handleMeterValues;
+
+  return async function handleStopTransaction(payload, { connection, messageId } = {}) {
     validatePayload(payload);
 
     const chargePointId = connection?.chargePoint?.id;
@@ -86,6 +91,27 @@ function createStopTransactionHandler({
     }
 
     try {
+      if (Array.isArray(payload.transactionData) && payload.transactionData.length > 0) {
+        const activeSession = await db.query(
+          `SELECT connector_no
+           FROM charging_sessions
+           WHERE id = $1
+             AND charge_point_id = $2
+             AND status = 'CHARGING'`,
+          [payload.transactionId, chargePointId]
+        );
+        if (activeSession.rowCount > 0) {
+          await saveTransactionData(
+            {
+              connectorId: activeSession.rows[0].connector_no,
+              transactionId: payload.transactionId,
+              meterValue: payload.transactionData,
+            },
+            { connection, messageId }
+          );
+        }
+      }
+
       const updated = await db.query(
         `UPDATE charging_sessions
          SET meter_stop = $2,
