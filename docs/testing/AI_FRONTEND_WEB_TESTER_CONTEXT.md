@@ -78,3 +78,13 @@ S-22 (phiên đang sạc, **360px**, xoay ngang, kWh tăng trong 2 giây), S-23/
 9. **Hiệu năng**: thời gian tải trang; số yêu cầu; kích thước JS; danh sách 50 trụ/200 đầu nối vẽ lại toàn bộ mỗi lần có sự kiện (giật) hay cập nhật cục bộ.
 10. **Tương thích**: tối thiểu Chrome và Firefox (và Safari nếu có); điện thoại ở 360px.
 
+## 6. Tầng web phía máy chủ (không thuộc một story, kiểm một lần rồi hồi quy)
+
+Ghi kết quả vào `docs/Audit/` (tầng web là việc audit) và dẫn chiếu từ `docs/testing/`.
+
+1. **Header bảo mật** trên trang HTML và API: `Content-Security-Policy` (không `unsafe-inline`/`unsafe-eval` nếu tránh được; nguồn script/connect chặt), `X-Content-Type-Options: nosniff`, `X-Frame-Options` hoặc `frame-ancestors`, `Referrer-Policy`, `Strict-Transport-Security` (production), `Permissions-Policy`; kiểm có dùng `helmet` hay tự đặt và **header nào thiếu**.
+2. **Cookie phiên:** `HttpOnly`, `Secure` (production — nhớ rằng chỉ bật khi `NODE_ENV=production`, nên ngrok/local khác Render), `SameSite`, `Path`, hạn; cookie còn hiệu lực sau đăng xuất không; cố định phiên (session fixation).
+3. **CORS:** `Access-Control-Allow-Origin` có phản chiếu bất kỳ `Origin`, có `*` kèm credentials không; preflight; biến `APP_ORIGIN` có thật sự được dùng để chặn không.
+4. **CSRF:** mọi phương thức thay đổi dữ liệu (POST/PUT/PATCH/DELETE) có cơ chế gì (SameSite/Origin/token); thử từ trang miền khác.
+5. **Giới hạn tốc độ:** đăng nhập, API kiểm trùng mã trụ, API reset, các route ghi — có giới hạn theo IP/tài khoản không; header IP lấy từ đâu (`TRUST_PROXY`).
+6. **Xử lý lỗi:** trang 404/500, lỗi JSON hỏng, thân quá lớn, `Content-Type` sai — có lộ stack trace, đường dẫn máy chủ, phiên bản, câu SQL không; `X-Powered-By` còn không; chế độ production vs dev khác biệt thế nào.
