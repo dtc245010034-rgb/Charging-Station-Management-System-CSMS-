@@ -208,3 +208,13 @@ Tham chiếu chuẩn: OWASP Top 10 (2021), OWASP ASVS 4.0, OCPP 1.6 Security Whi
 **Quy ước có sẵn trong repo luôn thắng** (Pha 0). Dưới đây là mẫu mặc định khi chưa có.
 
 ```
+docs/
+├─ testing/
+│  ├─ README.md                      # mục lục + cách dùng (cập nhật dòng mới, không viết lại)
+│  ├─ AI_TESTER_AUDITOR_CONTEXT.md   # file này
+│  ├─ results/
+│  │  ├─ PROGRESS.md                 # ma trận story × trạng thái (mục 9.1)
+│  │  └─ S-XX.md                     # một file / story; mỗi lần chạy THÊM một mục "Lần chạy YYYY-MM-DD"
+│  ├─ bugs/
+│  │  └─ BUG-SXX-NN.md               # một file / lỗi (hoặc theo quy ước sẵn có)
+│  └─ poc/                           # script tái hiện không đưa vào CI
