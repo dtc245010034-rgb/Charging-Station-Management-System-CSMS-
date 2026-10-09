@@ -68,3 +68,13 @@ Trong `backend/src/app.js`:
 1. Vô hiệu hoá header `X-Powered-By`:
 ```javascript
 app.disable('x-powered-by');
+```
+2. Thêm middleware thiết lập header an toàn (hoặc cài đặt `helmet`):
+```javascript
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org; connect-src 'self'; frame-ancestors 'none';");
+  next();
+});
