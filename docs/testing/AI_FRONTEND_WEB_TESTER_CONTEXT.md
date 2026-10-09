@@ -88,3 +88,13 @@ Ghi kết quả vào `docs/Audit/` (tầng web là việc audit) và dẫn chi�
 4. **CSRF:** mọi phương thức thay đổi dữ liệu (POST/PUT/PATCH/DELETE) có cơ chế gì (SameSite/Origin/token); thử từ trang miền khác.
 5. **Giới hạn tốc độ:** đăng nhập, API kiểm trùng mã trụ, API reset, các route ghi — có giới hạn theo IP/tài khoản không; header IP lấy từ đâu (`TRUST_PROXY`).
 6. **Xử lý lỗi:** trang 404/500, lỗi JSON hỏng, thân quá lớn, `Content-Type` sai — có lộ stack trace, đường dẫn máy chủ, phiên bản, câu SQL không; `X-Powered-By` còn không; chế độ production vs dev khác biệt thế nào.
+7. **Tệp tĩnh:** thư mục được phục vụ có chứa thứ không nên (`.env`, `.git`, `docker-compose.yml`, file sao lưu, bản đồ nguồn `.map`, tài liệu nội bộ, `node_modules`)? **Duyệt đường dẫn** (`../`, `%2e%2e`, `%5c`) có thoát ra ngoài thư mục tĩnh không; liệt kê thư mục có bật không; phân biệt hoa/thường.
+8. **Giới hạn kích thước/thời gian:** thân yêu cầu JSON lớn, header lớn, kết nối chậm (slowloris), số kết nối SSE tối đa.
+9. **HTTP method:** `TRACE`/`OPTIONS`/`HEAD` hành xử thế nào; `PUT/DELETE` trên route chỉ khai `GET` trả 405 hay lọt; (S-27 yêu cầu sửa/xoá nhật ký trả **405** — kiểm khi đã làm).
+10. **Phụ thuộc:** `npm audit` (cả `backend` và frontend nếu có `package.json` riêng), phiên bản Node/Express/ws/pg; thư viện nạp từ CDN có ghim phiên bản/`integrity` không; file `package-lock.json` có trong repo không; gói không dùng.
+11. **Bí mật & cấu hình trong repo công khai:** quét `.env*`, `render.yaml`, `run.py`, `docker-compose.yml`, `README` tìm giá trị mặc định nguy hiểm (JWT secret mặc định, mật khẩu admin cố định); `run.py` tạo mật khẩu admin ngẫu nhiên — mật khẩu đó **in ra đâu** (log/terminal/file)?
+12. **Khác biệt môi trường:** cùng một hành vi trên local, Docker, Render (`TRUST_PROXY=2`), ngrok (`TRUST_PROXY=1`): cờ `Secure`, IP, HTTPS, WebSocket `ws`/`wss`, độ dài kết nối SSE qua proxy (proxy có cắt kết nối rảnh sau X giây không → ảnh hưởng nối lại).
+
+## 7. Quy trình mỗi lần được gọi
+
+1. **Pha 0** (mục 3) + Pha 0 của file chính (nhánh, commit, đọc quy ước, đường cơ sở test).
