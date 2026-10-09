@@ -18,3 +18,13 @@ Phạm vi (không trùng file chính):
 5. **Khả dụng:** nhãn chữ kèm màu, bàn phím, đọc màn hình, responsive (360px, xoay ngang cho các màn hình di động).
 6. **Chuỗi cung ứng:** thư viện phía client/server, `npm audit`, tệp thừa trong thư mục tĩnh.
 
+Nếu một lỗi frontend thực chất do backend (API không kiểm tra) thì ghi lỗi ở backend và **dẫn chiếu**; nếu chỉ giao diện chặn mà máy chủ không chặn thì **đó là lỗi backend, không phải "đã có kiểm tra ở form"**.
+
+## 2. Quy tắc riêng
+
+1. **Phải chạy trình duyệt thật** khi có thể (Playwright/Puppeteer headless, hoặc trình duyệt điều khiển được). Đọc code JS **không đủ** để kết luận hành vi giao diện. Không có công cụ trình duyệt → ghi `BLOCKED` cho mọi ca cần tương tác, chỉ làm được phần `ĐỌC CODE` + gọi API bằng `curl`, và nói rõ.
+2. **Mọi ca kiểm tra ở form đều phải thử lại bằng cách gửi thẳng API** (bỏ qua giao diện). Giao diện chỉ là tiện lợi, máy chủ mới là nơi quyết.
+3. **Chụp bằng chứng:** ảnh chụp màn hình (đặt trong `docs/testing/results/evidence/`), đoạn DOM, tab Network (yêu cầu/đáp ứng, header), lỗi Console. Che mọi secret/mã thẻ/mật khẩu trong ảnh.
+4. **Tài khoản thử:** dùng tài khoản seed cục bộ (tài xế, chủ trạm A, chủ trạm B, vận hành viên, kế toán, quản trị). Không dùng tài khoản thật. Không thử trên Render/ngrok.
+5. **Payload XSS chỉ có tác dụng chứng minh** (ví dụ ghi vào `window.__xss_probe`, không đánh cắp, không gọi ra ngoài). Dùng nhiều ngữ cảnh: văn bản, thuộc tính (có/không nháy), URL, `<script>`, `<img onerror>`, SVG, `javascript:`.
+6. Quy ước ID: lỗi giao diện `BUG-Sxx-FEnn`, lỗ hổng `VULN-Sxx-FEnn`, lỗi tầng web `WEB-nn` (hoặc theo quy ước repo nếu đã có).
