@@ -8,3 +8,13 @@
 ---
 
 ## 1. Tóm tắt một trang
+
+| Mục kiểm toán | Kết quả | Chi tiết |
+|---|:---:|---|
+| **Bảo vệ XSS trong ứng dụng thuần** | **PARTIAL** | Hầu hết các component dùng `dom.js` an toàn (`document.createTextNode`), nhưng phát hiện **Stored XSS** tại `station-map.js` khi dùng Leaflet `bindTooltip` ([VULN-S04-FE01](../../testing/bugs/VULN-S04-FE01.md)). |
+| **Bảo vệ CSRF** | **PASS** | `requireJson.js` chặn Origin lạ và bắt buộc Content-Type `application/json`; cookie dùng `SameSite=Lax`. |
+| **Bảo vệ Clickjacking** | **FAIL** | Máy chủ thiếu hoàn toàn `X-Frame-Options` và CSP `frame-ancestors` ([WEB-01](../../testing/bugs/WEB-01.md)). |
+| **Header bảo mật tầng Web** | **FAIL** | Thiếu `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`; lộ `X-Powered-By: Express` ([WEB-01](../../testing/bugs/WEB-01.md)). |
+| **Cách ly dữ liệu SSE (`fleet-status/events`)** | **PASS** | SSE lọc sự kiện chặt chẽ theo `event.ownerId === req.user.id` cho trạm của chủ khác; đóng luồng khi JWT hết hạn. |
+| **Phân quyền & Kiểm soát truy cập (RBAC / IDOR)** | **PASS** | Mọi API thử nghiệm chéo tài khoản (Driver, Owner A vs Owner B) đều bị chặn 403 Forbidden. |
+| **Lưu trữ Client-Side & Dữ liệu nhạy cảm** | **PASS** | Token xác thực nằm trong cookie `HttpOnly`; `localStorage` chỉ lưu tuỳ chọn theme sáng/tối; không lưu secret hay thông tin cá nhân. |
