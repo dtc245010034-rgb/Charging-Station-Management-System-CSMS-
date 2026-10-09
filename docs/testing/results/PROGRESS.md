@@ -38,3 +38,8 @@
 ---
 
 ## 2. Ghi chú Rủi ro & Nợ kỹ thuật đã ghi nhận
+1. **[VULN-S04-FE01](../bugs/VULN-S04-FE01.md):** Lỗ hổng Stored XSS trong Leaflet tooltip hiển thị tên trạm trên bản đồ (`station-map.js`).
+2. **[WEB-01](../bugs/WEB-01.md):** Thiếu toàn bộ Security Headers (Clickjacking / CSP / nosniff).
+3. **B5 (Xác thực trụ OCPP):** Chấp nhận rủi ro cho demo theo phê duyệt kiến trúc (`docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`).
+4. **T-19 (Kiểm thử múi giờ container):** 1 test case skip khi chạy trong container test vì container không có Docker CLI lồng (được kiểm chứng trên Linux CI).
+5. **S-16 (Ghi vết Reset):** Ghi log ứng dụng đầy đủ; việc chuẩn hoá lưu trữ trigger vào bảng `audit_logs` sẽ hoàn tất ở S-27 (T-57).
