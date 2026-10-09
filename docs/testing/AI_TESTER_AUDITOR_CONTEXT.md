@@ -178,3 +178,13 @@ Mỗi mục: **Kiểm** = ca bám AC; **Soi** = góc audit/bẫy hay gặp. Đâ
 
 ## 6. Các "lăng kính" xuyên suốt — áp cho **mọi** story
 
+1. **Xác thực & phiên:** cookie, JWT, hết hạn, thu hồi, CSRF.
+2. **Phân quyền:** deny-by-default, IDOR (path/query/body), mass assignment, **quyền theo trụ gửi** (trụ X không được tác động tài nguyên của trụ Y).
+3. **Cách ly đa chủ trạm (tenant):** mọi truy vấn qua `scope.js`; SSE, báo cáo, log, lỗi không rò dữ liệu chéo.
+4. **Kiểm tra đầu vào:** kiểu, dải, độ dài, enum, số cực lớn, `NaN`, Unicode, chuỗi rỗng; validate ở **máy chủ**; `zod` có `.strict()`/loại trường thừa chưa.
+5. **Injection:** SQL (mọi truy vấn có nối chuỗi? mọi tham số có placeholder?), log injection (CRLF), XSS lưu trữ qua dữ liệu do trụ/người dùng gửi, prototype pollution.
+6. **Đồng thời & đua dữ liệu:** đọc-rồi-ghi, kiểm-rồi-làm, hai kết nối/hai tin/hai tab cùng lúc; ràng buộc nằm ở DB hay chỉ trong code.
+7. **Giao dịch & tính nhất quán:** thao tác nhiều bước có nằm trong một giao dịch; lỗi giữa chừng để dữ liệu nửa vời không; `async` không `await`.
+8. **Idempotency & phát lại:** gửi lại cùng tin nhắn có cho cùng kết quả không; khởi động lại giữa chừng.
+9. **Nguồn thời gian:** giờ DB vs giờ Node vs giờ trụ; ranh giới nào dùng giờ nào; múi giờ/định dạng; hậu quả với tính tiền.
+10. **Độ bền & tải (DoS):** giới hạn kích thước/số lượng/tốc độ; log flood; bảng phình vô hạn; rò bộ nhớ (map, listener, SSE, lời gọi đang chờ); `unhandledRejection`; timeout.
