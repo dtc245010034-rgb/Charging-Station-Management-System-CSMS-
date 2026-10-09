@@ -78,3 +78,10 @@ app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org; connect-src 'self'; frame-ancestors 'none';");
   next();
 });
+```
+
+## 7. Tham chiếu
+- OWASP Top 10:2021 — A05: Security Misconfiguration
+- CWE-1021: Improper Restriction of Rendered UI Layers or Frames (Clickjacking)
+- CWE-693: Protection Mechanism Failure
+- CWE-200: Exposure of Sensitive Information to an Unauthorized Actor
