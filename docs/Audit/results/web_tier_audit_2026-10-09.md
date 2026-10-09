@@ -38,3 +38,13 @@
 - Toàn bộ source code nghiệp vụ của frontend (`frontend/app/`, `frontend/components/`, `frontend/pages/`) tuân thủ nghiêm ngặt mô hình xây dựng DOM an toàn thông qua helper `frontend/app/dom.js`:
   - `h(tag, props, ...children)` chuyển tất cả chuỗi thành `document.createTextNode(String(child))`.
   - Không tồn tại lệnh gán `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write` nào trong mã nguồn ứng dụng tự viết.
+- **Ngoại lệ nguy hiểm duy nhất:** Việc tích hợp thư viện Leaflet (`frontend/vendor/leaflet/leaflet.js`). Leaflet mặc định gán `t.innerHTML = e` khi nội dung tooltip là dạng chuỗi. Do `station-map.js` truyền trực tiếp `point.name` (dữ liệu do người dùng nhập) vào `marker.bindTooltip(point.name)`, mã độc HTML/SVG bị chèn thẳng vào DOM mà không qua escape.
+
+### 3.2 Tầng Web & HTTP Security Headers
+- Kiểm tra phản hồi HTTP từ máy chủ `http://localhost:3000`:
+```http
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Access-Control-Allow-Credentials: true
+```
