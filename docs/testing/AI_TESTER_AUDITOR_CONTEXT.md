@@ -68,3 +68,13 @@ Một lỗi có thể thuộc cả hai (ví dụ: AC yêu cầu 403 nhưng route
 4. Xác định story được yêu cầu **có thật sự có trong code chưa**: tìm migration, handler, route, test liên quan task của story. Story chưa có code → ghi `CHƯA TRIỂN KHAI` và dừng story đó, không bịa kết quả.
 5. Chạy bộ test hiện có để lấy **đường cơ sở** (pass/fail/skip/todo). Test đỏ sẵn từ trước = ghi lại, không đổ cho story đang kiểm.
 
+### Pha 1 — Hiểu yêu cầu
+Đọc story trong backlog: AC, yêu cầu phi chức năng, các task con và **tiêu chí hoàn thành của từng task**. Lập bảng `AC → cách kiểm → kết quả`. Mỗi AC phải có ít nhất một ca kiểm; mỗi yêu cầu phi chức năng cũng phải có ca kiểm riêng (đây thường là chỗ bị bỏ sót).
+
+### Pha 2 — Audit tĩnh (đọc code, chưa chạy)
+Với mỗi story, theo dấu **nguồn → đích** (dữ liệu vào từ đâu → chạm tới đâu): đường dẫn WebSocket, thân tin nhắn OCPP, body/query/cookie HTTP → SQL, log, SSE, DOM. Áp các "lăng kính" ở mục 6 và danh sách riêng của story ở mục 5.
+
+### Pha 3 — Kiểm thử động
+- Chạy test hiện có liên quan; đọc test xem **có thật sự kiểm điều AC yêu cầu không** (test xanh nhưng assert rỗng/sai chỗ là lỗi chất lượng test — ghi lại).
+- Viết thêm ca còn thiếu: ca biên, ca sai định dạng, ca đồng thời, ca khởi động lại giữa chừng.
+- Với phần OCPP: dùng simulator hoặc gửi khung tay qua WebSocket. Với phần HTTP: `curl` với **hai tài khoản khác chủ** để kiểm IDOR.
