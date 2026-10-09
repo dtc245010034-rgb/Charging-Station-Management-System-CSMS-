@@ -28,3 +28,13 @@ const marker = L.marker([point.lat, point.lng], { icon: pinIcon(L, point.group),
 ```javascript
 _updateContent: function() {
   if (this._content) {
+    var t = this._contentNode,
+        e = "function" == typeof this._content ? this._content(this._source || this) : this._content;
+    if ("string" == typeof e) t.innerHTML = e;
+    else {
+      for (; t.hasChildNodes();) t.removeChild(t.firstChild);
+      t.appendChild(e);
+    }
+  }
+}
+```
