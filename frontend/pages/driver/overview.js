@@ -8,7 +8,8 @@ export function render(ctx) {
     h('section', {}, h('p', { class: 'eyebrow' }, 'Tài xế'), h('h1', { class: 'page-head__title', style: 'margin-top:4px' }, `Xin chào, ${firstName}!`)),
     h('section', { class: 'card', 'aria-label': 'Phiên sạc' },
       h('div', { class: 'card__body' }, emptyState({
-        iconName: 'bolt', title: 'Bạn chưa có phiên sạc nào',
-        text: 'Tìm trạm, bắt đầu sạc và theo dõi phiên sạc sẽ có ở đây khi tính năng này được mở.',
+        iconName: 'bolt', title: 'Phiên sạc',
+        text: 'Theo dõi phiên sạc đang diễn ra và kiểm tra số điện năng đã nạp theo thời gian thực.',
+        action: h('a', { class: 'btn btn--primary', href: '#/driver/sessions' }, 'Xem phiên sạc'),
       }))));
 }
