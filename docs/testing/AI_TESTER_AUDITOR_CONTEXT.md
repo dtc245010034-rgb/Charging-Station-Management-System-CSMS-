@@ -128,3 +128,13 @@ Mỗi mục: **Kiểm** = ca bám AC; **Soi** = góc audit/bẫy hay gặp. Đâ
 
 **S-09 `Heartbeat` và `last_seen_at`**
 - Kiểm: Heartbeat → `last_seen_at` đổi + trả giờ máy chủ; **bất kỳ** tin nhắn nào cũng cập nhật; trụ lệch giờ vài tiếng → vẫn ghi theo giờ máy chủ/DB; chỉ `UPDATE` đúng một cột; không giữ khoá quá một câu lệnh.
+- Soi: giờ ghi là `now()` của **DB** hay `new Date()` của Node (hai nguồn giờ khác nhau = lỗi so sánh sau này ở S-12); tin nhắn bị từ chối/chưa Boot có làm `last_seen_at` đổi không (kẻ lạ giữ trụ "còn sống" giả); test bằng chứng múi giờ (T-19) có thật sự chạy với lệch giờ không hay chỉ giả vờ.
+
+**S-10 `StatusNotification`**
+- Kiểm: 9 trạng thái OCPP → 4 trạng thái nội bộ (rảnh/bận/đặt chỗ/lỗi); trạng thái lạ lưu nguyên văn vào cột riêng, không sập; `connectorId` 0 = cả trụ; đầu nối không tồn tại → bỏ qua + cảnh báo, **không tạo mới**; lỗi → ghi `connector_errors` chỉ-thêm (khi `errorCode` ≠ `NoError`), báo `Available` sau đó **không xoá** dòng cũ; cập nhật trong 1 giây.
+- Soi: cảnh báo đầu nối chưa khai có **gom theo trụ, không lặp mỗi giây** (log flood = tự DoS ổ đĩa); độ dài `errorCode`/`vendorErrorCode`/`info`; khung tới **không đúng thứ tự** (trạng thái cũ ghi đè trạng thái mới — có so `timestamp` không); 50 trụ đồng thời có khoá bảng không; `connector_errors` có lớn vô hạn không (không có job dọn); sự kiện đẩy SSE phát đúng lúc, không phát cho người không có quyền.
+
+**S-11 Màn hình theo dõi + SSE**
+- Kiểm: 20 trụ → đủ 20, tải < 2 giây; đổi trạng thái → màn hình đổi < 1 giây không cần tải lại; trụ ngoại tuyến → hiện rõ + thời điểm liên lạc cuối; **chủ trạm chỉ thấy trụ mình**; đứt kênh đẩy → trình duyệt tự nối lại + tải lại đầy đủ; trạng thái phân biệt **bằng chữ chứ không chỉ màu**.
+- Soi: **truy vấn cây ba tầng có đúng một câu** (không N+1) và < 200 ms với 50 trụ/200 đầu nối — đo thật; **rò dữ liệu qua SSE**: sự kiện của trạm A có tới trình duyệt chủ trạm B không (kiểm bằng hai phiên đồng thời); SSE sau khi **hết hạn phiên/đăng xuất/đổi quyền** có còn mở và còn nhận dữ liệu không; giới hạn số kết nối SSE cho mỗi người dùng; rò bộ nhớ khi trình duyệt đóng; XSS khi vẽ dữ liệu trụ; quyền của người dùng thay đổi khi kết nối đang mở.
+
