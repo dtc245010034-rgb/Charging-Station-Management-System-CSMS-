@@ -238,3 +238,13 @@ Task kiểm: T-xx, T-yy. Môi trường (Docker/local), lệnh đã chạy.
 ## 3. Yêu cầu phi chức năng
 | Yêu cầu | Cách đo | Số đo thật | Đạt? |
 ## 4. Tiêu chí hoàn thành của task
+## 5. Phát hiện
+| ID | Loại (BUG/VULN/GAP/TEST-DEBT/OBS) | Severity | Tóm tắt | File |
+## 6. Hồi quy
+Test cũ liên quan còn xanh? Lỗi cũ đã sửa có quay lại không?
+## 7. Chưa kiểm được & lý do
+## 8. Lịch sử các lần chạy
+```
+
+### 8.2 Mẫu file phát hiện (BUG / VULN)
+```
