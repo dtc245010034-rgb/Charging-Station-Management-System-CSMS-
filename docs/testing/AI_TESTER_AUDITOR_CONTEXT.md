@@ -88,3 +88,13 @@ Tự bác bỏ từng phát hiện (nguyên tắc 6). Phân loại: **BUG** (sai
 
 ## 5. Bản đồ story S-01 → S-20: trọng tâm kiểm thử + audit
 
+Mỗi mục: **Kiểm** = ca bám AC; **Soi** = góc audit/bẫy hay gặp. Đây là danh sách **tối thiểu**, bạn được và nên nghĩ thêm.
+
+### Sprint 1 — Nền tảng, tài khoản, trạm
+
+**S-01 Khung ứng dụng chạy trên máy cá nhân**
+- Kiểm: làm đúng lệnh trong README trên máy sạch → ứng dụng + DB chạy, trang chủ HTTP 200; migration đầu chạy sạch và lùi được; `docker compose up` dùng chung cấu hình.
+- Soi: README có lệnh nào đã lỗi thời? Biến môi trường nào thiếu thì app chết mà không báo rõ? Log có in chuỗi kết nối DB không (kể cả khi lỗi kết nối)? Có secret mặc định/hard-code nào trong repo công khai (kể cả trong `docker-compose.yml`, `render.yaml`, `run.py`, lịch sử git)? Quy ước `snake_case`, khoá chính `id`, `created_at/updated_at` có được giữ ở mọi migration sau không?
+
+**S-02 Đăng nhập, khoá tạm**
+- Kiểm: đúng → phiên + chuyển trang theo vai trò; sai → thông báo chung; sai 5 lần → lần 6 bị khoá 15 phút **kể cả nhập đúng**; phiên hết hạn → 401 + về trang đăng nhập; khoá còn sau khi khởi động lại (lưu ở DB).
