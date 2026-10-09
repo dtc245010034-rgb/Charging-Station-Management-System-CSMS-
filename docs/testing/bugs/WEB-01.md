@@ -28,3 +28,13 @@ Vary: Origin
 Access-Control-Allow-Credentials: true
 Accept-Ranges: bytes
 Cache-Control: public, max-age=0
+Last-Modified: Thu, 01 Oct 2026 10:34:38 GMT
+ETag: W/"5852-1a0f707ca30"
+Content-Type: text/html; charset=utf-8
+Content-Length: 22610
+```
+
+## 3. Tái hiện
+Chạy lệnh kiểm tra header:
+```bash
+curl.exe -i http://localhost:3000/
