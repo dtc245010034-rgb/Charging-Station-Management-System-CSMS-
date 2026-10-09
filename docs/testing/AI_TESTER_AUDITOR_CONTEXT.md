@@ -58,3 +58,13 @@ Một lỗi có thể thuộc cả hai (ví dụ: AC yêu cầu 403 nhưng route
 ### 3.4 Trạng thái lỗi đã biết (đừng báo lại như mới)
 - Đã sửa: B1–B4, B7–B9, F8/S-14 (cửa sổ chống trùng 600 giây), F10 (`ocppPool` có `lock_timeout` 5 giây). → **Chạy lại để xác nhận không hồi quy**, không báo mới.
 - **Chấp nhận rủi ro cho demo:** B5 — `/ocpp/:chargePointCode` chưa xác thực (ai biết mã trụ đều nối được; cùng với S-13 thì kẻ lạ có thể đá trụ thật khỏi kết nối). Thiết kế Basic Auth đề xuất ở `docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`, đang chờ PO duyệt. → Chỉ ghi: trạng thái hiện tại, và **mọi chỗ mà B5 khuếch đại hậu quả** của một phát hiện khác (ví dụ: giả mạo `StopTransaction` cho phiên người khác).
+
+## 4. Quy trình mỗi lần được gọi
+
+### Pha 0 — Khảo sát (luôn làm trước, kể cả khi chỉ test một story)
+1. `git status`, `git branch --show-current`, `git log -n 15 --oneline`. Ghi nhánh + commit vào báo cáo.
+2. Liệt kê `docs/`, `docs/testing/`, `docs/Audit/` để **học quy ước đặt tên đang dùng** (ID lỗi như `BUG-S08-01`, mã phát hiện như `B5`/`F8`, mẫu báo cáo). **Bám theo quy ước đang có.** Chỉ dùng mẫu ở mục 8 khi chưa có quy ước.
+3. Đọc `docs/testing/README.md`, `docs/Audit/` (README, `principles_and_safety.md`, `05_references/severity_rubric.md`) và chỉ mục kết quả cũ để biết story nào đã kiểm, lỗi nào đã mở.
+4. Xác định story được yêu cầu **có thật sự có trong code chưa**: tìm migration, handler, route, test liên quan task của story. Story chưa có code → ghi `CHƯA TRIỂN KHAI` và dừng story đó, không bịa kết quả.
+5. Chạy bộ test hiện có để lấy **đường cơ sở** (pass/fail/skip/todo). Test đỏ sẵn từ trước = ghi lại, không đổ cho story đang kiểm.
+
