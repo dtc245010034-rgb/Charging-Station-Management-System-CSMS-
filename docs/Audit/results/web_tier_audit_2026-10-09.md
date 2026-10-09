@@ -58,3 +58,7 @@ Access-Control-Allow-Credentials: true
 
 ### 3.4 Kênh đẩy sự kiện thời gian thực (SSE)
 - Kiểm tra route `GET /api/fleet-status/events`:
+  - Có kiểm tra quyền truy cập `stations:read`.
+  - Đóng luồng khi JWT hết hạn (`req.user.exp`).
+  - Gửi keep-alive định kỳ 20 giây.
+  - Bộ lọc sự kiện `event.ownerId === req.user.id` đảm bảo Chủ trạm B không bao giờ nhận được sự kiện cập nhật của Chủ trạm A.
