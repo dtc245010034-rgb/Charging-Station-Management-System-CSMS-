@@ -48,3 +48,13 @@ Quan sát toàn bộ danh sách header không hề xuất hiện:
 - `Permissions-Policy`
 
 Thử nghiệm Clickjacking:
+Tạo một file HTML cục bộ với nội dung:
+```html
+<iframe src="http://localhost:3000/index.html" width="800" height="600"></iframe>
+```
+Trình duyệt tải và hiển thị trang đăng nhập CSMS bên trong iframe hoàn toàn bình thường mà không bị chặn.
+
+## 4. Thực tế vs Mong đợi
+- **Thực tế:** Không có header bảo vệ nào được gửi kèm; trang web có thể bị nhúng iframe và không có CSP.
+- **Mong đợi:** Trang web phải trả về đầy đủ các header bảo vệ tiêu chuẩn chống iframe embedding và MIME sniffing.
+
