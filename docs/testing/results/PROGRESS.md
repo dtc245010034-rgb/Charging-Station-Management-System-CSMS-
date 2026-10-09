@@ -28,3 +28,13 @@
 | **S-13** | GYM-39 | Trùng mã trụ → đóng kết nối cũ | **PASS** | N/A | 2026-10-09 | 0 | Registry quản lý 1 socket sống duy nhất / mã trụ. |
 | **S-14** | GYM-40 | Chống xử lý trùng tin nhắn (`messageId`) | **PASS** | N/A | 2026-10-09 | 0 | Cửa sổ replay 600s, lưu khoá DB `(charge_point_id, message_id)`. |
 | **S-15** | GYM-41 | Xác thực thẻ qua `Authorize` | **PASS** | N/A | 2026-10-09 | 0 | Bảng `id_tags`, hàm `evaluateIdTag`, che mã thẻ trong log. |
+| **S-16** | GYM-42 | Reset từ xa | **PASS** | **PASS** | 2026-10-09 | 0 (Nợ nhỏ T-57) | Hỗ trợ Soft/Hard, timeout 30s. Nút Reset trên UI chỉ hiện cho Operator/Admin. |
+| **S-17** | GYM-43 | `StartTransaction` bắt đầu phiên sạc | **PASS** | N/A | 2026-10-09 | 0 | Migration 017, cấp `transactionId`, 1 giao dịch, chống trùng 2 lớp. |
+| **S-18** | GYM-44 | `StopTransaction` chốt số kWh | **PASS** | N/A | 2026-10-07 | 0 | Đã nghiệm thu độc lập tại [`docs/testing/results/S-18_2026-10-07.md`](./S-18_2026-10-07.md). |
+| **S-19** | GYM-45 | `MeterValues` ghi liên tục | **PASS** | N/A | 2026-10-07 | 0 | Đã nghiệm thu độc lập tại [`docs/testing/results/S-19_2026-10-07.md`](./S-19_2026-10-07.md). |
+| **S-20** | GYM-46 | Số đo lùi hoặc trùng mốc bị bỏ qua | **SẴN SÀNG KIỂM THỬ** | N/A | 2026-10-09 | Chờ lập hồ sơ | PR #96 vừa merge; toàn bộ 520 test tự động pass; cần lập báo cáo nghiệm thu chi tiết `S-20`. |
+| **Tầng Web** | SEC-WEB | Header bảo mật & phòng thủ Web | N/A | **FAIL** | 2026-10-09 | 1 (VULN) | Thiếu CSP, X-Frame-Options (Clickjacking), MIME-sniffing ([WEB-01](../bugs/WEB-01.md)). Báo cáo tại [web_tier_audit_2026-10-09](../../Audit/results/web_tier_audit_2026-10-09.md). |
+
+---
+
+## 2. Ghi chú Rủi ro & Nợ kỹ thuật đã ghi nhận
