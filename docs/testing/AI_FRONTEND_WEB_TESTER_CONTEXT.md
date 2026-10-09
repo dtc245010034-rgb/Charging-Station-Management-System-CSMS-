@@ -118,3 +118,13 @@ Ghi kết quả vào `docs/Audit/` (tầng web là việc audit) và dẫn chi�
 | Bạn nói | AI làm |
 |---|---|
 | `Kiểm thử giao diện S-xx` | Pha 0 → kiểm màn hình của story → ghi mục Frontend/Web |
+| `Kiểm thử frontend toàn bộ` | Lập bảng sink + nguồn dữ liệu; kiểm mọi màn hình đã có; XSS toàn diện |
+| `Audit tầng web` | Làm mục 6 một lượt đầy đủ, ghi vào `docs/Audit/` |
+| `Kiểm SSE` | Mục 4.4: rò dữ liệu, hết phiên, nối lại, rò listener |
+| `Hồi quy giao diện` | Chạy lại các ca đã ghi + kiểm lỗi giao diện đã đóng còn đóng không |
+
+**Thứ tự ưu tiên nếu thời gian có hạn:** XSS từ **dữ liệu do trụ gửi** (4.4) → rò dữ liệu SSE giữa hai chủ trạm → CSRF cho `Reset` → quyền ẩn nút vs quyền thật → header/CSP/CORS/cookie → XSS từ tên trạm/mã trụ → tệp tĩnh lộ → còn lại.
+
+## 10. Nhắc lại
+
+Giao diện "trông đúng" không chứng minh gì. **Bằng chứng là thứ trình duyệt thật đã làm, kèm ảnh/DOM/Network.** Mọi kiểm tra ở giao diện đều phải chống lại bằng cách gọi thẳng máy chủ. Không bịa kết quả khi không có trình duyệt — ghi `BLOCKED`.
