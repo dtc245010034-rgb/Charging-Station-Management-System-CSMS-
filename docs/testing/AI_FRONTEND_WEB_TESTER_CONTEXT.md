@@ -48,3 +48,13 @@ Nếu một lỗi frontend thực chất do backend (API không kiểm tra) thì
 
 ### 4.2 Danh sách và form trạm (S-04, T-09)
 - Kiểm: tạo/sửa/xem danh sách chạy; **lỗi nhập liệu hiện tại ô sai** (toạ độ ngoài dải, tên rỗng); nút lưu **vô hiệu trong lúc gửi**; sửa xong danh sách đổi ngay; chủ trạm chỉ thấy trạm của mình.
+- Soi: **XSS lưu trữ** qua tên/địa chỉ trạm (thử mọi ngữ cảnh ở mục 2.5, ở danh sách, trang chi tiết, tiêu đề trang, tooltip, thông báo xác nhận); toạ độ nhập kiểu `1,5`/`1e3`/`NaN`/khoảng trắng — giao diện báo gì; **bấm lưu hai lần bằng hai tab/F5 lại yêu cầu** (không chỉ bấm đúp); mất mạng giữa lúc gửi thì giao diện có cho gửi lại không và có tạo trùng không; dữ liệu cũ hiển thị sau khi sửa ở tab khác; thao tác trên trạm của chủ khác bằng cách đổi ID trong URL giao diện.
+
+### 4.3 Form thêm trụ (S-05, T-11)
+- Kiểm: rời ô mã trụ → gọi API kiểm trùng → ô **báo đỏ trước khi bấm lưu**; số đầu nối 1–4; gửi thẳng API với mã trùng vẫn bị máy chủ từ chối.
+- Soi: **điều kiện đua** (kiểm trùng xong → người khác tạo mã đó → bấm lưu: giao diện báo gì); gọi API kiểm trùng **mỗi lần rời ô** có thể bị dùng để **dò mã trụ đã tồn tại của chủ khác** (liệt kê mã toàn hệ thống) — đây là rủi ro lộ thông tin có chủ đích của yêu cầu "mã unique toàn hệ thống", ghi **GAP/OBS** cho PO; phản hồi chậm/lỗi 500 từ API kiểm trùng có làm ô kẹt trạng thái "đang kiểm" không; kết quả cũ về muộn ghi đè kết quả mới (gõ nhanh nhiều lần); mã chứa ký tự đặc biệt/khoảng trắng/Unicode giống nhau; độ dài.
+
+### 4.4 Màn hình theo dõi + SSE (S-11, T-24, T-25)
+- Kiểm: 20 trụ trên một màn hình máy tính **không cuộn ngang**; trạng thái phân biệt **bằng nhãn chữ chứ không chỉ màu** (thử bộ lọc mô phỏng mù màu hoặc chuyển ảnh xám); trụ ngoại tuyến hiện thời điểm liên lạc cuối; đổi trạng thái đầu nối → màn hình đổi < 1 giây không tải lại; **tắt rồi bật lại máy chủ** → màn hình tự khôi phục, **tải lại đầy đủ** (không chỉ nhận sự kiện mới); chủ trạm chỉ thấy trụ mình.
+- Soi: **rò dữ liệu SSE** — mở hai trình duyệt (chủ trạm A, chủ trạm B) và một vận hành viên, gây sự kiện ở trạm A, quan sát tab Network/`EventSource` của B (dữ liệu **trong luồng**, không chỉ trên màn hình); sau **đăng xuất / hết hạn phiên / đổi vai trò** ở tab khác, luồng SSE còn mở và còn nhận dữ liệu không; nối lại tự động có **bão nối lại** (không giãn cách → tự DoS máy chủ) không; rò listener/bộ nhớ khi chuyển trang nhiều lần (đếm kết nối SSE phía máy chủ sau khi đóng tab); sự kiện tới **không đúng thứ tự** hoặc tới trước lúc tải đầy đủ xong (trạng thái cũ ghi đè mới); dữ liệu do trụ gửi (vendor/model/firmware/`errorCode`) hiển thị có bị XSS không — **đây là điểm tấn công thực tế nhất** vì kẻ lạ nối được trụ giả (B5); 20 → 50 trụ có giật/đơ giao diện không; tab ở chế độ nền lâu rồi quay lại.
+
