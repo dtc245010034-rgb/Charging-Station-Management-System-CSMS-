@@ -78,3 +78,13 @@ fetch('http://localhost:3000/api/auth/login', {
 
 ## 6. Tác động
 - Kẻ tấn công (tài khoản chủ trạm bị chiếm đoạt hoặc độc hại) có thể chiếm quyền điều khiển phiên làm việc của Quản trị viên/Vận hành viên khi họ mở bản đồ.
+- Thao tác các quyền quản trị như: đóng mở trạm, xoá dữ liệu, kích hoạt reset trụ sạc ngoài ý muốn.
+
+## 7. Đề xuất sửa
+Tại `frontend/components/station-map.js`, thay vì truyền chuỗi `point.name` trực tiếp vào `bindTooltip` và `setTooltipContent`, hãy truyền một `HTMLElement` (Node) hoặc thoát ký tự HTML:
+```javascript
+function makeTooltipNode(text) {
+  const span = document.createElement('span');
+  span.textContent = text;
+  return span;
+}
