@@ -18,3 +18,13 @@ Cụ thể các thiếu sót được xác minh trên server thật:
 4. **Thiếu `Referrer-Policy`**: Có thể rò rỉ URL và query parameters cho bên thứ ba.
 5. **Tiết lộ `X-Powered-By: Express`**: Cung cấp thông tin nền tảng công nghệ cho kẻ tấn công (Information Disclosure).
 
+## 2. Vị trí
+- File: `backend/src/app.js` (thiếu middleware bảo mật trước `express.static` và các router).
+- Header phản hồi thực tế từ `curl -i http://localhost:3000/`:
+```http
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Access-Control-Allow-Credentials: true
+Accept-Ranges: bytes
+Cache-Control: public, max-age=0
