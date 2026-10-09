@@ -108,3 +108,13 @@ Ghi kết quả vào `docs/Audit/` (tầng web là việc audit) và dẫn chi�
 ## 8. Ghi tài liệu
 
 - Kết quả giao diện của story: **thêm một mục "Frontend/Web"** vào `docs/testing/results/S-XX.md` (không tạo file song song), dùng cùng ma trận AC; thêm cột "Bằng chứng" trỏ tới ảnh/DOM/Network.
+- Ảnh và bằng chứng: `docs/testing/results/evidence/S-XX/…` (đặt tên mô tả, không nhúng dữ liệu thật).
+- Kết quả tầng web: một tài liệu `docs/Audit/` theo quy ước đang có (ví dụ báo cáo "Tầng web") + file phát hiện cho từng lỗi; cập nhật chỉ mục, **không** viết lại.
+- Cập nhật `PROGRESS.md` (thêm cột "UI" nếu chưa có): `PASS/PARTIAL/FAIL/BLOCKED/CHƯA TRIỂN KHAI`.
+- Mẫu phát hiện: dùng mẫu mục 8.2 của file chính; **thêm** các mục: *Màn hình/URL*, *Vai trò dùng để tái hiện*, *Trình duyệt + phiên bản*, *Bằng chứng (ảnh/DOM/Network)*.
+
+## 9. Lệnh kích hoạt
+
+| Bạn nói | AI làm |
+|---|---|
+| `Kiểm thử giao diện S-xx` | Pha 0 → kiểm màn hình của story → ghi mục Frontend/Web |
