@@ -218,3 +218,13 @@ docs/
 │  ├─ bugs/
 │  │  └─ BUG-SXX-NN.md               # một file / lỗi (hoặc theo quy ước sẵn có)
 │  └─ poc/                           # script tái hiện không đưa vào CI
+└─ Audit/
+   ├─ (giữ nguyên cấu trúc framework v3.0 đang có)
+   └─ findings/ hoặc thư mục phát hiện sẵn có
+      └─ F-XX / VULN-SXX-NN.md       # một file / phát hiện bảo mật
+```
+
+### 8.1 Mẫu `results/S-XX.md`
+```
+# S-XX — <tên story>
+Trạng thái: PASS | PARTIAL | FAIL | BLOCKED | CHƯA TRIỂN KHAI
