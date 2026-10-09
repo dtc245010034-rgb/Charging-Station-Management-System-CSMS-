@@ -28,3 +28,13 @@
 |---|:---:|:---:|---|---|
 | **[VULN-S04-FE01](../../testing/bugs/VULN-S04-FE01.md)** | VULN | **Cao (High - 7.2)** | `frontend/components/station-map.js:80,84` | Stored XSS trong Leaflet Tooltip khi hiển thị tên trạm sạc trên bản đồ. |
 | **[WEB-01](../../testing/bugs/WEB-01.md)** | VULN | **Trung bình (Medium - 5.4)** | `backend/src/app.js` | Thiếu toàn bộ các Header Bảo mật (CSP, X-Frame-Options, nosniff, Referrer-Policy); lộ `X-Powered-By`. |
+| **TEST-DEBT-FE01** | TEST-DEBT | **Thấp (Low)** | `tools/verify-ui-round6.js` | Kịch bản kiểm thử giao diện E2E chưa được đưa vào CI / pipeline test mặc định (`python test.py`). |
+
+---
+
+## 3. Đánh giá chi tiết từng phân vùng
+
+### 3.1 Bảng Sink & Nguồn dữ liệu (DOM / XSS Analysis)
+- Toàn bộ source code nghiệp vụ của frontend (`frontend/app/`, `frontend/components/`, `frontend/pages/`) tuân thủ nghiêm ngặt mô hình xây dựng DOM an toàn thông qua helper `frontend/app/dom.js`:
+  - `h(tag, props, ...children)` chuyển tất cả chuỗi thành `document.createTextNode(String(child))`.
+  - Không tồn tại lệnh gán `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write` nào trong mã nguồn ứng dụng tự viết.
