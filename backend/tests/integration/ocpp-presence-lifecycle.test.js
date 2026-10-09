@@ -23,6 +23,7 @@ describe('N4/F3/N8: vòng đời kết nối của trụ trên server thật', (
   });
 
   beforeEach(async () => {
+    await query('DELETE FROM charging_sessions WHERE charge_point_id IN (SELECT id FROM charge_points)');
     await query('DELETE FROM charge_points');
     await query('DELETE FROM ocpp_messages');
     chargePointId = (await query("INSERT INTO charge_points (station_id, code, status) VALUES ($1, $2, 'UNKNOWN') RETURNING id", [stationId, CODE])).rows[0].id;
@@ -99,6 +100,95 @@ describe('N4/F3/N8: vòng đời kết nối của trụ trên server thật', (
     const rows = await eventually(async () => (await connectorRows()).map((row) => [row.status, row.ocpp_status]), [['UNKNOWN', 'Available'], ['UNKNOWN', 'Charging']]);
     assert.deepEqual(rows, [['UNKNOWN', 'Available'], ['UNKNOWN', 'Charging']]);
     assert.equal(await cpStatus(), 'UNKNOWN');
+  });
+
+  it('T-26: nối lại báo Charging tiếp tục phiên cũ và MeterValues khớp transactionId cũ', { timeout: 60000 }, async () => {
+    const connectorId = (await query(
+      'SELECT id FROM connectors WHERE charge_point_id = $1 AND connector_no = 1',
+      [chargePointId]
+    )).rows[0].id;
+    const transactionId = (await query(
+      `INSERT INTO charging_sessions (charge_point_id, connector_id, connector_no, id_tag_masked, meter_start, started_at, status)
+       VALUES ($1, $2, 1, '***0026', 1000, CURRENT_TIMESTAMP, 'CHARGING')
+       RETURNING id`,
+      [chargePointId, connectorId]
+    )).rows[0].id;
+
+    server = await startServerProcess();
+    const first = await bootChargePoint(server.wsUrl, CODE);
+    await sendCall(first, 'charging-before-disconnect', 'StatusNotification', {
+      connectorId: 1,
+      status: 'Charging',
+      errorCode: 'NoError',
+    });
+    first.terminate();
+    assert.equal(await eventually(cpStatus, 'UNKNOWN'), 'UNKNOWN');
+    assert.equal((await query('SELECT status FROM charging_sessions WHERE id = $1', [transactionId])).rows[0].status, 'CHARGING');
+
+    const reconnected = await bootChargePoint(server.wsUrl, CODE);
+    await sendCall(reconnected, 'charging-after-reconnect', 'StatusNotification', {
+      connectorId: 1,
+      status: 'Charging',
+      errorCode: 'NoError',
+    });
+    const timestamp = new Date().toISOString();
+    const meterReply = await sendCall(reconnected, 'meter-after-reconnect', 'MeterValues', {
+      connectorId: 1,
+      transactionId,
+      meterValue: [{
+        timestamp,
+        sampledValue: [{ value: '1010', measurand: 'Energy.Active.Import.Register', unit: 'Wh' }],
+      }],
+    });
+
+    assert.deepEqual(meterReply, [3, 'meter-after-reconnect', {}]);
+    assert.equal((await query('SELECT count(*)::int AS count FROM charging_sessions WHERE charge_point_id = $1', [chargePointId])).rows[0].count, 1);
+    assert.deepEqual((await query('SELECT status, needs_review FROM charging_sessions WHERE id = $1', [transactionId])).rows[0], {
+      status: 'CHARGING',
+      needs_review: false,
+    });
+    assert.equal((await query('SELECT session_id FROM meter_values WHERE session_id = $1', [transactionId])).rows[0].session_id, transactionId);
+    reconnected.terminate();
+  });
+
+  it('T-26: nối lại báo Available giữ phiên CHARGING nhưng bật needs_review', { timeout: 60000 }, async () => {
+    const connectorId = (await query(
+      'SELECT id FROM connectors WHERE charge_point_id = $1 AND connector_no = 2',
+      [chargePointId]
+    )).rows[0].id;
+    const transactionId = (await query(
+      `INSERT INTO charging_sessions (charge_point_id, connector_id, connector_no, id_tag_masked, meter_start, started_at, status)
+       VALUES ($1, $2, 2, '***0027', 1000, CURRENT_TIMESTAMP, 'CHARGING')
+       RETURNING id`,
+      [chargePointId, connectorId]
+    )).rows[0].id;
+
+    server = await startServerProcess();
+    const first = await bootChargePoint(server.wsUrl, CODE);
+    await sendCall(first, 'charging-before-available-reconnect', 'StatusNotification', {
+      connectorId: 2,
+      status: 'Charging',
+      errorCode: 'NoError',
+    });
+    first.terminate();
+    assert.equal(await eventually(cpStatus, 'UNKNOWN'), 'UNKNOWN');
+
+    const reconnected = await bootChargePoint(server.wsUrl, CODE);
+    await sendCall(reconnected, 'available-after-reconnect', 'StatusNotification', {
+      connectorId: 2,
+      status: 'Available',
+      errorCode: 'NoError',
+    });
+
+    const session = (await query(
+      'SELECT status, needs_review, review_reason FROM charging_sessions WHERE id = $1',
+      [transactionId]
+    )).rows[0];
+    assert.equal(session.status, 'CHARGING');
+    assert.equal(session.needs_review, true);
+    assert.match(session.review_reason, /CONNECTOR_AVAILABLE_WITH_OPEN_SESSION/);
+    assert.equal((await query('SELECT count(*)::int AS count FROM charging_sessions WHERE charge_point_id = $1', [chargePointId])).rows[0].count, 1);
+    reconnected.terminate();
   });
 
   it('heartbeat tiếp theo khôi phục ONLINE sau khi job đánh dấu trụ ngoại tuyến', { timeout: 60000 }, async () => {

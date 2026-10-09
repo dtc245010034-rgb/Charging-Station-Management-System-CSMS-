@@ -1,6 +1,7 @@
 const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
 const { maskIdTag } = require('./authorize');
+const { createMeterValuesHandler } = require('./meter-values');
 
 const MAX_TRANSACTION_ID = 2147483647;
 const MAX_ID_TAG_LENGTH = 20;
@@ -50,8 +51,12 @@ function createStopTransactionHandler({
   now = Date.now,
   logWarning = console.warn,
   logError = console.error,
+  persistTransactionData = null,
 } = {}) {
-  return async function handleStopTransaction(payload, { connection } = {}) {
+  const handleMeterValues = createMeterValuesHandler({ pool, now, logWarning, logError });
+  const saveTransactionData = persistTransactionData || handleMeterValues;
+
+  return async function handleStopTransaction(payload, { connection, messageId } = {}) {
     validatePayload(payload);
 
     const chargePointId = connection?.chargePoint?.id;
@@ -86,19 +91,49 @@ function createStopTransactionHandler({
     }
 
     try {
+      let transactionDataFailed = false;
+      if (Array.isArray(payload.transactionData) && payload.transactionData.length > 0) {
+        const activeSession = await db.query(
+          `SELECT connector_no
+           FROM charging_sessions
+           WHERE id = $1
+             AND charge_point_id = $2
+             AND status = 'CHARGING'`,
+          [payload.transactionId, chargePointId]
+        );
+        if (activeSession.rowCount > 0) {
+          try {
+            await saveTransactionData(
+              {
+                connectorId: activeSession.rows[0].connector_no,
+                transactionId: payload.transactionId,
+                meterValue: payload.transactionData,
+              },
+              { connection, messageId }
+            );
+          } catch (error) {
+            transactionDataFailed = true;
+            logWarning(
+              `[OCPP] StopTransaction: Không thể lưu transactionData của trụ ${safeLog(code)} | transactionId: ${payload.transactionId}:`,
+              sanitizeErrorMessage(error?.message || error)
+            );
+          }
+        }
+      }
+
       const updated = await db.query(
         `UPDATE charging_sessions
          SET meter_stop = $2,
              stopped_at = $3::timestamptz,
              stop_reason = $4,
              status = 'COMPLETED',
-             needs_review = needs_review OR meter_start > $2 OR $5::boolean,
-             review_reason = CASE
-               WHEN meter_start > $2 AND $5::boolean THEN concat_ws('; ', NULLIF(review_reason, ''), 'METER_STOP_BELOW_START', 'CLOCK_SKEW')
-               WHEN meter_start > $2 THEN concat_ws('; ', NULLIF(review_reason, ''), 'METER_STOP_BELOW_START')
-               WHEN $5::boolean THEN concat_ws('; ', NULLIF(review_reason, ''), 'CLOCK_SKEW')
-               ELSE review_reason
-             END,
+             needs_review = needs_review OR meter_start > $2 OR $5::boolean OR $8::boolean,
+             review_reason = NULLIF(concat_ws('; ',
+               NULLIF(review_reason, ''),
+               CASE WHEN position('METER_STOP_BELOW_START' IN COALESCE(review_reason, '')) = 0 AND meter_start > $2 THEN 'METER_STOP_BELOW_START' END,
+               CASE WHEN position('CLOCK_SKEW' IN COALESCE(review_reason, '')) = 0 AND $5::boolean THEN 'CLOCK_SKEW' END,
+               CASE WHEN position('INVALID_TRANSACTION_DATA' IN COALESCE(review_reason, '')) = 0 AND $8::boolean THEN 'INVALID_TRANSACTION_DATA' END
+             ), ''),
              transaction_data = $7::jsonb,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1
@@ -113,6 +148,7 @@ function createStopTransactionHandler({
           !timestampTrusted,
           chargePointId,
           payload.transactionData == null ? null : JSON.stringify(payload.transactionData),
+          transactionDataFailed,
         ]
       );
 

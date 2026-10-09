@@ -12,6 +12,7 @@
     "migrate": "node src/db/migrate.js",
     "migrate:down": "node src/db/migrate.js down",
     "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
+    "test:s21-reconnect": "node ../tools/test-s21-reconnect-fleet.js",
     "create-admin": "node scripts/create-admin.js",
     "lint": "cd .. && eslint backend frontend"
   },

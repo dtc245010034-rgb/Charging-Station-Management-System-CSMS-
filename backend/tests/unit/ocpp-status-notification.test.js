@@ -38,9 +38,52 @@ describe('StatusNotification handler', () => {
       { connectorId: 2, status: 'Charging' },
       { connection: { chargePointCode: 'CP-TEST' } }
     ), {});
-    assert.equal(queries.length, 1);
+    assert.equal(queries.length, 2);
     assert.match(queries[0].sql, /UPDATE connectors/);
+    assert.match(queries[1].sql, /cs\.status = 'CHARGING'/);
     assert.deepEqual(queries[0].params, ['OCCUPIED', 'Charging', 'CP-TEST', 2]);
+  });
+
+  it('marks an open session for review on Available, but leaves it untouched on Charging', async () => {
+    const queries = [];
+    const handler = createStatusNotificationHandler({
+      pool: {
+        query: async (sql, params) => {
+          queries.push({ sql, params });
+          return { rowCount: 1, rows: [] };
+        },
+      },
+    });
+
+    await handler({ connectorId: 1, status: 'Charging' }, { connection: { chargePointCode: 'CP-TEST' } });
+    assert.equal(queries.length, 2);
+    assert.match(queries[1].sql, /cs\.status = 'CHARGING'/);
+
+    await handler({ connectorId: 1, status: 'Available' }, { connection: { chargePointCode: 'CP-TEST' } });
+    assert.equal(queries.length, 4);
+    assert.match(queries[3].sql, /UPDATE charging_sessions/);
+    assert.match(queries[3].sql, /cs\.status = 'CHARGING'/);
+    assert.deepEqual(queries[3].params, ['CONNECTOR_AVAILABLE_WITH_OPEN_SESSION', 'CP-TEST', 1]);
+  });
+
+  it('T-44: cảnh báo khi trụ gửi StatusNotification báo Charging nhưng không có phiên mở', async () => {
+    const warnings = [];
+    const handler = createStatusNotificationHandler({
+      pool: {
+        query: async (sql) => {
+          if (/charging_sessions/.test(sql)) {
+            return { rowCount: 0, rows: [] };
+          }
+          return { rowCount: 1, rows: [{ id: 1, changed: false }] };
+        },
+      },
+      logWarning: (msg) => warnings.push(msg),
+    });
+
+    await handler({ connectorId: 1, status: 'Charging' }, { connection: { chargePointCode: 'CP-ORPHAN' } });
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /Trụ báo Charging nhưng không có phiên mở/);
+    assert.match(warnings[0], /CP-ORPHAN/);
   });
 
   it('stores unknown statuses verbatim and acknowledges them', async () => {
