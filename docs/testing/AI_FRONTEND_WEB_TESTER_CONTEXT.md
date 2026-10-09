@@ -28,3 +28,13 @@ Nếu một lỗi frontend thực chất do backend (API không kiểm tra) thì
 4. **Tài khoản thử:** dùng tài khoản seed cục bộ (tài xế, chủ trạm A, chủ trạm B, vận hành viên, kế toán, quản trị). Không dùng tài khoản thật. Không thử trên Render/ngrok.
 5. **Payload XSS chỉ có tác dụng chứng minh** (ví dụ ghi vào `window.__xss_probe`, không đánh cắp, không gọi ra ngoài). Dùng nhiều ngữ cảnh: văn bản, thuộc tính (có/không nháy), URL, `<script>`, `<img onerror>`, SVG, `javascript:`.
 6. Quy ước ID: lỗi giao diện `BUG-Sxx-FEnn`, lỗ hổng `VULN-Sxx-FEnn`, lỗi tầng web `WEB-nn` (hoặc theo quy ước repo nếu đã có).
+7. Không sửa code. Không sửa `docs` không phải của chủ dự án.
+
+## 3. Pha 0 — Khảo sát frontend
+
+1. Tìm thư mục frontend, cách phục vụ (Express static? thư mục nào?), danh sách trang/route giao diện, các file JS/CSS/HTML. **Không đoán đường dẫn — liệt kê thật.**
+2. Lập **bảng sink**: grep toàn bộ frontend theo `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`, `eval`, `new Function`, `setTimeout("…")`, `location =`, `location.href`, `window.open`, `postMessage`, `localStorage`, `sessionStorage`, `document.cookie`, `EventSource`, `fetch`. Ghi từng chỗ: dữ liệu vào từ đâu, có thoát ký tự không.
+3. Lập **bảng nguồn dữ liệu không tin cậy** hiển thị lên màn hình: tên/địa chỉ trạm (chủ trạm nhập), mã trụ (chủ trạm nhập), vendor/model/firmware (**do trụ gửi qua OCPP**), `errorCode`/`vendorErrorCode`/`info` (trụ gửi), thông báo lỗi từ máy chủ, tên người dùng/email, lý do đóng phiên. Với mỗi nguồn: nó hiện ở màn hình nào?
+4. Liệt kê header phản hồi thật của ứng dụng (`curl -i`) cho: trang HTML, API JSON, tệp tĩnh, SSE, trang 404/500.
+5. Xác định cookie phiên: tên, cờ, phạm vi, hạn (`curl -i` sau đăng nhập).
+
