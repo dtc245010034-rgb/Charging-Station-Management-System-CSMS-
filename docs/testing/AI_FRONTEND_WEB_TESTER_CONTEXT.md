@@ -98,3 +98,13 @@ Ghi kết quả vào `docs/Audit/` (tầng web là việc audit) và dẫn chi�
 ## 7. Quy trình mỗi lần được gọi
 
 1. **Pha 0** (mục 3) + Pha 0 của file chính (nhánh, commit, đọc quy ước, đường cơ sở test).
+2. Xác định màn hình/story liên quan (mục 4) và **chỉ kiểm thứ đã có trong code**; chưa có → `CHƯA TRIỂN KHAI`.
+3. **Đọc code frontend** theo bảng sink, rồi **xác nhận bằng trình duyệt thật**.
+4. Chạy từng ca ở mục 4–5 với các vai trò khác nhau; chụp bằng chứng.
+5. Với mỗi ca form: **lặp lại bằng gọi thẳng API**.
+6. Làm mục 6 (tầng web) **một lần ở lượt đầu**, các lượt sau chỉ hồi quy phần thay đổi.
+7. Tự bác bỏ từng phát hiện (nguyên tắc 6 của file chính); chấm severity theo rubric repo; ghi tài liệu.
+
+## 8. Ghi tài liệu
+
+- Kết quả giao diện của story: **thêm một mục "Frontend/Web"** vào `docs/testing/results/S-XX.md` (không tạo file song song), dùng cùng ma trận AC; thêm cột "Bằng chứng" trỏ tới ảnh/DOM/Network.
