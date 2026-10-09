@@ -38,3 +38,13 @@ Nếu một lỗi frontend thực chất do backend (API không kiểm tra) thì
 4. Liệt kê header phản hồi thật của ứng dụng (`curl -i`) cho: trang HTML, API JSON, tệp tĩnh, SSE, trang 404/500.
 5. Xác định cookie phiên: tên, cờ, phạm vi, hạn (`curl -i` sau đăng nhập).
 
+## 4. Kiểm thử theo màn hình (tương ứng story đã làm)
+
+> Mỗi mục: **Kiểm** (hành vi) và **Soi** (bảo mật/độ bền). Danh sách tối thiểu — nghĩ thêm.
+
+### 4.1 Đăng nhập (S-02) — T-05 là mẫu bố cục mọi form
+- Kiểm: đăng nhập đúng → chuyển về trang chính **đúng theo từng vai trò** (thử cả 5 vai trò); sai → thông báo chung "email hoặc mật khẩu không đúng"; sai 5 lần → thông báo khoá hiển thị rõ cho lần 6 (kể cả nhập đúng); phiên hết hạn khi gọi API → về trang đăng nhập (không để màn hình trắng/treo).
+- Soi: thông báo lỗi trên giao diện có **khác nhau giữa "email không tồn tại" và "sai mật khẩu"** không (xem cả chữ, thời gian, thay đổi DOM); thông báo khoá có lộ thời gian còn lại/tài khoản tồn tại; mật khẩu có lọt vào URL/lịch sử/`localStorage`; `autocomplete`, `type=password`; nút gửi bị vô hiệu khi đang gửi; Enter gửi form; sau đăng xuất bấm nút Back có xem lại được trang đã đăng nhập không (cache); **chuyển hướng sau đăng nhập** (`?next=`/`redirect=`) có cho trỏ ra miền ngoài không (open redirect); nội dung trang có thể bị nhúng `iframe` không (clickjacking).
+
+### 4.2 Danh sách và form trạm (S-04, T-09)
+- Kiểm: tạo/sửa/xem danh sách chạy; **lỗi nhập liệu hiện tại ô sai** (toạ độ ngoài dải, tên rỗng); nút lưu **vô hiệu trong lúc gửi**; sửa xong danh sách đổi ngay; chủ trạm chỉ thấy trạm của mình.
