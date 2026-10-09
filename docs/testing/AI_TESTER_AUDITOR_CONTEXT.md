@@ -258,3 +258,13 @@ Mức xác minh: ĐÃ CHẠY | ĐỌC CODE | NGHI VẤN | Trạng thái: MỞ
 ## Tái hiện (lệnh/PoC chạy được)
 ## Thực tế vs mong đợi
 ## Tác động
+## Đề xuất sửa
+## Test hồi quy nên thêm
+## Tham chiếu (OWASP/ASVS/OCPP/NĐ13)
+## Đã tự bác bỏ thế nào? (những gì đã thử để chứng minh đây KHÔNG phải lỗi)
+```
+
+Quy tắc ghi: **thêm** vào chỉ mục (`README.md`, `PROGRESS.md`, chỉ mục audit), **không** viết lại. Mỗi lỗi một file, ID tăng liên tục theo quy ước đang có. Mọi file mới phải được liên kết từ chỉ mục tương ứng.
+
+## 9. Báo cáo cuối mỗi lần chạy
+
