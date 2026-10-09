@@ -23,14 +23,16 @@ describe('S-22: Tài xế xem phiên đang sạc theo thời gian thực (Accept
     await truncateAll();
 
     // 1. Tạo users với vai trò khác nhau
+    const owner = await createUser('owner@example.com', 'STATION_OWNER', 'password123');
     driver1 = await createUser('driver1@example.com', 'DRIVER', 'password123');
     driver2 = await createUser('driver2@example.com', 'DRIVER', 'password123');
 
     // 2. Tạo trạm, trụ, đầu nối
     const stRes = await pool.query(
-      `INSERT INTO stations (name, address, latitude, longitude, status)
-       VALUES ('Trạm Quận 1', '123 Lê Lợi, Q.1', 10.7769, 106.7009, 'ACTIVE')
-       RETURNING id`
+      `INSERT INTO stations (name, address, latitude, longitude, status, owner_id)
+       VALUES ('Trạm Quận 1', '123 Lê Lợi, Q.1', 10.7769, 106.7009, 'ACTIVE', $1)
+       RETURNING id`,
+      [owner.id]
     );
     stationId = stRes.rows[0].id;
 
@@ -53,7 +55,7 @@ describe('S-22: Tài xế xem phiên đang sạc theo thời gian thực (Accept
     // 3. Tạo thẻ RFID ảo gắn cho driver 1
     const tagRes = await pool.query(
       `INSERT INTO id_tags (tag, user_id, status)
-       VALUES ('TAG-DRIVER-1', $1, 'Accepted')
+       VALUES ('TAG-DRIVER-1', $1, 'ACTIVE')
        RETURNING id`,
       [driver1.id]
     );
@@ -83,8 +85,9 @@ describe('S-22: Tài xế xem phiên đang sạc theo thời gian thực (Accept
   });
 
   after(async () => {
-    await resetSchema();
     await closePool();
+    await resetSchema();
+    run('src/db/migrate.js');
   });
 
   it('AC1: GET /api/me/sessions/current trả 200 kèm đầy đủ thông tin phiên đang sạc của chính mình', async () => {

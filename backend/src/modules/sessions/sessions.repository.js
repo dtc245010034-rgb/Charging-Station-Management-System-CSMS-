@@ -172,7 +172,7 @@ async function findCurrentActiveSessionByDriverId(db, driverId) {
       latest_energy.value AS latest_energy_wh,
       latest_power.value AS latest_power_w,
       latest_current.value AS latest_current_a,
-      COALESCE(latest_energy.sampled_at, latest_power.sampled_at, cs.started_at) AS last_metered_at
+      COALESCE(latest_energy.sampled_at, latest_power.sampled_at, latest_current.sampled_at, cs.started_at) AS last_metered_at
     FROM charging_sessions cs
     JOIN connectors c ON c.id = cs.connector_id
     JOIN charge_points cp ON cp.id = cs.charge_point_id
@@ -185,14 +185,14 @@ async function findCurrentActiveSessionByDriverId(db, driverId) {
       LIMIT 1
     ) latest_energy ON TRUE
     LEFT JOIN LATERAL (
-      SELECT value
+      SELECT value, sampled_at
       FROM meter_values
       WHERE session_id = cs.id AND measurand = 'Power.Active.Import'
       ORDER BY sampled_at DESC, id DESC
       LIMIT 1
     ) latest_power ON TRUE
     LEFT JOIN LATERAL (
-      SELECT value
+      SELECT value, sampled_at
       FROM meter_values
       WHERE session_id = cs.id AND measurand = 'Current.Import'
       ORDER BY sampled_at DESC, id DESC
@@ -232,7 +232,7 @@ async function findSessionById(db, sessionId) {
       latest_energy.value AS latest_energy_wh,
       latest_power.value AS latest_power_w,
       latest_current.value AS latest_current_a,
-      COALESCE(latest_energy.sampled_at, latest_power.sampled_at, cs.started_at) AS last_metered_at
+      COALESCE(latest_energy.sampled_at, latest_power.sampled_at, latest_current.sampled_at, cs.started_at) AS last_metered_at
     FROM charging_sessions cs
     JOIN connectors c ON c.id = cs.connector_id
     JOIN charge_points cp ON cp.id = cs.charge_point_id
@@ -245,14 +245,14 @@ async function findSessionById(db, sessionId) {
       LIMIT 1
     ) latest_energy ON TRUE
     LEFT JOIN LATERAL (
-      SELECT value
+      SELECT value, sampled_at
       FROM meter_values
       WHERE session_id = cs.id AND measurand = 'Power.Active.Import'
       ORDER BY sampled_at DESC, id DESC
       LIMIT 1
     ) latest_power ON TRUE
     LEFT JOIN LATERAL (
-      SELECT value
+      SELECT value, sampled_at
       FROM meter_values
       WHERE session_id = cs.id AND measurand = 'Current.Import'
       ORDER BY sampled_at DESC, id DESC
