@@ -18,3 +18,13 @@
 | **Cách ly dữ liệu SSE (`fleet-status/events`)** | **PASS** | SSE lọc sự kiện chặt chẽ theo `event.ownerId === req.user.id` cho trạm của chủ khác; đóng luồng khi JWT hết hạn. |
 | **Phân quyền & Kiểm soát truy cập (RBAC / IDOR)** | **PASS** | Mọi API thử nghiệm chéo tài khoản (Driver, Owner A vs Owner B) đều bị chặn 403 Forbidden. |
 | **Lưu trữ Client-Side & Dữ liệu nhạy cảm** | **PASS** | Token xác thực nằm trong cookie `HttpOnly`; `localStorage` chỉ lưu tuỳ chọn theme sáng/tối; không lưu secret hay thông tin cá nhân. |
+| **Tệp tĩnh & Duyệt thư mục** | **PASS** | Không có file nhạy cảm trong thư mục `frontend/`; Express static ngăn chặn triệt để Path Traversal (`404 Not Found`). |
+
+---
+
+## 2. Bảng phát hiện (Findings Summary)
+
+| Mã lỗi | Loại | Mức độ (Severity) | Vị trí | Tóm tắt |
+|---|:---:|:---:|---|---|
+| **[VULN-S04-FE01](../../testing/bugs/VULN-S04-FE01.md)** | VULN | **Cao (High - 7.2)** | `frontend/components/station-map.js:80,84` | Stored XSS trong Leaflet Tooltip khi hiển thị tên trạm sạc trên bản đồ. |
+| **[WEB-01](../../testing/bugs/WEB-01.md)** | VULN | **Trung bình (Medium - 5.4)** | `backend/src/app.js` | Thiếu toàn bộ các Header Bảo mật (CSP, X-Frame-Options, nosniff, Referrer-Policy); lộ `X-Powered-By`. |
