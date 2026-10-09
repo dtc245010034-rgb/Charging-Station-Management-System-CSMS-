@@ -2,6 +2,7 @@ const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
 const { maskIdTag } = require('./authorize');
 const { createMeterValuesHandler } = require('./meter-values');
+const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
 
 const MAX_TRANSACTION_ID = 2147483647;
 const MAX_ID_TAG_LENGTH = 20;
@@ -153,6 +154,7 @@ function createStopTransactionHandler({
       );
 
       if (updated.rowCount > 0) {
+        publishSessionUpdateFromDb(payload.transactionId).catch(() => {});
         return {};
       }
 

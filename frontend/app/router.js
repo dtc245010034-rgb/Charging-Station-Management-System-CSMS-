@@ -12,6 +12,7 @@ export const PAGE_NEEDS = {
   'fleet-status': 'charge-points:read',
   map: 'stations:read',
   users: 'users:create',
+  sessions: 'sessions:read-own',
 };
 
 const fleetOverview = () => import('../pages/shared/fleet-overview.js');
@@ -24,6 +25,9 @@ const PAGES = {
     admin: fleetOverview,
     accountant: () => import('../pages/accountant/overview.js'),
     driver: () => import('../pages/driver/overview.js'),
+  },
+  sessions: {
+    driver: () => import('../pages/driver/session.js'),
   },
   stations: () => import('../pages/shared/stations.js'),
   'charge-points': () => import('../pages/shared/charge-points.js'),

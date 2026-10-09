@@ -1,5 +1,12 @@
 const { maskIdTag } = require('../ocpp/handlers/authorize');
 
+function getDefaultPool() {
+  if (!process.env.DATABASE_URL && process.env.CSMS_SKIP_DOTENV) {
+    return { query: async () => ({ rows: [] }) };
+  }
+  return require('../../db/pool').pool;
+}
+
 async function findConnectorWithStation(db, { chargePointId, connectorNo }) {
   const query = `
     SELECT
@@ -146,6 +153,88 @@ async function lockConnectorRow(db, connectorId) {
   return result.rows[0] || null;
 }
 
+const SESSION_WITH_METERS_BASE = `
+  SELECT
+    cs.id,
+    cs.charge_point_id,
+    cp.code AS charge_point_code,
+    cp.station_id,
+    s.name AS station_name,
+    s.address AS station_address,
+    s.owner_id AS station_owner_id,
+    cs.connector_id,
+    cs.connector_no,
+    cs.driver_id,
+    cs.id_tag_masked,
+    cs.meter_start,
+    cs.meter_stop,
+    cs.started_at,
+    cs.stopped_at,
+    cs.stop_reason,
+    cs.status,
+    cs.needs_review,
+    cs.review_reason,
+    cs.created_at,
+    cs.updated_at,
+    mv.latest_energy_wh,
+    mv.latest_power_w,
+    mv.latest_current_a,
+    mv.latest_soc,
+    mv.latest_sampled_at,
+    mv.readings AS latest_readings
+  FROM charging_sessions cs
+  JOIN charge_points cp ON cp.id = cs.charge_point_id
+  JOIN stations s ON s.id = cp.station_id
+  LEFT JOIN LATERAL (
+    SELECT
+      MAX(CASE WHEN measurand = 'Energy.Active.Import.Register' THEN value END) AS latest_energy_wh,
+      MAX(CASE WHEN measurand = 'Power.Active.Import' THEN value END) AS latest_power_w,
+      MAX(CASE WHEN measurand = 'Current.Import' THEN value END) AS latest_current_a,
+      MAX(CASE WHEN measurand = 'SoC' THEN value END) AS latest_soc,
+      MAX(sampled_at) AS latest_sampled_at,
+      COALESCE(
+        json_agg(json_build_object(
+          'measurand', measurand,
+          'value', value,
+          'unit', COALESCE(raw_unit, unit),
+          'sampled_at', sampled_at
+        )) FILTER (WHERE measurand IS NOT NULL),
+        '[]'::json
+      ) AS readings
+    FROM (
+      SELECT DISTINCT ON (measurand) measurand, value, unit, raw_unit, sampled_at
+      FROM meter_values
+      WHERE session_id = cs.id
+      ORDER BY measurand, sampled_at DESC, id DESC
+    ) sub
+  ) mv ON true
+`;
+
+async function findActiveSessionByDriverId(dbOrPool, driverId) {
+  const client = dbOrPool || getDefaultPool();
+  const query = `${SESSION_WITH_METERS_BASE}
+    WHERE cs.driver_id = $1 AND cs.status = 'CHARGING'
+    ORDER BY cs.started_at DESC
+    LIMIT 1`;
+  const result = await client.query(query, [driverId]);
+  return result.rows[0] || null;
+}
+
+async function findSessionById(dbOrPool, sessionId) {
+  const client = dbOrPool || getDefaultPool();
+  const query = `${SESSION_WITH_METERS_BASE}
+    WHERE cs.id = $1
+    LIMIT 1`;
+  const result = await client.query(query, [sessionId]);
+  return result.rows[0] || null;
+}
+
+async function existsSessionById(dbOrPool, sessionId) {
+  const client = dbOrPool || getDefaultPool();
+  const result = await client.query('SELECT 1 FROM charging_sessions WHERE id = $1 LIMIT 1', [sessionId]);
+  return Boolean(result.rows[0]);
+}
+
 module.exports = {
   findConnectorWithStation,
   findTagByTagValue,
@@ -154,4 +243,8 @@ module.exports = {
   recordOrphanMessage,
   findNaturalSession,
   lockConnectorRow,
+  findActiveSessionByDriverId,
+  findSessionById,
+  existsSessionById,
 };
+

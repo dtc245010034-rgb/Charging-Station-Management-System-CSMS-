@@ -9,6 +9,7 @@ const {
   evaluateMeterReading,
   isPlausibleMeterValue,
 } = require('../../sessions/meter-rules');
+const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
 
 const MAX_CONNECTOR_ID = 2147483647;
 const MAX_TRANSACTION_ID = 2147483647;
@@ -268,6 +269,10 @@ async function persistMeterValues({
       }
       return { sessionId, ignored: [...ignored], reviewReasons: [...reviewReasons] };
     }, db);
+
+    if (outcome?.sessionId) {
+      publishSessionUpdateFromDb(outcome.sessionId).catch(() => {});
+    }
 
     if (outcome.orphanReason) {
       logWarning(

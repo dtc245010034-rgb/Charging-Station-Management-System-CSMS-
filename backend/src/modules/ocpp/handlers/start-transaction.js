@@ -11,6 +11,7 @@ const {
   findNaturalSession,
   lockConnectorRow,
 } = require('../../sessions/sessions.repository');
+const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
 
 const MAX_CLOCK_SKEW_MS = 24 * 3600 * 1000;
 
@@ -190,6 +191,10 @@ function createStartTransactionHandler({
           reviewReason: reviewReasons.length > 0 ? reviewReasons.join('; ') : null,
         });
       }, db);
+
+      if (session?.id) {
+        publishSessionUpdateFromDb(session.id).catch(() => {});
+      }
 
       logInfo(
         `[OCPP] StartTransaction thành công | transactionId: ${session.id} | code: ${safeLog(code)} | idTag: ${masked} | status: ${tagStatus}`

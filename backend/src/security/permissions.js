@@ -18,6 +18,8 @@ const permissions = {
   'charge-points:write': WRITE_OPERATIONS,
   'charge-points:reset': ['ADMIN', 'OPERATOR'],
   'stations:lock': ADMIN,
+  'sessions:read-own': ['DRIVER'],
+  'sessions:read': ['ADMIN', 'OPERATOR', 'ACCOUNTANT', 'STATION_OWNER'],
 };
 
 function access(key) {
