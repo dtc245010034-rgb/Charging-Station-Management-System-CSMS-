@@ -146,6 +146,125 @@ async function lockConnectorRow(db, connectorId) {
   return result.rows[0] || null;
 }
 
+async function findCurrentActiveSessionByDriverId(db, driverId) {
+  const query = `
+    SELECT
+      cs.id,
+      cs.charge_point_id,
+      cs.connector_id,
+      cs.connector_no,
+      cs.driver_id,
+      cs.id_tag_masked,
+      cs.meter_start,
+      cs.meter_stop,
+      cs.started_at,
+      cs.stopped_at,
+      cs.stop_reason,
+      cs.status,
+      cs.needs_review,
+      cs.review_reason,
+      cs.created_at,
+      cs.updated_at,
+      cp.code AS charge_point_code,
+      s.id AS station_id,
+      s.name AS station_name,
+      s.address AS station_address,
+      latest_energy.value AS latest_energy_wh,
+      latest_power.value AS latest_power_w,
+      latest_current.value AS latest_current_a,
+      COALESCE(latest_energy.sampled_at, latest_power.sampled_at, cs.started_at) AS last_metered_at
+    FROM charging_sessions cs
+    JOIN connectors c ON c.id = cs.connector_id
+    JOIN charge_points cp ON cp.id = cs.charge_point_id
+    JOIN stations s ON s.id = cp.station_id
+    LEFT JOIN LATERAL (
+      SELECT value, sampled_at
+      FROM meter_values
+      WHERE session_id = cs.id AND measurand = 'Energy.Active.Import.Register'
+      ORDER BY sampled_at DESC, id DESC
+      LIMIT 1
+    ) latest_energy ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT value
+      FROM meter_values
+      WHERE session_id = cs.id AND measurand = 'Power.Active.Import'
+      ORDER BY sampled_at DESC, id DESC
+      LIMIT 1
+    ) latest_power ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT value
+      FROM meter_values
+      WHERE session_id = cs.id AND measurand = 'Current.Import'
+      ORDER BY sampled_at DESC, id DESC
+      LIMIT 1
+    ) latest_current ON TRUE
+    WHERE cs.driver_id = $1 AND cs.status = 'CHARGING'
+    ORDER BY cs.started_at DESC
+    LIMIT 1
+  `;
+  const result = await db.query(query, [driverId]);
+  return result.rows[0] || null;
+}
+
+async function findSessionById(db, sessionId) {
+  const query = `
+    SELECT
+      cs.id,
+      cs.charge_point_id,
+      cs.connector_id,
+      cs.connector_no,
+      cs.driver_id,
+      cs.id_tag_masked,
+      cs.meter_start,
+      cs.meter_stop,
+      cs.started_at,
+      cs.stopped_at,
+      cs.stop_reason,
+      cs.status,
+      cs.needs_review,
+      cs.review_reason,
+      cs.created_at,
+      cs.updated_at,
+      cp.code AS charge_point_code,
+      s.id AS station_id,
+      s.name AS station_name,
+      s.address AS station_address,
+      latest_energy.value AS latest_energy_wh,
+      latest_power.value AS latest_power_w,
+      latest_current.value AS latest_current_a,
+      COALESCE(latest_energy.sampled_at, latest_power.sampled_at, cs.started_at) AS last_metered_at
+    FROM charging_sessions cs
+    JOIN connectors c ON c.id = cs.connector_id
+    JOIN charge_points cp ON cp.id = cs.charge_point_id
+    JOIN stations s ON s.id = cp.station_id
+    LEFT JOIN LATERAL (
+      SELECT value, sampled_at
+      FROM meter_values
+      WHERE session_id = cs.id AND measurand = 'Energy.Active.Import.Register'
+      ORDER BY sampled_at DESC, id DESC
+      LIMIT 1
+    ) latest_energy ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT value
+      FROM meter_values
+      WHERE session_id = cs.id AND measurand = 'Power.Active.Import'
+      ORDER BY sampled_at DESC, id DESC
+      LIMIT 1
+    ) latest_power ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT value
+      FROM meter_values
+      WHERE session_id = cs.id AND measurand = 'Current.Import'
+      ORDER BY sampled_at DESC, id DESC
+      LIMIT 1
+    ) latest_current ON TRUE
+    WHERE cs.id = $1
+    LIMIT 1
+  `;
+  const result = await db.query(query, [sessionId]);
+  return result.rows[0] || null;
+}
+
 module.exports = {
   findConnectorWithStation,
   findTagByTagValue,
@@ -154,4 +273,6 @@ module.exports = {
   recordOrphanMessage,
   findNaturalSession,
   lockConnectorRow,
+  findCurrentActiveSessionByDriverId,
+  findSessionById,
 };
