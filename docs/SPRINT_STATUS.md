@@ -1,6 +1,7 @@
 # Tình trạng dự án và sprint — CSMS
 
 > Cập nhật: **05/10/2026**, khớp `main` sau PR #85 (S-15) và commit S-16 `6e74180` (**commit S-16 mới có trên `main` cục bộ, chưa qua PR**). Nguồn: lịch sử PR trên GitHub, mã nguồn và kết quả chạy thật (`python test.py`). **Trạng thái thẻ Jira chưa đối chiếu bằng API** (không có token): cột “Jira” của Sprint 2 dưới đây là “code đạt trên `main`”, không phải trạng thái Done chính thức.
+> Bổ sung 10/10/2026: tiến độ S-22 (GYM-48) ở [mục 11](#11-s-22-gym-48--tiến-độ-sửa-lỗi-review-10102026); các phần còn lại của tài liệu vẫn ở mốc 05/10.
 > Định nghĩa Done chính thức theo Jira và Definition of Done trong backlog; tài liệu này ghi thêm **bằng chứng** và **chỗ chưa đạt**.
 
 ## 1. Tóm tắt một trang
@@ -175,3 +176,15 @@ Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VON
 | Staging | Chạy 50 trụ ảo, WebSocket qua proxy Render, `TRUST_PROXY=2` | Phúc (cần URL staging) |
 | Bản đồ | Kiểm tile OpenStreetMap thật trên mạng có Internet | QA |
 | Jira | Đối chiếu trạng thái GYM-32…42 bằng API | Cần token |
+
+## 11. S-22 (GYM-48) — tiến độ sửa lỗi review (10/10/2026)
+
+**Chưa Done.** Bản giao đầu (xem [`dev/S-22_2026-10-10.md`](dev/S-22_2026-10-10.md)) nằm ở nhánh `nam/gym48-s-22`, chưa vào `main`. Các lỗi của báo cáo review lần 27 đã sửa trên nhánh `phuc/GYM-48-sua-loi-review-s22`; chưa mở PR, chưa được duyệt.
+
+| Hạng mục | Tình trạng (10/10/2026) |
+|---|---|
+| Đã sửa trên nhánh | kWh và công suất tính theo đúng đơn vị trụ gửi (Wh thập phân, kWh, W, kW; hết lỗi 500); lưu `SoC` (0–100 %) để thẻ Pin xe có số liệu; SSE lọc theo tài xế trước khi truy vấn và phát đúng thứ tự; lỗi phát SSE được ghi log; phiên cũ bị đóng `ABNORMAL` được báo tới đúng tài xế; trang phiên có màn hình kết thúc, định dạng W/kW và đồng bộ lại khi SSE nối lại |
+| Test | 7 file unit của đợt sửa: 79/79 đạt (10/10/2026, container Node 22). Test integration mới (`S-22.so-do-thap-phan`, `S-22.sse-pipeline`) đã viết nhưng chưa ghi kết quả chạy ở đây. **Chưa chạy lại toàn bộ bộ test sau sửa lỗi** (con số 557 trong hồ sơ là của bản giao đầu) |
+| Kiểm tay trên trình duyệt | **Chưa chạy.** Danh sách 12 bước ở [`testing/stories/S/kiem-thu-S-22.md`](testing/stories/S/kiem-thu-S-22.md) mục 1B |
+| Hợp đồng S-19 | Nới thêm `SoC` vào danh sách đại lượng được lưu; cần PO/tester S-19 xác nhận |
+| Còn lại | Mở PR và review; kiểm tay; chạy toàn bộ test trong môi trường CI và ghi tổng số; tách thẻ riêng cho các phát hiện ngoài phạm vi ([`dev/S-22_2026-10-10.md`](dev/S-22_2026-10-10.md) mục 4: giới hạn số kết nối SSE mỗi tài khoản, SSE không đóng khi thu hồi token, pool không có `query_timeout`, tài liệu chứa mật khẩu, `VULN-S04-FE01`, `WEB-01`) |

@@ -29,7 +29,7 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 
 ## Mục lục
 
-1. [Trạng thái dự án](#trạng-thái-dự-án-0510) · [Việc còn lại để đóng Sprint 2](#việc-còn-lại-để-đóng-sprint-2-hạn-510)
+1. [Trạng thái dự án](#trạng-thái-dự-án-0510) · [Việc còn lại để đóng Sprint 2](#việc-còn-lại-để-đóng-sprint-2-hạn-510) · [Tiến độ S-22](#tiến-độ-s-22-1010)
 2. [Chạy dự án](#1-chạy-dự-án) · [Chạy trên máy chủ](#chạy-trên-máy-chủ-nhóm-homelab-linux) · [Công khai qua Internet](#cho-người-khác-thử-qua-internet-công-khai-tạm) · [Tài khoản có sẵn](#tài-khoản-có-sẵn) · [Biến môi trường](#biến-môi-trường)
 3. [Dùng thử hệ thống](#2-dùng-thử-hệ-thống) · [Tạo tài khoản](#tạo-tài-khoản) · [Dữ liệu demo](#dữ-liệu-demo) · [Thử trụ sạc ảo (OCPP)](#thử-trụ-sạc-ảo-ocpp)
 4. [Kiểm thử](#3-kiểm-thử)
@@ -67,6 +67,15 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 | 8 | **Quyết định PO:** B5 (Basic Auth hay chấp nhận rủi ro), quy tắc `messageId`, lỗi mức trụ có đổi trạng thái tổng không, nhãn "Ngoại tuyến" cho trụ có mọi đầu nối tạm ngừng | — | Chốt trước demo |
 
 Ước lượng giờ là của người soạn tài liệu, không phải số liệu từ Jira.
+
+### Tiến độ S-22 (10/10)
+
+*Cập nhật 10/10/2026. Các mục khác của phần "Trạng thái dự án" ở trên vẫn dừng ở mốc 05/10; chi tiết S-22 ở [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md) mục 11.*
+
+| Hạng mục | Tình trạng |
+|---|---|
+| S-22 (GYM-48): tài xế xem phiên đang sạc | **Chưa Done.** Bản giao đầu ở nhánh `nam/gym48-s-22`, chưa vào `main`. Các lỗi của báo cáo review lần 27 đã sửa trên nhánh `phuc/GYM-48-sua-loi-review-s22`: kWh và công suất theo đúng đơn vị trụ gửi, lưu `SoC`, SSE lọc theo tài xế và đúng thứ tự, màn hình kết thúc phiên, đồng bộ lại khi SSE nối lại. Chưa mở PR, chưa được duyệt |
+| Còn lại | Mở PR và review; kiểm tay trên trình duyệt (**chưa chạy**); chạy toàn bộ test trong môi trường CI và ghi tổng số; tách thẻ riêng cho các phát hiện ngoài phạm vi. Hồ sơ: [`docs/dev/S-22_2026-10-10.md`](docs/dev/S-22_2026-10-10.md), [`kiem-thu-S-22.md`](docs/testing/stories/S/kiem-thu-S-22.md) |
 
 ---
 
