@@ -273,4 +273,23 @@ describe('S-22 Unit: sessions.service formatSession & logic', () => {
     );
     assert.ok(denied, 'phải gọi onDeny khi chủ trạm đọc phiên trạm người khác');
   });
+
+  it('getSessionById: phiên tồn tại nhưng không đọc được dòng, onDeny trả về bình thường -> 404, không TypeError (G7)', async () => {
+    const mockDb = {
+      query: async (sql) => {
+        if (sql.includes('SELECT 1 FROM charging_sessions')) return { rows: [{ '?column?': 1 }] };
+        return { rows: [] };
+      },
+    };
+
+    let denied = false;
+    await assert.rejects(
+      async () => getSessionById({ id: 10, role: 'DRIVER', ip: '127.0.0.1' }, 200, {
+        db: mockDb,
+        onDeny: async () => { denied = true; },
+      }),
+      (err) => err instanceof NotFoundError && err.status === 404
+    );
+    assert.ok(denied, 'phải gọi onDeny trước khi trả 404');
+  });
 });

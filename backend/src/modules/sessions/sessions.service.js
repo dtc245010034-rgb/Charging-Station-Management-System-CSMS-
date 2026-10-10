@@ -81,6 +81,7 @@ async function getSessionById(user, sessionId, options = {}) {
     }
     const onDeny = options?.onDeny || getDefaultDenyOrNotFound();
     await onDeny(user, 'charging_sessions', sessionId, async () => true, 'Không tìm thấy phiên sạc');
+    throw new NotFoundError('Không tìm thấy phiên sạc');
   }
 
   const roles = user.roles || [user.role];
