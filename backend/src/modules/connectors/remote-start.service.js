@@ -194,9 +194,35 @@ async function getRemoteStartRequest(driverId, requestId, db = pool) {
   };
 }
 
+async function getPendingRemoteStartRequest(driverId, db = pool) {
+  await db.query(
+    `UPDATE remote_start_requests
+     SET status = 'TIMED_OUT', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+     WHERE driver_id = $1 AND status = 'PENDING' AND deadline <= CURRENT_TIMESTAMP`,
+    [driverId]
+  );
+  const result = await db.query(
+    `SELECT id, status, deadline, session_id
+     FROM remote_start_requests
+     WHERE driver_id = $1 AND status = 'PENDING' AND deadline > CURRENT_TIMESTAMP
+     ORDER BY created_at DESC, id DESC
+     LIMIT 1`,
+    [driverId]
+  );
+  const request = result.rows[0];
+  if (!request) return null;
+  return {
+    request_id: Number(request.id),
+    status: request.status,
+    deadline: new Date(request.deadline).toISOString(),
+    session_id: request.session_id === null ? null : Number(request.session_id),
+  };
+}
+
 module.exports = {
   START_TIMEOUT_SECONDS,
   listDriverChargePoints,
   requestRemoteStart,
   getRemoteStartRequest,
+  getPendingRemoteStartRequest,
 };

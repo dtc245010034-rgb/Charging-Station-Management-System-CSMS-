@@ -27,6 +27,7 @@ export const chargePoints = {
 export const remoteStart = {
   chargePoints: () => api('/api/driver/charge-points'),
   start: (connectorId) => api(`/api/connectors/${encodeURIComponent(connectorId)}/start`, { method: 'POST', body: {} }),
+  getPendingRequest: () => api('/api/me/remote-start-requests/pending'),
   getRequest: (requestId) => api(`/api/me/remote-start-requests/${encodeURIComponent(requestId)}`),
 };
 

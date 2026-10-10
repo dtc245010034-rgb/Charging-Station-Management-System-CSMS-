@@ -308,8 +308,24 @@ export function render(ctx) {
     }
   }
 
+  async function resumePendingRequest() {
+    if (requestId || isStarting) return;
+    const request = await csms.remoteStart.getPendingRequest();
+    if (!request) return;
+    requestId = String(request.request_id);
+    requestDeadline = Date.parse(request.deadline);
+    isStarting = true;
+    updateStartButton(content.querySelector('[data-start-button]'));
+    showMessage('Đang khôi phục trạng thái yêu cầu bắt đầu sạc…');
+    if (terminalStatus(request)) return;
+    await pollRequest();
+  }
+
   renderPage();
-  refreshChargePoints();
+  refreshChargePoints().then(resumePendingRequest).catch((error) => {
+    showMessage(`Không thể khôi phục trạng thái yêu cầu bắt đầu: ${error.message}. Hãy làm mới để thử lại.`, { error: true });
+    toast('Không thể kiểm tra yêu cầu đang chờ. Hãy làm mới để thử lại.', { kind: 'error' });
+  });
 
   return () => {
     isUnmounted = true;

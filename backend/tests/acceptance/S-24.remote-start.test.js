@@ -34,6 +34,12 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     });
   }
 
+  async function getPendingRequest(cookie) {
+    return fetch(`http://127.0.0.1:${server.port}/api/me/remote-start-requests/pending`, {
+      headers: { Cookie: cookie },
+    });
+  }
+
   function listenForRemoteStart(socket) {
     socket.on('message', (raw) => {
       const frame = JSON.parse(raw.toString());
@@ -115,6 +121,10 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     assert.equal(response.status, 202);
     const request = await response.json();
     assert.equal(request.status, 'PENDING');
+    const pendingResponse = await getPendingRequest(driverCookie);
+    assert.equal(pendingResponse.status, 200);
+    assert.equal((await pendingResponse.json()).request_id, request.request_id);
+    assert.equal(await (await getPendingRequest(otherDriver.cookie)).json(), null);
     const time = await query(
       'SELECT EXTRACT(EPOCH FROM (deadline - created_at)) AS seconds FROM remote_start_requests WHERE id = $1',
       [request.request_id]
@@ -139,6 +149,7 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     const state = await stateResponse.json();
     assert.equal(state.status, 'STARTED');
     assert.equal(state.session_id, started[2].transactionId);
+    assert.equal(await (await getPendingRequest(driverCookie)).json(), null);
     const session = await query('SELECT driver_id, id_tag_id FROM charging_sessions WHERE id = $1', [state.session_id]);
     assert.equal(String(session.rows[0].driver_id), String(driverId));
 
