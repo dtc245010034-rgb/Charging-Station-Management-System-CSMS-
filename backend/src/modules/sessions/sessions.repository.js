@@ -150,6 +150,24 @@ async function lockConnectorRow(db, connectorId) {
   return result.rows[0] || null;
 }
 
+async function markRemoteStartRequestStarted(db, { connectorId, idTagId, sessionId }) {
+  await db.query(
+    `UPDATE remote_start_requests
+     SET status = 'TIMED_OUT', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+     WHERE connector_id = $1 AND status = 'PENDING' AND deadline <= CURRENT_TIMESTAMP`,
+    [connectorId]
+  );
+  const result = await db.query(
+    `UPDATE remote_start_requests
+     SET status = 'STARTED', session_id = $3, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+     WHERE connector_id = $1 AND id_tag_id = $2 AND status = 'PENDING'
+       AND deadline > CURRENT_TIMESTAMP
+     RETURNING id`,
+    [connectorId, idTagId, sessionId]
+  );
+  return result.rows[0] || null;
+}
+
 const SESSION_WITH_METERS_BASE = `
   SELECT
     cs.id,
@@ -282,10 +300,10 @@ module.exports = {
   recordOrphanMessage,
   findNaturalSession,
   lockConnectorRow,
+  markRemoteStartRequestStarted,
   findActiveSessionByDriverId,
   findSessionById,
   existsSessionById,
   findSessionControlById,
   listActiveSessions,
 };
-

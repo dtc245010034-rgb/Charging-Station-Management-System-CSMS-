@@ -22,5 +22,12 @@ const assignRoleByCode = async (client, userId, roleCode) => {
   const r = await client.query('INSERT INTO user_roles (user_id, role_id) SELECT $1, id FROM roles WHERE code = $2', [userId, roleCode]);
   return r.rowCount === 1;
 };
+const insertVirtualIdTag = async (client, userId, tag) => {
+  const r = await client.query(
+    "INSERT INTO id_tags (tag, user_id, status, is_virtual) VALUES ($1, $2, 'ACTIVE', TRUE) RETURNING id",
+    [tag, userId]
+  );
+  return r.rows[0];
+};
 
-module.exports = { findByEmail, findById, tokenVersionOf, bumpTokenVersion, listRoles, roleCodesOf, insertUser, assignRoleByCode };
+module.exports = { findByEmail, findById, tokenVersionOf, bumpTokenVersion, listRoles, roleCodesOf, insertUser, assignRoleByCode, insertVirtualIdTag };

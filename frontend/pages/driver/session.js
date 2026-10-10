@@ -89,16 +89,11 @@ export function render(ctx) {
           iconName: 'bolt',
           title: 'Không có phiên sạc nào đang diễn ra',
           text: 'Xe của bạn hiện chưa cắm sạc hoặc phiên sạc gần nhất đã kết thúc.',
-          action: h('div', { style: 'display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:12px' },
-            h('a', {
-              class: 'btn btn--primary',
-              href: '#/driver/find',
-              'aria-disabled': 'true',
-              style: 'pointer-events:none;opacity:0.6',
-              title: 'Tính năng Tìm trạm đang được phát triển (S-47)',
-            }, icon('station'), 'Tìm trạm'),
-            h('small', { class: 'muted', style: 'font-size:12px' }, '(Tính năng Tìm trạm sẽ mở ở Sprint sau - S-47)')
-          ),
+          action: h('a', {
+            class: 'btn btn--primary',
+            href: '#/driver/start',
+            style: 'margin-top:10px',
+          }, icon('bolt'), 'Bắt đầu sạc'),
         }))
       )
     );
