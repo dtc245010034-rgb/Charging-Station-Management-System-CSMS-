@@ -144,7 +144,7 @@ function createStartTransactionHandler({
 
     // 5. Thực thi trong một giao dịch duy nhất trên ocppPool
     try {
-      const session = await withTransaction(async (client) => {
+      const { session, closed } = await withTransaction(async (client) => {
         // 1. Khoá hàng connector để tuần tự hoá các yêu cầu đồng thời trên cùng một đầu nối
         await lockConnectorRow(client, connectorInfo.connector_id);
 
@@ -161,7 +161,7 @@ function createStartTransactionHandler({
           logInfo(
             `[OCPP] StartTransaction: Phát hiện tin gửi lại tự nhiên (D4) | transactionId: ${existingNaturalSession.id}`
           );
-          return existingNaturalSession;
+          return { session: existingNaturalSession, closed: [] };
         }
 
         // 3. AC3: Đầu nối còn phiên CHARGING khác -> đóng phiên cũ thành ABNORMAL (kWh để trống), cảnh báo
@@ -177,7 +177,7 @@ function createStartTransactionHandler({
         }
 
         // 4. Tạo phiên mới
-        return await startSession(client, {
+        const newSession = await startSession(client, {
           chargePointId: connectorInfo.charge_point_id,
           connectorId: connectorInfo.connector_id,
           connectorNo: connectorInfo.connector_no,
@@ -190,10 +190,17 @@ function createStartTransactionHandler({
           needsReview,
           reviewReason: reviewReasons.length > 0 ? reviewReasons.join('; ') : null,
         });
+        return { session: newSession, closed: closedOldSessions || [] };
       }, db);
 
+      for (const old of closed) {
+        publishSessionUpdateFromDb(old.id, { pool: db, driverId: old.driver_id }).catch(() => {});
+      }
       if (session?.id) {
-        publishSessionUpdateFromDb(session.id, { pool: db }).catch(() => {});
+        publishSessionUpdateFromDb(session.id, {
+          pool: db,
+          driverId: tagRecord ? tagRecord.user_id : null,
+        }).catch(() => {});
       }
 
       logInfo(

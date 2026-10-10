@@ -183,7 +183,7 @@ async function persistMeterValues({
   try {
     const outcome = await withTransaction(async (client) => {
       const connector = await client.query(
-        `SELECT c.id AS connector_id, cs.id AS session_id
+        `SELECT c.id AS connector_id, cs.id AS session_id, cs.driver_id
          FROM connectors c
          LEFT JOIN charging_sessions cs
            ON cs.connector_id = c.id
@@ -196,6 +196,7 @@ async function persistMeterValues({
         [chargePointId, payload.connectorId, payload.transactionId ?? null]
       );
       let sessionId = connector.rows[0]?.session_id;
+      const driverId = connector.rows[0]?.driver_id ?? null;
 
       if (sessionId) {
         const activeSession = await client.query(
@@ -271,11 +272,11 @@ async function persistMeterValues({
           [sessionId, reason]
         );
       }
-      return { sessionId, ignored: [...ignored], reviewReasons: [...reviewReasons] };
+      return { sessionId, driverId, ignored: [...ignored], reviewReasons: [...reviewReasons] };
     }, db);
 
     if (outcome?.sessionId) {
-      publishSessionUpdateFromDb(outcome.sessionId, { pool: db }).catch(() => {});
+      publishSessionUpdateFromDb(outcome.sessionId, { pool: db, driverId: outcome.driverId }).catch(() => {});
     }
 
     if (outcome.orphanReason) {

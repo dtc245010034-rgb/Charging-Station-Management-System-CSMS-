@@ -42,7 +42,7 @@ async function closeActiveSessionAsAbnormal(db, { connectorId, reason = 'Replace
         review_reason = $2,
         updated_at = CURRENT_TIMESTAMP
     WHERE connector_id = $1 AND status = 'CHARGING'
-    RETURNING id
+    RETURNING id, driver_id
   `;
   const result = await db.query(query, [connectorId, reason]);
   return result.rows;

@@ -140,7 +140,7 @@ function createStopTransactionHandler({
          WHERE id = $1
            AND charge_point_id = $6
            AND status = 'CHARGING'
-         RETURNING id`,
+         RETURNING id, driver_id`,
         [
           payload.transactionId,
           payload.meterStop,
@@ -154,7 +154,10 @@ function createStopTransactionHandler({
       );
 
       if (updated.rowCount > 0) {
-        publishSessionUpdateFromDb(payload.transactionId, { pool: db }).catch(() => {});
+        publishSessionUpdateFromDb(payload.transactionId, {
+          pool: db,
+          driverId: updated.rows[0]?.driver_id ?? null,
+        }).catch(() => {});
         return {};
       }
 
