@@ -21,11 +21,13 @@ const SUPPORTED_MEASURANDS = new Set([
   'Energy.Active.Import.Register',
   'Power.Active.Import',
   'Current.Import',
+  'SoC',
 ]);
 const DEFAULT_UNITS = {
   'Energy.Active.Import.Register': 'Wh',
   'Power.Active.Import': 'W',
   'Current.Import': 'A',
+  SoC: 'Percent',
 };
 function getDefaultPool() {
   return require('../../../db/pool').ocppPool;
@@ -93,6 +95,8 @@ function validatePayload(payload, now = Date.now) {
         measurand,
         sampledValue.unit || DEFAULT_UNITS[measurand]
       )) {
+        // SoC chỉ là thông tin hiển thị: giá trị ngoài 0–100 bỏ riêng, không làm hỏng cả bản tin (mất Energy cùng bản tin).
+        if (measurand === 'SoC') continue;
         throw violation('Supported sampledValue.value must be a plausible non-negative numeric string');
       }
       const unit = sampledValue.unit === undefined ? DEFAULT_UNITS[measurand] : sampledValue.unit;
