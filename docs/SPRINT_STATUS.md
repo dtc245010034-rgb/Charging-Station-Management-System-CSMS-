@@ -188,3 +188,15 @@ Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VON
 | Kiểm tay trên trình duyệt | **Chưa chạy.** Danh sách 12 bước ở [`testing/stories/S/kiem-thu-S-22.md`](testing/stories/S/kiem-thu-S-22.md) mục 1B |
 | Hợp đồng S-19 | Nới thêm `SoC` vào danh sách đại lượng được lưu; cần PO/tester S-19 xác nhận |
 | Còn lại | Mở PR và review; kiểm tay; chạy toàn bộ test trong môi trường CI và ghi tổng số; tách thẻ riêng cho các phát hiện ngoài phạm vi ([`dev/S-22_2026-10-10.md`](dev/S-22_2026-10-10.md) mục 4: giới hạn số kết nối SSE mỗi tài khoản, SSE không đóng khi thu hồi token, pool không có `query_timeout`, tài liệu chứa mật khẩu, `VULN-S04-FE01`, `WEB-01`) |
+
+## 12. S-23 (GYM-49) — Vận hành viên dừng phiên từ xa (10/10/2026)
+
+**Đã hoàn thành kiểm thử nghiệm thu.** Bản giao nằm ở nhánh `minh/GYM49-S23` (commit `e836b3a`). Hồ sơ kiểm thử: [`docs/testing/stories/S/kiem-thu-S-23.md`](testing/stories/S/kiem-thu-S-23.md).
+
+| Hạng mục | Tình trạng (10/10/2026) |
+|---|---|
+| Mã nguồn | Migration `025_remote_stop_requests` (up/down sạch); API `POST /api/sessions/:id/stop` (HTTP 202 kèm deadline); `sendRemoteCommand` (OCPP 1.6 RemoteStopTransaction); job nền `remote-stop-job` xử lý quá hạn 120s; handler StopTransaction chốt phiên và gỡ review tạm thời; trang `frontend/pages/shared/sessions.js` có đếm ngược và thông báo 3 trường hợp lỗi |
+| Test tự động | **36/36 test pass, 0 fail:** Acceptance thật (`S-23.remote-stop.test.js`) 6/6 đạt; Unit timeout job 2/2 đạt; Unit router frontend 2/2 đạt; Commands dùng chung 1/1 đạt; Regression S-18 8/8 đạt; Regression S-22 16/16 đạt; Integration rollback migration 025 đạt. Lint sạch |
+| Kiểm thử trụ ảo thực tế | Đã chạy live với WebSocket `ws://localhost:3000/ocpp/*` và máy chủ Docker thật: luồng thành công Happy Path (chốt 6 kWh, Remote reason), luồng Rejected (422), luồng Ngoại tuyến (409) đạt 100% |
+| Còn lại | Mở PR và review chéo; kiểm thử thủ công cuối cùng trên trình duyệt bởi QA |
+
