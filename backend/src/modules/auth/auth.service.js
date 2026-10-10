@@ -65,8 +65,8 @@ async function revokeSessions(token) {
   } catch {
     return;
   }
-  await users.bumpTokenVersion(payload.id, payload.tv ?? 0);
-  closeStreamsOf(payload.id);
+  const { changes } = await users.bumpTokenVersion(payload.id, payload.tv ?? 0);
+  if (changes > 0) closeStreamsOf(payload.id);
 }
 
 module.exports = { register, login, me, issueToken, revokeSessions, publicUser };
