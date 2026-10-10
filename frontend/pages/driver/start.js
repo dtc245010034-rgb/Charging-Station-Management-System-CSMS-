@@ -4,7 +4,6 @@ import { icon } from '../../components/icons.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
 import { toast } from '../../components/toast.js';
 
-const REQUEST_STORAGE_KEY = 'csms.remoteStartRequestId';
 const POLL_INTERVAL_MS = 1500;
 
 export function render(ctx) {
@@ -220,7 +219,6 @@ export function render(ctx) {
   function terminalStatus(request) {
     if (request.status === 'STARTED') {
       stopPolling();
-      sessionStorage.removeItem(REQUEST_STORAGE_KEY);
       toast('Phiên sạc đã bắt đầu.', { ms: 2500 });
       location.hash = '#/driver/sessions';
       return true;
@@ -229,7 +227,6 @@ export function render(ctx) {
       stopPolling();
       isStarting = false;
       requestId = null;
-      sessionStorage.removeItem(REQUEST_STORAGE_KEY);
       showMessage('Trụ từ chối yêu cầu bắt đầu. Hãy kiểm tra súng đã cắm chắc chưa rồi thử lại.', { error: true });
       toast('Trụ từ chối yêu cầu. Hãy kiểm tra súng đã cắm chưa.', { kind: 'error' });
       updateStartButton(content.querySelector('[data-start-button]'));
@@ -239,7 +236,6 @@ export function render(ctx) {
       stopPolling();
       isStarting = false;
       requestId = null;
-      sessionStorage.removeItem(REQUEST_STORAGE_KEY);
       showMessage('Chưa bắt đầu được trong 60 giây. Hãy kiểm tra súng đã cắm chưa và thử lại.', { error: true });
       toast('Chưa bắt đầu được, bạn có thể thử lại.', { kind: 'error' });
       updateStartButton(content.querySelector('[data-start-button]'));
@@ -249,7 +245,6 @@ export function render(ctx) {
       stopPolling();
       isStarting = false;
       requestId = null;
-      sessionStorage.removeItem(REQUEST_STORAGE_KEY);
       showMessage('Không gửi được lệnh tới trụ. Hãy kiểm tra kết nối của trụ rồi thử lại.', { error: true });
       updateStartButton(content.querySelector('[data-start-button]'));
       return true;
@@ -267,7 +262,6 @@ export function render(ctx) {
         showMessage('Chưa bắt đầu được trong 60 giây. Hãy kiểm tra súng đã cắm chưa; bạn có thể thử lại.', { error: true });
         isStarting = false;
         requestId = null;
-        sessionStorage.removeItem(REQUEST_STORAGE_KEY);
         updateStartButton(content.querySelector('[data-start-button]'));
         return;
       }
@@ -277,7 +271,6 @@ export function render(ctx) {
       if (Date.now() >= requestDeadline) {
         isStarting = false;
         requestId = null;
-        sessionStorage.removeItem(REQUEST_STORAGE_KEY);
         showMessage('Chưa bắt đầu được trong 60 giây. Hãy kiểm tra súng đã cắm chưa; bạn có thể thử lại.', { error: true });
         updateStartButton(content.querySelector('[data-start-button]'));
         return;
@@ -297,7 +290,6 @@ export function render(ctx) {
       const request = await csms.remoteStart.start(connector.connector_id);
       requestId = String(request.request_id);
       requestDeadline = Date.parse(request.deadline);
-      sessionStorage.setItem(REQUEST_STORAGE_KEY, requestId);
       if (terminalStatus(request)) return;
       showMessage('Trụ đã chấp nhận yêu cầu. Đang chờ phiên sạc bắt đầu…');
       await pollRequest();
@@ -316,28 +308,8 @@ export function render(ctx) {
     }
   }
 
-  async function resumePendingRequest() {
-    const savedId = sessionStorage.getItem(REQUEST_STORAGE_KEY);
-    if (!savedId) return;
-    requestId = savedId;
-    isStarting = true;
-    updateStartButton(content.querySelector('[data-start-button]'));
-    try {
-      const request = await csms.remoteStart.getRequest(requestId);
-      requestDeadline = Date.parse(request.deadline);
-      if (terminalStatus(request)) return;
-      showMessage('Đang khôi phục trạng thái yêu cầu bắt đầu sạc…');
-      await pollRequest();
-    } catch {
-      requestId = null;
-      isStarting = false;
-      sessionStorage.removeItem(REQUEST_STORAGE_KEY);
-      updateStartButton(content.querySelector('[data-start-button]'));
-    }
-  }
-
   renderPage();
-  refreshChargePoints().then(resumePendingRequest);
+  refreshChargePoints();
 
   return () => {
     isUnmounted = true;
