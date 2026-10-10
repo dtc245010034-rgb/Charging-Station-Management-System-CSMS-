@@ -5,6 +5,7 @@ const users = require('../users/users.repository');
 const usersService = require('../users/users.service');
 const { hashPassword, verifyPassword } = require('../../lib/password');
 const throttle = require('./login-throttle.repository');
+const { closeStreamsOf } = require('../../lib/sse-registry');
 const { AppError, UnauthorizedError, NotFoundError } = require('../../lib/errors');
 
 const EMAIL_MAX_FAILURES = 5;
@@ -65,6 +66,7 @@ async function revokeSessions(token) {
     return;
   }
   await users.bumpTokenVersion(payload.id, payload.tv ?? 0);
+  closeStreamsOf(payload.id);
 }
 
 module.exports = { register, login, me, issueToken, revokeSessions, publicUser };

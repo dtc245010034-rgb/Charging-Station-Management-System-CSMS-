@@ -190,6 +190,7 @@ Kiểm tra nhanh sau mỗi lần deploy: `/api/health` → `"ok":true`; đăng n
 | `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` | cả hai | Không | `600` giây; chỉ phát lại câu cũ khi cùng `messageId`, hành động, nội dung và chưa quá cửa sổ này (F8) |
 | `OCPP_LOCK_TIMEOUT_SECONDS` | cả hai | Không | `5` giây; `lock_timeout` chỉ cho truy vấn của handler OCPP (F10) |
 | `DB_QUERY_TIMEOUT_SECONDS` | cả hai | Không | `30` giây; truy vấn PostgreSQL quá hạn thì báo lỗi (`0` = không giới hạn). Migration lớn có thể cần đặt cao hơn |
+| `SSE_MAX_CONNECTIONS_PER_USER` | cả hai | Không | `5` luồng SSE đồng thời mỗi tài khoản (một tiến trình); mở thêm thì đóng luồng cũ nhất. Đăng xuất đóng mọi luồng |
 | `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | cả hai | Không | `30` lần/phút/tài khoản cho `check-code` (429 + `Retry-After`) |
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | cả hai | Không | `5` lần dò email trùng/giờ/IP; vượt thì đăng ký từ IP đó trả 429. IP lấy theo `TRUST_PROXY` |
 | `OCPP_HANDSHAKE_LIMIT_PER_10S` | cả hai | Không | `5` lần bắt tay/10 giây/(IP, mã trụ), kiểm trước khi truy vấn DB |

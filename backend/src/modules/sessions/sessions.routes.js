@@ -3,6 +3,7 @@ const { access } = require('../../security/permissions');
 const { AppError } = require('../../lib/errors');
 const service = require('./sessions.service');
 const { subscribe } = require('./sessions.events');
+const { registerStream } = require('../../lib/sse-registry');
 
 const router = secureRouter();
 
@@ -21,6 +22,7 @@ function handleSessionEvents(req, res) {
   let heartbeat;
   let expiry;
   let unsubscribe;
+  let releaseStream;
 
   const cleanup = () => {
     if (closed) return;
@@ -28,6 +30,7 @@ function handleSessionEvents(req, res) {
     clearInterval(heartbeat);
     clearTimeout(expiry);
     unsubscribe?.();
+    releaseStream?.();
   };
 
   const send = (chunk) => {
@@ -44,6 +47,11 @@ function handleSessionEvents(req, res) {
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
+  });
+
+  releaseStream = registerStream(req.user.id, () => {
+    cleanup();
+    res.end();
   });
 
   unsubscribe = subscribe((event) => {

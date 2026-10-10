@@ -2,6 +2,7 @@ const { secureRouter } = require('../../security/routeGuard');
 const { access } = require('../../security/permissions');
 const service = require('./fleet-status.service');
 const { subscribe } = require('./fleet-status.events');
+const { registerStream } = require('../../lib/sse-registry');
 
 const router = secureRouter();
 
@@ -16,6 +17,7 @@ router.get('/fleet-status/events', { access: access('stations:read') }, (req, re
   let heartbeat;
   let expiry;
   let unsubscribe;
+  let releaseStream;
 
   const cleanup = () => {
     if (closed) return;
@@ -23,6 +25,7 @@ router.get('/fleet-status/events', { access: access('stations:read') }, (req, re
     clearInterval(heartbeat);
     clearTimeout(expiry);
     unsubscribe?.();
+    releaseStream?.();
   };
 
   // Client đọc chậm (write trả false): huỷ luôn kết nối để không ghi tiếp vào luồng đã đóng; EventSource tự nối lại.
@@ -40,6 +43,10 @@ router.get('/fleet-status/events', { access: access('stations:read') }, (req, re
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
+  });
+  releaseStream = registerStream(req.user.id, () => {
+    cleanup();
+    res.end();
   });
   unsubscribe = subscribe((event) => {
     if (closed || (!seesAllStations && String(event.ownerId) !== String(req.user.id))) return;
