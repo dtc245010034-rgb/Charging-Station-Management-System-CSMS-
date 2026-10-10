@@ -110,7 +110,7 @@ Ký hiệu: **Cổng** = điều kiện để story sau ghép được. Tên fil
 
 ### S-19 · GYM-45 · 2 SP · `MeterValues` ghi liên tục *(Must)*
 - **Làn:** L2 · **Bắt đầu:** T4 sáng (bảng + khung), **tích hợp** T5 chiều sau S-18 · **Xong:** T6 sáng · **Cổng:** S-20, S-22.
-- **Việc:** **T-40** (migration 018). **T-41** `meter-values.js`: bóc `meterValue[].sampledValue[]` (hai tầng; mẫu ở `docs/spikes/k01-session-log.json`), chỉ lưu `Energy.Active.Import.Register`, `Power.Active.Import`, `Current.Import`; giữ **đơn vị nguyên văn** và chuẩn hoá ra Wh khi tính; một câu `INSERT` nhiều dòng (D5); tin cho đầu nối không có phiên → `orphan_messages`, không tạo phiên. `MeterValues.transactionId` là **tuỳ chọn** theo đặc tả → khớp phiên bằng `transactionId` nếu có, nếu không thì bằng phiên `CHARGING` của đầu nối.
+- **Việc:** **T-40** (migration 018). **T-41** `meter-values.js`: bóc `meterValue[].sampledValue[]` (hai tầng; mẫu ở `docs/spikes/k01-session-log.json`), chỉ lưu `Energy.Active.Import.Register`, `Power.Active.Import`, `Current.Import` (từ GYM-48 có thêm `SoC`, 0–100 %); giữ **đơn vị nguyên văn** và chuẩn hoá ra Wh khi tính; một câu `INSERT` nhiều dòng (D5); tin cho đầu nối không có phiên → `orphan_messages`, không tạo phiên. `MeterValues.transactionId` là **tuỳ chọn** theo đặc tả → khớp phiên bằng `transactionId` nếu có, nếu không thì bằng phiên `CHARGING` của đầu nối.
 - **AC:** giá trị + mốc lưu gắn phiên; đại lượng lạ bỏ qua không lỗi; 20 trụ × 1 tin/10 giây → trả lời **p95 < 200 ms** (đo bằng `tools/simulate-fleet.js` hoặc T-46; ghi số vào hồ sơ kiểm thử).
 - **NFR:** D5, D6, D12.
 
