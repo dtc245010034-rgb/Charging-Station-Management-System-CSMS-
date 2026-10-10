@@ -106,7 +106,7 @@ describe('S-18 StopTransaction handler', () => {
 
     await handler(validPayload({ meterStop: 900, reason: undefined }), { connection: CONNECTION });
     assert.equal(update.params[3], 'Local');
-    assert.match(update.sql, /needs_review = needs_review OR meter_start > \$2/);
+    assert.match(update.sql, /needs_review = .*meter_start > \$2/s);
     assert.match(update.sql, /METER_STOP_BELOW_START/);
   });
 

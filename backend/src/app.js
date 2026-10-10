@@ -15,6 +15,7 @@ const sessionsRoutes = require('./modules/sessions/sessions.routes');
 
 function createApp({ commandSender } = {}) {
   const app = express();
+  app.locals.commandSender = commandSender;
   if (env.TRUST_PROXY > 0) app.set('trust proxy', env.TRUST_PROXY);
   app.use(cors({ origin: env.APP_ORIGIN.split(','), credentials: true }));
   app.use('/api', requireJson);

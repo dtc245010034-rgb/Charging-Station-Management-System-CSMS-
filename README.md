@@ -165,6 +165,7 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` | Cửa sổ phát lại tin trùng: chỉ phát lại câu cũ khi cùng `messageId`, hành động, nội dung và chưa quá N giây (F8) | Giây | `600` |
 | `OCPP_LOCK_TIMEOUT_SECONDS` | `lock_timeout` cho truy vấn của handler OCPP; API, migration và job không bị ảnh hưởng (F10) | Giây | `5` |
 | `DB_QUERY_TIMEOUT_SECONDS` | Thời gian tối đa chờ một truy vấn PostgreSQL trả kết quả (cả hai pool); quá hạn thì truy vấn báo lỗi. `0` = không giới hạn | Giây | `30` |
+| `REMOTE_STOP_WAIT_SECONDS` | Thời gian chờ `StopTransaction` thực tế sau khi trụ `Accepted` lệnh dừng; hết hạn chỉ đánh dấu phiên cần xem xét, không tự đóng phiên | Giây | `120` |
 | `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | Số lần gọi `GET /api/charge-points/check-code` mỗi tài khoản (quá mức trả 429 + `Retry-After`) | Lần/phút | `30` |
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
 | `OCPP_HANDSHAKE_LIMIT_PER_10S` | Số lần bắt tay WebSocket mỗi cặp (IP, mã trụ), kiểm tra trước khi truy vấn DB; quá mức trả 429 | Lần/10 giây | `5` |

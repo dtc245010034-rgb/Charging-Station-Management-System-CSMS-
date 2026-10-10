@@ -4,7 +4,7 @@ const { formatSession, getCurrentSessionForDriver, getSessionById } = require('.
 const { ForbiddenError, NotFoundError } = require('../../src/lib/errors');
 
 describe('S-22 Unit: sessions.service formatSession & logic', () => {
-  it('formatSession: phiên CHARGING chưa có meter values -> current_kwh = 0', () => {
+  it('formatSession: phiên CHARGING chưa có meter values -> current_kwh không giả thành 0', () => {
     const row = {
       id: 101,
       charge_point_id: '1',
@@ -38,7 +38,7 @@ describe('S-22 Unit: sessions.service formatSession & logic', () => {
     assert.strictEqual(formatted.transaction_id, 101);
     assert.strictEqual(formatted.meter_start, 5000);
     assert.strictEqual(formatted.meter_stop, null);
-    assert.strictEqual(formatted.current_kwh, 0);
+    assert.strictEqual(formatted.current_kwh, null);
     assert.strictEqual(formatted.status, 'CHARGING');
     assert.strictEqual(formatted.needs_review, false);
   });
@@ -143,7 +143,7 @@ describe('S-22 Unit: sessions.service formatSession & logic', () => {
 
   it('formatSession: dòng dữ liệu thiếu hoàn toàn cột số đo vẫn không ném lỗi', () => {
     const formatted = formatSession({ id: 109, meter_start: '5000', status: 'CHARGING' });
-    assert.strictEqual(formatted.current_kwh, 0);
+    assert.strictEqual(formatted.current_kwh, null);
     assert.strictEqual(formatted.latest_power_w, null);
     assert.strictEqual(formatted.latest_soc, null);
   });

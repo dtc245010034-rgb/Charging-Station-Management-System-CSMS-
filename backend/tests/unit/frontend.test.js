@@ -49,13 +49,15 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(parseHash('').workspace, undefined);
   });
 
-  it('nav: mục chưa có backend (enabled:false) không bao giờ hiện; mục cần quyền bị ẩn khi thiếu quyền', async () => {
+  it('nav: mục chưa có backend (enabled:false) không bao giờ hiện; phiên sạc chỉ hiện cho Operator/Admin', async () => {
     const { visibleNav, WORKSPACES } = await load('app/workspace.js');
     const { can } = await load('app/permissions.js');
     const pages = (ws) => visibleNav(ws, WORKSPACES[ws].role, can).flatMap((g) => g.items.map((i) => i.page));
-    assert.ok(!pages('operator').includes('sessions') && !pages('operator').includes('alerts'));
+    assert.ok(pages('operator').includes('sessions') && !pages('operator').includes('alerts'));
     assert.ok(pages('operator').includes('stations') && pages('admin').includes('users'));
-    assert.ok(!pages('owner').includes('users') && !pages('accountant').includes('stations'));
+    assert.ok(pages('admin').includes('sessions'));
+    assert.ok(!pages('owner').includes('sessions') && !pages('accountant').includes('sessions'));
+    assert.ok(pages('driver').includes('sessions'));
   });
 
   it('S-11 T-24: operator và owner có đường dẫn tới lưới trạng thái', async () => {
@@ -69,6 +71,14 @@ describe('S-02 frontend: router', () => {
     assert.ok(pages('admin').includes('fleet-status'), 'admin cần vào được trang có nút Khởi động lại (charge-points:reset)');
     assert.strictEqual(PAGE_NEEDS['fleet-status'], 'charge-points:read');
     assert.strictEqual(typeof pageLoader('fleet-status', 'operator'), 'function');
+  });
+
+  it('S-23: trang phiên vận hành chỉ được tải ở Operator và Admin', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    assert.strictEqual(typeof pageLoader('sessions', 'operator'), 'function');
+    assert.strictEqual(typeof pageLoader('sessions', 'admin'), 'function');
+    assert.strictEqual(pageLoader('sessions', 'owner'), null);
+    assert.deepStrictEqual(PAGE_NEEDS.sessions, ['sessions:read-own', 'sessions:read']);
   });
 
   it('quyền nút trên giao diện: Reset cho Admin/Operator, khoá trạm chỉ Admin', async () => {

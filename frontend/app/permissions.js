@@ -15,6 +15,7 @@ export const PERMISSIONS = {
   'stations:lock': ADMIN,
   'sessions:read-own': ['DRIVER'],
   'sessions:read': ['ADMIN', 'OPERATOR', 'ACCOUNTANT', 'STATION_OWNER'],
+  'sessions:stop': ['ADMIN', 'OPERATOR'],
 };
 
 export const can = (role, key) => (PERMISSIONS[key] ?? []).includes(role);

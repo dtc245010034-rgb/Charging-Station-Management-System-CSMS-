@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Trụ sạc ảo TƯƠNG TÁC (OCPP 1.6J) để demo Sprint 2 (S-06 → S-16) trên máy chủ CSMS đang chạy.
-// Giữ kết nối, tự gửi Heartbeat, trả lời lệnh Reset của máy chủ, và nhận lệnh gõ tay (gõ `help`).
+// Giữ kết nối, tự gửi Heartbeat, trả lời lệnh Reset/RemoteStop của máy chủ, và nhận lệnh gõ tay.
 // Chỉ gửi/nhận khung JSON thô qua `ws`, không dùng thư viện OCPP, nên gửi được cả khung hỏng để thử S-07.
 // Hướng dẫn từng bước: docs/DEMO_SPRINT2.md
 'use strict';
@@ -33,6 +33,7 @@ const USAGE = `Dùng: node tools/demo-charge-point.js [MÃ_TRỤ] [tuỳ chọn]
   --heartbeat <giây>   ép chu kỳ Heartbeat; bỏ trống thì theo "interval" máy chủ trả trong Boot
   --reset <chế độ>     cách trả lời lệnh Reset: accept (mặc định, trả Accepted rồi tự khởi động lại),
                        accept-only, reject, silent (không trả lời, để thử hết thời gian), error
+  --remote-stop <mode> cách trả lời RemoteStopTransaction: accept (gửi StopTransaction Remote), reject, silent, error
   --protocol <tên>     subprotocol WebSocket, mặc định ocpp1.6 ("none" = không gửi, để thử S-06)
   --skew-hours <giờ>   làm đồng hồ trụ lệch so với máy chủ (thử S-09)
   --no-boot            kết nối xong KHÔNG gửi Boot (thử SecurityError của S-08)
@@ -89,7 +90,7 @@ function readOptions() {
     parsed = parseArgs({
       allowPositionals: true,
       options: {
-        url: { type: 'string' }, connectors: { type: 'string' }, heartbeat: { type: 'string' }, reset: { type: 'string' },
+        url: { type: 'string' }, connectors: { type: 'string' }, heartbeat: { type: 'string' }, reset: { type: 'string' }, 'remote-stop': { type: 'string' },
         protocol: { type: 'string' }, 'skew-hours': { type: 'string' },
         'no-boot': { type: 'boolean' }, 'no-status': { type: 'boolean' }, help: { type: 'boolean', short: 'h' },
       },
@@ -110,6 +111,7 @@ function readOptions() {
     connectors: number(values.connectors, 2),
     heartbeat: number(values.heartbeat, null),
     reset: values.reset || 'accept',
+    remoteStop: values['remote-stop'] || 'accept',
     protocol: values.protocol === undefined ? 'ocpp1.6' : (values.protocol === 'none' ? '' : values.protocol),
     skewHours: number(values['skew-hours'], 0),
     boot: !values['no-boot'],
@@ -118,6 +120,7 @@ function readOptions() {
   if (!Number.isInteger(opts.connectors) || opts.connectors < 0) { console.error('--connectors phải là số nguyên ≥ 0'); process.exit(2); }
   if (opts.heartbeat !== null && !(opts.heartbeat > 0)) { console.error('--heartbeat phải là số giây > 0'); process.exit(2); }
   if (!RESET_MODES.includes(opts.reset)) { console.error(`--reset phải là một trong: ${RESET_MODES.join(', ')}`); process.exit(2); }
+  if (!['accept', 'reject', 'silent', 'error'].includes(opts.remoteStop)) { console.error('--remote-stop phải là một trong: accept, reject, silent, error'); process.exit(2); }
   if (!Number.isFinite(opts.skewHours)) { console.error('--skew-hours phải là số'); process.exit(2); }
   return opts;
 }
@@ -165,7 +168,7 @@ function createChargePoint(opts) {
   const endpoint = endpointOf(opts.base, opts.code);
   const state = {
     ws: null, count: 0, booted: false, interval: 60, heartbeatTimer: null, heartbeatSeconds: null, silent: false,
-    resetMode: opts.reset, skewMs: opts.skewHours * 3600 * 1000, autoBoot: opts.boot, waiter: null,
+    resetMode: opts.reset, remoteStopMode: opts.remoteStop, sessions: new Map(), skewMs: opts.skewHours * 3600 * 1000, autoBoot: opts.boot, waiter: null,
   };
   const pending = new Map();
   let rl = null;
@@ -216,6 +219,23 @@ function createChargePoint(opts) {
 
   function onServerCall(sock, id, action, payload) {
     say(`${c.yellow('⇦ Máy chủ gửi lệnh')} ${action} ${JSON.stringify(payload)}`);
+    if (action === 'RemoteStopTransaction') {
+      const active = [...state.sessions.entries()].find(([, session]) => session.transactionId === payload?.transactionId);
+      if (!active) { reply(sock, [3, id, { status: 'Rejected' }]); return; }
+      if (state.remoteStopMode === 'silent') { say(c.yellow('Chế độ silent: cố ý không trả lời RemoteStopTransaction.')); return; }
+      if (state.remoteStopMode === 'reject') { reply(sock, [3, id, { status: 'Rejected' }]); return; }
+      if (state.remoteStopMode === 'error') { reply(sock, [4, id, 'NotSupported', 'Demo: không hỗ trợ RemoteStopTransaction', {}]); return; }
+      reply(sock, [3, id, { status: 'Accepted' }]);
+      const [connectorId, session] = active;
+      state.sessions.delete(connectorId);
+      void call('StopTransaction', {
+        transactionId: session.transactionId,
+        meterStop: session.meterStart,
+        timestamp: trueTime(),
+        reason: 'Remote',
+      }, { show: 'raw', sock });
+      return;
+    }
     if (action !== 'Reset') {
       reply(sock, [4, id, 'NotImplemented', `Trụ ảo chưa hỗ trợ ${action}`, {}]);
       return;
@@ -374,7 +394,7 @@ function createChargePoint(opts) {
       say([
         `Trụ ${opts.code} @ ${endpoint}`,
         `Kết nối: ${open ? `đang mở (#${state.ws.n})` : 'không có'} | Boot: ${state.booted ? 'đã được chấp nhận' : 'chưa'}`,
-        `Heartbeat: ${state.heartbeatTimer ? `mỗi ${state.heartbeatSeconds}s` : 'đang dừng'} | Trả lời Reset: ${state.resetMode}`,
+        `Heartbeat: ${state.heartbeatTimer ? `mỗi ${state.heartbeatSeconds}s` : 'đang dừng'} | Reset: ${state.resetMode} | RemoteStop: ${state.remoteStopMode}`,
         `Đồng hồ trụ lệch máy chủ: ${state.skewMs / 3600000} giờ`,
       ].join('\n'));
     },
@@ -402,6 +422,20 @@ function createChargePoint(opts) {
     auth: async (args) => {
       if (!args[0]) { say(c.red('Dùng: auth <idTag>')); return; }
       await authenticate(args[0]);
+    },
+    start: async (args) => {
+      const connectorId = Number(args[0]);
+      const idTag = args[1] || 'TAG-DEMO-01';
+      const meterStart = args[2] === undefined ? 10000 : Number(args[2]);
+      if (!Number.isInteger(connectorId) || connectorId < 1 || connectorId > opts.connectors || !Number.isSafeInteger(meterStart) || meterStart < 0) {
+        say(c.red('Dùng: start <connectorId> [idTag=TAG-DEMO-01] [meterStartWh=10000]'));
+        return;
+      }
+      const result = await call('StartTransaction', { connectorId, idTag, meterStart, timestamp: trueTime() });
+      if (result.ok && result.payload.idTagInfo?.status === 'Accepted') {
+        state.sessions.set(connectorId, { transactionId: result.payload.transactionId, meterStart });
+        say(c.green(`Phiên bắt đầu: transactionId ${result.payload.transactionId} trên đầu nối ${connectorId}.`));
+      } else if (result.ok) say(c.yellow(`StartTransaction không được chấp nhận: ${result.payload.idTagInfo?.status || 'phản hồi không rõ'}`));
     },
     'auth-all': async () => {
       const rows = [];
@@ -456,6 +490,11 @@ function createChargePoint(opts) {
       state.resetMode = args[0];
       say(`Từ giờ trả lời Reset theo chế độ: ${state.resetMode}`);
     },
+    'remote-stop-mode': async (args) => {
+      if (!['accept', 'reject', 'silent', 'error'].includes(args[0])) { say(c.red('Dùng: remote-stop-mode <accept|reject|silent|error>')); return; }
+      state.remoteStopMode = args[0];
+      say(`Từ giờ trả lời RemoteStopTransaction theo chế độ: ${state.remoteStopMode}`);
+    },
     skew: async (args) => {
       const hours = Number(args[0]);
       if (!Number.isFinite(hours)) { say(c.red('Dùng: skew <số giờ lệch>, ví dụ skew 5')); return; }
@@ -508,7 +547,9 @@ const HELP = `Lệnh (gõ trong dấu nhắc):
              trạng thái: ${OCPP_STATUSES.join(', ')}
   Thẻ        auth <idTag> · auth-all (năm ca, S-15) · dup [thẻ] [thẻ-khác] (gửi trùng messageId, S-14)
   Khung hỏng badframe [${Object.keys(BAD_FRAMES).join('|')}|all]   (S-07)
+  Phiên      start <connectorId> [idTag] [meterStartWh]   mở phiên OCPP để thử RemoteStopTransaction
   Reset      reset-mode <${RESET_MODES.join('|')}>   cách trả lời lệnh Reset của máy chủ (S-16)
+  Dừng từ xa remote-stop-mode <accept|reject|silent|error>   cách trả lời lệnh RemoteStopTransaction (S-23)
   Khác       sleep <giây> · help`;
 
 const options = readOptions();

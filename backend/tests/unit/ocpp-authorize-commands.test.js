@@ -1,8 +1,9 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { createAuthorizeHandler, evaluateIdTag, maskIdTag } = require('../../src/modules/ocpp/handlers/authorize');
-const { createCommandSender, OcppCommandError } = require('../../src/modules/ocpp/commands');
+const { createCommandSender, sendRemoteCommand, OcppCommandError } = require('../../src/modules/ocpp/commands');
 const { OcppCallError } = require('../../src/modules/ocpp/frames');
+const { OcppRemoteCallError } = require('../../src/modules/ocpp/message-handler');
 
 describe('S-15 Authorize unit tests', () => {
   const mockPool = {
@@ -102,5 +103,33 @@ describe('commands: gửi lệnh từ server xuống trụ (nền cho S-16)', ()
   it('lỗi từ trụ hoặc hết thời gian được chuyển nguyên cho nơi gọi', async () => {
     const sender = createCommandSender({ getConnection: () => ({}), sendCall: async () => { throw new Error('OCPP call timed out: Reset'); } });
     await assert.rejects(() => sender.send('CP-1', 'Reset', {}), /timed out/);
+  });
+
+  it('ánh xạ kết quả Accepted, Rejected, offline, CALLERROR và timeout dùng chung', async () => {
+    const acceptedSender = { send: async () => ({ status: 'Accepted' }) };
+    assert.deepEqual(await sendRemoteCommand({
+      commandSender: acceptedSender,
+      chargePointCode: 'CP-1',
+      action: 'RemoteStopTransaction',
+      payload: { transactionId: 7 },
+    }), { status: 'Accepted' });
+
+    const rejectedSender = { send: async () => ({ status: 'Rejected' }) };
+    await assert.rejects(
+      () => sendRemoteCommand({ commandSender: rejectedSender, chargePointCode: 'CP-1', action: 'RemoteStopTransaction', payload: {}, rejectedMessage: 'Bị từ chối' }),
+      (error) => error.status === 422 && error.message === 'Bị từ chối'
+    );
+
+    const callError = new OcppRemoteCallError({ errorDescription: 'NotSupported', errorCode: 'NotSupported' });
+    for (const [sender, status] of [
+      [{ send: async () => { throw new OcppCommandError('OFFLINE', 'offline'); } }, 409],
+      [{ send: async () => { throw callError; } }, 422],
+      [{ send: async () => { throw new Error('OCPP call timed out: RemoteStopTransaction'); } }, 504],
+    ]) {
+      await assert.rejects(
+        () => sendRemoteCommand({ commandSender: sender, chargePointCode: 'CP-1', action: 'RemoteStopTransaction', payload: {} }),
+        (error) => error.status === status
+      );
+    }
   });
 });
