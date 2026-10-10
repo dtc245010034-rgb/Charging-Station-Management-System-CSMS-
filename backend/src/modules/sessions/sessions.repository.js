@@ -173,10 +173,14 @@ const SESSION_WITH_METERS_BASE = `
     cs.review_reason,
     cs.created_at,
     cs.updated_at,
-    mv.latest_energy_wh,
-    mv.latest_power_w,
-    mv.latest_current_a,
-    mv.latest_soc,
+    mv.latest_energy_value,
+    mv.latest_energy_unit,
+    mv.latest_power_value,
+    mv.latest_power_unit,
+    mv.latest_current_value,
+    mv.latest_current_unit,
+    mv.latest_soc_value,
+    mv.latest_soc_unit,
     mv.latest_sampled_at,
     mv.readings AS latest_readings
   FROM charging_sessions cs
@@ -184,10 +188,14 @@ const SESSION_WITH_METERS_BASE = `
   JOIN stations s ON s.id = cp.station_id
   LEFT JOIN LATERAL (
     SELECT
-      MAX(CASE WHEN measurand = 'Energy.Active.Import.Register' THEN value END) AS latest_energy_wh,
-      MAX(CASE WHEN measurand = 'Power.Active.Import' THEN value END) AS latest_power_w,
-      MAX(CASE WHEN measurand = 'Current.Import' THEN value END) AS latest_current_a,
-      MAX(CASE WHEN measurand = 'SoC' THEN value END) AS latest_soc,
+      MAX(CASE WHEN measurand = 'Energy.Active.Import.Register' THEN value END) AS latest_energy_value,
+      MAX(CASE WHEN measurand = 'Energy.Active.Import.Register' THEN COALESCE(raw_unit, unit) END) AS latest_energy_unit,
+      MAX(CASE WHEN measurand = 'Power.Active.Import' THEN value END) AS latest_power_value,
+      MAX(CASE WHEN measurand = 'Power.Active.Import' THEN COALESCE(raw_unit, unit) END) AS latest_power_unit,
+      MAX(CASE WHEN measurand = 'Current.Import' THEN value END) AS latest_current_value,
+      MAX(CASE WHEN measurand = 'Current.Import' THEN COALESCE(raw_unit, unit) END) AS latest_current_unit,
+      MAX(CASE WHEN measurand = 'SoC' THEN value END) AS latest_soc_value,
+      MAX(CASE WHEN measurand = 'SoC' THEN COALESCE(raw_unit, unit) END) AS latest_soc_unit,
       MAX(sampled_at) AS latest_sampled_at,
       COALESCE(
         json_agg(json_build_object(

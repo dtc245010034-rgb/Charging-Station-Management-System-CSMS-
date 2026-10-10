@@ -1,4 +1,5 @@
 const { calculateEnergyKwh } = require('./energy');
+const { liveEnergyKwh, powerToWatts, toNumberOrNull } = require('./readings');
 const {
   findActiveSessionByDriverId,
   findSessionById,
@@ -19,16 +20,15 @@ function formatSession(row) {
   const meterStop = row.meter_stop !== null && row.meter_stop !== undefined
     ? Number(row.meter_stop)
     : null;
-  const latestEnergyWh = row.latest_energy_wh !== null && row.latest_energy_wh !== undefined
-    ? Number(row.latest_energy_wh)
-    : null;
 
   let currentKwh = null;
   if (row.status === 'COMPLETED' && meterStop !== null) {
     currentKwh = calculateEnergyKwh(meterStart, meterStop);
   } else if (meterStart !== null) {
-    const currentEndWh = latestEnergyWh !== null ? latestEnergyWh : meterStart;
-    currentKwh = calculateEnergyKwh(meterStart, currentEndWh);
+    const hasLatestEnergy = row.latest_energy_value !== null && row.latest_energy_value !== undefined;
+    currentKwh = hasLatestEnergy
+      ? liveEnergyKwh(meterStart, row.latest_energy_value, row.latest_energy_unit)
+      : 0;
   }
 
   return {
@@ -52,9 +52,9 @@ function formatSession(row) {
     status: row.status,
     needs_review: Boolean(row.needs_review),
     review_reason: row.review_reason || null,
-    latest_power_w: row.latest_power_w !== null && row.latest_power_w !== undefined ? Number(row.latest_power_w) : null,
-    latest_current_a: row.latest_current_a !== null && row.latest_current_a !== undefined ? Number(row.latest_current_a) : null,
-    latest_soc: row.latest_soc !== null && row.latest_soc !== undefined ? Number(row.latest_soc) : null,
+    latest_power_w: powerToWatts(row.latest_power_value, row.latest_power_unit),
+    latest_current_a: toNumberOrNull(row.latest_current_value),
+    latest_soc: toNumberOrNull(row.latest_soc_value),
     latest_sampled_at: row.latest_sampled_at ? new Date(row.latest_sampled_at).toISOString() : null,
     latest_readings: Array.isArray(row.latest_readings) ? row.latest_readings : [],
     created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
