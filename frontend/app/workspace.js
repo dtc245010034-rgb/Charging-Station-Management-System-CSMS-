@@ -90,6 +90,7 @@ export const WORKSPACES = {
         title: null,
         items: [
           { page: 'overview', label: 'Trang chủ', icon: 'home', enabled: true },
+          { page: 'start', label: 'Bắt đầu sạc', icon: 'bolt', enabled: true, needs: 'remote-start:create' },
           { page: 'find', label: 'Tìm trạm', icon: 'station', enabled: false, since: 'S-47' },
           { page: 'sessions', label: 'Phiên sạc', icon: 'bolt', enabled: true, needs: 'sessions:read-own' },
           { page: 'history', label: 'Lịch sử', icon: 'history', enabled: false, since: 'S-64' },

@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const users = require('./users.repository');
 const audit = require('../audit/audit.repository');
 const { withTransaction } = require('../../db/tx');
@@ -24,6 +25,9 @@ async function create({ name, email, password, role }) {
     return await withTransaction(async (client) => {
       const user = await users.insertUser(client, name, email, passwordHash);
       if (!await users.assignRoleByCode(client, user.id, role)) throw new BadRequestError('Vai trò không hợp lệ');
+      if (role === 'DRIVER') {
+        await users.insertVirtualIdTag(client, user.id, `V${crypto.randomBytes(9).toString('hex').toUpperCase()}`);
+      }
       return user;
     });
   } catch (error) {

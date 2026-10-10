@@ -10,6 +10,7 @@ const {
   recordOrphanMessage,
   findNaturalSession,
   lockConnectorRow,
+  markRemoteStartRequestStarted,
 } = require('../../sessions/sessions.repository');
 const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
 
@@ -158,6 +159,13 @@ function createStartTransactionHandler({
         });
 
         if (existingNaturalSession) {
+          if (tagRecord) {
+            await markRemoteStartRequestStarted(client, {
+              connectorId: connectorInfo.connector_id,
+              idTagId: tagRecord.id,
+              sessionId: existingNaturalSession.id,
+            });
+          }
           logInfo(
             `[OCPP] StartTransaction: Phát hiện tin gửi lại tự nhiên (D4) | transactionId: ${existingNaturalSession.id}`
           );
@@ -190,6 +198,13 @@ function createStartTransactionHandler({
           needsReview,
           reviewReason: reviewReasons.length > 0 ? reviewReasons.join('; ') : null,
         });
+        if (tagRecord) {
+          await markRemoteStartRequestStarted(client, {
+            connectorId: connectorInfo.connector_id,
+            idTagId: tagRecord.id,
+            sessionId: newSession.id,
+          });
+        }
         return { session: newSession, closed: closedOldSessions || [] };
       }, db);
 
