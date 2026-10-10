@@ -66,8 +66,8 @@ describe('S-22 G1: trụ gửi Wh thập phân hoặc đơn vị kWh/kW', () => 
     it(`SSE phát sự kiện (không im lặng) khi trụ gửi ${label}`, async () => {
       const id = await seed([['Energy.Active.Import.Register', value, unit]]);
       const events = [];
-      const off = subscribe((event) => events.push(event));
-      await publishSessionUpdateFromDb(id, { pool: ocppPool });
+      const off = subscribe((event) => events.push(event), { driverId: driver.id });
+      await publishSessionUpdateFromDb(id, { pool: ocppPool, driverId: driver.id });
       off();
       assert.equal(events.length, 1);
       assert.equal(events[0].currentKwh, expectedKwh);

@@ -1,17 +1,31 @@
-const subscribers = new Set();
 const { findSessionById } = require('./sessions.repository');
 const { formatSession } = require('./sessions.service');
 const { sanitizeErrorMessage } = require('../../lib/constants');
 
-function subscribe(listener) {
+const subscribers = new Map(); // listener -> driverId (chuỗi)
+const tails = new Map(); // sessionId -> Promise của lần phát gần nhất, để các lần phát cùng phiên chạy tuần tự
+
+function subscribe(listener, { driverId } = {}) {
   if (typeof listener !== 'function') throw new TypeError('listener must be a function');
-  subscribers.add(listener);
+  if (driverId === undefined || driverId === null) throw new TypeError('driverId is required');
+  subscribers.set(listener, String(driverId));
   return () => subscribers.delete(listener);
+}
+
+function hasSubscriberFor(driverId) {
+  if (driverId === undefined || driverId === null) return false;
+  const target = String(driverId);
+  for (const id of subscribers.values()) {
+    if (id === target) return true;
+  }
+  return false;
 }
 
 // Một người nghe hỏng không được chặn người nghe khác hay làm hỏng handler OCPP đang gọi publish().
 function publish(event) {
-  for (const listener of subscribers) {
+  const target = String(event.driverId);
+  for (const [listener, id] of subscribers) {
+    if (id !== target) continue;
     try {
       listener(event);
     } catch {
@@ -20,17 +34,16 @@ function publish(event) {
   }
 }
 
-async function publishSessionUpdateFromDb(sessionId, { pool: poolInstance = null, logError = console.error } = {}) {
-  if (subscribers.size === 0) return;
-
+async function snapshot(sessionId, { pool, logError }) {
   try {
-    const client = poolInstance || require('../../db/pool').pool;
-    const session = await findSessionById(client, sessionId);
-    if (!session || !session.driver_id) return;
-    const formatted = formatSession(session);
+    const client = pool || require('../../db/pool').pool;
+    const row = await findSessionById(client, sessionId);
+    if (!row || !row.driver_id) return;
+    if (!hasSubscriberFor(row.driver_id)) return;
+    const formatted = formatSession(row);
     publish({
-      driverId: session.driver_id,
-      sessionId: session.id,
+      driverId: row.driver_id,
+      sessionId: row.id,
       status: formatted.status,
       currentKwh: formatted.current_kwh,
       latestPowerW: formatted.latest_power_w,
@@ -41,12 +54,36 @@ async function publishSessionUpdateFromDb(sessionId, { pool: poolInstance = null
       session: formatted,
     });
   } catch (error) {
-    logError('[SSE] Không phát được sự kiện phiên sạc', sessionId, sanitizeErrorMessage(error?.message || error));
+    // Bộ ghi log hỏng cũng không được làm reject hay kẹt hàng đợi của phiên.
+    try {
+      logError('[SSE] Không phát được sự kiện phiên sạc', sessionId, sanitizeErrorMessage(error?.message || error));
+    } catch {
+      // bỏ qua
+    }
   }
 }
+
+// driverId: tài xế sở hữu phiên theo handler đang gọi; chỉ truy vấn khi có người đang nghe tài xế đó.
+function publishSessionUpdateFromDb(sessionId, { pool = null, driverId, logError = console.error } = {}) {
+  if (!hasSubscriberFor(driverId)) return Promise.resolve();
+
+  const run = () => snapshot(sessionId, { pool, logError });
+  const previous = tails.get(sessionId) || Promise.resolve();
+  const next = previous.then(run, run);
+  tails.set(sessionId, next);
+  const settle = () => {
+    if (tails.get(sessionId) === next) tails.delete(sessionId);
+  };
+  next.then(settle, settle);
+  return next;
+}
+
+const pendingCount = () => tails.size;
 
 module.exports = {
   subscribe,
   publish,
+  hasSubscriberFor,
   publishSessionUpdateFromDb,
+  pendingCount,
 };

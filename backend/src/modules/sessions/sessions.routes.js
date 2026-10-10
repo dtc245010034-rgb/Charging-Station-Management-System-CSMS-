@@ -48,8 +48,6 @@ function handleSessionEvents(req, res) {
 
   unsubscribe = subscribe((event) => {
     if (closed) return;
-    // Lọc theo tài xế đăng nhập
-    if (String(event.driverId) !== String(req.user.id)) return;
     const data = JSON.stringify({
       session_id: event.sessionId,
       status: event.status,
@@ -62,7 +60,7 @@ function handleSessionEvents(req, res) {
       session: event.session,
     });
     send(`data: ${data}\n\n`);
-  });
+  }, { driverId: req.user.id });
 
   heartbeat = setInterval(() => send(': keep-alive\n\n'), 20000);
 
