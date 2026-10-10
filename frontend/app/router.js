@@ -13,6 +13,7 @@ export const PAGE_NEEDS = {
   map: 'stations:read',
   users: 'users:create',
   sessions: ['sessions:read-own', 'sessions:read'],
+  start: 'remote-start:create',
 };
 
 const fleetOverview = () => import('../pages/shared/fleet-overview.js');
@@ -25,6 +26,9 @@ const PAGES = {
     admin: fleetOverview,
     accountant: () => import('../pages/accountant/overview.js'),
     driver: () => import('../pages/driver/overview.js'),
+  },
+  start: {
+    driver: () => import('../pages/driver/start.js'),
   },
   sessions: {
     driver: () => import('../pages/driver/session.js'),

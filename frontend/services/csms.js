@@ -24,6 +24,12 @@ export const chargePoints = {
   checkCode: (code) => api(`/api/charge-points/check-code?code=${encodeURIComponent(code)}`),
 };
 
+export const remoteStart = {
+  chargePoints: () => api('/api/driver/charge-points'),
+  start: (connectorId) => api(`/api/connectors/${encodeURIComponent(connectorId)}/start`, { method: 'POST', body: {} }),
+  getRequest: (requestId) => api(`/api/me/remote-start-requests/${encodeURIComponent(requestId)}`),
+};
+
 export const fleetStatus = {
   snapshot: () => api('/api/fleet-status'),
 };
