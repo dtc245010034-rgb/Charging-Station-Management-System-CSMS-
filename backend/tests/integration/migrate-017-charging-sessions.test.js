@@ -6,7 +6,7 @@ const tableSessions = async () => (await query("SELECT to_regclass('public.charg
 const tableMeterValues = async () => (await query("SELECT to_regclass('public.meter_values') AS t")).rows[0].t;
 const tableOrphanMessages = async () => (await query("SELECT to_regclass('public.orphan_messages') AS t")).rows[0].t;
 
-describe('migration 017-025: charging_sessions, meter_values, orphan_messages, transaction_data, remote stop', () => {
+describe('migration 017-026: charging_sessions, meter_values, orphan_messages, transaction_data, remote commands', () => {
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
@@ -17,6 +17,9 @@ describe('migration 017-025: charging_sessions, meter_values, orphan_messages, t
     assert.ok(await tableSessions(), 'Bảng charging_sessions phải tồn tại');
     assert.ok(await tableMeterValues(), 'Bảng meter_values phải tồn tại');
     assert.ok(await tableOrphanMessages(), 'Bảng orphan_messages phải tồn tại');
+    assert.ok((await query("SELECT to_regclass('public.remote_start_requests') AS t")).rows[0].t, 'Bảng remote_start_requests phải tồn tại');
+    assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'id_tags' AND column_name = 'is_virtual'")).rowCount, 1);
+    assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname = 'remote_start_one_pending_per_connector'")).rowCount, 1);
 
     const meterValuesColumns = await query(
       "SELECT column_name FROM information_schema.columns WHERE table_name = 'meter_values'"
@@ -58,8 +61,13 @@ describe('migration 017-025: charging_sessions, meter_values, orphan_messages, t
     );
   });
 
-  it('down: rollback lần lượt 025, 024, 023, 022, 019, 018, 017 và up lại sạch sẽ', async () => {
+  it('down: rollback lần lượt 026, 025, 024, 023, 022, 019, 018, 017 và up lại sạch sẽ', async () => {
     const rollbackChecks = [
+      { version: '026_remote_start_requests', check: async () => {
+        assert.equal((await query("SELECT to_regclass('public.remote_start_requests') AS t")).rows[0].t, null);
+        assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'id_tags' AND column_name = 'is_virtual'")).rowCount, 0);
+        assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname = 'id_tags_one_virtual_per_user'")).rowCount, 0);
+      } },
       { version: '025_remote_stop_requests', check: async () => {
         const columns = await query(
           "SELECT column_name FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name LIKE 'remote_stop_%'"

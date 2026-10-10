@@ -81,6 +81,13 @@ describe('S-02 frontend: router', () => {
     assert.deepStrictEqual(PAGE_NEEDS.sessions, ['sessions:read-own', 'sessions:read']);
   });
 
+  it('S-24: trang bắt đầu sạc chỉ được tải cho tài xế có quyền RemoteStart', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    assert.strictEqual(typeof pageLoader('start', 'driver'), 'function');
+    assert.strictEqual(pageLoader('start', 'operator'), null);
+    assert.strictEqual(PAGE_NEEDS.start, 'remote-start:create');
+  });
+
   it('quyền nút trên giao diện: Reset cho Admin/Operator, khoá trạm chỉ Admin', async () => {
     const { can } = await load('app/permissions.js');
     assert.ok(can('ADMIN', 'charge-points:reset') && can('OPERATOR', 'charge-points:reset'));
