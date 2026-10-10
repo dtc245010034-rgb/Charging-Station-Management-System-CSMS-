@@ -71,14 +71,19 @@ async function stopAllServerProcesses() {
 
 function sendCall(client, messageId, action, payload) {
   return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      client.off('message', onMessage);
+      client.off('error', onError);
+    };
+    const onError = (error) => { cleanup(); reject(error); };
     const onMessage = (raw) => {
       const frame = JSON.parse(raw.toString());
       if (frame[1] !== messageId) return;
-      client.off('message', onMessage);
+      cleanup();
       resolve(frame);
     };
     client.on('message', onMessage);
-    client.once('error', reject);
+    client.once('error', onError);
     client.send(JSON.stringify([2, messageId, action, payload]));
   });
 }

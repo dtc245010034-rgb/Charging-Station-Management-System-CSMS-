@@ -4,8 +4,21 @@ const {
   findActiveSessionByDriverId,
   findSessionById,
   existsSessionById,
+  findSessionControlById,
+  listActiveSessions,
 } = require('./sessions.repository');
-const { NotFoundError } = require('../../lib/errors');
+const { withTransaction } = require('../../db/tx');
+const connections = require('../charge-points/connection-registry');
+const { sendRemoteCommand } = require('../ocpp/commands');
+const {
+  AppError,
+  ConflictError,
+  GatewayTimeoutError,
+  NotFoundError,
+  ServiceUnavailableError,
+  UnprocessableEntityError,
+} = require('../../lib/errors');
+
 
 function getDefaultDenyOrNotFound() {
   return require('../../lib/ownership').denyOrNotFound;
@@ -28,7 +41,7 @@ function formatSession(row) {
     const hasLatestEnergy = row.latest_energy_value !== null && row.latest_energy_value !== undefined;
     currentKwh = hasLatestEnergy
       ? liveEnergyKwh(meterStart, row.latest_energy_value, row.latest_energy_unit)
-      : 0;
+      : null;
   }
 
   return {
@@ -52,6 +65,9 @@ function formatSession(row) {
     status: row.status,
     needs_review: Boolean(row.needs_review),
     review_reason: row.review_reason || null,
+    remote_stop_status: row.remote_stop_status || null,
+    remote_stop_requested_at: row.remote_stop_requested_at ? new Date(row.remote_stop_requested_at).toISOString() : null,
+    remote_stop_deadline: row.remote_stop_deadline ? new Date(row.remote_stop_deadline).toISOString() : null,
     latest_power_w: powerToWatts(row.latest_power_value, row.latest_power_unit),
     latest_current_a: toNumberOrNull(row.latest_current_value),
     latest_soc: toNumberOrNull(row.latest_soc_value),
@@ -108,8 +124,129 @@ async function getSessionById(user, sessionId, options = {}) {
   return formatSession(row);
 }
 
+async function getActiveSessions(user, options = {}) {
+  const db = options?.query ? options : options?.db || null;
+  const roles = user?.roles || [user?.role];
+  const stationOwnerId = roles.includes('STATION_OWNER') && !roles.includes('ADMIN')
+    ? user.id
+    : null;
+  return (await listActiveSessions(db, { stationOwnerId })).map(formatSession);
+}
+
+async function writeRemoteStopAudit(actorId, sessionId, chargePointId, result, metadata = {}, ip = null) {
+  const audit = require('../audit/audit.repository');
+  await audit.record(actorId, 'REMOTE_STOP', 'charging_session', sessionId, {
+    charge_point_id: Number(chargePointId),
+    result,
+    ...metadata,
+  }, ip);
+}
+
+async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, db = null } = {}) {
+  const client = db || require('../../db/pool').pool;
+  const initial = await findSessionControlById(client, sessionId);
+  if (!initial) throw new NotFoundError('Không tìm thấy phiên sạc');
+  if (initial.status !== 'CHARGING') throw new ConflictError('Phiên sạc đã kết thúc, không thể gửi lệnh dừng');
+  if (['SENDING', 'ACCEPTED'].includes(initial.remote_stop_status)) {
+    throw new ConflictError('Phiên sạc đang có yêu cầu dừng chưa hoàn tất');
+  }
+
+  const requestedAt = new Date().toISOString();
+  if (!connections.isConnected(initial.charge_point_code)) {
+    await writeRemoteStopAudit(actor.id, sessionId, initial.charge_point_id, 'OFFLINE', { requested_at: requestedAt }, ip);
+    throw new AppError(409, 'CHARGE_POINT_OFFLINE', 'Không thể dừng phiên vì trụ sạc đang ngoại tuyến');
+  }
+
+  const claim = await withTransaction(async (tx) => {
+    const current = await findSessionControlById(tx, sessionId, { forUpdate: true });
+    if (!current) throw new NotFoundError('Không tìm thấy phiên sạc');
+    if (current.status !== 'CHARGING') throw new ConflictError('Phiên sạc đã kết thúc, không thể gửi lệnh dừng');
+    if (['SENDING', 'ACCEPTED'].includes(current.remote_stop_status)) {
+      throw new ConflictError('Phiên sạc đang có yêu cầu dừng chưa hoàn tất');
+    }
+    const updated = await tx.query(
+      `UPDATE charging_sessions
+       SET remote_stop_status = 'SENDING',
+           remote_stop_requested_at = CURRENT_TIMESTAMP,
+           remote_stop_requested_by = $2,
+           remote_stop_deadline = CURRENT_TIMESTAMP + make_interval(secs => $3::int),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING remote_stop_requested_at`,
+      [sessionId, actor.id, require('../../config/env').OCPP_COMMAND_TIMEOUT_SECONDS + 5]
+    );
+    return { session: current, requestedAt: updated.rows[0].remote_stop_requested_at };
+  }, client);
+
+  try {
+    const response = await sendRemoteCommand({
+      commandSender,
+      chargePointCode: claim.session.charge_point_code,
+      action: 'RemoteStopTransaction',
+      payload: { transactionId: Number(claim.session.id) },
+      rejectedMessage: 'Trụ sạc từ chối yêu cầu dừng phiên. Phiên vẫn đang hoạt động.',
+      offlineCode: 'CHARGE_POINT_OFFLINE',
+      offlineMessage: 'Không thể dừng phiên vì trụ sạc đang ngoại tuyến',
+    });
+
+    const accepted = await client.query(
+      `UPDATE charging_sessions
+       SET remote_stop_status = 'ACCEPTED',
+           remote_stop_deadline = CURRENT_TIMESTAMP + make_interval(secs => $2::int),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND status = 'CHARGING' AND remote_stop_status = 'SENDING'
+       RETURNING remote_stop_deadline`,
+      [sessionId, require('../../config/env').REMOTE_STOP_WAIT_SECONDS]
+    );
+    const deadline = accepted.rows[0]?.remote_stop_deadline || null;
+    await writeRemoteStopAudit(actor.id, sessionId, claim.session.charge_point_id, 'ACCEPTED', {
+      requested_at: new Date(claim.requestedAt).toISOString(),
+      deadline: deadline ? new Date(deadline).toISOString() : null,
+    }, ip);
+    return { ...response, deadline: deadline ? new Date(deadline).toISOString() : null };
+  } catch (error) {
+    if (error instanceof NotFoundError) throw error;
+    if (error.code === 'CHARGE_POINT_OFFLINE') {
+      await client.query(
+        `UPDATE charging_sessions
+         SET remote_stop_status = NULL,
+             remote_stop_requested_at = NULL,
+             remote_stop_requested_by = NULL,
+             remote_stop_deadline = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND status = 'CHARGING' AND remote_stop_status = 'SENDING'`,
+        [sessionId]
+      );
+      await writeRemoteStopAudit(actor.id, sessionId, claim.session.charge_point_id, 'OFFLINE', {
+        requested_at: new Date(claim.requestedAt).toISOString(),
+      }, ip);
+      throw error;
+    }
+    const result = error instanceof UnprocessableEntityError ? 'REJECTED' : 'ERROR';
+    const needsReview = error instanceof GatewayTimeoutError;
+    await client.query(
+      `UPDATE charging_sessions
+       SET remote_stop_status = $2,
+           needs_review = needs_review OR $3::boolean,
+           review_reason = CASE WHEN $3::boolean AND position('REMOTE_STOP_RESULT_UNKNOWN' IN COALESCE(review_reason, '')) = 0
+             THEN concat_ws('; ', NULLIF(review_reason, ''), 'REMOTE_STOP_RESULT_UNKNOWN') ELSE review_reason END,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND status = 'CHARGING' AND remote_stop_status = 'SENDING'`,
+      [sessionId, result, needsReview]
+    );
+    await writeRemoteStopAudit(actor.id, sessionId, claim.session.charge_point_id, result, {
+      requested_at: new Date(claim.requestedAt).toISOString(),
+      error_code: error.code || null,
+    }, ip);
+    if (error instanceof ServiceUnavailableError) throw error;
+    throw error;
+  }
+}
+
 module.exports = {
   getCurrentSessionForDriver,
   getSessionById,
+  getActiveSessions,
+  requestRemoteStop,
   formatSession,
 };

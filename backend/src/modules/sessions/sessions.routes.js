@@ -4,8 +4,13 @@ const { AppError } = require('../../lib/errors');
 const service = require('./sessions.service');
 const { subscribe } = require('./sessions.events');
 const { registerStream } = require('../../lib/sse-registry');
+const { idParam } = require('../../lib/schemas');
 
 const router = secureRouter();
+
+router.get('/sessions', { access: access('sessions:read') }, async (req, res) => {
+  res.json(await service.getActiveSessions(req.user));
+});
 
 // T-47: Lấy phiên đang sạc hiện tại của tài xế đăng nhập (204 nếu không có phiên)
 router.get('/me/sessions/current', { access: access('sessions:read-own') }, async (req, res) => {
@@ -88,6 +93,12 @@ function handleSessionEvents(req, res) {
 
 router.get('/me/sessions/events', { access: access('sessions:read-own') }, handleSessionEvents);
 router.get('/sessions/events', { access: access('sessions:read-own') }, handleSessionEvents);
+
+router.post('/sessions/:id/stop', { access: access('sessions:stop') }, async (req, res) => {
+  const { id } = idParam.parse(req.params);
+  const result = await service.requestRemoteStop(req.user, id, { commandSender: req.app.locals.commandSender, ip: req.ip });
+  res.status(202).json(result);
+});
 
 // T-47: Lấy chi tiết phiên theo id (bảo vệ IDOR, ghi audit_logs nếu trái quyền)
 router.get('/sessions/:id', { access: [...access('sessions:read-own'), ...access('sessions:read')] }, async (req, res) => {

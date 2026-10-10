@@ -171,6 +171,11 @@ const SESSION_WITH_METERS_BASE = `
     cs.status,
     cs.needs_review,
     cs.review_reason,
+    cs.remote_stop_status,
+    cs.remote_stop_requested_at,
+    cs.remote_stop_deadline,
+    cs.remote_stop_requested_by,
+    cs.remote_stop_completed_at,
     cs.created_at,
     cs.updated_at,
     mv.latest_energy_value,
@@ -240,6 +245,35 @@ async function existsSessionById(dbOrPool, sessionId) {
   return Boolean(result.rows[0]);
 }
 
+async function findSessionControlById(dbOrPool, sessionId, { forUpdate = false } = {}) {
+  const client = dbOrPool || getDefaultPool();
+  const result = await client.query(
+    `SELECT cs.id, cs.charge_point_id, cp.code AS charge_point_code,
+            s.owner_id AS station_owner_id, cs.driver_id, cs.status,
+            cs.needs_review, cs.remote_stop_status, cs.remote_stop_requested_at,
+            cs.remote_stop_deadline, cs.remote_stop_requested_by
+     FROM charging_sessions cs
+     JOIN charge_points cp ON cp.id = cs.charge_point_id
+     JOIN stations s ON s.id = cp.station_id
+     WHERE cs.id = $1
+     LIMIT 1${forUpdate ? ' FOR UPDATE OF cs' : ''}`,
+    [sessionId]
+  );
+  return result.rows[0] || null;
+}
+
+async function listActiveSessions(dbOrPool, { stationOwnerId = null } = {}) {
+  const client = dbOrPool || getDefaultPool();
+  const ownerFilter = stationOwnerId === null ? '' : ' AND s.owner_id = $1';
+  const result = await client.query(
+    `${SESSION_WITH_METERS_BASE}
+     WHERE cs.status = 'CHARGING'${ownerFilter}
+     ORDER BY cs.started_at DESC, cs.id DESC`,
+    stationOwnerId === null ? [] : [stationOwnerId]
+  );
+  return result.rows;
+}
+
 module.exports = {
   findConnectorWithStation,
   findTagByTagValue,
@@ -251,5 +285,7 @@ module.exports = {
   findActiveSessionByDriverId,
   findSessionById,
   existsSessionById,
+  findSessionControlById,
+  listActiveSessions,
 };
 

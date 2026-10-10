@@ -6,7 +6,7 @@ const tableSessions = async () => (await query("SELECT to_regclass('public.charg
 const tableMeterValues = async () => (await query("SELECT to_regclass('public.meter_values') AS t")).rows[0].t;
 const tableOrphanMessages = async () => (await query("SELECT to_regclass('public.orphan_messages') AS t")).rows[0].t;
 
-describe('migration 017-024: charging_sessions, meter_values, orphan_messages, transaction_data', () => {
+describe('migration 017-025: charging_sessions, meter_values, orphan_messages, transaction_data, remote stop', () => {
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
@@ -58,8 +58,18 @@ describe('migration 017-024: charging_sessions, meter_values, orphan_messages, t
     );
   });
 
-  it('down: rollback lần lượt 024, 023, 022, 019, 018, 017 và up lại sạch sẽ', async () => {
+  it('down: rollback lần lượt 025, 024, 023, 022, 019, 018, 017 và up lại sạch sẽ', async () => {
     const rollbackChecks = [
+      { version: '025_remote_stop_requests', check: async () => {
+        const columns = await query(
+          "SELECT column_name FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name LIKE 'remote_stop_%'"
+        );
+        assert.equal(columns.rows.length, 0);
+        const index = await query(
+          "SELECT indexname FROM pg_indexes WHERE indexname = 'idx_charging_sessions_remote_stop_deadline'"
+        );
+        assert.equal(index.rows.length, 0);
+      } },
       { version: '024_meter_values_stream_latest_index', check: async () => {
         const index = await query(
           "SELECT indexname FROM pg_indexes WHERE indexname = 'idx_meter_values_stream_latest'"

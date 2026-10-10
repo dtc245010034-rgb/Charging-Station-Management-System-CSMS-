@@ -128,9 +128,14 @@ function createStopTransactionHandler({
              stopped_at = $3::timestamptz,
              stop_reason = $4,
              status = 'COMPLETED',
-             needs_review = needs_review OR meter_start > $2 OR $5::boolean OR $8::boolean,
+             remote_stop_status = CASE WHEN remote_stop_status IN ('SENDING', 'ACCEPTED', 'ERROR', 'TIMED_OUT') THEN 'STOPPED' ELSE remote_stop_status END,
+             remote_stop_completed_at = CASE WHEN remote_stop_status IN ('SENDING', 'ACCEPTED', 'ERROR', 'TIMED_OUT') THEN CURRENT_TIMESTAMP ELSE remote_stop_completed_at END,
+             needs_review = (needs_review AND (
+                 review_reason IS NULL
+                 OR COALESCE(array_length(array_remove(array_remove(string_to_array(review_reason, '; '), 'REMOTE_STOP_TIMEOUT'), 'REMOTE_STOP_RESULT_UNKNOWN'), 1), 0) > 0
+               )) OR meter_start > $2 OR $5::boolean OR $8::boolean,
              review_reason = NULLIF(concat_ws('; ',
-               NULLIF(review_reason, ''),
+               NULLIF(array_to_string(array_remove(array_remove(string_to_array(COALESCE(review_reason, ''), '; '), 'REMOTE_STOP_TIMEOUT'), 'REMOTE_STOP_RESULT_UNKNOWN'), '; '), ''),
                CASE WHEN position('METER_STOP_BELOW_START' IN COALESCE(review_reason, '')) = 0 AND meter_start > $2 THEN 'METER_STOP_BELOW_START' END,
                CASE WHEN position('CLOCK_SKEW' IN COALESCE(review_reason, '')) = 0 AND $5::boolean THEN 'CLOCK_SKEW' END,
                CASE WHEN position('INVALID_TRANSACTION_DATA' IN COALESCE(review_reason, '')) = 0 AND $8::boolean THEN 'INVALID_TRANSACTION_DATA' END
@@ -140,7 +145,7 @@ function createStopTransactionHandler({
          WHERE id = $1
            AND charge_point_id = $6
            AND status = 'CHARGING'
-         RETURNING id, driver_id`,
+         RETURNING id, driver_id, remote_stop_requested_by, remote_stop_status`,
         [
           payload.transactionId,
           payload.meterStop,
@@ -154,6 +159,19 @@ function createStopTransactionHandler({
       );
 
       if (updated.rowCount > 0) {
+        if (updated.rows[0]?.remote_stop_status === 'STOPPED') {
+          try {
+            await require('../../audit/audit.repository').record(updated.rows[0].remote_stop_requested_by, 'REMOTE_STOP', 'charging_session', payload.transactionId, {
+              charge_point_id: Number(chargePointId),
+              phase: 'STOP_TRANSACTION',
+              result: 'STOPPED',
+              stop_reason: stopReason,
+              stopped_at: stoppedAt,
+            });
+          } catch (auditError) {
+            logWarning('[OCPP] StopTransaction đã chốt nhưng không ghi được audit log:', sanitizeErrorMessage(auditError?.message || auditError));
+          }
+        }
         publishSessionUpdateFromDb(payload.transactionId, {
           pool: db,
           driverId: updated.rows[0]?.driver_id ?? null,

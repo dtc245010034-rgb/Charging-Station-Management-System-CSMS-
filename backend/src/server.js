@@ -16,6 +16,7 @@ const { startChargePointOfflineJob } = require('./modules/charge-points/offline-
 const { createShutdown } = require('./modules/ocpp/shutdown');
 const { createMessageStore } = require('./modules/ocpp/messages.repository');
 const { createCommandSender } = require('./modules/ocpp/commands');
+const { startRemoteStopTimeoutJob } = require('./modules/sessions/remote-stop-job');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
@@ -95,8 +96,10 @@ async function purgeOldMessages() {
 
 const shutdown = createShutdown({ server, wss, pool: { query: (...args) => pool.query(...args), end: () => Promise.all([pool.end(), ocppPool.end()]) } });
 let stopChargePointOfflineJob = () => {};
+let stopRemoteStopJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();
+	stopRemoteStopJob();
 	if (purgeTimer) clearInterval(purgeTimer);
 	shutdown(signal);
 });
@@ -112,6 +115,7 @@ async function start() {
 	purgeTimer = setInterval(purgeOldMessages, PURGE_INTERVAL_MS);
 	purgeTimer.unref();
 	stopChargePointOfflineJob = startChargePointOfflineJob().stop;
+	stopRemoteStopJob = startRemoteStopTimeoutJob().stop;
 	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
 }
 start().catch((error) => { console.error('Database startup failed:', error); process.exitCode = 1; });

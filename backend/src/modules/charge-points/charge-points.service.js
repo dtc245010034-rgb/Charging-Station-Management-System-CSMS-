@@ -5,13 +5,9 @@ const { denyOrNotFound } = require('../../lib/ownership');
 const {
   BadRequestError,
   ConflictError,
-  GatewayTimeoutError,
-  ServiceUnavailableError,
-  UnprocessableEntityError,
 } = require('../../lib/errors');
 const connections = require('./connection-registry');
-const { OcppCommandError } = require('../ocpp/commands');
-const { OcppRemoteCallError } = require('../ocpp/message-handler');
+const { sendRemoteCommand } = require('../ocpp/commands');
 const { safeLog } = require('../../lib/constants');
 
 const duplicateCode = (error) => (error.code === '23505' ? new ConflictError('Mã trụ đã tồn tại') : error);
@@ -60,25 +56,14 @@ async function update(actor, id, data) {
 async function reset(actor, id, type, commandSender) {
   const point = await repo.findById(actor, id)
     || await denyOrNotFound(actor, 'charge_point', id, repo.existsById, 'Không tìm thấy trụ sạc');
-  if (!commandSender) throw new ServiceUnavailableError('Chức năng Reset từ xa chưa được khởi tạo');
-
   console.info(`[OCPP] Remote Reset requested | actorId: ${safeLog(actor.id)} | chargePoint: ${safeLog(point.code)} | type: ${type}`);
-  try {
-    const result = await commandSender.send(point.code, 'Reset', { type });
-    if (result.status === 'Rejected') throw new UnprocessableEntityError('Trụ sạc từ chối Reset');
-    return result;
-  } catch (error) {
-    if (error instanceof OcppCommandError && error.code === 'OFFLINE') {
-      throw new ConflictError('Trụ sạc không có kết nối OCPP');
-    }
-    if (error instanceof OcppRemoteCallError || error?.name === 'OcppRemoteCallError') {
-      throw new UnprocessableEntityError(`Trụ sạc từ chối Reset: ${error.message}`);
-    }
-    if (/^OCPP call timed out:/.test(error?.message || '')) {
-      throw new GatewayTimeoutError();
-    }
-    throw error;
-  }
+  return sendRemoteCommand({
+    commandSender,
+    chargePointCode: point.code,
+    action: 'Reset',
+    payload: { type },
+    rejectedMessage: 'Trụ sạc từ chối Reset',
+  });
 }
 
 module.exports = { list, get, create, update, isCodeAvailable, reset };

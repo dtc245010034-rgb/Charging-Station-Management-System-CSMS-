@@ -10,7 +10,7 @@ export const WORKSPACES = {
         items: [
           { page: 'stations', label: 'Trạm sạc', icon: 'station', enabled: true, needs: 'stations:read' },
           { page: 'charge-points', label: 'Trụ sạc', icon: 'charger', enabled: true, needs: 'charge-points:read' },
-          { page: 'sessions', label: 'Phiên sạc', icon: 'bolt', enabled: false, since: 'S-17' },
+          { page: 'sessions', label: 'Phiên sạc', icon: 'bolt', enabled: true, needs: 'sessions:read' },
           { page: 'alerts', label: 'Cảnh báo', icon: 'alert', enabled: false, since: 'S-46' },
           { page: 'remote', label: 'Điều khiển từ xa', icon: 'sliders', enabled: false, since: 'S-16' },
           { page: 'ocpp', label: 'OCPP', icon: 'radio', enabled: false, since: 'S-06' },
@@ -61,6 +61,7 @@ export const WORKSPACES = {
         items: [
           { page: 'stations', label: 'Trạm sạc', icon: 'station', enabled: true, needs: 'stations:read' },
           { page: 'charge-points', label: 'Trụ sạc', icon: 'charger', enabled: true, needs: 'charge-points:read' },
+          { page: 'sessions', label: 'Phiên sạc', icon: 'bolt', enabled: true, needs: 'sessions:read' },
           { page: 'fleet-status', label: 'Trạng thái trụ', icon: 'charger', enabled: true, needs: 'charge-points:read' },
           { page: 'map', label: 'Bản đồ', icon: 'map', enabled: true, needs: 'stations:read' },
           { page: 'users', label: 'Tạo tài khoản', icon: 'users', enabled: true, needs: 'users:create' },

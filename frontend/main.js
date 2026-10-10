@@ -105,7 +105,8 @@ async function showPage(route) {
     main.replaceChildren(emptyState({ iconName: 'search', title: 'Không tìm thấy trang', text: 'Trang này không tồn tại hoặc chưa được mở cho vai trò của bạn.' }));
     return;
   }
-  if (needs && !can(shell.role, needs)) {
+  const hasPageAccess = Array.isArray(needs) ? needs.some((permission) => can(shell.role, permission)) : can(shell.role, needs);
+  if (needs && !hasPageAccess) {
     main.replaceChildren(emptyState({ iconName: 'alert', title: 'Bạn không có quyền mở trang này', text: 'Nếu cần dùng, hãy liên hệ Quản trị viên.' }));
     return;
   }
