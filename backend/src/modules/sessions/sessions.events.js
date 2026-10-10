@@ -1,6 +1,7 @@
 const subscribers = new Set();
 const { findSessionById } = require('./sessions.repository');
 const { formatSession } = require('./sessions.service');
+const { sanitizeErrorMessage } = require('../../lib/constants');
 
 function subscribe(listener) {
   if (typeof listener !== 'function') throw new TypeError('listener must be a function');
@@ -19,7 +20,7 @@ function publish(event) {
   }
 }
 
-async function publishSessionUpdateFromDb(sessionId, { pool: poolInstance = null } = {}) {
+async function publishSessionUpdateFromDb(sessionId, { pool: poolInstance = null, logError = console.error } = {}) {
   if (subscribers.size === 0) return;
 
   try {
@@ -39,8 +40,8 @@ async function publishSessionUpdateFromDb(sessionId, { pool: poolInstance = null
       type: formatted.status === 'COMPLETED' ? 'session_stopped' : 'meter_value',
       session: formatted,
     });
-  } catch {
-    // Bỏ qua lỗi không làm gián đoạn tiến trình gọi
+  } catch (error) {
+    logError('[SSE] Không phát được sự kiện phiên sạc', sessionId, sanitizeErrorMessage(error?.message || error));
   }
 }
 
