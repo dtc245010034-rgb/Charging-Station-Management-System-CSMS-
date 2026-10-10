@@ -63,8 +63,8 @@
 
 | Mã | Tiêu chí yêu cầu trong Backlog / Sprint 3 Plan | Phương pháp kiểm | Kết quả | Bằng chứng thực tế (Evidence) |
 |:---|:---|:---|:---:|:---|
-| **AC1** | Bóc tách 2 tầng `meterValue[].sampledValue[]`, lưu 3 đại lượng hỗ trợ (`Energy.Active.Import.Register`, `Power.Active.Import`, `Current.Import`) gắn đúng phiên | Gửi tin có đủ 3 đại lượng kèm `Voltage` qua WebSocket thật | **ĐẠT** | Session 22 lưu đúng 3 dòng vào `meter_values` với các giá trị: `1250 Wh`, `22000 W`, `31.9 A`. Khớp khóa ngoại `session_id`. |
-| **AC2** | Đại lượng lạ (ví dụ `Voltage`, `SoC`, `Temperature`) bị bỏ qua không gây lỗi | Gửi sample `{ value: '230', measurand: 'Voltage', unit: 'V' }` | **ĐẠT** | Nhận `CALLRESULT {}`, DB không lưu dòng `Voltage`, tiến trình CSMS hoạt động ổn định không lỗi. |
+| **AC1** | Bóc tách 2 tầng `meterValue[].sampledValue[]`, lưu các đại lượng hỗ trợ (`Energy.Active.Import.Register`, `Power.Active.Import`, `Current.Import`; từ GYM-48 thêm `SoC`) gắn đúng phiên | Gửi tin có đủ 3 đại lượng kèm `Voltage` qua WebSocket thật (lần kiểm 2026-10-07, chưa gửi `SoC`) | **ĐẠT** | Kết quả lần kiểm 2026-10-07, khi chưa lưu `SoC`: Session 22 lưu đúng 3 dòng vào `meter_values` với các giá trị: `1250 Wh`, `22000 W`, `31.9 A`. Khớp khóa ngoại `session_id`. Việc lưu `SoC` được kiểm bằng `tests/unit/ocpp-meter-values-soc.test.js`. |
+| **AC2** | Đại lượng lạ (ví dụ `Voltage`, `Frequency`, `Temperature`) bị bỏ qua không gây lỗi; SoC được lưu từ GYM-48 (0–100 %, ngoài khoảng thì chỉ bỏ riêng mẫu SoC) | Gửi sample `{ value: '230', measurand: 'Voltage', unit: 'V' }` | **ĐẠT** | Nhận `CALLRESULT {}`, DB không lưu dòng `Voltage`, tiến trình CSMS hoạt động ổn định không lỗi. |
 | **AC3** | Tin cho đầu nối không có phiên sạc $\rightarrow$ cách ly vào `orphan_messages`, không tạo phiên | Gửi `MeterValues` trên `connectorId: 2` (không có phiên mở) | **ĐẠT** | Bảng `orphan_messages` ghi nhận 1 bản ghi: `action = 'MeterValues'`, `reason = 'NO_ACTIVE_SESSION'`. Không tạo phiên ma. |
 | **AC4** | `transactionId` là tuỳ chọn: có thì khớp theo `transactionId`, không có thì khớp phiên `CHARGING` của đầu nối | Gửi 1 tin có `transactionId`, 1 tin chỉ có `connectorId: 1` | **ĐẠT** | Cả 2 tin đều ghi thành công vào phiên sạc số 22 đang mở trên đầu nối 1 (`value = 1250` và `value = 1300`). |
 | **AC5** | Đo độ trễ phản hồi: 20 trụ $\times$ 1 tin/10s $\rightarrow$ p95 < 200 ms | Bắn liên tiếp 50 tin `MeterValues` đo Round-Trip Time | **ĐẠT** | `min = 3ms`, `p50 = 4ms`, `p95 = 5ms`, `max = 8ms` (nhỏ hơn rất nhiều ngưỡng 200ms). |
@@ -89,7 +89,7 @@
 
 ### 5.2. Kết quả kiểm thử độc lập trên WebSocket Server thật (`testing/verify-s19.js`)
 - Kết nối tới `ws://localhost:3000/ocpp/DEMO-ST01-CP1` và DB thật `127.0.0.1:5434/csms`:
-  - `TC-01`: Lưu 3 đại lượng, bỏ qua Voltage $\rightarrow$ **PASS**
+  - `TC-01`: Lưu 3 đại lượng (lần kiểm 2026-10-07, khi chưa lưu `SoC`), bỏ qua Voltage $\rightarrow$ **PASS**
   - `TC-02`: Khớp phiên theo connector khi thiếu transactionId $\rightarrow$ **PASS**
   - `TC-03`: Đầu nối không có phiên $\rightarrow$ orphan NO_ACTIVE_SESSION $\rightarrow$ **PASS**
   - `TC-04`: Đầu nối 0 $\rightarrow$ orphan UNDECLARED_CONNECTOR $\rightarrow$ **PASS**

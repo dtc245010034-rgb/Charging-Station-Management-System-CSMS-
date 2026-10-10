@@ -6,7 +6,8 @@ const { WebSocket } = require('ws');
 const { Client } = require('pg');
 
 const WS_URL = process.env.WS_URL || 'ws://localhost:3000';
-const DB_URL = process.env.DATABASE_URL || 'postgres://csms:91253f1bc463143a4f5f9305559e98eb@127.0.0.1:5434/csms';
+const DB_URL = process.env.DATABASE_URL;
+if (!DB_URL) throw new Error('Cần đặt biến môi trường DATABASE_URL, ví dụ postgres://csms:<mật_khẩu>@127.0.0.1:5434/csms');
 
 let msgCounter = 1;
 function nextMsgId() {

@@ -1,10 +1,12 @@
 const ENERGY_MEASURAND = 'Energy.Active.Import.Register';
+const SOC_MEASURAND = 'SoC';
 const DECIMAL_VALUE = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE]([+-]?\d+))?$/;
 const MAX_DECIMAL_VALUE_LENGTH = 128;
 const MAX_STORED_DECIMAL_LENGTH = 4096;
 const MAX_DECIMAL_EXPONENT = 1000;
 const MIN_METER_VALUE = '0.000000000001';
 const MAX_METER_VALUE = '1000000000000';
+const MAX_SOC_PERCENT = '100';
 
 /**
  * Kiểm tra tính hợp lệ về cú pháp chuỗi số thập phân của số đo.
@@ -22,6 +24,18 @@ function isValidMeterDecimal(value) {
 }
 
 /**
+ * Xác định giá trị tối đa cho một loại đại lượng đo nhất định.
+ * @param {string} measurand - Loại đại lượng đo
+ * @param {string} unit - Đơn vị đo
+ * @returns {string} - Giá trị tối đa cho measurand
+ */
+function maximumFor(measurand, unit) {
+  if (measurand === SOC_MEASURAND) return MAX_SOC_PERCENT;
+  if (measurand === ENERGY_MEASURAND && normalizeUnit(unit) === 'kWh') return '1000000000';
+  return MAX_METER_VALUE;
+}
+
+/**
  * Kiểm tra xem giá trị số đo có nằm trong ngưỡng vật lý hợp lệ theo chuẩn OCPP không.
  * @param {string} value - Chuỗi số đo
  * @param {string} measurand - Loại đại lượng đo
@@ -34,11 +48,7 @@ function isPlausibleMeterValue(value, measurand, unit) {
   if (parts.sign < 0) return false;
   if (parts.sign !== 0 && compareDecimals(value, MIN_METER_VALUE) < 0) return false;
 
-  const normUnit = normalizeUnit(unit);
-  const maximum = measurand === ENERGY_MEASURAND && normUnit === 'kWh'
-    ? '1000000000'
-    : MAX_METER_VALUE;
-  return compareDecimals(value, maximum) <= 0;
+  return compareDecimals(value, maximumFor(measurand, unit)) <= 0;
 }
 
 /**

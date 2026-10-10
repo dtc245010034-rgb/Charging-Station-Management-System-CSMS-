@@ -29,7 +29,7 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 
 ## Mục lục
 
-1. [Trạng thái dự án](#trạng-thái-dự-án-0510) · [Việc còn lại để đóng Sprint 2](#việc-còn-lại-để-đóng-sprint-2-hạn-510)
+1. [Trạng thái dự án](#trạng-thái-dự-án-0510) · [Việc còn lại để đóng Sprint 2](#việc-còn-lại-để-đóng-sprint-2-hạn-510) · [Tiến độ S-22](#tiến-độ-s-22-1010)
 2. [Chạy dự án](#1-chạy-dự-án) · [Chạy trên máy chủ](#chạy-trên-máy-chủ-nhóm-homelab-linux) · [Công khai qua Internet](#cho-người-khác-thử-qua-internet-công-khai-tạm) · [Tài khoản có sẵn](#tài-khoản-có-sẵn) · [Biến môi trường](#biến-môi-trường)
 3. [Dùng thử hệ thống](#2-dùng-thử-hệ-thống) · [Tạo tài khoản](#tạo-tài-khoản) · [Dữ liệu demo](#dữ-liệu-demo) · [Thử trụ sạc ảo (OCPP)](#thử-trụ-sạc-ảo-ocpp)
 4. [Kiểm thử](#3-kiểm-thử)
@@ -67,6 +67,15 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 | 8 | **Quyết định PO:** B5 (Basic Auth hay chấp nhận rủi ro), quy tắc `messageId`, lỗi mức trụ có đổi trạng thái tổng không, nhãn "Ngoại tuyến" cho trụ có mọi đầu nối tạm ngừng | — | Chốt trước demo |
 
 Ước lượng giờ là của người soạn tài liệu, không phải số liệu từ Jira.
+
+### Tiến độ S-22 (10/10)
+
+*Cập nhật 10/10/2026. Các mục khác của phần "Trạng thái dự án" ở trên vẫn dừng ở mốc 05/10; chi tiết S-22 ở [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md) mục 11.*
+
+| Hạng mục | Tình trạng |
+|---|---|
+| S-22 (GYM-48): tài xế xem phiên đang sạc | **Chưa Done.** Bản giao đầu ở nhánh `nam/gym48-s-22`, chưa vào `main`. Các lỗi của báo cáo review lần 27 đã sửa trên nhánh `phuc/GYM-48-sua-loi-review-s22`: kWh và công suất theo đúng đơn vị trụ gửi, lưu `SoC`, SSE lọc theo tài xế và đúng thứ tự, màn hình kết thúc phiên, đồng bộ lại khi SSE nối lại. Chưa mở PR, chưa được duyệt |
+| Còn lại | Mở PR và review; kiểm tay trên trình duyệt (**chưa chạy**); chạy toàn bộ test trong môi trường CI và ghi tổng số; tách thẻ riêng cho các phát hiện ngoài phạm vi. Hồ sơ: [`docs/dev/S-22_2026-10-10.md`](docs/dev/S-22_2026-10-10.md), [`kiem-thu-S-22.md`](docs/testing/stories/S/kiem-thu-S-22.md) |
 
 ---
 
@@ -149,11 +158,13 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `TRUST_PROXY` | Số reverse proxy tin cậy (0 = bỏ qua `X-Forwarded-For`) | Số nguyên | `0` |
 | `OCPP_HEARTBEAT_INTERVAL` | Khoảng nhịp tim gửi cho trụ trong BootNotificationResponse | Giây | `60` |
 | `OCPP_PING_INTERVAL` | Chu kỳ WebSocket Ping giữ kết nối OCPP (B9) | Giây | `30` |
+| `SSE_MAX_CONNECTIONS_PER_USER` | Số luồng SSE (phiên sạc, fleet-status) đồng thời tối đa mỗi tài khoản; mở thêm thì luồng cũ nhất bị đóng. Đăng xuất đóng mọi luồng của tài khoản | Luồng | `5` |
 | `OCPP_RATE_LIMIT_MAX` | Giới hạn tần suất tin nhắn mỗi kết nối OCPP (B3) | Tin/giây | `50` |
 | `OCPP_ERROR_DEDUP_SECONDS` | Bỏ qua lỗi đầu nối y hệt (cùng đầu nối, `errorCode`, `vendorErrorCode`, trạng thái không đổi) đã ghi trong N giây gần nhất; `0` = tắt | Giây | `60` |
 | `OCPP_MESSAGE_RETENTION_DAYS` | Số ngày giữ câu trả lời đã gửi để nhận ra tin OCPP trùng `messageId` (S-14). Job dọn chạy khi khởi động và mỗi giờ | Ngày | `7` |
 | `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` | Cửa sổ phát lại tin trùng: chỉ phát lại câu cũ khi cùng `messageId`, hành động, nội dung và chưa quá N giây (F8) | Giây | `600` |
 | `OCPP_LOCK_TIMEOUT_SECONDS` | `lock_timeout` cho truy vấn của handler OCPP; API, migration và job không bị ảnh hưởng (F10) | Giây | `5` |
+| `DB_QUERY_TIMEOUT_SECONDS` | Thời gian tối đa chờ một truy vấn PostgreSQL trả kết quả (cả hai pool); quá hạn thì truy vấn báo lỗi. `0` = không giới hạn | Giây | `30` |
 | `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | Số lần gọi `GET /api/charge-points/check-code` mỗi tài khoản (quá mức trả 429 + `Retry-After`) | Lần/phút | `30` |
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
 | `OCPP_HANDSHAKE_LIMIT_PER_10S` | Số lần bắt tay WebSocket mỗi cặp (IP, mã trụ), kiểm tra trước khi truy vấn DB; quá mức trả 429 | Lần/10 giây | `5` |

@@ -9,6 +9,7 @@ const {
   evaluateMeterReading,
   isPlausibleMeterValue,
 } = require('../../sessions/meter-rules');
+const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
 
 const MAX_CONNECTOR_ID = 2147483647;
 const MAX_TRANSACTION_ID = 2147483647;
@@ -20,11 +21,13 @@ const SUPPORTED_MEASURANDS = new Set([
   'Energy.Active.Import.Register',
   'Power.Active.Import',
   'Current.Import',
+  'SoC',
 ]);
 const DEFAULT_UNITS = {
   'Energy.Active.Import.Register': 'Wh',
   'Power.Active.Import': 'W',
   'Current.Import': 'A',
+  SoC: 'Percent',
 };
 function getDefaultPool() {
   return require('../../../db/pool').ocppPool;
@@ -87,23 +90,29 @@ function validatePayload(payload, now = Date.now) {
       }
       const measurand = sampledValue.measurand || 'Energy.Active.Import.Register';
       if (!SUPPORTED_MEASURANDS.has(measurand)) continue;
+      const isSoc = measurand === 'SoC';
       if (!isPlausibleMeterValue(
         sampledValue.value,
         measurand,
         sampledValue.unit || DEFAULT_UNITS[measurand]
       )) {
+        // SoC chỉ là thông tin hiển thị: giá trị ngoài 0–100 bỏ riêng, không làm hỏng cả bản tin (mất Energy cùng bản tin).
+        if (isSoc) continue;
         throw violation('Supported sampledValue.value must be a plausible non-negative numeric string');
       }
       const unit = sampledValue.unit === undefined ? DEFAULT_UNITS[measurand] : sampledValue.unit;
       if (typeof unit !== 'string' || unit.length === 0 || unit.length > MAX_UNIT_LENGTH) {
+        if (isSoc) continue;
         throw violation(`sampledValue.unit must be a string of at most ${MAX_UNIT_LENGTH} characters`);
       }
       const phase = sampledValue.phase == null ? '' : sampledValue.phase;
       const context = sampledValue.context == null ? '' : sampledValue.context;
       if (phase !== '' && (typeof phase !== 'string' || phase.length === 0 || phase.length > 20)) {
+        if (isSoc) continue;
         throw violation('sampledValue.phase must be a non-empty string of at most 20 characters');
       }
       if (context !== '' && (typeof context !== 'string' || context.length > 200)) {
+        if (isSoc) continue;
         throw violation('sampledValue.context must be a string of at most 200 characters');
       }
       readings.push({
@@ -178,7 +187,7 @@ async function persistMeterValues({
   try {
     const outcome = await withTransaction(async (client) => {
       const connector = await client.query(
-        `SELECT c.id AS connector_id, cs.id AS session_id
+        `SELECT c.id AS connector_id, cs.id AS session_id, cs.driver_id
          FROM connectors c
          LEFT JOIN charging_sessions cs
            ON cs.connector_id = c.id
@@ -191,6 +200,7 @@ async function persistMeterValues({
         [chargePointId, payload.connectorId, payload.transactionId ?? null]
       );
       let sessionId = connector.rows[0]?.session_id;
+      const driverId = connector.rows[0]?.driver_id ?? null;
 
       if (sessionId) {
         const activeSession = await client.query(
@@ -266,8 +276,12 @@ async function persistMeterValues({
           [sessionId, reason]
         );
       }
-      return { sessionId, ignored: [...ignored], reviewReasons: [...reviewReasons] };
+      return { sessionId, driverId, ignored: [...ignored], reviewReasons: [...reviewReasons] };
     }, db);
+
+    if (outcome?.sessionId) {
+      publishSessionUpdateFromDb(outcome.sessionId, { pool: db, driverId: outcome.driverId }).catch(() => {});
+    }
 
     if (outcome.orphanReason) {
       logWarning(

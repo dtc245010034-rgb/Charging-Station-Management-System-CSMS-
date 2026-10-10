@@ -2,6 +2,7 @@ const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
 const { maskIdTag } = require('./authorize');
 const { createMeterValuesHandler } = require('./meter-values');
+const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
 
 const MAX_TRANSACTION_ID = 2147483647;
 const MAX_ID_TAG_LENGTH = 20;
@@ -139,7 +140,7 @@ function createStopTransactionHandler({
          WHERE id = $1
            AND charge_point_id = $6
            AND status = 'CHARGING'
-         RETURNING id`,
+         RETURNING id, driver_id`,
         [
           payload.transactionId,
           payload.meterStop,
@@ -153,6 +154,10 @@ function createStopTransactionHandler({
       );
 
       if (updated.rowCount > 0) {
+        publishSessionUpdateFromDb(payload.transactionId, {
+          pool: db,
+          driverId: updated.rows[0]?.driver_id ?? null,
+        }).catch(() => {});
         return {};
       }
 
