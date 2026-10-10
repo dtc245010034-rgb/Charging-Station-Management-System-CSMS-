@@ -27,6 +27,31 @@ describe('ocpp meter-values: SoC', () => {
     assert.deepEqual(readings.map((r) => r.measurand), ['Energy.Active.Import.Register']);
   });
 
+  const energy = { measurand: 'Energy.Active.Import.Register', value: '15500', unit: 'Wh' };
+  const onlyEnergy = (readings) => assert.deepEqual(readings.map((r) => r.measurand), ['Energy.Active.Import.Register']);
+
+  it('SoC trong khoảng nhưng unit null bị bỏ riêng, Energy vẫn được giữ', () => {
+    onlyEnergy(validatePayload(payloadWith([energy, { measurand: 'SoC', value: '55', unit: null }])));
+  });
+
+  it('SoC trong khoảng nhưng unit rỗng bị bỏ riêng, Energy vẫn được giữ', () => {
+    onlyEnergy(validatePayload(payloadWith([energy, { measurand: 'SoC', value: '55', unit: '' }])));
+  });
+
+  it('SoC có phase không hợp lệ bị bỏ riêng, Energy vẫn được giữ', () => {
+    onlyEnergy(validatePayload(payloadWith([energy, { measurand: 'SoC', value: '55', unit: 'Percent', phase: 'x'.repeat(21) }])));
+  });
+
+  it('SoC có context không hợp lệ bị bỏ riêng, Energy vẫn được giữ', () => {
+    onlyEnergy(validatePayload(payloadWith([energy, { measurand: 'SoC', value: '55', unit: 'Percent', context: 'x'.repeat(201) }])));
+  });
+
+  it('Energy có unit sai định dạng vẫn ném lỗi như cũ', () => {
+    assert.throws(() => validatePayload(payloadWith([
+      { measurand: 'Energy.Active.Import.Register', value: '15500', unit: '' },
+    ])), /unit/);
+  });
+
   it('measurand khác chưa hỗ trợ (Voltage) vẫn bị bỏ qua', () => {
     const readings = validatePayload(payloadWith([{ measurand: 'Voltage', value: '230', unit: 'V' }]));
     assert.equal(readings.length, 0);

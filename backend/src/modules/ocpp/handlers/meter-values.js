@@ -90,25 +90,29 @@ function validatePayload(payload, now = Date.now) {
       }
       const measurand = sampledValue.measurand || 'Energy.Active.Import.Register';
       if (!SUPPORTED_MEASURANDS.has(measurand)) continue;
+      const isSoc = measurand === 'SoC';
       if (!isPlausibleMeterValue(
         sampledValue.value,
         measurand,
         sampledValue.unit || DEFAULT_UNITS[measurand]
       )) {
         // SoC chỉ là thông tin hiển thị: giá trị ngoài 0–100 bỏ riêng, không làm hỏng cả bản tin (mất Energy cùng bản tin).
-        if (measurand === 'SoC') continue;
+        if (isSoc) continue;
         throw violation('Supported sampledValue.value must be a plausible non-negative numeric string');
       }
       const unit = sampledValue.unit === undefined ? DEFAULT_UNITS[measurand] : sampledValue.unit;
       if (typeof unit !== 'string' || unit.length === 0 || unit.length > MAX_UNIT_LENGTH) {
+        if (isSoc) continue;
         throw violation(`sampledValue.unit must be a string of at most ${MAX_UNIT_LENGTH} characters`);
       }
       const phase = sampledValue.phase == null ? '' : sampledValue.phase;
       const context = sampledValue.context == null ? '' : sampledValue.context;
       if (phase !== '' && (typeof phase !== 'string' || phase.length === 0 || phase.length > 20)) {
+        if (isSoc) continue;
         throw violation('sampledValue.phase must be a non-empty string of at most 20 characters');
       }
       if (context !== '' && (typeof context !== 'string' || context.length > 200)) {
+        if (isSoc) continue;
         throw violation('sampledValue.context must be a string of at most 200 characters');
       }
       readings.push({
