@@ -252,10 +252,14 @@ export function render(ctx) {
     return false;
   }
 
+  let networkRetryCount = 0;
+  const MAX_NETWORK_RETRIES = 45;
+
   async function pollRequest() {
     if (!requestId || isUnmounted) return;
     try {
       const request = await csms.remoteStart.getRequest(requestId);
+      networkRetryCount = 0;
       if (terminalStatus(request)) return;
       const remainingMs = Date.parse(request.deadline) - Date.now();
       if (remainingMs <= 0) {
@@ -268,9 +272,11 @@ export function render(ctx) {
       showMessage(`Đang chờ trụ bắt đầu phiên sạc… Còn ${Math.ceil(remainingMs / 1000)} giây.`);
       pollTimer = setTimeout(pollRequest, Math.min(POLL_INTERVAL_MS, remainingMs));
     } catch (error) {
-      if (Date.now() >= requestDeadline) {
+      networkRetryCount += 1;
+      if (Date.now() >= requestDeadline || networkRetryCount >= MAX_NETWORK_RETRIES) {
         isStarting = false;
         requestId = null;
+        networkRetryCount = 0;
         showMessage('Chưa bắt đầu được trong 60 giây. Hãy kiểm tra súng đã cắm chưa; bạn có thể thử lại.', { error: true });
         updateStartButton(content.querySelector('[data-start-button]'));
         return;

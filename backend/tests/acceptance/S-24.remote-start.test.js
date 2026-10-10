@@ -220,4 +220,49 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     await query("UPDATE remote_start_requests SET deadline = CURRENT_TIMESTAMP - interval '1 second' WHERE id = $1", [requestId]);
     await getRequest(driverCookie, requestId);
   });
+
+  it('chặn một tài xế spam yêu cầu sạc đồng thời trên nhiều đầu nối khác nhau (chống chiếm trạm)', async () => {
+    await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id IN ($1, $2)", [connectorIds[0], connectorIds[1]]);
+    responseMode = 'Accepted';
+    const firstReq = await postStart(driverCookie, connectorIds[0]);
+    assert.equal(firstReq.status, 202);
+    const { request_id: firstId } = await firstReq.json();
+
+    // Thử gửi tiếp sang connector thứ hai khi đang có request PENDING
+    const secondReq = await postStart(driverCookie, connectorIds[1]);
+    assert.equal(secondReq.status, 409);
+    const errBody = await secondReq.json();
+    assert.equal(errBody.error.code, 'DRIVER_BUSY');
+
+    // Dọn dẹp
+    await query("UPDATE remote_start_requests SET deadline = CURRENT_TIMESTAMP - interval '1 second' WHERE id = $1", [firstId]);
+    await getRequest(driverCookie, firstId);
+  });
+
+  it('đầu nối bị bảo trì (connectors.status != AVAILABLE) bị từ chối ngay dù ocpp_status là Available', async () => {
+    await query("UPDATE connectors SET status = 'UNAVAILABLE', ocpp_status = 'Available' WHERE id = $1", [connectorIds[0]]);
+    const response = await postStart(driverCookie, connectorIds[0]);
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).error.code, 'CONNECTOR_UNAVAILABLE');
+    await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id = $1", [connectorIds[0]]);
+  });
+
+  it('lệnh RemoteStartTransaction ghi nhận đúng nhật ký vào audit_logs', async () => {
+    await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id = $1", [connectorIds[0]]);
+    responseMode = 'Accepted';
+    const response = await postStart(driverCookie, connectorIds[0]);
+    assert.equal(response.status, 202);
+    const { request_id: reqId } = await response.json();
+
+    const auditRow = await query(
+      "SELECT action, entity, entity_id, metadata FROM audit_logs WHERE action = 'REMOTE_START' AND entity_id = $1 ORDER BY id DESC LIMIT 1",
+      [connectorIds[0]]
+    );
+    assert.equal(auditRow.rowCount, 1);
+    assert.equal(auditRow.rows[0].action, 'REMOTE_START');
+    assert.equal(auditRow.rows[0].metadata.result, 'ACCEPTED');
+
+    await query("UPDATE remote_start_requests SET deadline = CURRENT_TIMESTAMP - interval '1 second' WHERE id = $1", [reqId]);
+    await getRequest(driverCookie, reqId);
+  });
 });

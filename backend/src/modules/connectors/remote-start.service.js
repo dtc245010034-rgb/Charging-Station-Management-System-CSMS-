@@ -41,6 +41,7 @@ async function listDriverChargePoints(db = pool) {
     const online = connections.isConnected(row.charge_point_code);
     const available = online
       && !row.station_locked_at
+      && row.connector_status === 'AVAILABLE'
       && STARTABLE_OCPP_STATUSES.has(row.connector_ocpp_status)
       && !row.has_active_session
       && !row.has_pending_start;
@@ -73,7 +74,7 @@ async function claimRemoteStart(driver, connectorId, db) {
   return withTransaction(async (client) => {
     const connectorResult = await client.query(
       `SELECT
-         c.id AS connector_id, c.connector_no, c.ocpp_status,
+         c.id AS connector_id, c.connector_no, c.status AS connector_status, c.ocpp_status,
          cp.id AS charge_point_id, cp.code AS charge_point_code,
          s.status AS station_status, s.locked_at AS station_locked_at
        FROM connectors c
@@ -97,6 +98,10 @@ async function claimRemoteStart(driver, connectorId, db) {
       throw new AppError(409, 'STATION_UNAVAILABLE', 'Trạm sạc hiện không hoạt động.');
     }
 
+    if (connector.connector_status && connector.connector_status !== 'AVAILABLE') {
+      throw new AppError(409, 'CONNECTOR_UNAVAILABLE', 'Đầu nối đang bảo trì hoặc tạm ngưng phục vụ.');
+    }
+
     if (!STARTABLE_OCPP_STATUSES.has(connector.ocpp_status)) {
       throw new AppError(409, 'CONNECTOR_BUSY', 'Đầu nối đang bận hoặc chưa sẵn sàng.');
     }
@@ -117,15 +122,39 @@ async function claimRemoteStart(driver, connectorId, db) {
       throw new AppError(409, 'CONNECTOR_BUSY', 'Đầu nối đang có yêu cầu bắt đầu sạc.');
     }
 
-    const tagResult = await client.query(
+    const driverPending = await client.query(
+      "SELECT 1 FROM remote_start_requests WHERE driver_id = $1 AND status = 'PENDING' AND deadline > CURRENT_TIMESTAMP LIMIT 1",
+      [driver.id]
+    );
+    if (driverPending.rowCount) {
+      throw new AppError(409, 'DRIVER_BUSY', 'Bạn đang có một yêu cầu bắt đầu sạc chưa hoàn tất. Vui lòng chờ.');
+    }
+
+    let tagResult = await client.query(
       `SELECT id, tag FROM id_tags
        WHERE user_id = $1 AND is_virtual = TRUE AND status = 'ACTIVE'
          AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
        LIMIT 1`,
       [driver.id]
     );
-    const tag = tagResult.rows[0];
-    if (!tag) throw new ServiceUnavailableError('Tài khoản chưa có thẻ sạc ảo. Vui lòng liên hệ hỗ trợ.');
+    let tag = tagResult.rows[0];
+    if (!tag) {
+      const crypto = require('node:crypto');
+      const virtualTag = `V${crypto.randomBytes(9).toString('hex').toUpperCase()}`;
+      const inserted = await client.query(
+        "INSERT INTO id_tags (tag, user_id, status, is_virtual) VALUES ($1, $2, 'ACTIVE', TRUE) ON CONFLICT DO NOTHING RETURNING id, tag",
+        [virtualTag, driver.id]
+      );
+      tag = inserted.rows[0];
+      if (!tag) {
+        tagResult = await client.query(
+          "SELECT id, tag FROM id_tags WHERE user_id = $1 AND is_virtual = TRUE AND status = 'ACTIVE' LIMIT 1",
+          [driver.id]
+        );
+        tag = tagResult.rows[0];
+      }
+    }
+    if (!tag) throw new ServiceUnavailableError('Không thể tạo hoặc tìm thấy thẻ sạc ảo cho tài xế.');
 
     const requestResult = await client.query(
       `INSERT INTO remote_start_requests
@@ -139,8 +168,9 @@ async function claimRemoteStart(driver, connectorId, db) {
   }, db);
 }
 
-async function requestRemoteStart(driver, connectorId, { commandSender, db = pool } = {}) {
+async function requestRemoteStart(driver, connectorId, { commandSender, db = pool, ip = null } = {}) {
   const claim = await claimRemoteStart(driver, connectorId, db);
+  const audit = require('../audit/audit.repository');
 
   try {
     await sendRemoteCommand({
@@ -152,6 +182,12 @@ async function requestRemoteStart(driver, connectorId, { commandSender, db = poo
       offlineCode: 'CHARGE_POINT_OFFLINE',
       offlineMessage: 'Trụ sạc đang ngoại tuyến. Hãy thử lại khi trụ kết nối.',
     });
+    await audit.record(driver.id, 'REMOTE_START', 'connector', connectorId, {
+      request_id: Number(claim.request.id),
+      charge_point_id: Number(claim.connector.charge_point_id),
+      charge_point_code: claim.connector.charge_point_code,
+      result: 'ACCEPTED',
+    }, ip);
   } catch (error) {
     const status = error instanceof UnprocessableEntityError ? 'REJECTED' : 'ERROR';
     await db.query(
@@ -160,6 +196,13 @@ async function requestRemoteStart(driver, connectorId, { commandSender, db = poo
        WHERE id = $1 AND status = 'PENDING'`,
       [claim.request.id, status]
     );
+    await audit.record(driver.id, 'REMOTE_START', 'connector', connectorId, {
+      request_id: Number(claim.request.id),
+      charge_point_id: Number(claim.connector.charge_point_id),
+      charge_point_code: claim.connector.charge_point_code,
+      result: status,
+      error_code: error.code || null,
+    }, ip).catch(() => {});
     throw error;
   }
 

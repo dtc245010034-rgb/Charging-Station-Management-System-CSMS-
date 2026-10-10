@@ -11,7 +11,10 @@ router.get('/driver/charge-points', { access: access('charge-points:read-driver'
 
 router.post('/connectors/:id/start', { access: access('remote-start:create') }, async (req, res) => {
   const { id } = idParam.parse(req.params);
-  const result = await service.requestRemoteStart(req.user, Number(id), { commandSender: req.app.locals.commandSender });
+  const result = await service.requestRemoteStart(req.user, Number(id), {
+    commandSender: req.app.locals.commandSender,
+    ip: req.ip,
+  });
   res.status(202).json(result);
 });
 
