@@ -37,7 +37,8 @@ export function render(ctx) {
   let eventSource = null;
   let durationTimer = null;
   let revision = 0; // tăng mỗi khi một sự kiện/đồng bộ được áp dụng; kết quả tải cũ hơn bị bỏ
-  let hasOpened = false;
+  let needsResync = false; // true sau mỗi lỗi/nối lại SSE: lần mở kế tiếp phải lấy lại trạng thái đã lỡ
+  const endedSeen = new Map(); // sự kiện kết thúc đến khi chưa có phiên hiển thị (đang tải): id -> phiên
   let isUnmounted = false;
 
   const container = h('div', { class: 'page-stack', style: 'max-width:540px;margin:0 auto;display:flex;flex-direction:column;gap:16px;' });
@@ -202,7 +203,10 @@ export function render(ctx) {
     // Chỉ chuyển cho decideAction đối tượng phiên đầy đủ (có id và status); bản tin thiếu thì bỏ.
     if (!incoming || incoming.id === null || incoming.id === undefined || !incoming.status) return;
     const action = decideAction(shown, incoming);
-    if (action === 'ignore') return;
+    if (action === 'ignore') {
+      if (incoming.status !== 'CHARGING') endedSeen.set(incoming.id, incoming);
+      return;
+    }
     revision += 1;
     if (action === 'show-live') renderLive(incoming);
     else if (action === 'update-live') updateLive(incoming);
@@ -216,6 +220,14 @@ export function render(ctx) {
       const current = await api('/api/me/sessions/current');
       if (isUnmounted || revision !== startedRevision) return;
       if (current) {
+        const ended = endedSeen.get(current.id);
+        if (ended) {
+          if (!shown || shown.id !== ended.id || shown.status === 'CHARGING') {
+            revision += 1;
+            renderEnded(ended);
+          }
+          return;
+        }
         const action = decideAction(shown, current);
         if (action === 'ignore') return;
         revision += 1;
@@ -249,6 +261,7 @@ export function render(ctx) {
   }
 
   function reconnectSse() {
+    needsResync = true;
     hideNotice();
     if (eventSource) eventSource.close();
     openSse();
@@ -259,10 +272,13 @@ export function render(ctx) {
     eventSource = new EventSource('/api/me/sessions/events');
     eventSource.onopen = () => {
       hideNotice();
-      if (hasOpened) resync();
-      hasOpened = true;
+      if (needsResync) {
+        needsResync = false;
+        resync();
+      }
     };
     eventSource.onerror = () => {
+      needsResync = true; // mọi lỗi (kể cả trước lần mở đầu tiên) đều có thể làm lỡ sự kiện
       // Lỗi tạm thời (readyState CONNECTING) thì trình duyệt tự nối lại; chỉ xử lý khi đã đóng hẳn.
       if (isUnmounted || !eventSource || eventSource.readyState !== EventSource.CLOSED) return;
       onStreamClosed();
@@ -285,8 +301,9 @@ export function render(ctx) {
       mount(container, loadingState(3));
       const data = await api('/api/me/sessions/current');
       if (isUnmounted || revision !== startedRevision) return;
-      if (data) renderLive(data);
-      else renderEmpty();
+      if (!data) renderEmpty();
+      else if (endedSeen.has(data.id)) renderEnded(endedSeen.get(data.id));
+      else renderLive(data);
     } catch (err) {
       if (isUnmounted || revision !== startedRevision) return;
       mount(container, errorState({ message: err.message, onRetry: loadSession }));
