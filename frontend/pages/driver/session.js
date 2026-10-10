@@ -122,7 +122,7 @@ export function render(ctx) {
       currentEl: h('span', { style: VALUE_STYLE }),
       socEl: h('span', { style: VALUE_STYLE }),
     };
-    live.kwhEl.textContent = session.current_kwh !== null && session.current_kwh !== undefined ? formatNumber(session.current_kwh) : '0';
+    live.kwhEl.textContent = session.current_kwh !== null && session.current_kwh !== undefined ? formatNumber(session.current_kwh) : '—';
     setPower(session);
     live.currentEl.textContent = session.latest_current_a !== null && session.latest_current_a !== undefined ? `${formatNumber(session.latest_current_a)} A` : '—';
     live.socEl.textContent = session.latest_soc !== null && session.latest_soc !== undefined ? `${formatNumber(session.latest_soc)} %` : '—';
