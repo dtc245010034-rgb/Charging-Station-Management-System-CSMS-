@@ -28,7 +28,7 @@ Các ca ở mục 1 là kết quả của bản giao đầu. Các ca bên dướ
 
 ### 1A. Test tự động thêm trong đợt sửa lỗi review
 
-Cột trạng thái chỉ ghi kết quả đã chạy thật: file unit chạy ngày 2026-10-10 trong container Node 22 (7 file unit của đợt sửa: 79/79 đạt). File integration của đợt sửa có test nhưng tài liệu này chưa ghi kết quả chạy, nên để "Chưa ghi kết quả".
+Cột trạng thái chỉ ghi kết quả đã chạy thật: file unit chạy ngày 2026-10-10 trong container Node 22 (7 file unit của đợt sửa: 79/79 đạt). Hai file integration của đợt sửa (`S-22.so-do-thap-phan`, `S-22.sse-pipeline`) chạy ngày 2026-10-10 trong container Node 22 với Postgres thật: 14/14 đạt. Toàn bộ bộ test chạy đúng môi trường CI (chỉ truyền `TEST_DATABASE_URL`, không có `backend/.env`): 647 test, 646 đạt, 0 lỗi, 1 bỏ qua (test cần Docker CLI, chỉ chạy ở CI Linux).
 
 | Mã ca | Kịch bản kiểm thử | Kết quả mong đợi | Bằng chứng kiểm thử | Trạng thái |
 |---|---|---|---|:---:|
@@ -36,8 +36,8 @@ Cột trạng thái chỉ ghi kết quả đã chạy thật: file unit chạy n
 | **FIX-02** | Số đo không dùng được: nhỏ hơn mốc bắt đầu, đơn vị lạ, giá trị hỏng, thiếu mốc bắt đầu | `liveEnergyKwh` trả `null` (bằng mốc bắt đầu thì trả `0`); không ghi số âm, không đoán | `tests/unit/session-readings.test.js` | **PASS** (unit) |
 | **FIX-03** | Công suất theo đơn vị: W giữ nguyên (kể cả 3680.5 W), 7.2 kW -> 7200 W, thiếu đơn vị (mặc định W), đơn vị lạ hoặc giá trị hỏng | `powerToWatts` trả W hoặc `null` | `tests/unit/session-readings.test.js` (`powerToWatts`, `toNumberOrNull`) | **PASS** (unit) |
 | **FIX-04** | `formatSession` với Wh thập phân, kWh, kW và đơn vị năng lượng lạ; dòng dữ liệu thiếu cột số đo | `current_kwh` 5.5005 / 6, `latest_power_w` 7200, đơn vị lạ -> `null`, không ném lỗi | `tests/unit/S-22.sessions.test.js` | **PASS** (unit) |
-| **FIX-05** | Trụ gửi Wh thập phân, kWh nguyên, kWh thập phân trên API và SSE; công suất 7.2 kW và W thập phân | `/me/sessions/current` và `/sessions/:id` trả 200 với `current_kwh` đúng; SSE có sự kiện; `latest_power_w` 7200 / giữ phần lẻ | `tests/integration/S-22.so-do-thap-phan.test.js` | Chưa ghi kết quả |
-| **FIX-06** | Đường OCPP -> SSE/API bằng handler thật: phiên cũ bị đóng `ABNORMAL` khi có `StartTransaction` mới; `MeterValues` Wh thập phân + kW + SoC; `StopTransaction` | Tài xế cũ nhận `ABNORMAL`, tài xế mới nhận `CHARGING`, không lẫn; API và SSE cùng cho 5.5005 kWh, 3680 W, SoC 55; `StopTransaction` phát sự kiện `COMPLETED` (`type = 'session_stopped'`) với kWh cuối 20 | `tests/integration/S-22.sse-pipeline.test.js` | Chưa ghi kết quả |
+| **FIX-05** | Trụ gửi Wh thập phân, kWh nguyên, kWh thập phân trên API và SSE; công suất 7.2 kW và W thập phân | `/me/sessions/current` và `/sessions/:id` trả 200 với `current_kwh` đúng; SSE có sự kiện; `latest_power_w` 7200 / giữ phần lẻ | `tests/integration/S-22.so-do-thap-phan.test.js` | PASS (integration, 2026-10-10) |
+| **FIX-06** | Đường OCPP -> SSE/API bằng handler thật: phiên cũ bị đóng `ABNORMAL` khi có `StartTransaction` mới; `MeterValues` Wh thập phân + kW + SoC; `StopTransaction` | Tài xế cũ nhận `ABNORMAL`, tài xế mới nhận `CHARGING`, không lẫn; API và SSE cùng cho 5.5005 kWh, 3680 W, SoC 55; `StopTransaction` phát sự kiện `COMPLETED` (`type = 'session_stopped'`) với kWh cuối 20 | `tests/integration/S-22.sse-pipeline.test.js` | PASS (integration, 2026-10-10) |
 | **FIX-07** | SSE lọc theo tài xế trước khi truy vấn; đăng ký không có `driverId`; listener ném lỗi; tài xế rời đi giữa lúc truy vấn | Không có người nghe đúng tài xế thì 0 truy vấn, 0 sự kiện; `subscribe` thiếu `driverId` ném `TypeError`; listener hỏng bị gỡ; sự kiện chỉ tới đúng tài xế | `tests/unit/sessions-events.test.js` | **PASS** (unit) |
 | **FIX-08** | Nhiều lần phát cùng một phiên liên tiếp | Sự kiện phát tuần tự theo từng phiên, không đảo thứ tự | `tests/unit/sessions-events.test.js` | **PASS** (unit) |
 | **FIX-09** | Lỗi khi phát sự kiện SSE | Ghi log `[SSE] Không phát được sự kiện phiên sạc`, không reject, không kẹt hàng đợi | `tests/unit/sessions-events.test.js` | **PASS** (unit) |
@@ -171,6 +171,6 @@ Các lệnh 1 đến 7 dưới đây là bằng chứng của **bản giao đầ
 ---
 
 ## 4. Kết luận
-Cập nhật 2026-10-10. Bản giao đầu của **S-22 (GYM-48)** đạt 4/4 AC và các NFR ở mục 1. Các lỗi review lần 27 đã được sửa trên nhánh `phuc/GYM-48-sua-loi-review-s22`; test unit mới đạt (mục 1A), test integration mới có nhưng chưa ghi kết quả chạy.
+Cập nhật 2026-10-10. Bản giao đầu của **S-22 (GYM-48)** đạt 4/4 AC và các NFR ở mục 1. Các lỗi review lần 27 đã được sửa trên nhánh `phuc/GYM-48-sua-loi-review-s22`; test unit mới đạt (mục 1A), test integration mới đạt 14/14, toàn bộ bộ test 646/647 đạt (1 bỏ qua vì cần Docker CLI).
 
 Chưa kết luận hoàn tất. Còn lại: kiểm tay trên trình duyệt (mục 1B), chạy toàn bộ bộ test trong môi trường CI và ghi tổng số, mở PR và được duyệt. Các phát hiện ngoài phạm vi (số kết nối SSE mỗi tài khoản, SSE không đóng khi thu hồi token, v.v.) ghi ở `docs/dev/S-22_2026-10-10.md` mục 4.

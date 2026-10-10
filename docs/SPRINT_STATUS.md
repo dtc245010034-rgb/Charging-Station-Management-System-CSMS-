@@ -184,7 +184,7 @@ Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VON
 | Hạng mục | Tình trạng (10/10/2026) |
 |---|---|
 | Đã sửa trên nhánh | kWh và công suất tính theo đúng đơn vị trụ gửi (Wh thập phân, kWh, W, kW; hết lỗi 500); lưu `SoC` (0–100 %) để thẻ Pin xe có số liệu; SSE lọc theo tài xế trước khi truy vấn và phát đúng thứ tự; lỗi phát SSE được ghi log; phiên cũ bị đóng `ABNORMAL` được báo tới đúng tài xế; trang phiên có màn hình kết thúc, định dạng W/kW và đồng bộ lại khi SSE nối lại |
-| Test | 7 file unit của đợt sửa: 79/79 đạt (10/10/2026, container Node 22). Test integration mới (`S-22.so-do-thap-phan`, `S-22.sse-pipeline`) đã viết nhưng chưa ghi kết quả chạy ở đây. **Chưa chạy lại toàn bộ bộ test sau sửa lỗi** (con số 557 trong hồ sơ là của bản giao đầu) |
+| Test | 7 file unit của đợt sửa: 79/79 đạt (10/10/2026, container Node 22). Test integration mới (`S-22.so-do-thap-phan`, `S-22.sse-pipeline`): 14/14 đạt. Toàn bộ bộ test sau sửa lỗi, chạy đúng môi trường CI (10/10/2026): 647 test, 646 đạt, 0 lỗi, 1 bỏ qua (cần Docker CLI). Lint sạch |
 | Kiểm tay trên trình duyệt | **Chưa chạy.** Danh sách 12 bước ở [`testing/stories/S/kiem-thu-S-22.md`](testing/stories/S/kiem-thu-S-22.md) mục 1B |
 | Hợp đồng S-19 | Nới thêm `SoC` vào danh sách đại lượng được lưu; cần PO/tester S-19 xác nhận |
 | Còn lại | Mở PR và review; kiểm tay; chạy toàn bộ test trong môi trường CI và ghi tổng số; tách thẻ riêng cho các phát hiện ngoài phạm vi ([`dev/S-22_2026-10-10.md`](dev/S-22_2026-10-10.md) mục 4: giới hạn số kết nối SSE mỗi tài khoản, SSE không đóng khi thu hồi token, pool không có `query_timeout`, tài liệu chứa mật khẩu, `VULN-S04-FE01`, `WEB-01`) |
