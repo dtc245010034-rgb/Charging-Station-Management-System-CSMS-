@@ -2,15 +2,20 @@ const { Pool } = require('pg');
 const env = require('../config/env');
 const { sanitizeErrorMessage } = require('../lib/constants');
 
+// query_timeout làm truy vấn treo (mạng đứt, DB đơ) báo lỗi thay vì giữ kết nối và yêu cầu vô thời hạn; 0 = tắt.
+const queryTimeout = env.DB_QUERY_TIMEOUT_SECONDS * 1000;
+
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
   connectionTimeoutMillis: 2000,
+  query_timeout: queryTimeout,
 });
 
 // Pool riêng cho handler OCPP: khoá hàng giữ quá lâu thì lỗi sau lock_timeout thay vì treo tới khi trụ tự ngắt (F10).
 const ocppPool = new Pool({
   connectionString: env.DATABASE_URL,
   connectionTimeoutMillis: 2000,
+  query_timeout: queryTimeout,
   options: `-c lock_timeout=${env.OCPP_LOCK_TIMEOUT_SECONDS * 1000}`,
 });
 

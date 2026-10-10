@@ -36,6 +36,8 @@ const schema = z.object({
   OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS: z.coerce.number().int().positive().default(600),
   // Thời gian tối đa (giây) một truy vấn của handler OCPP chờ khoá hàng trước khi trả InternalError (F10), mặc định 5
   OCPP_LOCK_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(5),
+  // Thời gian tối đa (giây) máy chủ chờ một truy vấn PostgreSQL trả kết quả, áp cho cả hai pool; 0 = không giới hạn, mặc định 30
+  DB_QUERY_TIMEOUT_SECONDS: z.coerce.number().int().min(0).default(30),
   // Giới hạn tần suất trong bộ nhớ (một tiến trình): check-code theo tài khoản, số lần dò email trùng khi đăng ký theo IP, bắt tay OCPP theo (IP, mã trụ)
   CHECK_CODE_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(30),
   REGISTER_CONFLICT_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(5),

@@ -16,4 +16,9 @@ describe('F10: chỉ pool của handler OCPP có lock_timeout; pool chung (API, 
     const result = await pool.query('SHOW lock_timeout');
     assert.equal(result.rows[0].lock_timeout, '0');
   });
+
+  it('cả hai pool đặt query_timeout 30 giây theo mặc định', () => {
+    assert.equal(pool.options.query_timeout, 30000);
+    assert.equal(ocppPool.options.query_timeout, 30000);
+  });
 });
