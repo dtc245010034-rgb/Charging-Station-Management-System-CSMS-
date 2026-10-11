@@ -249,7 +249,10 @@ Trụ kết nối tại `ws://localhost:3000/ocpp/<mã trụ>` với subprotocol
 Mẫu trụ ảo: `docs/spikes/k01-simulator.js`, `docs/spikes/k01/` (xem [`docs/spikes/K-01-ocpp-simulator.md`](docs/spikes/K-01-ocpp-simulator.md)), và các kịch bản kiểm chứng trong `tools/` (đọc thông tin đăng nhập từ biến môi trường, chỉ chạy trên DB thử `_test`/`_chk`). Kết quả kiểm chứng vòng 6: [`docs/testing/BAO-CAO-VONG-6.md`](docs/testing/BAO-CAO-VONG-6.md).
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 1e6f3a839617801b2824ca826677130ab2a38a93
 #### Chạy một đội trụ ảo bằng Docker Compose
 
 Sau khi chạy `python run.py`, có thể bật mặc định 20 trụ ảo (mã `VCP-001`…`VCP-020`) bằng:
@@ -260,6 +263,7 @@ docker compose --profile simulator up -d --build vcp
 
 Simulator tạo sẵn các trạm/trụ thử qua API bằng tài khoản quản trị cục bộ, gửi `BootNotification`, trạng thái `Available` và heartbeat định kỳ; dashboard sẽ báo đủ số trụ sau khi kết nối. Để đổi số lượng hoặc địa chỉ CSMS, đặt `VCP_COUNT` và `CSMS_URL` trong `.env` rồi chạy lại lệnh. Trên máy chủ dùng chung, đặt `VCP_ADMIN_EMAIL`/`VCP_ADMIN_PASSWORD` trong `.env` thành thông tin quản trị tương ứng; không dùng mật khẩu mặc định `admin`. Dừng simulator bằng `docker compose --profile simulator stop vcp`.
 
+<<<<<<< HEAD
 Chạy kịch bản phiên sạc ngắt–nối có thể lặp lại bằng seed cố định (cần tài khoản admin và `STAGING_DATABASE_URL` trỏ tới DB thử):
 
 ```bash
@@ -267,6 +271,8 @@ node tools/test-s21-reconnect-fleet.js --count 20 --drops 1-3 --seed 26026 --run
 ```
 
 >>>>>>> b932504 (huu/S26-bo-tru-ao)
+=======
+>>>>>>> 1e6f3a839617801b2824ca826677130ab2a38a93
 ---
 
 ## 3. Kiểm thử
@@ -283,6 +289,7 @@ python test.py --verbose               # in toàn bộ output
 
 - Kết quả cuối: `KẾT QUẢ: ĐẠT (N test pass, 0 fail)` hoặc `KHÔNG ĐẠT` kèm tên ca lỗi; mã thoát 0 = đạt. Log đầy đủ ở `.run/test-output.log` (không commit).
 - **`# fail 0` là điều kiện để merge**: CI trên mỗi PR chạy lint, quét phụ thuộc (`npm audit --omit=dev --audit-level=high`), test backend, test của `tools/` (job Ubuntu) và test trên Windows.
+- Sau khi các test này xanh, job `OCPP reconnect session scenario` dựng app và 5 trụ, chạy kịch bản phiên sạc ngắt–nối với seed cố định; bảng kết quả ghi mã trụ/phiên và kWh mong đợi/thực tế. Đánh dấu check này là required trong branch protection để chặn merge khi kịch bản lỗi.
 - Lần đầu chậm vài phút (tải Node 22, cài thư viện).
 - **Test S-09 T-19 cần Docker** (trụ ảo chạy trong container có đồng hồ lệch 5 giờ) và chỉ chạy trên Linux; máy không có Docker sẽ bỏ qua.
 - Hai test tắt máy sạch (N4, gửi `SIGTERM`/`SIGINT`) **bị bỏ qua trên Windows** vì Windows không gửi được tín hiệu POSIX tới tiến trình con; chúng chạy ở job Linux.

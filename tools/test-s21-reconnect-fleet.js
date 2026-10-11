@@ -37,6 +37,7 @@ function optionsFromArgs(args) {
     count: 20,
     disconnects: [1, 3],
     runs: 3,
+    seed: randomInt(0, 0x100000000),
     prefix: `S21-${Date.now().toString(36).toUpperCase()}-`,
     tag: TAG,
   };
@@ -56,13 +57,19 @@ function optionsFromArgs(args) {
       const number = Number(value);
       if (!Number.isSafeInteger(number) || number < 1) throw new Error(`${flag} must be a positive integer`);
       options[flag.slice(2)] = number;
-    } else if (flag === '--disconnects') {
+    } else if (flag === '--disconnects' || flag === '--drops') {
       const match = /^(\d+)(?:-(\d+))?$/.exec(value);
-      if (!match) throw new Error('--disconnects must be N or MIN-MAX');
+      if (!match) throw new Error(`${flag} must be N or MIN-MAX`);
       options.disconnects = [Number(match[1]), Number(match[2] || match[1])];
       if (options.disconnects[0] < 1 || options.disconnects[1] < options.disconnects[0]) {
-        throw new Error('--disconnects must be a range with MIN >= 1 and MAX >= MIN');
+        throw new Error(`${flag} must be a range with MIN >= 1 and MAX >= MIN`);
       }
+    } else if (flag === '--seed') {
+      const seed = Number(value);
+      if (!Number.isSafeInteger(seed) || seed < 0 || seed > 0xffffffff) {
+        throw new Error('--seed must be an integer from 0 to 4294967295');
+      }
+      options.seed = seed;
     } else {
       throw new Error(`Unknown option: ${flag}`);
     }
@@ -88,13 +95,28 @@ function printUsage() {
 Runs OCPP reconnect energy verification against a staging CSMS.
   --url <base-url>       Staging HTTP URL (default: STAGING_BASE_URL)
   --count <n>            Virtual charge points per run (default: 20)
-  --disconnects <n|a-b>  Disconnects per session, fixed or random range (default: 1-3)
+  --drops <n|a-b>        Disconnects per session, fixed or seeded random range (default: 1-3)
+  --seed <n>              Seed for repeatable disconnect counts (default: generated)
   --runs <n>             Complete repetitions (default: 3)
   --prefix <text>        Dedicated fixture prefix (default: unique per invocation)
   --tag <idTag>          Active OCPP idTag (default: TAG-DEMO-01)
 
 Example for a quick CI run:
-  node tools/test-s21-reconnect-fleet.js --count 2 --disconnects 1 --runs 1`);
+  node tools/test-s21-reconnect-fleet.js --count 5 --drops 1-3 --seed 26026 --runs 1`);
+}
+
+function createSeededRandom(seed) {
+  let state = (seed >>> 0) || 0x6d2b79f5;
+  return () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return (state >>> 0) / 0x100000000;
+  };
+}
+
+function seededInt(random, min, max) {
+  return min + Math.floor(random() * (max - min + 1));
 }
 
 function createApi(baseUrl) {
@@ -435,11 +457,13 @@ async function main() {
     printUsage();
     return;
   }
+  console.log(`Scenario seed: ${options.seed}`);
   const api = createApi(options.url);
   await api.login(requireAdminCredentials());
   const { codes } = await ensureFleet(api, options);
   const db = new Client({ connectionString: process.env.STAGING_DATABASE_URL, connectionTimeoutMillis: 5000 });
   const points = [];
+  const random = createSeededRandom(options.seed);
 
   await db.connect();
   try {
@@ -482,7 +506,7 @@ async function main() {
 
       const settlements = await Promise.allSettled(currentPoints.map(async ({ point, index }) => {
         const [minDisconnects, maxDisconnects] = options.disconnects;
-        const disconnectCount = randomInt(minDisconnects, maxDisconnects + 1);
+        const disconnectCount = seededInt(random, minDisconnects, maxDisconnects);
         return runSession(point, run, index, disconnectCount);
       }));
       const failures = settlements.filter((settlement) => settlement.status === 'rejected');
@@ -512,4 +536,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { optionsFromArgs, makeSample, readSessionResults };
+module.exports = { optionsFromArgs, makeSample, readSessionResults, createSeededRandom, seededInt };

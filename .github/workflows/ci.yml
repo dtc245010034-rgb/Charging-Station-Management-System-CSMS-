@@ -99,7 +99,10 @@ jobs:
       - run: npm ci
       - run: npm test
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 1e6f3a839617801b2824ca826677130ab2a38a93
 
   session-scenario:
     name: OCPP reconnect session scenario
@@ -116,7 +119,10 @@ jobs:
       VCP_ADMIN_PASSWORD: ci-only-admin-password
       CSMS_URL: http://app:3000
       VCP_COUNT: 5
+<<<<<<< HEAD
       VCP_PREFIX: CI-VCP-
+=======
+>>>>>>> 1e6f3a839617801b2824ca826677130ab2a38a93
       STAGING_BASE_URL: http://127.0.0.1:3000
       STAGING_DATABASE_URL: postgresql://csms:csms_ci_only@127.0.0.1:5432/csms
 
@@ -156,4 +162,7 @@ jobs:
       - name: Stop CI services
         if: always()
         run: docker compose --profile simulator down --volumes --remove-orphans
+<<<<<<< HEAD
 >>>>>>> b932504 (huu/S26-bo-tru-ao)
+=======
+>>>>>>> 1e6f3a839617801b2824ca826677130ab2a38a93

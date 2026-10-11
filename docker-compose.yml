@@ -65,7 +65,10 @@ services:
         condition: service_healthy
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 1e6f3a839617801b2824ca826677130ab2a38a93
   vcp:
     image: csms-vcp:2.2.1
     build:
@@ -83,13 +86,20 @@ services:
       app:
         condition: service_healthy
     healthcheck:
+<<<<<<< HEAD
       test: ["CMD-SHELL", "test -f /tmp/vcp-ready"]
+=======
+      test: ["CMD", "node", "-e", "require('node:fs').accessSync('/tmp/vcp-ready')"]
+>>>>>>> 1e6f3a839617801b2824ca826677130ab2a38a93
       interval: 5s
       timeout: 2s
       retries: 12
       start_period: 10s
 
+<<<<<<< HEAD
 >>>>>>> b932504 (huu/S26-bo-tru-ao)
+=======
+>>>>>>> 1e6f3a839617801b2824ca826677130ab2a38a93
   # Chạy lint + toàn bộ test trong container (không cần cài Node trên máy): python test.py
   # node_modules nằm trong volume riêng nên không lẫn với node_modules của Windows/macOS trên máy.
   tests:

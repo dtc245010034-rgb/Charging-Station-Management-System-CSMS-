@@ -155,12 +155,17 @@ Ký hiệu: **Cổng** = điều kiện để story sau ghép được. Tên fil
 ### S-26 · GYM-52 · 2 SP · Bộ trụ ảo chạy trong `docker-compose` và trong CI *(Should)*
 - **Làn:** L6 · **Bắt đầu:** T4 sáng (T-55 độc lập) · **Xong:** T3 13/10 sáng (T-56 chờ T-46). Jira đã có sẵn subtask T-55 (GYM-93), T-56 (GYM-94).
 <<<<<<< HEAD
+<<<<<<< HEAD
 - **Hiện trạng:** đã có `docs/spikes/k01-simulator.js` (chạy được phiên sạc trọn vẹn) và `tools/simulate-fleet.js` (đội trụ ảo, chỉ chạy trên DB tên `_test`/`_chk`, **chưa chạy phiên sạc**). `docker-compose.yml` chưa có dịch vụ trụ ảo; CI (`.github/workflows/ci.yml`) có `lint-and-test` + `test-windows`.
 - **Việc:** **T-55** dịch vụ `vcp` trong compose (biến `VCP_COUNT`, `CSMS_URL`; mã trụ tiền tố `VCP-`, seed idempotent qua API bằng tài khoản admin; không đi qua ngrok — nhớ hạn mức HTTP của gói miễn phí). **T-46** kịch bản 20 trụ ngắt–nối ngẫu nhiên (tham số `--count`, `--drops`, `--seed` để lặp lại được), in bảng đối chiếu (mã phiên, kWh mong đợi, kWh thực). **T-56** job CI `session-scenario` (`needs: lint-and-test`, DB service, 5 trụ cho nhanh), dưới 5 phút, **log nêu phiên nào sai**; Phúc đặt nó thành **required check** trong branch protection (việc cấu hình GitHub, không nằm trong mã).
 =======
 - **Hiện trạng (11/10):** đã rebase nhánh S-26 lên `origin/main` sau S-25. T-55 có dịch vụ `vcp` trong Compose (mã mặc định `VCP-`, seed idempotent qua API); hiện ghim `ocpp-rpc` 2.2.1. T-46 dùng `tools/test-s21-reconnect-fleet.js` với `--count`, `--drops`, `--seed`. T-56 có job `session-scenario` sau `lint-and-test`, chạy 5 trụ dưới 5 phút; prefix `CI-VCP-` và `CI-S21-` không trùng. Bằng chứng: [`kiem-thu-S-26.md`](testing/stories/S/kiem-thu-S-26.md). Còn mở: nâng cấp simulator chỉ bằng đổi tag Compose và cấu hình required check.
 - **Còn ngoài repository:** đặt `OCPP reconnect session scenario` thành **required check** trong branch protection để GitHub chặn merge khi job đỏ; cấu hình này cần người có quyền quản trị repository.
 >>>>>>> b932504 (huu/S26-bo-tru-ao)
+=======
+- **Hiện trạng (11/10):** đã có `docs/spikes/k01-simulator.js` (phiên sạc trọn vẹn), dịch vụ `vcp` trong `docker-compose.yml` với mã `VCP-` và seed idempotent qua API, cùng job CI `session-scenario` chạy sau `lint-and-test`. Kịch bản dùng `tools/test-s21-reconnect-fleet.js` để kiểm tra phiên S-21; chạy thử cục bộ 20 trụ đạt 20/20 phiên.
+- **Việc còn lại:** T-55 khởi động đội mặc định 20 trụ bằng `VCP_COUNT` và `CSMS_URL`; không đi qua ngrok. T-46 hỗ trợ `--count`, `--drops`, `--seed`, để lặp lại số lần ngắt–nối; in bảng mã phiên, kWh kỳ vọng/thực tế. T-56 chạy 5 trụ trong CI (`needs: lint-and-test`), dưới 5 phút và log rõ phiên lỗi. Phúc đặt `session-scenario` thành **required check** trong branch protection (việc cấu hình GitHub, không nằm trong mã).
+>>>>>>> 1e6f3a839617801b2824ca826677130ab2a38a93
 - **AC:** 3 ca; cố ý phá phần khôi phục phiên thì PR bị chặn.
 - **Rủi ro:** nếu chưa bật required check trên branch protection, GitHub vẫn cho merge dù `session-scenario` thất bại.
 

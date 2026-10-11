@@ -1,9 +1,15 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { optionsFromArgs, makeSample, readSessionResults } = require('../../../tools/test-s21-reconnect-fleet');
+const {
+  optionsFromArgs,
+  makeSample,
+  readSessionResults,
+  createSeededRandom,
+  seededInt,
+} = require('../../../tools/test-s21-reconnect-fleet');
 
 describe('S-21 reconnect fleet scenario', () => {
-  it('parses configurable fleet size, reconnect count range, and repetition count', () => {
+  it('parses fleet size, seeded disconnect ranges, and repetition count', () => {
     const previous = {
       STAGING_BASE_URL: process.env.STAGING_BASE_URL,
       STAGING_DATABASE_URL: process.env.STAGING_DATABASE_URL,
@@ -11,15 +17,17 @@ describe('S-21 reconnect fleet scenario', () => {
     process.env.STAGING_BASE_URL = 'https://staging.invalid';
     process.env.STAGING_DATABASE_URL = 'postgres://readonly.invalid/csms';
     try {
-      assert.deepEqual(optionsFromArgs(['--count', '4', '--disconnects', '1-2', '--runs', '3', '--prefix', 'S21-CI-']), {
+      assert.deepEqual(optionsFromArgs(['--count', '4', '--drops', '1-2', '--seed', '42', '--runs', '3', '--prefix', 'S21-CI-']), {
         url: 'https://staging.invalid',
         count: 4,
         disconnects: [1, 2],
         runs: 3,
+        seed: 42,
         prefix: 'S21-CI-',
         tag: 'TAG-DEMO-01',
       });
       assert.deepEqual(optionsFromArgs(['--disconnects', '2']).disconnects, [2, 2]);
+      assert.deepEqual(optionsFromArgs(['--drops', '3']).disconnects, [3, 3]);
     } finally {
       for (const [key, value] of Object.entries(previous)) {
         if (value === undefined) delete process.env[key];
@@ -38,12 +46,25 @@ describe('S-21 reconnect fleet scenario', () => {
     try {
       assert.throws(() => optionsFromArgs(['--disconnects', '0']), /MIN >= 1/);
       assert.throws(() => optionsFromArgs(['--disconnects', '3-1']), /MIN >= 1/);
+      assert.throws(() => optionsFromArgs(['--drops', '0']), /MIN >= 1/);
+      assert.throws(() => optionsFromArgs(['--seed', '-1']), /integer from 0 to 4294967295/);
+      assert.throws(() => optionsFromArgs(['--seed', '4294967296']), /integer from 0 to 4294967295/);
     } finally {
       for (const [key, value] of Object.entries(previous)) {
         if (value === undefined) delete process.env[key];
         else process.env[key] = value;
       }
     }
+  });
+
+  it('selects the same disconnect counts for the same seed, including seed zero', () => {
+    const sequence = (seed) => {
+      const random = createSeededRandom(seed);
+      return Array.from({ length: 10 }, () => seededInt(random, 1, 3));
+    };
+    assert.deepEqual(sequence(42), sequence(42));
+    assert.notDeepEqual(sequence(42), sequence(43));
+    assert.ok(new Set(sequence(0)).size > 1);
   });
 
   it('creates T-41-compatible cumulative Wh samples at the supplied timestamp', () => {
