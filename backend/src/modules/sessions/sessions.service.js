@@ -251,7 +251,7 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
   }
 }
 
-async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db = null } = {}) {
+async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db = null, allowZeroEnergy = false } = {}) {
   const client = db || require('../../db/pool').pool;
   const normalizedReason = typeof reason === 'string' ? reason.trim() : '';
   if (!normalizedReason || normalizedReason.length > 1000) {
@@ -283,15 +283,20 @@ async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db 
        LIMIT 1`,
       [sessionId]
     );
-    if (!latest.rows[0]) {
-      throw new AppError(409, 'FINAL_METER_READING_UNAVAILABLE', 'Không thể đóng phiên vì chưa có số đo năng lượng cuối cùng hợp lệ');
-    }
 
     let meterStop;
-    try {
-      meterStop = meterValueToWh(latest.rows[0]);
-    } catch {
-      throw new AppError(409, 'FINAL_METER_READING_INVALID', 'Không thể đóng phiên vì số đo năng lượng cuối cùng không hợp lệ');
+    if (!latest.rows[0]) {
+      if (allowZeroEnergy) {
+        meterStop = Number(session.meter_start);
+      } else {
+        throw new AppError(409, 'FINAL_METER_READING_UNAVAILABLE', 'Không thể đóng phiên vì chưa có số đo năng lượng cuối cùng hợp lệ');
+      }
+    } else {
+      try {
+        meterStop = meterValueToWh(latest.rows[0]);
+      } catch {
+        throw new AppError(409, 'FINAL_METER_READING_INVALID', 'Không thể đóng phiên vì số đo năng lượng cuối cùng không hợp lệ');
+      }
     }
     const meterStart = Number(session.meter_start);
     if (!Number.isSafeInteger(meterStart) || !Number.isSafeInteger(meterStop) || meterStop < meterStart) {
