@@ -88,6 +88,14 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(PAGE_NEEDS.start, 'remote-start:create');
   });
 
+  it('S-24: điều hướng phiên sạc dùng đúng route mà router đăng ký', async () => {
+    const { parseHash, pageLoader } = await load('app/router.js');
+    const route = parseHash('#/driver/sessions');
+    assert.equal(route.workspace, 'driver');
+    assert.equal(route.page, 'sessions');
+    assert.equal(typeof pageLoader(route.page, route.workspace), 'function');
+  });
+
   it('quyền nút trên giao diện: Reset cho Admin/Operator, khoá trạm chỉ Admin', async () => {
     const { can } = await load('app/permissions.js');
     assert.ok(can('ADMIN', 'charge-points:reset') && can('OPERATOR', 'charge-points:reset'));

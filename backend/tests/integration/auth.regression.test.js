@@ -1,8 +1,9 @@
 const { describe, it, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert');
 const request = require('supertest');
-const { run, resetSchema, truncateAll } = require('../helpers/db');
+const { run, query, resetSchema, truncateAll } = require('../helpers/db');
 const { app, closePool } = require('../helpers/app');
+const usersService = require('../../src/modules/users/users.service');
 
 // Giữ hành vi auth hiện tại sau refactor PR-2 (S-02/S-03 sẽ đổi ở PR sau).
 describe('Hồi quy auth sau refactor', () => {
@@ -31,6 +32,35 @@ describe('Hồi quy auth sau refactor', () => {
     assert.strictEqual((await request(app).post('/api/auth/register').send({ ...creds, role: 'ROOT' })).status, 400);
     assert.strictEqual((await request(app).post('/api/auth/register').send(creds)).status, 201);
     assert.strictEqual((await request(app).post('/api/auth/register').send(creds)).status, 409);
+  });
+
+  it('rollback cả tài khoản và thẻ ảo nếu tạo thẻ thất bại', async () => {
+    await query(`
+      CREATE FUNCTION reject_virtual_tag_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.is_virtual THEN RAISE EXCEPTION 'test virtual tag failure'; END IF;
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TRIGGER reject_virtual_tag_insert
+      BEFORE INSERT ON id_tags
+      FOR EACH ROW EXECUTE FUNCTION reject_virtual_tag_insert();
+    `);
+    try {
+      await assert.rejects(
+        usersService.create({
+          name: 'Rollback Driver',
+          email: 'rollback-driver@example.com',
+          password: 'password123',
+          role: 'DRIVER',
+        }),
+        /test virtual tag failure/
+      );
+      assert.equal((await query("SELECT id FROM users WHERE email = 'rollback-driver@example.com'")).rowCount, 0);
+      assert.equal((await query("SELECT id FROM id_tags WHERE is_virtual")).rowCount, 0);
+    } finally {
+      await query('DROP TRIGGER IF EXISTS reject_virtual_tag_insert ON id_tags; DROP FUNCTION IF EXISTS reject_virtual_tag_insert();');
+    }
   });
 
   it('không cookie/token → 401 envelope', async () => {
