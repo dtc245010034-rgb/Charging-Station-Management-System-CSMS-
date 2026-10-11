@@ -58,6 +58,7 @@ export function render(ctx) {
       autocomplete: 'off',
       placeholder: 'Nhập lý do đóng phiên',
       'aria-label': `Lý do đóng phiên #${session.id}`,
+      oninput: () => reason.setCustomValidity(''),
     });
     const form = canClose ? h('form', {
       style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end',

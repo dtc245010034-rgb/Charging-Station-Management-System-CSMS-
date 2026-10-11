@@ -191,7 +191,7 @@ async function persistMeterValues({
          FROM connectors c
          LEFT JOIN charging_sessions cs
            ON cs.connector_id = c.id
-          AND cs.status = 'CHARGING'
+          AND cs.status IN ('CHARGING', 'ABNORMAL')
           AND ($3::integer IS NULL OR cs.id = $3)
          WHERE c.charge_point_id = $1
            AND c.connector_no = $2
@@ -204,7 +204,7 @@ async function persistMeterValues({
 
       if (sessionId) {
         const activeSession = await client.query(
-          `SELECT id FROM charging_sessions WHERE id = $1 AND status = 'CHARGING' FOR UPDATE`,
+          `SELECT id FROM charging_sessions WHERE id = $1 AND status IN ('CHARGING', 'ABNORMAL') FOR UPDATE`,
           [sessionId]
         );
         if (activeSession.rowCount === 0) sessionId = null;

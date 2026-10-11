@@ -92,6 +92,7 @@ describe('S-25 unexpected charging sessions', () => {
 
     const result = await closeUnexpectedSession({ id: 3 }, 10, 'Trụ mất liên lạc', { db, ip: '127.0.0.1' });
     const update = queries.find(({ sql }) => sql.includes('UPDATE charging_sessions'));
+    const finalMeterQuery = queries.find(({ sql }) => sql.includes('FROM meter_values'));
     const audit = queries.find(({ sql }) => sql.includes('INSERT INTO audit_logs'));
 
     assert.deepEqual(result, { id: 10, status: 'COMPLETED', meter_stop: 15250, current_kwh: 5.25 });
@@ -100,6 +101,8 @@ describe('S-25 unexpected charging sessions', () => {
     assert.match(update.sql, /remote_stop_status = CASE.*'STOPPED'/s);
     assert.match(update.sql, /manual_closed_by = \$4/);
     assert.deepEqual(update.values, [10, 15250, 'Trụ mất liên lạc', 3]);
+    assert.match(finalMeterQuery.sql, /\(phase IS NULL OR phase = ''\)/);
+    assert.doesNotMatch(finalMeterQuery.sql, /reported_at\s*=\s*sampled_at/);
     assert.ok(audit);
     assert.deepEqual(JSON.parse(audit.values[4]), {
       reason: 'Trụ mất liên lạc',

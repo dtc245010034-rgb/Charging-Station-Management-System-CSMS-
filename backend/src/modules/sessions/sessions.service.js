@@ -278,7 +278,7 @@ async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db 
        FROM meter_values
        WHERE session_id = $1
          AND measurand = 'Energy.Active.Import.Register'
-         AND reported_at = sampled_at
+         AND (phase IS NULL OR phase = '')
        ORDER BY sampled_at DESC, id DESC
        LIMIT 1`,
       [sessionId]
