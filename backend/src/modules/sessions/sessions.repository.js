@@ -234,6 +234,7 @@ const SESSION_WITH_METERS_BASE = `
       SELECT DISTINCT ON (measurand) measurand, value, unit, raw_unit, sampled_at
       FROM meter_values
       WHERE session_id = cs.id
+        AND (phase IS NULL OR phase = '')
       ORDER BY measurand, sampled_at DESC, id DESC
     ) sub
   ) mv ON true
