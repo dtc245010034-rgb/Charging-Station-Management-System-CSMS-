@@ -5,6 +5,9 @@ const { query, run, resetSchema, truncateAll } = require('../helpers/db');
 const { createUser } = require('../helpers/auth');
 const { postStation, stationBody } = require('../helpers/station');
 const { startServerProcess, stopServerProcess, stopAllServerProcesses, bootChargePoint, sendCall } = require('../helpers/server-process');
+const remoteStartService = require('../../src/modules/connectors/remote-start.service');
+const { OcppCommandError } = require('../../src/modules/ocpp/commands');
+const auditRepository = require('../../src/modules/audit/audit.repository');
 
 const CODE = 'S24-REMOTE-START-CP';
 
@@ -106,6 +109,7 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
   });
 
   it('Accepted chờ StartTransaction đúng thẻ ảo + đầu nối rồi chuyển sang STARTED', async () => {
+    await query("UPDATE connectors SET status = 'OCCUPIED', ocpp_status = 'Preparing' WHERE id = $1", [connectorIds[0]]);
     const list = await fetch(`http://127.0.0.1:${server.port}/api/driver/charge-points`, {
       headers: { Cookie: driverCookie },
     });
@@ -159,6 +163,7 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
       timestamp: new Date().toISOString(),
       reason: 'Local',
     });
+    await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id = $1", [connectorIds[0]]);
   });
 
   it('Rejected trả thông báo kiểm tra súng và không tạo phiên', async () => {
@@ -237,6 +242,95 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     // Dọn dẹp
     await query("UPDATE remote_start_requests SET deadline = CURRENT_TIMESTAMP - interval '1 second' WHERE id = $1", [firstId]);
     await getRequest(driverCookie, firstId);
+  });
+
+  it('chỉ một trong hai yêu cầu đồng thời của cùng tài xế được chấp nhận', async () => {
+    await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id IN ($1, $2)", [connectorIds[0], connectorIds[1]]);
+    responseMode = 'Accepted';
+    const beforeCalls = remoteCalls.length;
+    const responses = await Promise.all(connectorIds.map((connectorId) => postStart(driverCookie, connectorId)));
+    assert.deepEqual(responses.map((response) => response.status).sort(), [202, 409]);
+    assert.equal(remoteCalls.length, beforeCalls + 1);
+
+    const conflict = responses.find((response) => response.status === 409);
+    assert.equal((await conflict.json()).error.code, 'DRIVER_BUSY');
+    const accepted = await responses.find((response) => response.status === 202).json();
+    await query("UPDATE remote_start_requests SET deadline = CURRENT_TIMESTAMP - interval '1 second' WHERE id = $1", [accepted.request_id]);
+    await getRequest(driverCookie, accepted.request_id);
+  });
+
+  it('lỗi ngoại tuyến và gateway timeout đóng yêu cầu, ghi audit để tài xế thử lại', async () => {
+    await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id = $1", [connectorIds[0]]);
+    const beforeCalls = remoteCalls.length;
+    await assert.rejects(
+      remoteStartService.requestRemoteStart(
+        { id: driverId },
+        connectorIds[0],
+        { commandSender: { send: async () => { throw new OcppCommandError('OFFLINE', 'offline'); } }, ip: '127.0.0.1' }
+      ),
+      (error) => error.status === 409 && error.code === 'CHARGE_POINT_OFFLINE'
+    );
+    assert.equal(remoteCalls.length, beforeCalls);
+
+    let latest = await query(
+      "SELECT id, status FROM remote_start_requests WHERE driver_id = $1 ORDER BY id DESC LIMIT 1",
+      [driverId]
+    );
+    assert.equal(latest.rows[0].status, 'ERROR');
+    await assert.rejects(
+      remoteStartService.requestRemoteStart(
+        { id: driverId },
+        connectorIds[0],
+        { commandSender: { send: async () => { throw new Error('OCPP call timed out: RemoteStartTransaction'); } }, ip: '127.0.0.1' }
+      ),
+      (error) => error.status === 504 && error.code === 'OCPP_CALL_TIMEOUT'
+    );
+    latest = await query(
+      "SELECT id, status FROM remote_start_requests WHERE driver_id = $1 ORDER BY id DESC LIMIT 1",
+      [driverId]
+    );
+    assert.equal(latest.rows[0].status, 'ERROR');
+    const auditRows = await query(
+      "SELECT metadata->>'result' AS result FROM audit_logs WHERE action = 'REMOTE_START' AND entity_id = $1 ORDER BY id DESC LIMIT 2",
+      [connectorIds[0]]
+    );
+    assert.deepEqual(auditRows.rows.map((row) => row.result), ['ERROR', 'ERROR']);
+
+    const retry = await remoteStartService.requestRemoteStart(
+      { id: driverId },
+      connectorIds[0],
+      { commandSender: { send: async () => ({ status: 'Accepted' }) }, ip: '127.0.0.1' }
+    );
+    assert.equal(retry.status, 'PENDING');
+    await query("UPDATE remote_start_requests SET deadline = CURRENT_TIMESTAMP - interval '1 second' WHERE id = $1", [retry.request_id]);
+    await getRequest(driverCookie, retry.request_id);
+  });
+
+  it('lỗi ghi audit sau khi trụ chấp nhận không biến yêu cầu đang chờ thành thất bại', async () => {
+    await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id = $1", [connectorIds[0]]);
+    const recordAudit = auditRepository.record;
+    auditRepository.record = async () => { throw new Error('audit database unavailable'); };
+    try {
+      await assert.rejects(
+        remoteStartService.requestRemoteStart(
+          { id: driverId },
+          connectorIds[0],
+          { commandSender: { send: async () => ({ status: 'Accepted' }) } }
+        ),
+        /audit database unavailable/
+      );
+    } finally {
+      auditRepository.record = recordAudit;
+    }
+
+    const pending = await query(
+      "SELECT id, status FROM remote_start_requests WHERE driver_id = $1 AND status = 'PENDING'",
+      [driverId]
+    );
+    assert.equal(pending.rowCount, 1);
+    assert.equal(pending.rows[0].status, 'PENDING');
+    await query("UPDATE remote_start_requests SET deadline = CURRENT_TIMESTAMP - interval '1 second' WHERE id = $1", [pending.rows[0].id]);
+    await getRequest(driverCookie, pending.rows[0].id);
   });
 
   it('đầu nối bị bảo trì (connectors.status != AVAILABLE) bị từ chối ngay dù ocpp_status là Available', async () => {
