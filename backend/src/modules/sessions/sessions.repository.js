@@ -194,6 +194,7 @@ const SESSION_WITH_METERS_BASE = `
     cs.remote_stop_deadline,
     cs.remote_stop_requested_by,
     cs.remote_stop_completed_at,
+    cp.last_seen_at,
     cs.created_at,
     cs.updated_at,
     mv.latest_energy_value,
@@ -292,6 +293,16 @@ async function listActiveSessions(dbOrPool, { stationOwnerId = null } = {}) {
   return result.rows;
 }
 
+async function listUnexpectedSessions(dbOrPool) {
+  const client = dbOrPool || getDefaultPool();
+  const result = await client.query(
+    `${SESSION_WITH_METERS_BASE}
+     WHERE cs.status = 'ABNORMAL'
+     ORDER BY cs.updated_at DESC, cs.id DESC`
+  );
+  return result.rows;
+}
+
 module.exports = {
   findConnectorWithStation,
   findTagByTagValue,
@@ -306,4 +317,5 @@ module.exports = {
   existsSessionById,
   findSessionControlById,
   listActiveSessions,
+  listUnexpectedSessions,
 };

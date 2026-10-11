@@ -14,7 +14,7 @@ async function markExpiredRemoteStops(db, { recordAudit = null } = {}) {
            ELSE concat_ws('; ', NULLIF(review_reason, ''), CASE WHEN remote_stop_status = 'ACCEPTED' THEN 'REMOTE_STOP_TIMEOUT' ELSE 'REMOTE_STOP_RESULT_UNKNOWN' END)
          END,
          updated_at = CURRENT_TIMESTAMP
-     WHERE status = 'CHARGING'
+     WHERE status IN ('CHARGING', 'ABNORMAL')
        AND remote_stop_status IN ('SENDING', 'ACCEPTED')
        AND remote_stop_deadline <= CURRENT_TIMESTAMP
      RETURNING id, charge_point_id, driver_id, remote_stop_requested_by, remote_stop_deadline, remote_stop_status`,

@@ -24,6 +24,7 @@ describe('S-23 remote stop timeout job', () => {
     assert.match(sqlSeen, /CURRENT_TIMESTAMP/);
     assert.match(sqlSeen, /remote_stop_status IN \('SENDING', 'ACCEPTED'\)/);
     assert.match(sqlSeen, /remote_stop_deadline <= CURRENT_TIMESTAMP/);
+    assert.match(sqlSeen, /status IN \('CHARGING', 'ABNORMAL'\)/);
     assert.match(sqlSeen, /needs_review = TRUE/);
     assert.doesNotMatch(sqlSeen, /status = 'COMPLETED'/);
     assert.equal(result.rowCount, 1);

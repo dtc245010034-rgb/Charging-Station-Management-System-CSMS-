@@ -49,14 +49,17 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(parseHash('').workspace, undefined);
   });
 
-  it('nav: mục chưa có backend (enabled:false) không bao giờ hiện; phiên sạc chỉ hiện cho Operator/Admin', async () => {
+  it('nav: mục chưa có backend (enabled:false) không bao giờ hiện; phiên bất thường chỉ hiện cho Operator/Kế toán/Admin', async () => {
     const { visibleNav, WORKSPACES } = await load('app/workspace.js');
     const { can } = await load('app/permissions.js');
     const pages = (ws) => visibleNav(ws, WORKSPACES[ws].role, can).flatMap((g) => g.items.map((i) => i.page));
     assert.ok(pages('operator').includes('sessions') && !pages('operator').includes('alerts'));
+    assert.ok(pages('operator').includes('unexpected-sessions'));
     assert.ok(pages('operator').includes('stations') && pages('admin').includes('users'));
     assert.ok(pages('admin').includes('sessions'));
     assert.ok(!pages('owner').includes('sessions') && !pages('accountant').includes('sessions'));
+    assert.ok(pages('accountant').includes('unexpected-sessions'));
+    assert.ok(pages('admin').includes('unexpected-sessions'));
     assert.ok(pages('driver').includes('sessions'));
   });
 
@@ -79,6 +82,22 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(typeof pageLoader('sessions', 'admin'), 'function');
     assert.strictEqual(pageLoader('sessions', 'owner'), null);
     assert.deepStrictEqual(PAGE_NEEDS.sessions, ['sessions:read-own', 'sessions:read']);
+  });
+
+  it('S-25: trang phiên bất thường chỉ được tải cho Operator, Kế toán và Admin', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { can } = await load('app/permissions.js');
+    assert.strictEqual(typeof pageLoader('unexpected-sessions', 'operator'), 'function');
+    assert.strictEqual(typeof pageLoader('unexpected-sessions', 'accountant'), 'function');
+    assert.strictEqual(typeof pageLoader('unexpected-sessions', 'admin'), 'function');
+    assert.strictEqual(pageLoader('unexpected-sessions', 'owner'), null);
+    assert.strictEqual(PAGE_NEEDS['unexpected-sessions'], 'sessions:unexpected:read');
+    for (const role of ['OPERATOR', 'ACCOUNTANT', 'ADMIN']) {
+      assert.ok(can(role, 'sessions:unexpected:read'), `${role} can read`);
+    }
+    assert.ok(!can('ACCOUNTANT', 'sessions:unexpected:close'));
+    assert.ok(can('OPERATOR', 'sessions:unexpected:close'));
+    assert.ok(can('ADMIN', 'sessions:unexpected:close'));
   });
 
   it('S-24: trang bắt đầu sạc chỉ được tải cho tài xế có quyền RemoteStart', async () => {

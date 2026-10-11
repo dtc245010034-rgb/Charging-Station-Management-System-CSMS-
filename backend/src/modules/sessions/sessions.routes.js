@@ -12,6 +12,20 @@ router.get('/sessions', { access: access('sessions:read') }, async (req, res) =>
   res.json(await service.getActiveSessions(req.user));
 });
 
+router.get('/sessions/unexpected', { access: access('sessions:unexpected:read') }, async (req, res) => {
+  res.json(await service.getUnexpectedSessions());
+});
+
+router.post('/sessions/:id/close', { access: access('sessions:unexpected:close') }, async (req, res) => {
+  const { id } = idParam.parse(req.params);
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+  if (!reason || reason.length > 1000) {
+    throw new AppError(400, 'INVALID_MANUAL_CLOSE_REASON', 'Lý do đóng phiên phải có từ 1 đến 1000 ký tự');
+  }
+  const result = await service.closeUnexpectedSession(req.user, id, reason, { ip: req.ip });
+  res.status(200).json(result);
+});
+
 // T-47: Lấy phiên đang sạc hiện tại của tài xế đăng nhập (204 nếu không có phiên)
 router.get('/me/sessions/current', { access: access('sessions:read-own') }, async (req, res) => {
   const session = await service.getCurrentSessionForDriver(req.user);

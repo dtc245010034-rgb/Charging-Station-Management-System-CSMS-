@@ -6,8 +6,10 @@ const {
   existsSessionById,
   findSessionControlById,
   listActiveSessions,
+  listUnexpectedSessions,
 } = require('./sessions.repository');
 const { withTransaction } = require('../../db/tx');
+const { meterValueToWh } = require('./meter-values.repository');
 const connections = require('../charge-points/connection-registry');
 const { sendRemoteCommand } = require('../ocpp/commands');
 const {
@@ -68,6 +70,7 @@ function formatSession(row) {
     remote_stop_status: row.remote_stop_status || null,
     remote_stop_requested_at: row.remote_stop_requested_at ? new Date(row.remote_stop_requested_at).toISOString() : null,
     remote_stop_deadline: row.remote_stop_deadline ? new Date(row.remote_stop_deadline).toISOString() : null,
+    last_seen_at: row.last_seen_at ? new Date(row.last_seen_at).toISOString() : null,
     latest_power_w: powerToWatts(row.latest_power_value, row.latest_power_unit),
     latest_current_a: toNumberOrNull(row.latest_current_value),
     latest_soc: toNumberOrNull(row.latest_soc_value),
@@ -131,6 +134,11 @@ async function getActiveSessions(user, options = {}) {
     ? user.id
     : null;
   return (await listActiveSessions(db, { stationOwnerId })).map(formatSession);
+}
+
+async function getUnexpectedSessions(options = {}) {
+  const db = options?.query ? options : options?.db || null;
+  return (await listUnexpectedSessions(db)).map(formatSession);
 }
 
 async function writeRemoteStopAudit(actorId, sessionId, chargePointId, result, metadata = {}, ip = null) {
@@ -243,10 +251,106 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
   }
 }
 
+async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db = null } = {}) {
+  const client = db || require('../../db/pool').pool;
+  const normalizedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!normalizedReason || normalizedReason.length > 1000) {
+    throw new AppError(400, 'INVALID_MANUAL_CLOSE_REASON', 'Lý do đóng phiên phải có từ 1 đến 1000 ký tự');
+  }
+
+  const closed = await withTransaction(async (tx) => {
+    const selected = await tx.query(
+      `SELECT id, driver_id, meter_start, review_reason
+       FROM charging_sessions
+       WHERE id = $1 AND status = 'ABNORMAL'
+       FOR UPDATE`,
+      [sessionId]
+    );
+    const session = selected.rows[0];
+    if (!session) {
+      const existing = await tx.query('SELECT status FROM charging_sessions WHERE id = $1', [sessionId]);
+      if (!existing.rows[0]) throw new NotFoundError('Không tìm thấy phiên sạc');
+      throw new ConflictError('Phiên sạc không còn nằm trong danh sách bất thường');
+    }
+
+    const latest = await tx.query(
+      `SELECT value, COALESCE(raw_unit, unit) AS unit
+       FROM meter_values
+       WHERE session_id = $1
+         AND measurand = 'Energy.Active.Import.Register'
+         AND reported_at = sampled_at
+       ORDER BY sampled_at DESC, id DESC
+       LIMIT 1`,
+      [sessionId]
+    );
+    if (!latest.rows[0]) {
+      throw new AppError(409, 'FINAL_METER_READING_UNAVAILABLE', 'Không thể đóng phiên vì chưa có số đo năng lượng cuối cùng hợp lệ');
+    }
+
+    let meterStop;
+    try {
+      meterStop = meterValueToWh(latest.rows[0]);
+    } catch {
+      throw new AppError(409, 'FINAL_METER_READING_INVALID', 'Không thể đóng phiên vì số đo năng lượng cuối cùng không hợp lệ');
+    }
+    const meterStart = Number(session.meter_start);
+    if (!Number.isSafeInteger(meterStart) || !Number.isSafeInteger(meterStop) || meterStop < meterStart) {
+      throw new AppError(409, 'FINAL_METER_READING_INVALID', 'Không thể đóng phiên vì số đo năng lượng cuối cùng không hợp lệ');
+    }
+
+    const energyKwh = (meterStop - meterStart) / 1000;
+    await tx.query(
+      `UPDATE charging_sessions
+       SET meter_stop = $2,
+           stopped_at = CURRENT_TIMESTAMP,
+           stop_reason = 'Other',
+           status = 'COMPLETED',
+           remote_stop_status = CASE WHEN remote_stop_status IN ('SENDING', 'ACCEPTED', 'ERROR', 'TIMED_OUT') THEN 'STOPPED' ELSE remote_stop_status END,
+           remote_stop_completed_at = CASE WHEN remote_stop_status IN ('SENDING', 'ACCEPTED', 'ERROR', 'TIMED_OUT') THEN CURRENT_TIMESTAMP ELSE remote_stop_completed_at END,
+           needs_review = FALSE,
+           review_reason = NULL,
+           manual_close_reason = $3,
+           manual_closed_by = $4,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND status = 'ABNORMAL'`,
+      [sessionId, meterStop, normalizedReason, actor.id]
+    );
+    await require('../audit/audit.repository').record(
+      actor.id,
+      'SESSION_MANUALLY_CLOSED',
+      'charging_session',
+      sessionId,
+      {
+        reason: normalizedReason,
+        meter_start_wh: meterStart,
+        meter_stop_wh: meterStop,
+        energy_kwh: energyKwh,
+        previous_review_reason: session.review_reason || null,
+      },
+      ip,
+      tx
+    );
+
+    return { id: session.id, driverId: session.driver_id, meterStop, energyKwh };
+  }, client);
+
+  void require('./sessions.events')
+    .publishSessionUpdateFromDb(closed.id, { pool: client, driverId: closed.driverId });
+
+  return {
+    id: Number(closed.id),
+    status: 'COMPLETED',
+    meter_stop: closed.meterStop,
+    current_kwh: closed.energyKwh,
+  };
+}
+
 module.exports = {
   getCurrentSessionForDriver,
   getSessionById,
   getActiveSessions,
+  getUnexpectedSessions,
+  closeUnexpectedSession,
   requestRemoteStop,
   formatSession,
 };
