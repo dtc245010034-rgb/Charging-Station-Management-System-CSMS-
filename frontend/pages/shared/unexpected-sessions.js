@@ -49,6 +49,11 @@ export function render(ctx) {
     const energyReading = readings.find((reading) => reading.measurand === ENERGY_MEASURAND);
     const busy = inFlight.has(session.id);
     const canClose = ctx.can('sessions:unexpected:close');
+    const submitBtn = h('button', {
+      class: 'btn btn--danger',
+      type: 'submit',
+      disabled: busy,
+    }, busy ? 'Đang lưu…' : 'Đóng phiên');
     const reason = h('input', {
       class: 'input',
       type: 'text',
@@ -71,6 +76,8 @@ export function render(ctx) {
           return;
         }
         reason.setCustomValidity('');
+        submitBtn.disabled = true;
+        mount(submitBtn, 'Đang lưu…');
         await closeSession(session, value);
       },
     },
@@ -78,11 +85,7 @@ export function render(ctx) {
       h('span', { class: 'muted' }, 'Lý do đóng'),
       reason
     ),
-    h('button', {
-      class: 'btn btn--danger',
-      type: 'submit',
-      disabled: busy,
-    }, busy ? 'Đang lưu…' : 'Đóng phiên')) : null;
+    submitBtn) : null;
 
     return h('article', { class: 'card', style: 'padding:16px;display:grid;gap:12px' },
       h('div', { style: 'display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap' },
@@ -109,8 +112,6 @@ export function render(ctx) {
   async function closeSession(session, reason) {
     if (!ctx.can('sessions:unexpected:close') || inFlight.has(session.id)) return;
     inFlight.add(session.id);
-    signature = '';
-    await refresh();
     try {
       const result = await api(`/api/sessions/${session.id}/close`, { method: 'POST', body: { reason } });
       showNotice(`Đã đóng phiên #${session.id}; số điện năng chốt ${formatNumber(result.current_kwh)} kWh.`);
