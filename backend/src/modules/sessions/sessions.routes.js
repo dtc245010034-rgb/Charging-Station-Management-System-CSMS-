@@ -22,7 +22,8 @@ router.post('/sessions/:id/close', { access: access('sessions:unexpected:close')
   if (!reason || reason.length > 1000) {
     throw new AppError(400, 'INVALID_MANUAL_CLOSE_REASON', 'Lý do đóng phiên phải có từ 1 đến 1000 ký tự');
   }
-  const result = await service.closeUnexpectedSession(req.user, id, reason, { ip: req.ip });
+  const allowZeroEnergy = Boolean(req.body?.allow_zero_energy || req.body?.allowZeroEnergy);
+  const result = await service.closeUnexpectedSession(req.user, id, reason, { ip: req.ip, allowZeroEnergy });
   res.status(200).json(result);
 });
 
