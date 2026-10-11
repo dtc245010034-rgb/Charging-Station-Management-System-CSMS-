@@ -314,8 +314,9 @@ describe('MeterValues handler (T-41)', () => {
       ],
     }, { connection: { chargePointCode: 'CP-TEST', chargePoint: { id: 8 } } });
 
-    const sessionLock = calls.find((call) => call.sql.includes("status = 'CHARGING' FOR UPDATE"));
+    const sessionLock = calls.find((call) => call.sql.includes('SELECT id FROM charging_sessions WHERE id = $1'));
     assert.ok(sessionLock, 'session row must be locked before reading its latest values');
+    assert.match(sessionLock.sql, /status IN \('CHARGING', 'ABNORMAL'\) FOR UPDATE/);
     const insert = calls.find((call) => call.sql.includes('INSERT INTO meter_values'));
     assert.equal((insert.sql.match(/\(\$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+, \$\d+\)/g) || []).length, 1);
     assert.equal(insert.params[4], '999');

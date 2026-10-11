@@ -13,6 +13,7 @@ export const PAGE_NEEDS = {
   map: 'stations:read',
   users: 'users:create',
   sessions: ['sessions:read-own', 'sessions:read'],
+  'unexpected-sessions': 'sessions:unexpected:read',
   start: 'remote-start:create',
 };
 
@@ -34,6 +35,11 @@ const PAGES = {
     driver: () => import('../pages/driver/session.js'),
     operator: () => import('../pages/shared/sessions.js'),
     admin: () => import('../pages/shared/sessions.js'),
+  },
+  'unexpected-sessions': {
+    operator: () => import('../pages/shared/unexpected-sessions.js'),
+    accountant: () => import('../pages/shared/unexpected-sessions.js'),
+    admin: () => import('../pages/shared/unexpected-sessions.js'),
   },
   stations: () => import('../pages/shared/stations.js'),
   'charge-points': () => import('../pages/shared/charge-points.js'),

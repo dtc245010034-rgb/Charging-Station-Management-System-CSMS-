@@ -5,6 +5,7 @@ const { query, resetSchema, truncateAll, run: runScript } = require('../helpers/
 const { createUser } = require('../helpers/auth');
 const { stationBody, postStation } = require('../helpers/station');
 const { startServerProcess, stopServerProcess, stopAllServerProcesses, sendCall, bootChargePoint } = require('../helpers/server-process');
+const { closeUnexpectedSession } = require('../../src/modules/sessions/sessions.service');
 
 const CODE = 'MV-TEST-CP-01';
 
@@ -14,6 +15,7 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
   let chargePointId;
   let connectorId;
   let transactionId;
+  let operator;
 
   before(async () => {
     await resetSchema();
@@ -21,6 +23,7 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
     await truncateAll();
 
     const owner = await createUser('owner-mv@test.invalid', 'STATION_OWNER');
+    operator = await createUser('operator-mv@test.invalid', 'OPERATOR');
     const stationId = (await postStation(owner, stationBody({ name: 'Station Meter Values' }))).body.id;
     await query("UPDATE stations SET status = 'ACTIVE' WHERE id = $1", [stationId]);
 
@@ -561,5 +564,82 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
     });
     assert.equal(errEmpty[0], 4);
     assert.equal(errEmpty[2], 'PropertyConstraintViolation');
+  });
+
+  it('chấp nhận MeterValues cho phiên ABNORMAL rồi đóng bằng số đo năng lượng toàn pha bất kể reported_at', async () => {
+    await query(
+      `UPDATE charging_sessions
+       SET status = 'ABNORMAL', needs_review = TRUE, review_reason = 'CHARGE_POINT_OFFLINE_TIMEOUT'
+       WHERE id = $1`,
+      [transactionId]
+    );
+    const sampledAt = new Date().toISOString();
+    const response = await sendCall(client, 'mv-abnormal-late', 'MeterValues', {
+      connectorId: 1,
+      transactionId,
+      meterValue: [{
+        timestamp: sampledAt,
+        sampledValue: [
+          { value: '2500', measurand: 'Energy.Active.Import.Register', unit: 'Wh', context: 'S-25.ManualClose' },
+          { value: '9000', measurand: 'Energy.Active.Import.Register', unit: 'Wh', phase: 'L1', context: 'S-25.ManualClose' },
+        ],
+      }],
+    });
+
+    assert.deepEqual(response, [3, 'mv-abnormal-late', {}]);
+    const readings = (await query(
+      `SELECT value, phase
+       FROM meter_values
+       WHERE session_id = $1 AND source_message_id = 'mv-abnormal-late'
+         AND context = 'S-25.ManualClose'
+       ORDER BY id`,
+      [transactionId]
+    )).rows;
+    assert.deepEqual(readings, [
+      { value: '2500', phase: '' },
+      { value: '9000', phase: 'L1' },
+    ]);
+
+    await query(
+      `UPDATE meter_values
+       SET reported_at = sampled_at - interval '1 second'
+       WHERE session_id = $1 AND source_message_id = 'mv-abnormal-late'
+         AND context = 'S-25.ManualClose'`,
+      [transactionId]
+    );
+    const timestampedReadings = (await query(
+      `SELECT value, phase, reported_at <> sampled_at AS timestamps_differ
+       FROM meter_values
+       WHERE session_id = $1 AND source_message_id = 'mv-abnormal-late' AND context = 'S-25.ManualClose'
+       ORDER BY id`,
+      [transactionId]
+    )).rows;
+    assert.deepEqual(timestampedReadings, [
+      { value: '2500', phase: '', timestamps_differ: true },
+      { value: '9000', phase: 'L1', timestamps_differ: true },
+    ]);
+
+    const closed = await closeUnexpectedSession(operator, transactionId, 'Đã đối soát số đo', {
+      ip: '127.0.0.1',
+    });
+    assert.deepEqual(closed, {
+      id: transactionId,
+      status: 'COMPLETED',
+      meter_stop: 2500,
+      current_kwh: 1.5,
+    });
+
+    const session = (await query(
+      'SELECT status, meter_stop FROM charging_sessions WHERE id = $1',
+      [transactionId]
+    )).rows[0];
+    assert.deepEqual(session, { status: 'COMPLETED', meter_stop: '2500' });
+    const audit = (await query(
+      `SELECT action, metadata->>'meter_stop_wh' AS meter_stop_wh
+       FROM audit_logs
+       WHERE entity = 'charging_session' AND entity_id = $1 AND action = 'SESSION_MANUALLY_CLOSED'`,
+      [transactionId]
+    )).rows[0];
+    assert.deepEqual(audit, { action: 'SESSION_MANUALLY_CLOSED', meter_stop_wh: '2500' });
   });
 });
