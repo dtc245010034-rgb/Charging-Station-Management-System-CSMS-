@@ -291,10 +291,13 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     );
     assert.equal(latest.rows[0].status, 'ERROR');
     const auditRows = await query(
-      "SELECT metadata->>'result' AS result FROM audit_logs WHERE action = 'REMOTE_START' AND entity_id = $1 ORDER BY id DESC LIMIT 2",
+      "SELECT result, metadata->>'result' AS metadata_result FROM audit_logs WHERE action = 'REMOTE_START' AND entity_id = $1 ORDER BY id DESC LIMIT 2",
       [connectorIds[0]]
     );
-    assert.deepEqual(auditRows.rows.map((row) => row.result), ['ERROR', 'ERROR']);
+    assert.deepEqual(auditRows.rows, [
+      { result: 'ERROR', metadata_result: 'ERROR' },
+      { result: 'ERROR', metadata_result: 'ERROR' },
+    ]);
 
     const retry = await remoteStartService.requestRemoteStart(
       { id: driverId },
@@ -349,11 +352,12 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     const { request_id: reqId } = await response.json();
 
     const auditRow = await query(
-      "SELECT action, entity, entity_id, metadata FROM audit_logs WHERE action = 'REMOTE_START' AND entity_id = $1 ORDER BY id DESC LIMIT 1",
+      "SELECT action, entity, entity_id, result, metadata FROM audit_logs WHERE action = 'REMOTE_START' AND entity_id = $1 ORDER BY id DESC LIMIT 1",
       [connectorIds[0]]
     );
     assert.equal(auditRow.rowCount, 1);
     assert.equal(auditRow.rows[0].action, 'REMOTE_START');
+    assert.equal(auditRow.rows[0].result, 'ACCEPTED');
     assert.equal(auditRow.rows[0].metadata.result, 'ACCEPTED');
 
     await query("UPDATE remote_start_requests SET deadline = CURRENT_TIMESTAMP - interval '1 second' WHERE id = $1", [reqId]);

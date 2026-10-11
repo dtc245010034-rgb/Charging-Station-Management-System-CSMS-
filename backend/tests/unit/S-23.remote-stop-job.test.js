@@ -31,6 +31,28 @@ describe('S-23 remote stop timeout job', () => {
     assert.deepEqual(auditArgs.slice(0, 4), ['9', 'REMOTE_STOP', 'charging_session', 15]);
     assert.equal(auditArgs[4].result, 'TIMED_OUT');
     assert.equal(auditArgs[4].deadline, deadline.toISOString());
+    assert.equal(auditArgs[7], 'TIMED_OUT');
+  });
+
+  it('logs an explicit error when recording the timeout audit fails', async () => {
+    const errors = [];
+    await markExpiredRemoteStops({
+      query: async () => ({
+        rowCount: 1,
+        rows: [{
+          id: 15,
+          driver_id: null,
+          remote_stop_requested_by: '9',
+          remote_stop_deadline: null,
+          remote_stop_status: 'ERROR',
+        }],
+      }),
+    }, {
+      recordAudit: async () => { throw new Error('audit unavailable'); },
+      logError: (message) => errors.push(message),
+    });
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /session 15: audit unavailable/);
   });
 
   it('starts immediately, prevents overlapping scans, and returns a stop handle', async () => {

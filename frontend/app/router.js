@@ -43,7 +43,6 @@ const PAGES = {
     admin: () => import('../pages/shared/unexpected-sessions.js'),
   },
   'control-log': {
-    operator: () => import('../pages/shared/audit-logs.js'),
     admin: () => import('../pages/shared/audit-logs.js'),
   },
   stations: () => import('../pages/shared/stations.js'),

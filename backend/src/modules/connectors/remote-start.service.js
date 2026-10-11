@@ -215,7 +215,7 @@ async function requestRemoteStart(driver, connectorId, { commandSender, db = poo
       charge_point_code: claim.connector.charge_point_code,
       result: status,
       error_code: error.code || null,
-    }, ip);
+    }, ip, db, status);
     throw error;
   }
 
@@ -224,7 +224,7 @@ async function requestRemoteStart(driver, connectorId, { commandSender, db = poo
     charge_point_id: Number(claim.connector.charge_point_id),
     charge_point_code: claim.connector.charge_point_code,
     result: 'ACCEPTED',
-  }, ip);
+  }, ip, db, 'ACCEPTED');
 
   const latest = await getRemoteStartRequest(driver.id, claim.request.id, db);
   return {

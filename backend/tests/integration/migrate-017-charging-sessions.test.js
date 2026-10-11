@@ -6,7 +6,7 @@ const tableSessions = async () => (await query("SELECT to_regclass('public.charg
 const tableMeterValues = async () => (await query("SELECT to_regclass('public.meter_values') AS t")).rows[0].t;
 const tableOrphanMessages = async () => (await query("SELECT to_regclass('public.orphan_messages') AS t")).rows[0].t;
 
-describe('migrations 017-029: charging sessions, remote commands, and append-only audit logs', () => {
+describe('migrations 017-030: charging sessions, remote commands, and append-only audit logs', () => {
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
@@ -23,6 +23,9 @@ describe('migrations 017-029: charging sessions, remote commands, and append-onl
     assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'audit_logs' AND column_name = 'result'")).rowCount, 1);
     assert.equal((await query("SELECT tgname FROM pg_trigger WHERE tgname = 'audit_logs_no_truncate' AND NOT tgisinternal")).rowCount, 1);
     assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname IN ('audit_logs_created_at_idx', 'audit_logs_entity_entity_id_idx', 'audit_logs_user_id_idx')")).rowCount, 3);
+    assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname IN ('charge_points_code_trgm_idx', 'users_name_trgm_idx', 'users_email_trgm_idx')")).rowCount, 3);
+    const orderedAuditIndex = await query("SELECT indexdef FROM pg_indexes WHERE indexname = 'audit_logs_created_at_idx'");
+    assert.match(orderedAuditIndex.rows[0].indexdef, /\(created_at DESC, id DESC\)/);
     assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname = 'remote_start_one_pending_per_connector'")).rowCount, 1);
     assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname = 'remote_start_one_pending_per_driver'")).rowCount, 1);
 
@@ -89,6 +92,11 @@ describe('migrations 017-029: charging sessions, remote commands, and append-onl
 
   it('down: rollback lần lượt 029 tới 017 và up lại sạch sẽ', async () => {
     const rollbackChecks = [
+      { version: '030_audit_logs_query_indexes', check: async () => {
+        assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname IN ('charge_points_code_trgm_idx', 'users_name_trgm_idx', 'users_email_trgm_idx')")).rowCount, 0);
+        const createdAtIndex = await query("SELECT indexdef FROM pg_indexes WHERE indexname = 'audit_logs_created_at_idx'");
+        assert.match(createdAtIndex.rows[0].indexdef, /\(created_at\)/);
+      } },
       { version: '029_audit_logs_append_only', check: async () => {
         assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'audit_logs' AND column_name = 'result'")).rowCount, 0);
         assert.equal((await query("SELECT tgname FROM pg_trigger WHERE tgname = 'audit_logs_append_only' AND NOT tgisinternal")).rowCount, 0);

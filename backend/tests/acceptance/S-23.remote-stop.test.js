@@ -198,6 +198,11 @@ describe('S-23 RemoteStopTransaction acceptance', { concurrency: false }, () => 
     });
     assert.equal(row.status, 'CHARGING');
     assert.equal(row.needs_review, true);
+    const stopAudits = await query(
+      "SELECT result FROM audit_logs WHERE action = 'REMOTE_STOP' AND entity_id = $1 ORDER BY id",
+      [sessionId]
+    );
+    assert.deepEqual(stopAudits.rows.map((audit) => audit.result), ['ACCEPTED', 'TIMED_OUT']);
     await finishSession(sessionId, 16000, 'Other');
     const ended = await query('SELECT status, stop_reason, needs_review, review_reason FROM charging_sessions WHERE id = $1', [sessionId]);
     assert.deepEqual(ended.rows[0], { status: 'COMPLETED', stop_reason: 'Other', needs_review: false, review_reason: null });

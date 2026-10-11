@@ -15,7 +15,6 @@ export const WORKSPACES = {
           { page: 'alerts', label: 'Cảnh báo', icon: 'alert', enabled: false, since: 'S-46' },
           { page: 'remote', label: 'Điều khiển từ xa', icon: 'sliders', enabled: false, since: 'S-16' },
           { page: 'ocpp', label: 'OCPP', icon: 'radio', enabled: false, since: 'S-06' },
-          { page: 'control-log', label: 'Nhật ký điều khiển', icon: 'log', enabled: true, needs: 'audit-logs:read' },
         ],
       },
       {

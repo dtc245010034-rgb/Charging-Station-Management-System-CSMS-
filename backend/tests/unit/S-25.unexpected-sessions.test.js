@@ -101,6 +101,7 @@ describe('S-25 unexpected charging sessions', () => {
     assert.match(update.sql, /remote_stop_status = CASE.*'STOPPED'/s);
     assert.match(update.sql, /manual_closed_by = \$4/);
     assert.deepEqual(update.values, [10, 15250, 'Trụ mất liên lạc', 3]);
+    assert.match(update.sql, /manual_close_reason = \$3/);
     assert.match(finalMeterQuery.sql, /\(phase IS NULL OR phase = ''\)/);
     assert.doesNotMatch(finalMeterQuery.sql, /reported_at\s*=\s*sampled_at/);
     assert.ok(audit);
