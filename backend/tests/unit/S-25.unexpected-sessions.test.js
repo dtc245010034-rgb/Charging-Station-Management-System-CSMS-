@@ -1,5 +1,9 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
+process.env.CSMS_SKIP_DOTENV = '1';
+process.env.DATABASE_URL ||= 'postgresql://localhost/csms_test';
+process.env.JWT_SECRET ||= 'x'.repeat(40);
+process.env.APP_ORIGIN ||= 'http://localhost:3000';
 const {
   markAbnormalSessions,
   startAbnormalSessionJob,
