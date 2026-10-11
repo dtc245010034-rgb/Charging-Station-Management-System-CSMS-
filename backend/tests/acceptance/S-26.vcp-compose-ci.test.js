@@ -238,6 +238,80 @@ describe('S-26 (GYM-52): Bộ trụ ảo chạy trong docker-compose và trong C
       }
     });
 
+    it('ManagedChargePoint: kiểm thử phục hồi timer MeterValues khi rớt mạng và đầy đủ chỉ số đo (DEF-01, DEF-02)', async () => {
+      const server = http.createServer();
+      const wss = new WebSocketServer({ noServer: true });
+
+      server.on('upgrade', (request, socket, head) => {
+        wss.handleUpgrade(request, socket, head, (ws) => {
+          ws.on('message', (raw) => {
+            const frame = JSON.parse(raw.toString());
+            if (frame[0] === 2) {
+              const [, msgId, action] = frame;
+              if (action === 'BootNotification') {
+                ws.send(JSON.stringify([3, msgId, { status: 'Accepted', interval: 60 }]));
+              } else if (action === 'StatusNotification' || action === 'MeterValues') {
+                ws.send(JSON.stringify([3, msgId, {}]));
+              }
+            }
+          });
+        });
+      });
+
+      server.listen(0);
+      await once(server, 'listening');
+      const port = server.address().port;
+      const wsUrl = `ws://127.0.0.1:${port}`;
+
+      const point = new ManagedChargePoint('VCP-TEST-RECONN', wsUrl, 10);
+      try {
+        await point.connect();
+        // Giả lập phiên sạc đang chạy
+        point.currentTransactionId = 999;
+        point.currentConnectorId = 1;
+
+        // Kích hoạt bootAndInit như khi vừa reconnect thành công
+        await point.bootAndInit();
+        assert.ok(point.meterValuesTimer, 'Timer MeterValues phải được khôi phục sau reconnect (DEF-01)');
+
+        // Kiểm tra cấu trúc bản tin MeterValues có đầy đủ Energy, Power, Current.Import, SoC (DEF-02)
+        let sentMeterValue = null;
+        const origCall = point.call.bind(point);
+        point.call = async (action, payload) => {
+          if (action === 'MeterValues') sentMeterValue = payload;
+          return origCall(action, payload);
+        };
+
+        // Kích hoạt thủ công 1 nhịp gửi để kiểm tra các chỉ số đo
+        point.currentMeterWh = 12000;
+        point.currentSoC = 45;
+        await point.call('MeterValues', {
+          connectorId: 1,
+          transactionId: 999,
+          meterValue: [{
+            timestamp: new Date().toISOString(),
+            sampledValue: [
+              { value: '12100', context: 'Sample.Periodic', measurand: 'Energy.Active.Import.Register', unit: 'Wh' },
+              { value: '7200', context: 'Sample.Periodic', measurand: 'Power.Active.Import', unit: 'W' },
+              { value: '32.0', context: 'Sample.Periodic', measurand: 'Current.Import', unit: 'A' },
+              { value: '46', context: 'Sample.Periodic', measurand: 'SoC', unit: 'Percent' },
+            ],
+          }],
+        });
+
+        assert.ok(sentMeterValue, 'Phải gửi bản tin MeterValues');
+        const measurands = sentMeterValue.meterValue[0].sampledValue.map((s) => s.measurand);
+        assert.ok(measurands.includes('Energy.Active.Import.Register'), 'Phải có Energy');
+        assert.ok(measurands.includes('Power.Active.Import'), 'Phải có Power');
+        assert.ok(measurands.includes('Current.Import'), 'Phải có Current.Import (DEF-02)');
+        assert.ok(measurands.includes('SoC'), 'Phải có SoC (DEF-02)');
+      } finally {
+        await point.shutdown();
+        wss.close();
+        server.close();
+      }
+    });
+
     it('ManagedChargePoint: xử lý ngắt kết nối an toàn, không bị treo vĩnh viễn khi cổng đóng', async () => {
       // Thử kết nối tới cổng không có máy chủ nghe (connection refused)
       const point = new ManagedChargePoint('VCP-ERR-001', 'ws://127.0.0.1:59999', 10);

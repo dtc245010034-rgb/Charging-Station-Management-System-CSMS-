@@ -58,6 +58,9 @@ services:
       OCPP_LOCK_TIMEOUT_SECONDS: ${OCPP_LOCK_TIMEOUT_SECONDS:-5}
       DB_QUERY_TIMEOUT_SECONDS: ${DB_QUERY_TIMEOUT_SECONDS:-30}
       SSE_MAX_CONNECTIONS_PER_USER: ${SSE_MAX_CONNECTIONS_PER_USER:-5}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@csms.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminPassword12345}
+    command: ["sh", "-c", "node src/db/migrate.js && node scripts/create-admin.js && npm start"]
     ports:
       - "${BIND_HOST:-127.0.0.1}:${APP_PORT:-3000}:3000"
     depends_on:

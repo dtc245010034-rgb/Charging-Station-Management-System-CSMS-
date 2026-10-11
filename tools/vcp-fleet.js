@@ -280,6 +280,11 @@ class ManagedChargePoint {
           errorCode: 'NoError',
           timestamp: new Date().toISOString(),
         });
+
+        // Khắc phục DEF-01 (Vòng 3): Tái kích hoạt bộ đếm MeterValues nếu đang có phiên sạc dở dang khi kết nối lại
+        if (this.currentTransactionId) {
+          this.startMeterValuesReporting(connId, this.currentTransactionId);
+        }
       }
     } catch {
       // Lỗi trong boot, socket sẽ tự đóng và thử lại
@@ -296,12 +301,13 @@ class ManagedChargePoint {
     this.heartbeatTimer.unref?.();
   }
 
-  // Khắc phục LỖI 3 (Vòng 2): Phát định kỳ MeterValues trong suốt phiên sạc theo Sprint 3 Goal
+  // Khắc phục LỖI 3 (Vòng 2) & DEF-02 (Vòng 3): Bổ sung Current.Import và SoC vào bản tin MeterValues định kỳ
   startMeterValuesReporting(connectorId, transactionId) {
     clearInterval(this.meterValuesTimer);
     this.meterValuesTimer = setInterval(async () => {
       if (this.socket && this.socket.readyState === WebSocket.OPEN && this.currentTransactionId === transactionId) {
         this.currentMeterWh += 100; // Tích lũy 100 Wh mỗi kỳ báo cáo
+        this.currentSoC = Math.min(100, (this.currentSoC || 20) + 1); // Tăng tiến mức pin %
         await this.call('MeterValues', {
           connectorId,
           transactionId,
@@ -319,6 +325,18 @@ class ManagedChargePoint {
                 context: 'Sample.Periodic',
                 measurand: 'Power.Active.Import',
                 unit: 'W',
+              },
+              {
+                value: '32.0',
+                context: 'Sample.Periodic',
+                measurand: 'Current.Import',
+                unit: 'A',
+              },
+              {
+                value: String(this.currentSoC),
+                context: 'Sample.Periodic',
+                measurand: 'SoC',
+                unit: 'Percent',
               },
             ],
           }],
@@ -375,6 +393,7 @@ class ManagedChargePoint {
         const { idTag, connectorId = 1 } = payload;
         this.currentConnectorId = connectorId;
         this.currentIdTag = idTag || 'TAG-DEMO-01';
+        this.currentSoC = 20;
 
         this.socket.send(JSON.stringify([3, messageId, { status: 'Accepted' }]));
         setTimeout(async () => {
