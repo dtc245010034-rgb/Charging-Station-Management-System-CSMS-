@@ -15,18 +15,22 @@ async function markAbnormalSessions(db, abnormalAfterSeconds = DEFAULT_SESSION_A
     `UPDATE charging_sessions cs
      SET status = 'ABNORMAL',
          needs_review = TRUE,
-         review_reason = CASE
-           WHEN cp.last_seen_at IS NOT NULL
-             AND cp.last_seen_at <= CURRENT_TIMESTAMP - make_interval(secs => $1::int)
-             AND position('CHARGE_POINT_OFFLINE_TIMEOUT' IN COALESCE(cs.review_reason, '')) = 0
-             THEN concat_ws('; ', NULLIF(cs.review_reason, ''), 'CHARGE_POINT_OFFLINE_TIMEOUT')
-           WHEN cs.remote_stop_status IN ('SENDING', 'ACCEPTED', 'ERROR', 'TIMED_OUT')
-             AND cs.remote_stop_requested_at IS NOT NULL
-             AND cs.remote_stop_requested_at <= CURRENT_TIMESTAMP - make_interval(secs => $2::int)
-             AND position('STOP_TRANSACTION_TIMEOUT' IN COALESCE(cs.review_reason, '')) = 0
-             THEN concat_ws('; ', NULLIF(cs.review_reason, ''), 'STOP_TRANSACTION_TIMEOUT')
-           ELSE cs.review_reason
-         END,
+         review_reason = concat_ws('; ',
+           NULLIF(cs.review_reason, ''),
+           CASE
+             WHEN cp.last_seen_at IS NOT NULL
+               AND cp.last_seen_at <= CURRENT_TIMESTAMP - make_interval(secs => $1::int)
+               AND position('CHARGE_POINT_OFFLINE_TIMEOUT' IN COALESCE(cs.review_reason, '')) = 0
+               THEN 'CHARGE_POINT_OFFLINE_TIMEOUT'
+           END,
+           CASE
+             WHEN cs.remote_stop_status IN ('SENDING', 'ACCEPTED', 'ERROR', 'TIMED_OUT')
+               AND cs.remote_stop_requested_at IS NOT NULL
+               AND cs.remote_stop_requested_at <= CURRENT_TIMESTAMP - make_interval(secs => $2::int)
+               AND position('STOP_TRANSACTION_TIMEOUT' IN COALESCE(cs.review_reason, '')) = 0
+               THEN 'STOP_TRANSACTION_TIMEOUT'
+           END
+         ),
          updated_at = CURRENT_TIMESTAMP
      FROM charge_points cp
      WHERE cp.id = cs.charge_point_id
