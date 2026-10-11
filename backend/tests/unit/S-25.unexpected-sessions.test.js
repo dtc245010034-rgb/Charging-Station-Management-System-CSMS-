@@ -137,4 +137,31 @@ describe('S-25 unexpected charging sessions', () => {
     assert.ok(queries.includes('ROLLBACK'));
     assert.ok(!queries.some((sql) => sql.includes('UPDATE charging_sessions')));
   });
+
+  it('closes a deadlocked session with zero energy when allowZeroEnergy option is passed', async () => {
+    const queries = [];
+    const client = {
+      async query(sql, values = []) {
+        queries.push({ sql, values });
+        if (sql.includes('SELECT id, driver_id, meter_start, review_reason')) {
+          return { rows: [{ id: 10, driver_id: 21, meter_start: '10000', review_reason: 'CHARGE_POINT_OFFLINE_TIMEOUT' }] };
+        }
+        if (sql.includes('FROM meter_values')) return { rows: [] };
+        return { rows: [], rowCount: 1 };
+      },
+      release() {},
+    };
+    const db = { connect: async () => client };
+
+    const result = await closeUnexpectedSession({ id: 3 }, 10, 'Trụ sập nguồn ngay khi bắt đầu', {
+      db,
+      ip: '127.0.0.1',
+      allowZeroEnergy: true,
+    });
+    assert.deepEqual(result, { id: 10, status: 'COMPLETED', meter_stop: 10000, current_kwh: 0 });
+    const update = queries.find(({ sql }) => sql.includes('UPDATE charging_sessions'));
+    assert.ok(update);
+    assert.equal(update.values[1], 10000);
+    assert.ok(queries.some(({ sql }) => sql === 'COMMIT'));
+  });
 });
