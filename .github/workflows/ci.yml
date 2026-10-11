@@ -157,7 +157,7 @@ jobs:
           node backend/scripts/create-admin.js
           node -e "
             const { pool } = require('./backend/src/db/pool');
-            pool.query(\"INSERT INTO id_tags (tag, status) VALUES ('TAG-DEMO-01', 'ACTIVE') ON CONFLICT (tag) DO NOTHING\")
+            pool.query(\"INSERT INTO id_tags (tag, status) VALUES ('TAG-DEMO-01', 'ACTIVE') ON CONFLICT ((UPPER(tag))) DO NOTHING\")
               .then(() => pool.end());
           "
 
