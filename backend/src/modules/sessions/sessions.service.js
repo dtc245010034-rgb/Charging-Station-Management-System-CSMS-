@@ -325,6 +325,7 @@ async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db 
         meter_start_wh: meterStart,
         meter_stop_wh: meterStop,
         energy_kwh: energyKwh,
+        reason: normalizedReason,
         previous_review_reason: session.review_reason || null,
       },
       'COMPLETED',

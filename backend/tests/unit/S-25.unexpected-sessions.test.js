@@ -108,6 +108,7 @@ describe('S-25 unexpected charging sessions', () => {
       meter_start_wh: 10000,
       meter_stop_wh: 15250,
       energy_kwh: 5.25,
+      reason: 'Trụ mất liên lạc',
       previous_review_reason: 'CHARGE_POINT_OFFLINE_TIMEOUT',
     });
     assert.equal(audit.values[5], 'COMPLETED');

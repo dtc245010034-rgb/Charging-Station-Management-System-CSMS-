@@ -1,10 +1,20 @@
 const { secureRouter } = require('../../security/routeGuard');
 const { access } = require('../../security/permissions');
-const { BadRequestError } = require('../../lib/errors');
+const { AppError, BadRequestError } = require('../../lib/errors');
 const audit = require('./audit.repository');
 
 const router = secureRouter();
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const ALLOWED_METHODS = 'GET, HEAD, OPTIONS';
+
+function methodNotAllowed(_req, res) {
+  res.set('Allow', ALLOWED_METHODS);
+  throw new AppError(
+    405,
+    'METHOD_NOT_ALLOWED',
+    'Phương thức này không được hỗ trợ cho nhật ký kiểm toán'
+  );
+}
 
 function queryText(value, label, maxLength) {
   if (value === undefined) return null;
@@ -40,5 +50,11 @@ router.get('/audit-logs', { access: access('audit-logs:read') }, async (req, res
 
   res.json(await audit.list({ chargePoint, user, from, to, page }));
 });
+
+for (const method of ['put', 'patch', 'delete']) {
+  for (const path of ['/audit-logs', '/audit-logs/:id']) {
+    router[method](path, { access: access('audit-logs:read') }, methodNotAllowed);
+  }
+}
 
 module.exports = router;

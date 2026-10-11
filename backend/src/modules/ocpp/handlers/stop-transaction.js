@@ -53,6 +53,7 @@ function createStopTransactionHandler({
   logWarning = console.warn,
   logError = console.error,
   persistTransactionData = null,
+  recordAudit = null,
 } = {}) {
   const handleMeterValues = createMeterValuesHandler({ pool, now, logWarning, logError });
   const saveTransactionData = persistTransactionData || handleMeterValues;
@@ -159,6 +160,20 @@ function createStopTransactionHandler({
       );
 
       if (updated.rowCount > 0) {
+        const requesterId = updated.rows[0]?.remote_stop_requested_by;
+        if (requesterId !== null && requesterId !== undefined) {
+          const writeAudit = recordAudit || require('../../audit/audit.repository').ghi_nhat_ky;
+          await writeAudit(
+            requesterId,
+            'REMOTE_STOP',
+            'charging_session',
+            payload.transactionId,
+            { reason: stopReason, meter_stop: payload.meterStop, stopped_at: stoppedAt },
+            'STOPPED',
+            null,
+            db
+          );
+        }
         publishSessionUpdateFromDb(payload.transactionId, {
           pool: db,
           driverId: updated.rows[0]?.driver_id ?? null,

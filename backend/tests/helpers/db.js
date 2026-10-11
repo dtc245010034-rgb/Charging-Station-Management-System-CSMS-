@@ -27,8 +27,24 @@ async function resetSchema() {
   await query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
 }
 
-async function truncateAll() {
-  await query('TRUNCATE audit_logs, login_throttle, connectors, charge_points, stations, user_roles, users RESTART IDENTITY CASCADE');
+async function truncateAuditLogs() {
+  await query(`
+    BEGIN;
+    ALTER TABLE audit_logs DISABLE TRIGGER audit_logs_no_truncate;
+    TRUNCATE audit_logs RESTART IDENTITY;
+    ALTER TABLE audit_logs ENABLE TRIGGER audit_logs_no_truncate;
+    COMMIT;
+  `);
 }
 
-module.exports = { BASE, env, run, query, resetSchema, truncateAll };
+async function truncateAll() {
+  await query(`
+    BEGIN;
+    ALTER TABLE audit_logs DISABLE TRIGGER audit_logs_no_truncate;
+    TRUNCATE audit_logs, login_throttle, connectors, charge_points, stations, user_roles, users RESTART IDENTITY CASCADE;
+    ALTER TABLE audit_logs ENABLE TRIGGER audit_logs_no_truncate;
+    COMMIT;
+  `);
+}
+
+module.exports = { BASE, env, run, query, resetSchema, truncateAll, truncateAuditLogs };

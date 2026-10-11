@@ -21,6 +21,7 @@ describe('migrations 017-029: charging sessions, remote commands, and append-onl
     assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name IN ('manual_close_reason', 'manual_closed_by')")).rowCount, 2);
     assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'id_tags' AND column_name = 'is_virtual'")).rowCount, 1);
     assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'audit_logs' AND column_name = 'result'")).rowCount, 1);
+    assert.equal((await query("SELECT tgname FROM pg_trigger WHERE tgname = 'audit_logs_no_truncate' AND NOT tgisinternal")).rowCount, 1);
     assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname IN ('audit_logs_created_at_idx', 'audit_logs_entity_entity_id_idx', 'audit_logs_user_id_idx')")).rowCount, 3);
     assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname = 'remote_start_one_pending_per_connector'")).rowCount, 1);
     assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname = 'remote_start_one_pending_per_driver'")).rowCount, 1);
@@ -65,7 +66,7 @@ describe('migrations 017-029: charging sessions, remote commands, and append-onl
     );
   });
 
-  it('audit_logs rejects UPDATE and DELETE at the database layer', async () => {
+  it('audit_logs rejects UPDATE, DELETE, and TRUNCATE at the database layer', async () => {
     const inserted = await query(
       "INSERT INTO audit_logs (action, entity, metadata) VALUES ('APPEND_ONLY_TEST', 'test', '{}'::jsonb) RETURNING id"
     );
@@ -79,6 +80,10 @@ describe('migrations 017-029: charging sessions, remote commands, and append-onl
       query('DELETE FROM audit_logs WHERE id = $1', [id]),
       (error) => error.code === '55000'
     );
+    await assert.rejects(
+      query('TRUNCATE audit_logs'),
+      (error) => error.code === '55000'
+    );
     assert.equal((await query('SELECT action FROM audit_logs WHERE id = $1', [id])).rows[0].action, 'APPEND_ONLY_TEST');
   });
 
@@ -87,6 +92,7 @@ describe('migrations 017-029: charging sessions, remote commands, and append-onl
       { version: '029_audit_logs_append_only', check: async () => {
         assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'audit_logs' AND column_name = 'result'")).rowCount, 0);
         assert.equal((await query("SELECT tgname FROM pg_trigger WHERE tgname = 'audit_logs_append_only' AND NOT tgisinternal")).rowCount, 0);
+        assert.equal((await query("SELECT tgname FROM pg_trigger WHERE tgname = 'audit_logs_no_truncate' AND NOT tgisinternal")).rowCount, 0);
       } },
       { version: '028_manual_session_closure', check: async () => {
         assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name IN ('manual_close_reason', 'manual_closed_by')")).rowCount, 0);

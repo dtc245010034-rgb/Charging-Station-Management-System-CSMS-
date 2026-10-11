@@ -72,4 +72,23 @@ describe('S-27 audit logs', () => {
       .set('Cookie', admin.cookie);
     assert.equal(invalidPage.status, 400);
   });
+
+  it('blocks audit-log mutations with 405 after authentication and authorization', async () => {
+    const anonymous = await request(app).delete('/api/audit-logs/1').type('json').send({});
+    assert.equal(anonymous.status, 401);
+
+    const forbidden = await request(app).delete('/api/audit-logs/1')
+      .set('Cookie', accountant.cookie).type('json').send({});
+    assert.equal(forbidden.status, 403);
+
+    for (const method of ['put', 'patch', 'delete']) {
+      for (const path of ['/api/audit-logs', '/api/audit-logs/1']) {
+        const response = await request(app)[method](path).set('Cookie', admin.cookie).type('json').send({});
+        assert.equal(response.status, 405, `${method.toUpperCase()} ${path}`);
+        assert.equal(response.headers.allow, 'GET, HEAD, OPTIONS');
+        assert.equal(response.body.error.code, 'METHOD_NOT_ALLOWED');
+      }
+    }
+  });
+
 });

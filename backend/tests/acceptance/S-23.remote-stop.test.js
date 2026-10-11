@@ -133,12 +133,22 @@ describe('S-23 RemoteStopTransaction acceptance', { concurrency: false }, () => 
 
     const detail = await fetch(`http://127.0.0.1:${server.port}/api/sessions/${sessionId}`, { headers: { Cookie: operator.cookie } });
     assert.equal((await detail.json()).current_kwh, 6);
-    const audit = await query("SELECT metadata, result FROM audit_logs WHERE action = 'REMOTE_STOP' AND entity_id = $1", [sessionId]);
-    assert.equal(audit.rowCount, 1);
-    assert.equal(audit.rows[0].result, 'ACCEPTED');
-    assert.deepEqual(Object.keys(audit.rows[0].metadata).sort(), ['deadline', 'requested_at']);
-    assert.ok(Date.parse(audit.rows[0].metadata.requested_at));
-    assert.ok(Date.parse(audit.rows[0].metadata.deadline));
+    const audits = await query(
+      "SELECT metadata, result FROM audit_logs WHERE action = 'REMOTE_STOP' AND entity_id = $1 ORDER BY id",
+      [sessionId]
+    );
+    assert.equal(audits.rowCount, 2);
+    assert.equal(audits.rows[0].result, 'ACCEPTED');
+    assert.deepEqual(Object.keys(audits.rows[0].metadata).sort(), ['deadline', 'requested_at']);
+    assert.ok(Date.parse(audits.rows[0].metadata.requested_at));
+    assert.ok(Date.parse(audits.rows[0].metadata.deadline));
+    assert.equal(audits.rows[1].result, 'STOPPED');
+    assert.deepEqual(audits.rows[1].metadata, {
+      reason: 'Remote',
+      meter_stop: 16000,
+      stopped_at: audits.rows[1].metadata.stopped_at,
+    });
+    assert.ok(Date.parse(audits.rows[1].metadata.stopped_at));
   });
 
   it('Rejected giữ phiên hoạt động; chỉ Operator/Admin có quyền dừng', async () => {
