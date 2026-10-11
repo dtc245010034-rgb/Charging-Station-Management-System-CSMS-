@@ -154,8 +154,8 @@ Ký hiệu: **Cổng** = điều kiện để story sau ghép được. Tên fil
 
 ### S-26 · GYM-52 · 2 SP · Bộ trụ ảo chạy trong `docker-compose` và trong CI *(Should)*
 - **Làn:** L6 · **Bắt đầu:** T4 sáng (T-55 độc lập) · **Xong:** T3 13/10 sáng (T-56 chờ T-46). Jira đã có sẵn subtask T-55 (GYM-93), T-56 (GYM-94).
-- **Hiện trạng:** đã có `docs/spikes/k01-simulator.js` (chạy được phiên sạc trọn vẹn) và `tools/simulate-fleet.js` (đội trụ ảo, chỉ chạy trên DB tên `_test`/`_chk`, **chưa chạy phiên sạc**). `docker-compose.yml` chưa có dịch vụ trụ ảo; CI (`.github/workflows/ci.yml`) có `lint-and-test` + `test-windows`.
-- **Việc:** **T-55** dịch vụ `vcp` trong compose (biến `VCP_COUNT`, `CSMS_URL`; mã trụ tiền tố `VCP-`, seed idempotent qua API bằng tài khoản admin; không đi qua ngrok — nhớ hạn mức HTTP của gói miễn phí). **T-46** kịch bản 20 trụ ngắt–nối ngẫu nhiên (tham số `--count`, `--drops`, `--seed` để lặp lại được), in bảng đối chiếu (mã phiên, kWh mong đợi, kWh thực). **T-56** job CI `session-scenario` (`needs: lint-and-test`, DB service, 5 trụ cho nhanh), dưới 5 phút, **log nêu phiên nào sai**; Phúc đặt nó thành **required check** trong branch protection (việc cấu hình GitHub, không nằm trong mã).
+- **Hiện trạng (11/10):** đã có `docs/spikes/k01-simulator.js` (phiên sạc trọn vẹn), dịch vụ `vcp` trong `docker-compose.yml` với mã `VCP-` và seed idempotent qua API, cùng job CI `session-scenario` chạy sau `lint-and-test`. Kịch bản dùng `tools/test-s21-reconnect-fleet.js` để kiểm tra phiên S-21; chạy thử cục bộ 20 trụ đạt 20/20 phiên.
+- **Việc còn lại:** T-55 khởi động đội mặc định 20 trụ bằng `VCP_COUNT` và `CSMS_URL`; không đi qua ngrok. T-46 hỗ trợ `--count`, `--drops`, `--seed`, để lặp lại số lần ngắt–nối; in bảng mã phiên, kWh kỳ vọng/thực tế. T-56 chạy 5 trụ trong CI (`needs: lint-and-test`), dưới 5 phút và log rõ phiên lỗi. Phúc đặt `session-scenario` thành **required check** trong branch protection (việc cấu hình GitHub, không nằm trong mã).
 - **AC:** 3 ca; cố ý phá phần khôi phục phiên thì PR bị chặn.
 - **Rủi ro:** T-56 phụ thuộc S-21 → có thể trượt sang sáng T4 14/10; khi đó merge T-55 trước, T-56 ngay sau, không để S-26 chặn S-21.
 
