@@ -58,6 +58,9 @@ services:
       OCPP_LOCK_TIMEOUT_SECONDS: ${OCPP_LOCK_TIMEOUT_SECONDS:-5}
       DB_QUERY_TIMEOUT_SECONDS: ${DB_QUERY_TIMEOUT_SECONDS:-30}
       SSE_MAX_CONNECTIONS_PER_USER: ${SSE_MAX_CONNECTIONS_PER_USER:-5}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@csms.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminPassword12345}
+    command: ["sh", "-c", "node src/db/migrate.js && node scripts/create-admin.js && npm start"]
     ports:
       - "${BIND_HOST:-127.0.0.1}:${APP_PORT:-3000}:3000"
     depends_on:
@@ -80,6 +83,26 @@ services:
       db_test:
         condition: service_healthy
     command: ["sh", "-c", "npm ci --no-audit --no-fund && npm run lint && npm test"]
+
+  # Dịch vụ đội trụ sạc ảo (VCP - Virtual Charge Point) chạy trong compose (T-55 / S-26)
+  vcp:
+    image: csms_app:latest
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+    environment:
+      VCP_COUNT: ${VCP_COUNT:-20}
+      CSMS_URL: ${CSMS_URL:-http://app:3000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@csms.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminPassword12345}
+      VCP_PREFIX: ${VCP_PREFIX:-VCP-}
+      VCP_HEARTBEAT_INTERVAL: ${VCP_HEARTBEAT_INTERVAL:-60}
+    volumes:
+      - ./tools:/app/tools:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    command: ["node", "/app/tools/vcp-fleet.js"]
 
 volumes:
   postgres_data:

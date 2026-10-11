@@ -98,3 +98,82 @@ jobs:
 
       - run: npm ci
       - run: npm test
+
+  # S-26 / T-56: Kịch bản kiểm thử phiên sạc đội trụ ảo có ngắt-nối mạng
+  # Chặn mọi PR phá hỏng cơ chế khôi phục phiên sạc hoặc tính sai kWh (dưới 5 phút)
+  session-scenario:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: lint-and-test
+
+    services:
+      db_test:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: csms_test
+          POSTGRES_USER: csms
+          POSTGRES_PASSWORD: csms_test_only
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U csms -d csms_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    defaults:
+      run:
+        working-directory: .
+
+    env:
+      PORT: 3000
+      NODE_ENV: test
+      JWT_SECRET: "ci-scenario-jwt-secret-at-least-32-chars-long"
+      APP_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql://csms:csms_test_only@localhost:5433/csms_test
+      TEST_DATABASE_URL: postgresql://csms:csms_test_only@localhost:5433/csms_test
+      STAGING_BASE_URL: http://localhost:3000
+      STAGING_DATABASE_URL: postgresql://csms:csms_test_only@localhost:5433/csms_test
+      ADMIN_EMAIL: admin@csms.local
+      ADMIN_PASSWORD: AdminCiTestPassword2026!
+      OCPP_RATE_LIMIT_BURST: 500
+      OCPP_RATE_LIMIT_MAX: 50
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+        working-directory: backend
+
+      - name: Chạy migration và tạo admin cùng thẻ mẫu
+        run: |
+          node backend/src/db/migrate.js up
+          node backend/scripts/create-admin.js
+          node -e "
+            const { pool } = require('./backend/src/db/pool');
+            pool.query(\"INSERT INTO id_tags (tag, status) VALUES ('TAG-DEMO-01', 'ACTIVE') ON CONFLICT ((UPPER(tag))) DO NOTHING\")
+              .then(() => pool.end());
+          "
+
+      - name: Khởi động máy chủ và chạy kịch bản khôi phục phiên sạc (5 trụ)
+        run: |
+          node backend/src/server.js &
+          SERVER_PID=$!
+          trap "kill $SERVER_PID 2>/dev/null || true" EXIT
+
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3000/api/health | grep -q 'ok'; then
+              echo 'CSMS server is ready'
+              break
+            fi
+            sleep 1
+          done
+
+          node tools/test-s21-reconnect-fleet.js --count 5 --drops 1-2 --runs 1 --seed 42 --prefix S26-CI-
+

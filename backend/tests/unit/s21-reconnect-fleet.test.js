@@ -105,4 +105,40 @@ describe('S-21 reconnect fleet scenario', () => {
     }, [expected], [expected.code]);
     assert.equal(mismatch[0].passed, false);
   });
+
+  it('supports --drops as an alias for --disconnects and --seed for deterministic runs', () => {
+    const previous = {
+      STAGING_BASE_URL: process.env.STAGING_BASE_URL,
+      STAGING_DATABASE_URL: process.env.STAGING_DATABASE_URL,
+    };
+    process.env.STAGING_BASE_URL = 'https://staging.invalid';
+    process.env.STAGING_DATABASE_URL = 'postgres://readonly.invalid/csms';
+    try {
+      const parsedDrops = optionsFromArgs(['--drops', '2-4', '--seed', '12345']);
+      assert.deepEqual(parsedDrops.disconnects, [2, 4]);
+      assert.equal(parsedDrops.seed, 12345);
+
+      const parsedSingleDrop = optionsFromArgs(['--drops', '3']);
+      assert.deepEqual(parsedSingleDrop.disconnects, [3, 3]);
+
+      assert.throws(() => optionsFromArgs(['--seed', 'invalid']), /--seed must be an integer/);
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
+  it('ensures createPrng generates identical sequence for the same seed', () => {
+    const { createPrng } = require('../../../tools/test-s21-reconnect-fleet');
+    const prng1 = createPrng(42);
+    const prng2 = createPrng(42);
+    const seq1 = [prng1(), prng1(), prng1(), prng1()];
+    const seq2 = [prng2(), prng2(), prng2(), prng2()];
+    assert.deepEqual(seq1, seq2);
+
+    const prng3 = createPrng(999);
+    assert.notDeepEqual([prng3(), prng3()], [seq1[0], seq1[1]]);
+  });
 });

@@ -29,18 +29,13 @@ if (!input.success) {
   try {
     await client.query('BEGIN');
     const created = await client.query(
-      "INSERT INTO users (name, email, password_hash) VALUES ('Administrator', $1, $2) ON CONFLICT (email) DO NOTHING RETURNING id",
+      "INSERT INTO users (name, email, password_hash) VALUES ('Administrator', $1, $2) ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash RETURNING id",
       [email, hash]
     );
-    if (!created.rowCount) {
-      await client.query('ROLLBACK');
-      console.log('Tài khoản đã tồn tại, không thay đổi.');
-      return;
-    }
-    await client.query("INSERT INTO user_roles (user_id, role_id) SELECT $1, id FROM roles WHERE code = 'ADMIN'", [created.rows[0].id]);
+    await client.query("INSERT INTO user_roles (user_id, role_id) SELECT $1, id FROM roles WHERE code = 'ADMIN' ON CONFLICT DO NOTHING", [created.rows[0].id]);
     await client.query('COMMIT');
     if (weakAllowed && password.length < 12) console.warn('CẢNH BÁO: mật khẩu yếu chỉ dành cho máy cá nhân.');
-    console.log(`Đã tạo admin ${email}`);
+    console.log(`Đã cập nhật/tạo admin ${email}`);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

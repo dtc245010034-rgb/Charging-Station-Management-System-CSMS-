@@ -31,6 +31,16 @@ async function pacedConnect(point) {
   await point.connect();
 }
 
+function createPrng(seed) {
+  let s = (seed >>> 0) || 1;
+  return function next() {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 function optionsFromArgs(args) {
   const defaults = {
     url: process.env.STAGING_BASE_URL,
@@ -56,23 +66,28 @@ function optionsFromArgs(args) {
       const number = Number(value);
       if (!Number.isSafeInteger(number) || number < 1) throw new Error(`${flag} must be a positive integer`);
       options[flag.slice(2)] = number;
-    } else if (flag === '--disconnects') {
+    } else if (flag === '--disconnects' || flag === '--drops') {
       const match = /^(\d+)(?:-(\d+))?$/.exec(value);
-      if (!match) throw new Error('--disconnects must be N or MIN-MAX');
+      if (!match) throw new Error(`${flag} must be N or MIN-MAX`);
       options.disconnects = [Number(match[1]), Number(match[2] || match[1])];
       if (options.disconnects[0] < 1 || options.disconnects[1] < options.disconnects[0]) {
-        throw new Error('--disconnects must be a range with MIN >= 1 and MAX >= MIN');
+        throw new Error(`${flag} must be a range with MIN >= 1 and MAX >= MIN`);
       }
+    } else if (flag === '--seed') {
+      const seedNum = Number(value);
+      if (!Number.isSafeInteger(seedNum)) throw new Error('--seed must be an integer');
+      options.seed = seedNum;
     } else {
       throw new Error(`Unknown option: ${flag}`);
     }
   }
+  const dbUrl = process.env.STAGING_DATABASE_URL || process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
   if (!options.url) throw new Error('Set STAGING_BASE_URL or pass --url');
-  if (!process.env.STAGING_DATABASE_URL) throw new Error('Set STAGING_DATABASE_URL for read-only result verification');
+  if (!dbUrl) throw new Error('Set STAGING_DATABASE_URL (or TEST_DATABASE_URL / DATABASE_URL) for read-only result verification');
   if (
     process.env.NODE_ENV === 'production' ||
     /production|\bprod\b/i.test(options.url) ||
-    /production|\bprod\b/i.test(process.env.STAGING_DATABASE_URL)
+    /production|\bprod\b/i.test(dbUrl)
   ) {
     throw new Error('Safety guardrail: Refusing to run fleet reconnect test against a production environment');
   }
@@ -89,12 +104,14 @@ Runs OCPP reconnect energy verification against a staging CSMS.
   --url <base-url>       Staging HTTP URL (default: STAGING_BASE_URL)
   --count <n>            Virtual charge points per run (default: 20)
   --disconnects <n|a-b>  Disconnects per session, fixed or random range (default: 1-3)
+  --drops <n|a-b>        Alias for --disconnects
+  --seed <number>        Deterministic PRNG seed for reproducible disconnects
   --runs <n>             Complete repetitions (default: 3)
   --prefix <text>        Dedicated fixture prefix (default: unique per invocation)
   --tag <idTag>          Active OCPP idTag (default: TAG-DEMO-01)
 
 Example for a quick CI run:
-  node tools/test-s21-reconnect-fleet.js --count 2 --disconnects 1 --runs 1`);
+  node tools/test-s21-reconnect-fleet.js --count 2 --drops 1 --runs 1 --seed 42`);
 }
 
 function createApi(baseUrl) {
@@ -285,7 +302,7 @@ function makeSample(meterWh, timestamp) {
   };
 }
 
-async function runSession(point, run, index, disconnectCount) {
+async function runSession(point, run, index, disconnectCount, randInt = randomInt) {
   await pacedConnect(point);
   await point.boot();
   const idTag = point.idTag;
@@ -320,7 +337,7 @@ async function runSession(point, run, index, disconnectCount) {
   }
 
   for (let attempt = 0; attempt < disconnectCount; attempt += 1) {
-    await sleep(randomInt(25, 175));
+    await sleep(randInt(25, 175));
     await recordSample();
     const oldSocket = point.socket;
     const closed = once(oldSocket, 'close');
@@ -481,9 +498,14 @@ async function main() {
       points.push(...currentPoints.map(({ point }) => point));
 
       const settlements = await Promise.allSettled(currentPoints.map(async ({ point, index }) => {
+        // Khắc phục LỖI 4: Mỗi trụ sở hữu luồng PRNG phái sinh độc lập, loại bỏ race condition do OS timer jitter
+        const pointSeed = options.seed !== undefined ? ((options.seed + (run * 100000) + (index * 1337)) >>> 0) : undefined;
+        const pointPrng = pointSeed !== undefined ? createPrng(pointSeed) : null;
+        const pointRandInt = (min, max) => (pointPrng ? Math.floor(pointPrng() * (max - min)) + min : randomInt(min, max));
+
         const [minDisconnects, maxDisconnects] = options.disconnects;
-        const disconnectCount = randomInt(minDisconnects, maxDisconnects + 1);
-        return runSession(point, run, index, disconnectCount);
+        const disconnectCount = pointRandInt(minDisconnects, maxDisconnects + 1);
+        return runSession(point, run, index, disconnectCount, pointRandInt);
       }));
       const failures = settlements.filter((settlement) => settlement.status === 'rejected');
       if (failures.length) {
@@ -493,7 +515,11 @@ async function main() {
       const verified = await readSessionResults(db, simulatorResults, codes);
       printTable(verified, run, options.runs);
       if (verified.some((row) => !row.passed)) {
-        throw new Error(`Run ${run} failed: simulator and CSMS records did not match`);
+        const failedInfo = verified
+          .filter((row) => !row.passed)
+          .map((row) => `${row.code} (Tx: ${row.transactionId}, Expected: ${row.expectedKwh} kWh, CSMS: ${row.systemKwh} kWh, Mẫu: ${row.sampleCount})`)
+          .join('; ');
+        throw new Error(`Run ${run} failed: simulator and CSMS records did not match: ${failedInfo}`);
       }
       await Promise.all(currentPoints.map(({ point }) => point.close()));
       points.splice(0, points.length);
@@ -512,4 +538,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { optionsFromArgs, makeSample, readSessionResults };
+module.exports = { optionsFromArgs, makeSample, readSessionResults, createPrng };
