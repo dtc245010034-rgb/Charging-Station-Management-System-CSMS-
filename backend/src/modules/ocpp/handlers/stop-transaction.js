@@ -99,7 +99,7 @@ function createStopTransactionHandler({
            FROM charging_sessions
            WHERE id = $1
              AND charge_point_id = $2
-             AND status = 'CHARGING'`,
+             AND status IN ('CHARGING', 'ABNORMAL')`,
           [payload.transactionId, chargePointId]
         );
         if (activeSession.rowCount > 0) {
@@ -132,10 +132,10 @@ function createStopTransactionHandler({
              remote_stop_completed_at = CASE WHEN remote_stop_status IN ('SENDING', 'ACCEPTED', 'ERROR', 'TIMED_OUT') THEN CURRENT_TIMESTAMP ELSE remote_stop_completed_at END,
              needs_review = (needs_review AND (
                  review_reason IS NULL
-                 OR COALESCE(array_length(array_remove(array_remove(string_to_array(review_reason, '; '), 'REMOTE_STOP_TIMEOUT'), 'REMOTE_STOP_RESULT_UNKNOWN'), 1), 0) > 0
+                 OR COALESCE(array_length(array_remove(array_remove(array_remove(array_remove(string_to_array(review_reason, '; '), 'REMOTE_STOP_TIMEOUT'), 'REMOTE_STOP_RESULT_UNKNOWN'), 'CHARGE_POINT_OFFLINE_TIMEOUT'), 'STOP_TRANSACTION_TIMEOUT'), 1), 0) > 0
                )) OR meter_start > $2 OR $5::boolean OR $8::boolean,
              review_reason = NULLIF(concat_ws('; ',
-               NULLIF(array_to_string(array_remove(array_remove(string_to_array(COALESCE(review_reason, ''), '; '), 'REMOTE_STOP_TIMEOUT'), 'REMOTE_STOP_RESULT_UNKNOWN'), '; '), ''),
+               NULLIF(array_to_string(array_remove(array_remove(array_remove(array_remove(string_to_array(COALESCE(review_reason, ''), '; '), 'REMOTE_STOP_TIMEOUT'), 'REMOTE_STOP_RESULT_UNKNOWN'), 'CHARGE_POINT_OFFLINE_TIMEOUT'), 'STOP_TRANSACTION_TIMEOUT'), '; '), ''),
                CASE WHEN position('METER_STOP_BELOW_START' IN COALESCE(review_reason, '')) = 0 AND meter_start > $2 THEN 'METER_STOP_BELOW_START' END,
                CASE WHEN position('CLOCK_SKEW' IN COALESCE(review_reason, '')) = 0 AND $5::boolean THEN 'CLOCK_SKEW' END,
                CASE WHEN position('INVALID_TRANSACTION_DATA' IN COALESCE(review_reason, '')) = 0 AND $8::boolean THEN 'INVALID_TRANSACTION_DATA' END
@@ -144,7 +144,7 @@ function createStopTransactionHandler({
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1
            AND charge_point_id = $6
-           AND status = 'CHARGING'
+           AND status IN ('CHARGING', 'ABNORMAL')
          RETURNING id, driver_id, remote_stop_requested_by, remote_stop_status`,
         [
           payload.transactionId,

@@ -51,7 +51,7 @@ describe('S-18 StopTransaction handler', () => {
       },
       context: { connection: CONNECTION, messageId: 'stop-message-17' },
     });
-    assert.match(update.sql, /WHERE id = \$1\s+AND charge_point_id = \$6\s+AND status = 'CHARGING'/);
+    assert.match(update.sql, /WHERE id = \$1\s+AND charge_point_id = \$6\s+AND status IN \('CHARGING', 'ABNORMAL'\)/);
     assert.deepEqual(update.params, [17, 1250, new Date(NOW).toISOString(), 'Remote', false, 42, JSON.stringify(transactionData), false]);
     assert.match(update.sql, /meter_start > \$2/);
     assert.match(update.sql, /status = 'COMPLETED'/);
@@ -108,6 +108,9 @@ describe('S-18 StopTransaction handler', () => {
     assert.equal(update.params[3], 'Local');
     assert.match(update.sql, /needs_review = .*meter_start > \$2/s);
     assert.match(update.sql, /METER_STOP_BELOW_START/);
+    assert.match(update.sql, /CHARGE_POINT_OFFLINE_TIMEOUT/);
+    assert.match(update.sql, /STOP_TRANSACTION_TIMEOUT/);
+    assert.match(update.sql, /status IN \('CHARGING', 'ABNORMAL'\)/);
   });
 
   it('timestamp lệch quá 24 giờ thay bằng giờ nhận và bật needs_review', async () => {

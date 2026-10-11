@@ -49,14 +49,17 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(parseHash('').workspace, undefined);
   });
 
-  it('nav: mục chưa có backend (enabled:false) không bao giờ hiện; phiên sạc chỉ hiện cho Operator/Admin', async () => {
+  it('nav: mục chưa có backend (enabled:false) không bao giờ hiện; phiên bất thường chỉ hiện cho Operator/Kế toán/Admin', async () => {
     const { visibleNav, WORKSPACES } = await load('app/workspace.js');
     const { can } = await load('app/permissions.js');
     const pages = (ws) => visibleNav(ws, WORKSPACES[ws].role, can).flatMap((g) => g.items.map((i) => i.page));
     assert.ok(pages('operator').includes('sessions') && !pages('operator').includes('alerts'));
+    assert.ok(pages('operator').includes('unexpected-sessions'));
     assert.ok(pages('operator').includes('stations') && pages('admin').includes('users'));
     assert.ok(pages('admin').includes('sessions'));
     assert.ok(!pages('owner').includes('sessions') && !pages('accountant').includes('sessions'));
+    assert.ok(pages('accountant').includes('unexpected-sessions'));
+    assert.ok(pages('admin').includes('unexpected-sessions'));
     assert.ok(pages('driver').includes('sessions'));
   });
 
@@ -79,6 +82,95 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(typeof pageLoader('sessions', 'admin'), 'function');
     assert.strictEqual(pageLoader('sessions', 'owner'), null);
     assert.deepStrictEqual(PAGE_NEEDS.sessions, ['sessions:read-own', 'sessions:read']);
+  });
+
+  it('S-25: trang phiên bất thường chỉ được tải cho Operator, Kế toán và Admin', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { can } = await load('app/permissions.js');
+    assert.strictEqual(typeof pageLoader('unexpected-sessions', 'operator'), 'function');
+    assert.strictEqual(typeof pageLoader('unexpected-sessions', 'accountant'), 'function');
+    assert.strictEqual(typeof pageLoader('unexpected-sessions', 'admin'), 'function');
+    assert.strictEqual(pageLoader('unexpected-sessions', 'owner'), null);
+    assert.strictEqual(PAGE_NEEDS['unexpected-sessions'], 'sessions:unexpected:read');
+    for (const role of ['OPERATOR', 'ACCOUNTANT', 'ADMIN']) {
+      assert.ok(can(role, 'sessions:unexpected:read'), `${role} can read`);
+    }
+    assert.ok(!can('ACCOUNTANT', 'sessions:unexpected:close'));
+    assert.ok(can('OPERATOR', 'sessions:unexpected:close'));
+    assert.ok(can('ADMIN', 'sessions:unexpected:close'));
+  });
+
+  it('S-25: sửa ô lý do xóa custom validity sau khi submit lý do trắng', async () => {
+    const saved = new Map();
+    const define = (name, value) => {
+      saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+      Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+    };
+    class Element {
+      constructor(tag) {
+        this.tag = tag;
+        this.attributes = {};
+        this.children = [];
+        this.listeners = {};
+        this.style = {};
+        this.dataset = {};
+      }
+      setAttribute(name, value) { this.attributes[name] = String(value); }
+      addEventListener(name, handler) { this.listeners[name] = handler; }
+      append(...children) { this.children.push(...children); }
+      replaceChildren(...children) { this.children = children; }
+      setCustomValidity(message) { this.customValidity = message; }
+      reportValidity() { this.didReportValidity = true; }
+    }
+    define('Node', Element);
+    define('document', {
+      createElement: (tag) => new Element(tag),
+      createElementNS: (_namespace, tag) => new Element(tag),
+      createTextNode: (text) => ({ textContent: String(text) }),
+    });
+    define('fetch', async () => ({
+      ok: true,
+      status: 200,
+      json: async () => [{
+        id: 25,
+        charge_point_code: 'CP-25',
+        connector_no: 1,
+        latest_readings: [],
+      }],
+    }));
+    define('location', { pathname: '/app.html', replace() {} });
+    define('setInterval', () => 1);
+    define('clearInterval', () => {});
+
+    let dispose;
+    try {
+      const { render } = await load('pages/shared/unexpected-sessions.js');
+      const root = new Element('root');
+      dispose = render({ root, can: () => true });
+      await new Promise((resolve) => setImmediate(resolve));
+      const find = (node, predicate) => [
+        ...(predicate(node) ? [node] : []),
+        ...node.children.flatMap((child) => child instanceof Element ? find(child, predicate) : []),
+      ];
+      const reason = find(root, (node) => node.tag === 'input' && node.attributes.name === 'reason')[0];
+      const form = find(root, (node) => node.tag === 'form')[0];
+      assert.ok(reason);
+      assert.ok(form);
+      reason.value = '   ';
+      await form.listeners.submit({ preventDefault() {} });
+      assert.equal(reason.customValidity, 'Vui lòng nhập lý do đóng phiên.');
+      assert.equal(reason.didReportValidity, true);
+
+      reason.value = 'Đã kiểm tra';
+      reason.listeners.input();
+      assert.equal(reason.customValidity, '');
+    } finally {
+      dispose?.();
+      for (const [name, descriptor] of saved) {
+        if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+        else delete globalThis[name];
+      }
+    }
   });
 
   it('S-24: trang bắt đầu sạc chỉ được tải cho tài xế có quyền RemoteStart', async () => {

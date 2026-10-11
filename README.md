@@ -166,6 +166,7 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `OCPP_LOCK_TIMEOUT_SECONDS` | `lock_timeout` cho truy vấn của handler OCPP; API, migration và job không bị ảnh hưởng (F10) | Giây | `5` |
 | `DB_QUERY_TIMEOUT_SECONDS` | Thời gian tối đa chờ một truy vấn PostgreSQL trả kết quả (cả hai pool); quá hạn thì truy vấn báo lỗi. `0` = không giới hạn | Giây | `30` |
 | `REMOTE_STOP_WAIT_SECONDS` | Thời gian chờ `StopTransaction` thực tế sau khi trụ `Accepted` lệnh dừng; hết hạn chỉ đánh dấu phiên cần xem xét, không tự đóng phiên | Giây | `120` |
+| `SESSION_ABNORMAL_AFTER_SECONDS` | Thời gian không nhận tin từ trụ trước khi job đánh dấu phiên đang sạc `ABNORMAL` (job cũng đánh dấu bất thường khi quá 120 giây chờ `StopTransaction`) | Giây | `21600` |
 | `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | Số lần gọi `GET /api/charge-points/check-code` mỗi tài khoản (quá mức trả 429 + `Retry-After`) | Lần/phút | `30` |
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
 | `OCPP_HANDSHAKE_LIMIT_PER_10S` | Số lần bắt tay WebSocket mỗi cặp (IP, mã trụ), kiểm tra trước khi truy vấn DB; quá mức trả 429 | Lần/10 giây | `5` |
@@ -247,6 +248,25 @@ Trụ kết nối tại `ws://localhost:3000/ocpp/<mã trụ>` với subprotocol
 
 Mẫu trụ ảo: `docs/spikes/k01-simulator.js`, `docs/spikes/k01/` (xem [`docs/spikes/K-01-ocpp-simulator.md`](docs/spikes/K-01-ocpp-simulator.md)), và các kịch bản kiểm chứng trong `tools/` (đọc thông tin đăng nhập từ biến môi trường, chỉ chạy trên DB thử `_test`/`_chk`). Kết quả kiểm chứng vòng 6: [`docs/testing/BAO-CAO-VONG-6.md`](docs/testing/BAO-CAO-VONG-6.md).
 
+<<<<<<< HEAD
+=======
+#### Chạy một đội trụ ảo bằng Docker Compose
+
+Sau khi chạy `python run.py`, có thể bật mặc định 20 trụ ảo (mã `VCP-001`…`VCP-020`) bằng:
+
+```bash
+docker compose --profile simulator up -d --build vcp
+```
+
+Simulator tạo sẵn các trạm/trụ thử qua API bằng tài khoản quản trị cục bộ, gửi `BootNotification`, trạng thái `Available` và heartbeat định kỳ; dashboard sẽ báo đủ số trụ sau khi kết nối. Để đổi số lượng hoặc địa chỉ CSMS, đặt `VCP_COUNT` và `CSMS_URL` trong `.env` rồi chạy lại lệnh. Trên máy chủ dùng chung, đặt `VCP_ADMIN_EMAIL`/`VCP_ADMIN_PASSWORD` trong `.env` thành thông tin quản trị tương ứng; không dùng mật khẩu mặc định `admin`. Dừng simulator bằng `docker compose --profile simulator stop vcp`.
+
+Chạy kịch bản phiên sạc ngắt–nối có thể lặp lại bằng seed cố định (cần tài khoản admin và `STAGING_DATABASE_URL` trỏ tới DB thử):
+
+```bash
+node tools/test-s21-reconnect-fleet.js --count 20 --drops 1-3 --seed 26026 --runs 1 --prefix S26-RUN-
+```
+
+>>>>>>> b932504 (huu/S26-bo-tru-ao)
 ---
 
 ## 3. Kiểm thử

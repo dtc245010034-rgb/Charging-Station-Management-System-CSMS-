@@ -98,3 +98,62 @@ jobs:
 
       - run: npm ci
       - run: npm test
+<<<<<<< HEAD
+=======
+
+  session-scenario:
+    name: OCPP reconnect session scenario
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      POSTGRES_PASSWORD: csms_ci_only
+      JWT_SECRET: ci-only-jwt-secret-that-is-not-used-outside-this-job
+      ADMIN_EMAIL: admin@csms.local
+      ADMIN_PASSWORD: ci-only-admin-password
+      VCP_ADMIN_EMAIL: admin@csms.local
+      VCP_ADMIN_PASSWORD: ci-only-admin-password
+      CSMS_URL: http://app:3000
+      VCP_COUNT: 5
+      VCP_PREFIX: CI-VCP-
+      STAGING_BASE_URL: http://127.0.0.1:3000
+      STAGING_DATABASE_URL: postgresql://csms:csms_ci_only@127.0.0.1:5432/csms
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install scenario dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build app
+        run: docker compose up --build --detach --wait app
+
+      - name: Create isolated CI fixtures
+        run: |
+          docker compose exec -T -e ADMIN_EMAIL -e ADMIN_PASSWORD app npm run create-admin
+          docker compose exec -T -e ALLOW_DEMO_SEED=1 -e DEMO_PASSWORD=ci-only-demo-password app npm run seed-demo
+
+      - name: Start 5 virtual charge points
+        run: docker compose --profile simulator up --build --detach --wait vcp
+
+      - name: Run 5-point disconnect and reconnect scenario
+        working-directory: backend
+        env:
+          ADMIN_EMAIL: admin@csms.local
+          ADMIN_PASSWORD: ci-only-admin-password
+          STAGING_BASE_URL: http://127.0.0.1:3000
+          STAGING_DATABASE_URL: postgresql://csms:csms_ci_only@127.0.0.1:5432/csms
+        run: node ../tools/test-s21-reconnect-fleet.js --count 5 --drops 1-3 --seed 26026 --runs 1 --prefix CI-S21-
+
+      - name: Stop CI services
+        if: always()
+        run: docker compose --profile simulator down --volumes --remove-orphans
+>>>>>>> b932504 (huu/S26-bo-tru-ao)
