@@ -81,6 +81,26 @@ services:
         condition: service_healthy
     command: ["sh", "-c", "npm ci --no-audit --no-fund && npm run lint && npm test"]
 
+  # Dịch vụ đội trụ sạc ảo (VCP - Virtual Charge Point) chạy trong compose (T-55 / S-26)
+  vcp:
+    image: csms_app:latest
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+    environment:
+      VCP_COUNT: ${VCP_COUNT:-20}
+      CSMS_URL: ${CSMS_URL:-http://app:3000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@csms.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminPassword12345}
+      VCP_PREFIX: ${VCP_PREFIX:-VCP-}
+      VCP_HEARTBEAT_INTERVAL: ${VCP_HEARTBEAT_INTERVAL:-60}
+    volumes:
+      - ./tools:/app/tools:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    command: ["node", "/app/tools/vcp-fleet.js"]
+
 volumes:
   postgres_data:
   tests_node_modules:
