@@ -100,6 +100,25 @@ describe('S-02 frontend: router', () => {
     assert.ok(can('ADMIN', 'sessions:unexpected:close'));
   });
 
+  it('S-27: nhật ký điều khiển chỉ hiện và chỉ tải cho Operator/Admin', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { visibleNav, WORKSPACES } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    assert.strictEqual(typeof pageLoader('control-log', 'operator'), 'function');
+    assert.strictEqual(typeof pageLoader('control-log', 'admin'), 'function');
+    assert.strictEqual(pageLoader('control-log', 'accountant'), null);
+    assert.strictEqual(pageLoader('control-log', 'driver'), null);
+    assert.strictEqual(pageLoader('control-log', 'owner'), null);
+    assert.strictEqual(PAGE_NEEDS['control-log'], 'audit-logs:read');
+    assert.ok(can('ADMIN', 'audit-logs:read'));
+    assert.ok(can('OPERATOR', 'audit-logs:read'));
+    assert.ok(!can('ACCOUNTANT', 'audit-logs:read'));
+    for (const workspace of ['operator', 'admin']) {
+      const pages = visibleNav(workspace, WORKSPACES[workspace].role, can).flatMap((group) => group.items.map((item) => item.page));
+      assert.ok(pages.includes('control-log'));
+    }
+  });
+
   it('S-25: sửa ô lý do xóa custom validity sau khi submit lý do trắng', async () => {
     const saved = new Map();
     const define = (name, value) => {

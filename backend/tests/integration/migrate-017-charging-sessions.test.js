@@ -6,7 +6,7 @@ const tableSessions = async () => (await query("SELECT to_regclass('public.charg
 const tableMeterValues = async () => (await query("SELECT to_regclass('public.meter_values') AS t")).rows[0].t;
 const tableOrphanMessages = async () => (await query("SELECT to_regclass('public.orphan_messages') AS t")).rows[0].t;
 
-describe('migration 017-028: charging_sessions, meter_values, orphan_messages, transaction_data, remote commands', () => {
+describe('migrations 017-029: charging sessions, remote commands, and append-only audit logs', () => {
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
@@ -20,6 +20,8 @@ describe('migration 017-028: charging_sessions, meter_values, orphan_messages, t
     assert.ok((await query("SELECT to_regclass('public.remote_start_requests') AS t")).rows[0].t, 'Bảng remote_start_requests phải tồn tại');
     assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name IN ('manual_close_reason', 'manual_closed_by')")).rowCount, 2);
     assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'id_tags' AND column_name = 'is_virtual'")).rowCount, 1);
+    assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'audit_logs' AND column_name = 'result'")).rowCount, 1);
+    assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname IN ('audit_logs_created_at_idx', 'audit_logs_entity_entity_id_idx', 'audit_logs_user_id_idx')")).rowCount, 3);
     assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname = 'remote_start_one_pending_per_connector'")).rowCount, 1);
     assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname = 'remote_start_one_pending_per_driver'")).rowCount, 1);
 
@@ -63,8 +65,29 @@ describe('migration 017-028: charging_sessions, meter_values, orphan_messages, t
     );
   });
 
-  it('down: rollback lần lượt 028, 027, 026, 025, 024, 023, 022, 019, 018, 017 và up lại sạch sẽ', async () => {
+  it('audit_logs rejects UPDATE and DELETE at the database layer', async () => {
+    const inserted = await query(
+      "INSERT INTO audit_logs (action, entity, metadata) VALUES ('APPEND_ONLY_TEST', 'test', '{}'::jsonb) RETURNING id"
+    );
+    const { id } = inserted.rows[0];
+
+    await assert.rejects(
+      query("UPDATE audit_logs SET action = 'CHANGED' WHERE id = $1", [id]),
+      (error) => error.code === '55000'
+    );
+    await assert.rejects(
+      query('DELETE FROM audit_logs WHERE id = $1', [id]),
+      (error) => error.code === '55000'
+    );
+    assert.equal((await query('SELECT action FROM audit_logs WHERE id = $1', [id])).rows[0].action, 'APPEND_ONLY_TEST');
+  });
+
+  it('down: rollback lần lượt 029 tới 017 và up lại sạch sẽ', async () => {
     const rollbackChecks = [
+      { version: '029_audit_logs_append_only', check: async () => {
+        assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'audit_logs' AND column_name = 'result'")).rowCount, 0);
+        assert.equal((await query("SELECT tgname FROM pg_trigger WHERE tgname = 'audit_logs_append_only' AND NOT tgisinternal")).rowCount, 0);
+      } },
       { version: '028_manual_session_closure', check: async () => {
         assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name IN ('manual_close_reason', 'manual_closed_by')")).rowCount, 0);
       } },

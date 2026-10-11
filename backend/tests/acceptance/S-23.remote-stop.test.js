@@ -133,8 +133,12 @@ describe('S-23 RemoteStopTransaction acceptance', { concurrency: false }, () => 
 
     const detail = await fetch(`http://127.0.0.1:${server.port}/api/sessions/${sessionId}`, { headers: { Cookie: operator.cookie } });
     assert.equal((await detail.json()).current_kwh, 6);
-    const audit = await query("SELECT metadata FROM audit_logs WHERE action = 'REMOTE_STOP' AND entity_id = $1", [sessionId]);
-    assert.ok(audit.rowCount >= 2);
+    const audit = await query("SELECT metadata, result FROM audit_logs WHERE action = 'REMOTE_STOP' AND entity_id = $1", [sessionId]);
+    assert.equal(audit.rowCount, 1);
+    assert.equal(audit.rows[0].result, 'ACCEPTED');
+    assert.deepEqual(Object.keys(audit.rows[0].metadata).sort(), ['deadline', 'requested_at']);
+    assert.ok(Date.parse(audit.rows[0].metadata.requested_at));
+    assert.ok(Date.parse(audit.rows[0].metadata.deadline));
   });
 
   it('Rejected giữ phiên hoạt động; chỉ Operator/Admin có quyền dừng', async () => {

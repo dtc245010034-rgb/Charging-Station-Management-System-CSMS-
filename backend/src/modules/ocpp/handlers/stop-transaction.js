@@ -159,19 +159,6 @@ function createStopTransactionHandler({
       );
 
       if (updated.rowCount > 0) {
-        if (updated.rows[0]?.remote_stop_status === 'STOPPED') {
-          try {
-            await require('../../audit/audit.repository').record(updated.rows[0].remote_stop_requested_by, 'REMOTE_STOP', 'charging_session', payload.transactionId, {
-              charge_point_id: Number(chargePointId),
-              phase: 'STOP_TRANSACTION',
-              result: 'STOPPED',
-              stop_reason: stopReason,
-              stopped_at: stoppedAt,
-            });
-          } catch (auditError) {
-            logWarning('[OCPP] StopTransaction đã chốt nhưng không ghi được audit log:', sanitizeErrorMessage(auditError?.message || auditError));
-          }
-        }
         publishSessionUpdateFromDb(payload.transactionId, {
           pool: db,
           driverId: updated.rows[0]?.driver_id ?? null,

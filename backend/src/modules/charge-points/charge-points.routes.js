@@ -34,7 +34,7 @@ function createChargePointsRouter({ commandSender } = {}) {
   router.post('/charge-points/:id/reset', { access: access('charge-points:reset') }, async (req, res) => {
     const { id } = idParam.parse(req.params);
     const { type } = resetBody.parse(req.body ?? {});
-    res.json(await service.reset(req.user, id, type, commandSender));
+    res.json(await service.reset(req.user, id, type, commandSender, { ip: req.ip }));
   });
 
   return router;

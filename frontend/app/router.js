@@ -14,6 +14,7 @@ export const PAGE_NEEDS = {
   users: 'users:create',
   sessions: ['sessions:read-own', 'sessions:read'],
   'unexpected-sessions': 'sessions:unexpected:read',
+  'control-log': 'audit-logs:read',
   start: 'remote-start:create',
 };
 
@@ -40,6 +41,10 @@ const PAGES = {
     operator: () => import('../pages/shared/unexpected-sessions.js'),
     accountant: () => import('../pages/shared/unexpected-sessions.js'),
     admin: () => import('../pages/shared/unexpected-sessions.js'),
+  },
+  'control-log': {
+    operator: () => import('../pages/shared/audit-logs.js'),
+    admin: () => import('../pages/shared/audit-logs.js'),
   },
   stations: () => import('../pages/shared/stations.js'),
   'charge-points': () => import('../pages/shared/charge-points.js'),

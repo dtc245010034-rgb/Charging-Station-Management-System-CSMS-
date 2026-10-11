@@ -24,7 +24,6 @@ async function markExpiredRemoteStops(db, { recordAudit = null } = {}) {
     try {
       const writeAudit = recordAudit || require('../audit/audit.repository').record;
       await writeAudit(row.remote_stop_requested_by, 'REMOTE_STOP', 'charging_session', row.id, {
-        charge_point_id: Number(row.charge_point_id),
         phase: row.remote_stop_status === 'TIMED_OUT' ? 'TIMEOUT' : 'RESULT_UNKNOWN',
         result: row.remote_stop_status,
         deadline: row.remote_stop_deadline ? new Date(row.remote_stop_deadline).toISOString() : null,

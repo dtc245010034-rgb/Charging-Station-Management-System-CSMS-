@@ -105,13 +105,13 @@ describe('S-25 unexpected charging sessions', () => {
     assert.doesNotMatch(finalMeterQuery.sql, /reported_at\s*=\s*sampled_at/);
     assert.ok(audit);
     assert.deepEqual(JSON.parse(audit.values[4]), {
-      reason: 'Trụ mất liên lạc',
       meter_start_wh: 10000,
       meter_stop_wh: 15250,
       energy_kwh: 5.25,
       previous_review_reason: 'CHARGE_POINT_OFFLINE_TIMEOUT',
     });
-    assert.equal(audit.values[5], '127.0.0.1');
+    assert.equal(audit.values[5], 'COMPLETED');
+    assert.equal(audit.values[6], '127.0.0.1');
     assert.ok(queries.some(({ sql }) => sql === 'COMMIT'));
   });
 

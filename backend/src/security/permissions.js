@@ -25,6 +25,7 @@ const permissions = {
   'sessions:stop': ['ADMIN', 'OPERATOR'],
   'sessions:unexpected:read': ['OPERATOR', 'ACCOUNTANT', 'ADMIN'],
   'sessions:unexpected:close': ['OPERATOR', 'ADMIN'],
+  'audit-logs:read': ['ADMIN', 'OPERATOR'],
 };
 
 function access(key) {

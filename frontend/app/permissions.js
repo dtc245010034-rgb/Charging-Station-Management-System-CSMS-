@@ -20,6 +20,7 @@ export const PERMISSIONS = {
   'sessions:stop': ['ADMIN', 'OPERATOR'],
   'sessions:unexpected:read': ['OPERATOR', 'ACCOUNTANT', 'ADMIN'],
   'sessions:unexpected:close': ['OPERATOR', 'ADMIN'],
+  'audit-logs:read': ['OPERATOR', 'ADMIN'],
 };
 
 export const can = (role, key) => (PERMISSIONS[key] ?? []).includes(role);

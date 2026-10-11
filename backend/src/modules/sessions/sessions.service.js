@@ -141,13 +141,9 @@ async function getUnexpectedSessions(options = {}) {
   return (await listUnexpectedSessions(db)).map(formatSession);
 }
 
-async function writeRemoteStopAudit(actorId, sessionId, chargePointId, result, metadata = {}, ip = null) {
+async function writeRemoteStopAudit(actorId, sessionId, result, metadata = {}, ip = null) {
   const audit = require('../audit/audit.repository');
-  await audit.record(actorId, 'REMOTE_STOP', 'charging_session', sessionId, {
-    charge_point_id: Number(chargePointId),
-    result,
-    ...metadata,
-  }, ip);
+  await audit.ghi_nhat_ky(actorId, 'REMOTE_STOP', 'charging_session', sessionId, metadata, result, ip);
 }
 
 async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, db = null } = {}) {
@@ -161,7 +157,7 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
 
   const requestedAt = new Date().toISOString();
   if (!connections.isConnected(initial.charge_point_code)) {
-    await writeRemoteStopAudit(actor.id, sessionId, initial.charge_point_id, 'OFFLINE', { requested_at: requestedAt }, ip);
+    await writeRemoteStopAudit(actor.id, sessionId, 'OFFLINE', { requested_at: requestedAt }, ip);
     throw new AppError(409, 'CHARGE_POINT_OFFLINE', 'Không thể dừng phiên vì trụ sạc đang ngoại tuyến');
   }
 
@@ -207,7 +203,7 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
       [sessionId, require('../../config/env').REMOTE_STOP_WAIT_SECONDS]
     );
     const deadline = accepted.rows[0]?.remote_stop_deadline || null;
-    await writeRemoteStopAudit(actor.id, sessionId, claim.session.charge_point_id, 'ACCEPTED', {
+    await writeRemoteStopAudit(actor.id, sessionId, 'ACCEPTED', {
       requested_at: new Date(claim.requestedAt).toISOString(),
       deadline: deadline ? new Date(deadline).toISOString() : null,
     }, ip);
@@ -225,7 +221,7 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
          WHERE id = $1 AND status = 'CHARGING' AND remote_stop_status = 'SENDING'`,
         [sessionId]
       );
-      await writeRemoteStopAudit(actor.id, sessionId, claim.session.charge_point_id, 'OFFLINE', {
+      await writeRemoteStopAudit(actor.id, sessionId, 'OFFLINE', {
         requested_at: new Date(claim.requestedAt).toISOString(),
       }, ip);
       throw error;
@@ -242,7 +238,7 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
        WHERE id = $1 AND status = 'CHARGING' AND remote_stop_status = 'SENDING'`,
       [sessionId, result, needsReview]
     );
-    await writeRemoteStopAudit(actor.id, sessionId, claim.session.charge_point_id, result, {
+    await writeRemoteStopAudit(actor.id, sessionId, result, {
       requested_at: new Date(claim.requestedAt).toISOString(),
       error_code: error.code || null,
     }, ip);
@@ -320,18 +316,18 @@ async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db 
        WHERE id = $1 AND status = 'ABNORMAL'`,
       [sessionId, meterStop, normalizedReason, actor.id]
     );
-    await require('../audit/audit.repository').record(
+    await require('../audit/audit.repository').ghi_nhat_ky(
       actor.id,
       'SESSION_MANUALLY_CLOSED',
       'charging_session',
       sessionId,
       {
-        reason: normalizedReason,
         meter_start_wh: meterStart,
         meter_stop_wh: meterStop,
         energy_kwh: energyKwh,
         previous_review_reason: session.review_reason || null,
       },
+      'COMPLETED',
       ip,
       tx
     );
