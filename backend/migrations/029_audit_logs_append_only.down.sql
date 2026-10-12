@@ -1,4 +1,3 @@
-DROP TRIGGER audit_logs_no_truncate ON audit_logs;
 DROP TRIGGER audit_logs_append_only ON audit_logs;
 DROP FUNCTION reject_audit_logs_mutation();
 

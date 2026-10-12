@@ -6,7 +6,7 @@ const tableSessions = async () => (await query("SELECT to_regclass('public.charg
 const tableMeterValues = async () => (await query("SELECT to_regclass('public.meter_values') AS t")).rows[0].t;
 const tableOrphanMessages = async () => (await query("SELECT to_regclass('public.orphan_messages') AS t")).rows[0].t;
 
-describe('migrations 017-030: charging sessions, remote commands, and append-only audit logs', () => {
+describe('migrations 017-031: charging sessions, remote commands, and append-only audit logs', () => {
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
@@ -90,8 +90,11 @@ describe('migrations 017-030: charging sessions, remote commands, and append-onl
     assert.equal((await query('SELECT action FROM audit_logs WHERE id = $1', [id])).rows[0].action, 'APPEND_ONLY_TEST');
   });
 
-  it('down: rollback lần lượt 029 tới 017 và up lại sạch sẽ', async () => {
+  it('down: rollback lần lượt 031 tới 017 và up lại sạch sẽ', async () => {
     const rollbackChecks = [
+      { version: '031_audit_logs_no_truncate', check: async () => {
+        assert.equal((await query("SELECT tgname FROM pg_trigger WHERE tgname = 'audit_logs_no_truncate' AND NOT tgisinternal")).rowCount, 0);
+      } },
       { version: '030_audit_logs_query_indexes', check: async () => {
         assert.equal((await query("SELECT indexname FROM pg_indexes WHERE indexname IN ('charge_points_code_trgm_idx', 'users_name_trgm_idx', 'users_email_trgm_idx')")).rowCount, 0);
         const createdAtIndex = await query("SELECT indexdef FROM pg_indexes WHERE indexname = 'audit_logs_created_at_idx'");
@@ -100,7 +103,6 @@ describe('migrations 017-030: charging sessions, remote commands, and append-onl
       { version: '029_audit_logs_append_only', check: async () => {
         assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'audit_logs' AND column_name = 'result'")).rowCount, 0);
         assert.equal((await query("SELECT tgname FROM pg_trigger WHERE tgname = 'audit_logs_append_only' AND NOT tgisinternal")).rowCount, 0);
-        assert.equal((await query("SELECT tgname FROM pg_trigger WHERE tgname = 'audit_logs_no_truncate' AND NOT tgisinternal")).rowCount, 0);
       } },
       { version: '028_manual_session_closure', check: async () => {
         assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name IN ('manual_close_reason', 'manual_closed_by')")).rowCount, 0);
