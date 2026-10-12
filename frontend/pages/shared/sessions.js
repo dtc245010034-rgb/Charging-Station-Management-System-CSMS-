@@ -2,7 +2,8 @@ import { h, mount } from '../../app/dom.js';
 import { api } from '../../services/api.js';
 import { icon } from '../../components/icons.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
-import { formatDateTime, formatNumber } from '../../app/format.js';
+import { formatDateTime } from '../../app/format.js';
+import { kwhLabel, reviewReasonLabel } from './session-text.js';
 
 const POLL_INTERVAL_MS = 2500;
 
@@ -56,7 +57,7 @@ export function render(ctx) {
           ? 'Chưa xác định được trụ đã nhận lệnh hay chưa. Cần kiểm tra trạng thái thực tế trước khi gửi lại.'
           : session.remote_stop_status === 'TIMED_OUT'
           ? 'Quá thời hạn chờ; phiên cần được kiểm tra trạng thái thực tế.'
-          : session.needs_review ? `Cần xem xét${session.review_reason ? ` · ${session.review_reason}` : ''}` : '';
+          : session.needs_review ? `Cần xem xét${session.review_reason ? ` · ${reviewReasonLabel(session.review_reason)}` : ''}` : '';
     const clock = session.remote_stop_status === 'ACCEPTED'
       ? h('span', { class: 'muted', dataset: { deadline: session.remote_stop_deadline }, 'aria-live': 'off' }, `Còn ${remaining(session.remote_stop_deadline)}`)
       : null;
@@ -69,7 +70,7 @@ export function render(ctx) {
           h('span', { class: 'muted' }, `Phiên #${session.id} · Bắt đầu ${formatDateTime(session.started_at)}`)
         ),
         h('div', { style: 'display:flex;align-items:center;gap:16px;flex-wrap:wrap' },
-          h('span', {}, session.current_kwh === null || session.current_kwh === undefined ? 'kWh —' : `${formatNumber(session.current_kwh)} kWh`),
+          h('span', {}, kwhLabel(session.current_kwh)),
           button
         )
       ),
@@ -88,10 +89,9 @@ export function render(ctx) {
     signature = '';
     await refresh();
     try {
-      const result = await api(`/api/sessions/${session.id}/stop`, { method: 'POST', body: {} });
+      await api(`/api/sessions/${session.id}/stop`, { method: 'POST', body: {} });
       requestedSessions.add(session.id);
       showNotice('Trụ đã chấp nhận yêu cầu dừng. Đang chờ trụ xác nhận kết thúc phiên.');
-      if (result.deadline) showNotice('Trụ đã chấp nhận yêu cầu dừng. Đang chờ trụ xác nhận kết thúc phiên.');
     } catch (error) {
       if (error.code === 'CHARGE_POINT_OFFLINE' || error.message.toLowerCase().includes('ngoại tuyến')) {
         showNotice('Không thể dừng phiên vì trụ sạc đang ngoại tuyến.', 'error');

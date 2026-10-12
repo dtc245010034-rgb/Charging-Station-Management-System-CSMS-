@@ -50,8 +50,8 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 | Sprint 2 (28/9–5/10), 20 SP | **Có code đạt AC (20/20 SP):** S-06 (trụ kết nối, trụ lạ bị từ chối), S-07 (khung OCPP), S-08 (BootNotification, khoá trạm), S-09 (Heartbeat, `last_seen_at`), S-10 (StatusNotification, lỗi mức đầu nối và mức trụ), S-11 (màn hình trạng thái mọi trụ, SSE), S-12 (job quá hạn nhịp tim → ngoại tuyến), S-13 (trùng mã trụ đóng kết nối cũ), S-14 (chống xử lý tin trùng `messageId`, bảng `ocpp_messages`), S-15 (xác thực thẻ qua `Authorize`, bảng `id_tags`), S-16 (Reset từ xa). **S-16 chưa Done:** chưa ghi vết vào `audit_logs` (mới ghi log ứng dụng) và chưa qua PR/review |
 | Chất lượng | Lint sạch · **425 test pass, 0 fail** (`python test.py`, 05/10/2026, 205 giây, chạy **một lần**; lần chạy 3 lần liên tiếp gần nhất là 04/10 với 402 test) · migration 001–016 lên/xuống/lên sạch · CI: `lint-and-test` (Ubuntu) + `test-windows` |
 | Chạy được ngay | Đăng nhập, 5 workspace theo vai trò, quản lý trạm/trụ, bảng trạng thái trụ cập nhật tức thời, khoá/mở khoá trạm, tắt máy sạch, trụ ảo kết nối được, kiểm thẻ `Authorize`, Reset trụ từ xa (Vận hành/Quản trị) |
-| Chưa có | Phiên sạc thật, tính tiền, ví, phân bổ công suất, đặt chỗ, đối soát (Sprint 3–8) |
-| Còn mở | S-16 ghi vết `audit_logs`, B5 (trụ chưa xác thực), chạy 50 trụ ảo trên máy chủ nhóm, tile bản đồ thật: xem [Giới hạn đã biết](#giới-hạn-đã-biết) |
+| Chưa có | Tính tiền, ví, phân bổ công suất, đặt chỗ, đối soát (Sprint 4–8). Phiên sạc thật đã có từ Sprint 3 (xem [Tiến độ Sprint 3](#tiến-độ-sprint-3-1210)) |
+| Còn mở | B5 (trụ chưa xác thực), chạy 50 trụ ảo trên máy chủ nhóm, tile bản đồ thật: xem [Giới hạn đã biết](#giới-hạn-đã-biết) |
 
 ### Việc còn lại để đóng Sprint 2 (hạn 5/10)
 
@@ -68,12 +68,18 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 
 Ước lượng giờ là của người soạn tài liệu, không phải số liệu từ Jira.
 
-### Tiến độ S-22 (10/10)
+### Tiến độ Sprint 3 (12/10)
 
-*Cập nhật 10/10/2026. Các mục khác của phần "Trạng thái dự án" ở trên vẫn dừng ở mốc 05/10; chi tiết S-22 ở [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md) mục 11.*
+*Cập nhật 12/10/2026. Phần "Trạng thái dự án" ở trên dừng ở mốc 05/10; bảng này thay cho ghi chú S-22 ngày 10/10. Chi tiết: [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md) mục 13. Hướng dẫn demo: [`docs/DEMO_SPRINT3.md`](docs/DEMO_SPRINT3.md).*
 
 | Hạng mục | Tình trạng |
 |---|---|
+| Code Sprint 3 (S-17 → S-27) | **Đã vào `main`** qua PR #91 (S-17), #93 (S-18), #94 (S-19), #96 (S-20), #98 (S-21), #101 (S-22), #103 (S-23), #106/#107 (S-24), #108 (S-25), #110 (S-26), #113 (S-27). Trạng thái Done chính thức theo Jira **chưa đối chiếu** |
+| Kiểm tra 12/10/2026 | `python test.py` trên `main`: **710 test pass, 0 fail** (358 giây); `npm audit --omit=dev --audit-level=high`: 0 vulnerabilities. Một phiên sạc có ngắt kết nối giữa chừng, xả 200 `MeterValues` dồn và `StopTransaction` đến muộn chốt đúng kWh (đã chạy trên server thật) |
+| Sửa lỗi rà soát 12/10 | Đóng được phiên bất thường chưa có số đo (ô tích "0 kWh"), dịch lý do cần xem xét sang tiếng Việt, sửa trang "Bắt đầu sạc" của tài xế, mỗi tài xế một phiên khi bắt đầu từ ứng dụng. Chi tiết ở mục cuối [`docs/DEMO_SPRINT3.md`](docs/DEMO_SPRINT3.md) |
+| Còn mở | B5 (trụ chưa xác thực, phải chốt trước khi tính tiền), kịch bản 20 trụ ngắt–nối trên staging, menu "Phiên sạc" cho Chủ trạm/Kế toán, hồ sơ kiểm thử S-18, S-24, S-27, trạng thái Jira |
+
+---|---|
 | S-22 (GYM-48): tài xế xem phiên đang sạc | **Chưa Done.** Bản giao đầu ở nhánh `nam/gym48-s-22`, chưa vào `main`. Các lỗi của báo cáo review lần 27 đã sửa trên nhánh `phuc/GYM-48-sua-loi-review-s22`: kWh và công suất theo đúng đơn vị trụ gửi, lưu `SoC`, SSE lọc theo tài xế và đúng thứ tự, màn hình kết thúc phiên, đồng bộ lại khi SSE nối lại. Chưa mở PR, chưa được duyệt |
 | Còn lại | Mở PR và review; kiểm tay trên trình duyệt (**chưa chạy**); chạy toàn bộ test trong môi trường CI và ghi tổng số; tách thẻ riêng cho các phát hiện ngoài phạm vi. Hồ sơ: [`docs/dev/S-22_2026-10-10.md`](docs/dev/S-22_2026-10-10.md), [`kiem-thu-S-22.md`](docs/testing/stories/S/kiem-thu-S-22.md) |
 
@@ -345,7 +351,7 @@ Công nghệ: Node ≥ 22.7 · Express 5 · PostgreSQL 16 · Zod · argon2id · 
 |---|---|---|
 | 1 (21–28/9) | Khai báo trạm, trụ, đầu nối; cả nhóm chạy được dự án | **Xong** (12 SP) |
 | 2 (28/9–5/10) | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ | Code đạt AC đủ 20/20 SP (S-06…S-16). S-16 còn thiếu ghi vết `audit_logs` và chưa qua PR. Kế hoạch: [`docs/SPRINT_2_PLAN.md`](docs/SPRINT_2_PLAN.md) |
-| 3 | Một phiên sạc trọn vẹn, kWh đúng dù trụ mất kết nối | Chưa |
+| 3 (7/10–14/10) | Một phiên sạc trọn vẹn, kWh đúng dù trụ mất kết nối | Code S-17…S-27 đã vào `main`; kiểm 12/10: 710 test pass. Kế hoạch: [`docs/SPRINT_3_PLAN.md`](docs/SPRINT_3_PLAN.md); demo: [`docs/DEMO_SPRINT3.md`](docs/DEMO_SPRINT3.md) |
 | 4 | Tính đúng tiền theo biểu giá nhiều khung giờ | Chưa |
 | 5 | Nạp ví (sandbox), tự trừ tiền | Chưa; **chưa có hồ sơ sandbox thanh toán** |
 | 6–8 | Phân bổ công suất · Tìm trạm, đặt chỗ · Đối soát | Chưa |
@@ -354,7 +360,7 @@ Công nghệ: Node ≥ 22.7 · Express 5 · PostgreSQL 16 · Zod · argon2id · 
 
 ### API hiện có
 
-`/api/auth/{register,login,logout,me}` · `/api/admin/users` · `/api/admin/stations/:id/lock` · `/api/roles` · `/api/stations` (+`/:id`) · `/api/stations/:id/charge-points` · `/api/charge-points` (+`/:id`, `/check-code`, `POST /:id/reset`) · `/api/fleet-status` (+`/events`, SSE) · `/api/health` · WebSocket `/ocpp/<mã>`. Chi tiết: [`backend/README.md`](backend/README.md).
+`/api/auth/{register,login,logout,me}` · `/api/admin/users` · `/api/admin/stations/:id/lock` · `/api/roles` · `/api/stations` (+`/:id`) · `/api/stations/:id/charge-points` · `/api/charge-points` (+`/:id`, `/check-code`, `POST /:id/reset`) · `/api/fleet-status` (+`/events`, SSE) · `/api/sessions` (+`/:id`, `/unexpected`, `/events`, `POST /:id/stop`, `POST /:id/close`) · `/api/me/sessions/{current,events}` · `/api/driver/charge-points` · `POST /api/connectors/:id/start` · `/api/me/remote-start-requests/{pending,:id}` · `/api/audit-logs` (chỉ Quản trị) · `/api/health` · WebSocket `/ocpp/<mã>`. Chi tiết: [`backend/README.md`](backend/README.md).
 
 ### Giới hạn đã biết
 
@@ -371,7 +377,7 @@ Các mục dưới đây là hiện trạng thật trên `main`, không phải l
 | **F10** | **Đã xử lý.** Truy vấn của handler OCPP dùng pool riêng với `lock_timeout` 5 giây (`OCPP_LOCK_TIMEOUT_SECONDS`); hết hạn thì trụ nhận `InternalError` thay vì chờ vô hạn. | — |
 | — | Server đòi `BootNotification` ở mỗi kết nối mới (tin khác bị `SecurityError`). Trụ nối lại sau khi rớt mạng mà không Boot sẽ bị từ chối cho tới khi Boot. Chưa kiểm với trụ thật. | Chờ PO/trụ thật xác nhận |
 | — | `errorCode` ngoài 16 mã OCPP 1.6 được lưu `OtherError` (mã gốc giữ ở `vendor_error_code`). `Authorize` đi qua chống trùng S-14: thẻ bị khoá giữa chừng mà trụ gửi lại y hệt tin cũ trong cửa sổ F8 thì vẫn nhận câu cũ. | Chấp nhận (S-15) |
-| — | **Reset từ xa (S-16) mới ghi vết vào log ứng dụng** (`[OCPP] Remote Reset requested \| actorId \| chargePoint \| type`), **chưa ghi bảng `audit_logs`** dù bảng đã có. Không truy vấn lại được ai đã bấm sau khi log xoay vòng. Nhận diện hết thời gian dựa vào nội dung câu báo lỗi. | Thêm `audit.record(...)` trước khi đóng S-16; nền cho S-27 |
+| — | **Reset từ xa (S-16) đã ghi `audit_logs`** (qua `ghi_nhat_ky`, từ S-27; ĐỌC CODE `charge-points.service.js`). Nhận diện hết thời gian vẫn dựa vào nội dung câu báo lỗi của trụ. | Chấp nhận |
 | — | **Tắt máy sạch (N4) chỉ đúng với một tiến trình server.** Khởi động sau sẽ đánh dấu nhầm trụ đang kết nối ở bản kia nếu chạy nhiều bản cùng một DB. `SIGKILL` không chạy được handler tắt máy: trụ `ONLINE` mồ côi chỉ được dọn ở lần khởi động kế tiếp. | Cần cơ chế theo phiên trước khi mở rộng ngang |
 | — | **Quy tắc hiển thị:** trụ `ONLINE` mà đầu nối chưa báo trạng thái (`UNKNOWN`) vẫn hiện "Sẵn sàng" (xanh); trụ `ONLINE` có toàn đầu nối `UNAVAILABLE` hiện "Trực tuyến – tạm ngừng" (thống nhất ở trang "Trụ sạc" và "Trạng thái trụ"; cờ `offline` của API giữ nguyên). | Chờ PO/QA xác nhận |
 | — | Hai test N4 bỏ qua trên Windows (xem [Kiểm thử](#3-kiểm-thử)); đường tắt máy bằng `taskkill` trên Windows chưa kiểm. | Khởi động lại sẽ tự dọn trụ mồ côi |
@@ -413,7 +419,8 @@ run.py / test.py          chạy dự án / chạy toàn bộ test bằng Docker
 | Cần gì | Đọc |
 |---|---|
 | Build, chạy, dừng, sao lưu DB, staging, biến môi trường | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
-| Dự án đang ở đâu (từng story, rủi ro, DoD) | [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md), [`docs/SPRINT_2_PLAN.md`](docs/SPRINT_2_PLAN.md) |
+| Dự án đang ở đâu (từng story, rủi ro, DoD) | [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md), [`docs/SPRINT_2_PLAN.md`](docs/SPRINT_2_PLAN.md), [`docs/SPRINT_3_PLAN.md`](docs/SPRINT_3_PLAN.md) |
+| Demo cho mentor | [`docs/DEMO_SPRINT2.md`](docs/DEMO_SPRINT2.md), [`docs/DEMO_SPRINT3.md`](docs/DEMO_SPRINT3.md) |
 | Đóng góp code (nhánh, commit, review, DoD) | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | API, phân quyền, khoá đăng nhập, migration | [`backend/README.md`](backend/README.md) |
 | Thiết kế giao diện | [`docs/design/`](docs/design/) |

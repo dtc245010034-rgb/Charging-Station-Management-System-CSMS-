@@ -3,6 +3,7 @@ import { formatDateTime, formatNumber } from '../../app/format.js';
 import { api } from '../../services/api.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
 import { icon } from '../../components/icons.js';
+import { kwhLabel, lacksEnergyReading, reviewReasonLabel } from './session-text.js';
 
 const POLL_INTERVAL_MS = 5000;
 const ENERGY_MEASURAND = 'Energy.Active.Import.Register';
@@ -65,6 +66,8 @@ export function render(ctx) {
       'aria-label': `Lý do đóng phiên #${session.id}`,
       oninput: () => reason.setCustomValidity(''),
     });
+    const needsZeroConfirm = lacksEnergyReading(session);
+    const zeroEnergy = needsZeroConfirm ? h('input', { type: 'checkbox', name: 'allow_zero_energy', 'aria-label': `Đóng phiên #${session.id} với 0 kWh` }) : null;
     const form = canClose ? h('form', {
       style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end',
       onsubmit: async (event) => {
@@ -78,13 +81,17 @@ export function render(ctx) {
         reason.setCustomValidity('');
         submitBtn.disabled = true;
         mount(submitBtn, 'Đang lưu…');
-        await closeSession(session, value);
+        await closeSession(session, value, Boolean(zeroEnergy?.checked));
       },
     },
     h('label', { style: 'display:grid;gap:5px;flex:1 1 280px' },
       h('span', { class: 'muted' }, 'Lý do đóng'),
       reason
     ),
+    zeroEnergy ? h('label', { style: 'display:flex;gap:8px;align-items:center;flex:1 1 100%' },
+      zeroEnergy,
+      h('span', { class: 'muted' }, 'Phiên chưa có số đo năng lượng: xác nhận đóng với 0 kWh')
+    ) : null,
     submitBtn) : null;
 
     return h('article', { class: 'card', style: 'padding:16px;display:grid;gap:12px' },
@@ -94,12 +101,10 @@ export function render(ctx) {
           h('span', { class: 'muted' }, session.station_name || 'Trạm chưa rõ'),
           h('span', { class: 'muted' }, `Phiên #${session.id} · Bắt đầu ${formatDateTime(session.started_at)}`),
           h('span', { class: 'muted' }, `Liên lạc lần cuối: ${session.last_seen_at ? formatDateTime(session.last_seen_at) : 'Chưa ghi nhận'}`),
-          h('span', { class: 'muted' }, `Lý do cần xem xét: ${session.review_reason || 'Cần kiểm tra thủ công'}`)
+          h('span', { class: 'muted' }, `Lý do cần xem xét: ${reviewReasonLabel(session.review_reason) || 'Cần kiểm tra thủ công'}`)
         ),
         h('div', { style: 'display:grid;gap:5px;text-align:right' },
-          h('strong', {}, session.current_kwh === null || session.current_kwh === undefined
-            ? 'Điện năng đã lấy: —'
-            : `Điện năng đã lấy: ${formatNumber(session.current_kwh)} kWh`),
+          h('strong', {}, `Điện năng đã lấy: ${kwhLabel(session.current_kwh)}`),
           h('span', { class: 'muted' }, energyReading
             ? `Số đo cuối: ${energyReading.value} ${energyReading.unit || 'Wh'} · ${formatDateTime(energyReading.sampled_at)}`
             : 'Chưa có số đo năng lượng cuối')
@@ -109,11 +114,11 @@ export function render(ctx) {
     );
   }
 
-  async function closeSession(session, reason) {
+  async function closeSession(session, reason, allowZeroEnergy = false) {
     if (!ctx.can('sessions:unexpected:close') || inFlight.has(session.id)) return;
     inFlight.add(session.id);
     try {
-      const result = await api(`/api/sessions/${session.id}/close`, { method: 'POST', body: { reason } });
+      const result = await api(`/api/sessions/${session.id}/close`, { method: 'POST', body: allowZeroEnergy ? { reason, allow_zero_energy: true } : { reason } });
       showNotice(`Đã đóng phiên #${session.id}; số điện năng chốt ${formatNumber(result.current_kwh)} kWh.`);
     } catch (error) {
       showNotice(error.message || 'Không thể đóng phiên sạc.', 'error');

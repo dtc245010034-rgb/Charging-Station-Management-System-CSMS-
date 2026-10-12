@@ -259,6 +259,33 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     await getRequest(driverCookie, accepted.request_id);
   });
 
+  it('tài xế đang có phiên CHARGING không được bắt đầu thêm phiên thứ hai và không gửi lệnh xuống trụ', async () => {
+    await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id = $1", [connectorIds[0]]);
+    const virtualTag = (await query('SELECT tag FROM id_tags WHERE user_id = $1 AND is_virtual', [driverId])).rows[0].tag;
+    const started = await sendCall(client, 's24-active-session-start', 'StartTransaction', {
+      connectorId: 2,
+      idTag: virtualTag,
+      meterStart: 500,
+      timestamp: new Date().toISOString(),
+    });
+    assert.equal(started[0], 3);
+
+    const beforeCalls = remoteCalls.length;
+    const response = await postStart(driverCookie, connectorIds[0]);
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).error.code, 'DRIVER_HAS_ACTIVE_SESSION');
+    assert.equal(remoteCalls.length, beforeCalls);
+    const requests = await query("SELECT 1 FROM remote_start_requests WHERE driver_id = $1 AND status = 'PENDING'", [driverId]);
+    assert.equal(requests.rowCount, 0);
+
+    await sendCall(client, 's24-active-session-stop', 'StopTransaction', {
+      transactionId: started[2].transactionId,
+      meterStop: 500,
+      timestamp: new Date().toISOString(),
+      reason: 'Local',
+    });
+  });
+
   it('lỗi ngoại tuyến và gateway timeout đóng yêu cầu, ghi audit để tài xế thử lại', async () => {
     await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id = $1", [connectorIds[0]]);
     const beforeCalls = remoteCalls.length;
