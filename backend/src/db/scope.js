@@ -7,7 +7,7 @@ const ALIAS = /^[a-z_][a-z0-9_]*$/i;
 function scopeByOwner(actor, alias) {
   if (!ALIAS.test(alias)) throw new Error(`alias không hợp lệ: ${alias}`);
   const roles = actor.roles || [];
-  if (roles.includes('ADMIN') || roles.includes('OPERATOR')) return { sql: 'TRUE', params: [] };
+  if (roles.includes('ADMIN') || roles.includes('OPERATOR') || roles.includes('ACCOUNTANT')) return { sql: 'TRUE', params: [] };
   if (roles.includes('STATION_OWNER')) return { sql: `${alias}.owner_id = ?`, params: [actor.id] };
   throw new ForbiddenError();
 }

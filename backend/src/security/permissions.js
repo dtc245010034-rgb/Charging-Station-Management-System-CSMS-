@@ -26,6 +26,8 @@ const permissions = {
   'sessions:unexpected:read': ['OPERATOR', 'ACCOUNTANT', 'ADMIN'],
   'sessions:unexpected:close': ['OPERATOR', 'ADMIN'],
   'audit-logs:read': ADMIN,
+  'tariffs:read': ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT'],
+  'tariffs:write': WRITE_OPERATIONS,
 };
 
 function access(key) {
