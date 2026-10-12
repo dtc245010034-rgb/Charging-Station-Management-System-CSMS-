@@ -2,6 +2,7 @@
 
 > Cập nhật: **05/10/2026**, khớp `main` sau PR #85 (S-15) và commit S-16 `6e74180` (**commit S-16 mới có trên `main` cục bộ, chưa qua PR**). Nguồn: lịch sử PR trên GitHub, mã nguồn và kết quả chạy thật (`python test.py`). **Trạng thái thẻ Jira chưa đối chiếu bằng API** (không có token): cột “Jira” của Sprint 2 dưới đây là “code đạt trên `main`”, không phải trạng thái Done chính thức.
 > Bổ sung 10/10/2026: tiến độ S-22 (GYM-48) ở [mục 11](#11-s-22-gym-48--tiến-độ-sửa-lỗi-review-10102026); các phần còn lại của tài liệu vẫn ở mốc 05/10.
+> Bổ sung 12/10/2026: **tình trạng Sprint 3 ở [mục 13](#13-sprint-3-s-17--s-27--tình-trạng-12102026)**. Mục 11 và 12 dưới đây là ghi chú theo thời điểm 10/10; S-22 và S-23 đã vào `main` (PR #101, #103).
 > Định nghĩa Done chính thức theo Jira và Definition of Done trong backlog; tài liệu này ghi thêm **bằng chứng** và **chỗ chưa đạt**.
 
 ## 1. Tóm tắt một trang
@@ -200,3 +201,43 @@ Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VON
 | Kiểm thử trụ ảo thực tế | Đã chạy live với WebSocket `ws://localhost:3000/ocpp/*` và máy chủ Docker thật: luồng thành công Happy Path (chốt 6 kWh, Remote reason), luồng Rejected (422), luồng Ngoại tuyến (409) đạt 100% |
 | Còn lại | Mở PR và review chéo; kiểm thử thủ công cuối cùng trên trình duyệt bởi QA |
 
+## 13. Sprint 3 (S-17 → S-27) — tình trạng 12/10/2026
+
+Nguồn: lịch sử `git` trên `main`, chạy thật ngày 12/10/2026 (Docker, PostgreSQL 16), duyệt giao diện bằng Chrome. **Trạng thái thẻ Jira chưa đối chiếu bằng API.**
+
+| Story | Jira | Trên `main` | PR |
+|---|---|---|---|
+| S-17 `StartTransaction` | GYM-43 | Có | #91 |
+| S-18 `StopTransaction` chốt kWh | GYM-44 | Có | #93 |
+| S-19 `MeterValues` | GYM-45 | Có | #94 |
+| S-20 số đo lùi/trùng | GYM-46 | Có | #96 |
+| S-21 khôi phục khi trụ nối lại | GYM-47 | Có | #98 |
+| S-22 tài xế xem phiên trực tiếp | GYM-48 | Có | #101 |
+| S-23 vận hành dừng từ xa | GYM-49 | Có | #103 (+ #104 tài liệu) |
+| S-24 tài xế bắt đầu từ ứng dụng | GYM-50 | Có | #106, #107 |
+| S-25 phiên bất thường | GYM-51 | Có | #108 |
+| S-26 trụ ảo trong compose và CI | GYM-52 | Có | #110 |
+| S-27 nhật ký điều khiển | GYM-53 | Có | #113 |
+
+| Hạng mục | Kết quả (12/10/2026) |
+|---|---|
+| Lint + toàn bộ test (`python test.py`, trên `main`) | **ĐẠT, 710 test pass, 0 fail, 358 giây** |
+| `python test.py` sau khi sửa lỗi rà soát (nhánh `loc/GYM-51-ra-soat-sprint3`) | **ĐẠT, 723 test pass, 0 fail, 332 giây** (+13 test mới) |
+| `python3 -m unittest discover -s tools -q` | 21 test, OK |
+| `npm audit --omit=dev --audit-level=high` | 0 vulnerabilities |
+| Mục tiêu sprint (đã chạy thật, script tạm) | Phiên có ngắt kết nối đột ngột giữa chừng, xả 200 `MeterValues` dồn không bị đóng kết nối, `StopTransaction` muộn chốt 3 kWh đúng; `StopTransaction` lần hai không đổi số liệu |
+| Giao diện duyệt bằng Chrome | Admin, Vận hành, Chủ trạm, Kế toán, Tài xế |
+
+**Lỗi tìm thấy khi rà soát và đã sửa (nhánh `loc/GYM-51-ra-soat-sprint3`, chưa qua PR/review):** phiên bất thường chưa có số đo không đóng được từ giao diện (thêm ô tích "đóng với 0 kWh"); lý do cần xem xét hiện tiếng Anh; trang "Bắt đầu sạc" của tài xế (nút bấm được khi trụ ngoại tuyến, báo sai nguyên nhân, lộ chữ `StartTransaction`, không tự cập nhật); định dạng "kWh —", mã thẻ che hai lần, thông báo dừng lặp; tài xế mở được hai phiên từ ứng dụng (nay chặn 409 `DRIVER_HAS_ACTIVE_SESSION`).
+
+**Còn mở / CHƯA KIỂM:**
+
+| Việc | Ghi chú |
+|---|---|
+| B5 xác thực trụ | PO quyết; phải chốt trước Sprint 4 (số đo quyết định tiền) |
+| Kịch bản 20 trụ ngắt–nối trên staging | Chưa có URL staging; CI chạy profile nhỏ (job `session-scenario`); kết quả CI trên GitHub chưa xem lại |
+| Phiên mở bằng thẻ khoá (`Blocked`) vẫn `CHARGING` có cờ cần xem xét | Đúng AC S-17; PO xác nhận cách trụ thật xử lý |
+| Tài xế có hai phiên đồng thời qua thẻ vật lý (trụ gửi `StartTransaction`) | Màn hình Tài xế chỉ hiện một phiên; cần quy tắc nghiệp vụ |
+| Menu "Phiên sạc" cho Chủ trạm và Kế toán; `driver_id` trong API phiên của Chủ trạm (NĐ 13) | Chưa cam kết ở Sprint 3; PO quyết |
+| Hồ sơ kiểm thử S-18, S-24, S-27 | Thiếu trong `docs/testing/stories/S/` (vùng của vai trò kiểm thử) |
+| Jira, tile bản đồ thật, trụ thật | Chưa kiểm |
