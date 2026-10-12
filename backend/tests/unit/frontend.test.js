@@ -180,6 +180,7 @@ describe('S-02 frontend: router', () => {
             entity_id: '2',
             charge_point_code: 'CP-2',
             result: 'ACCEPTED',
+            ip: '203.0.113.42',
             metadata: { note: '<img src=x onerror=alert(1)>' },
           }],
         }),
@@ -211,6 +212,7 @@ describe('S-02 frontend: router', () => {
       assert.equal(find(root, (node) => node.tag === 'img').length, 0);
       assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Bắt đầu sạc từ xa'));
       assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Đã chấp nhận'));
+      assert.ok(find(root, (node) => node.tag === 'td').some((node) => node.textContent === '203.0.113.42'));
       assert.ok(find(root, (node) => node.tag === 'span' && node.attributes.class === 'badge badge--ready').length > 0);
       assert.equal(auditActionLabel('UNKNOWN_ACTION'), 'UNKNOWN_ACTION');
       assert.equal(auditResultLabel('TIMED_OUT'), 'Hết thời gian');

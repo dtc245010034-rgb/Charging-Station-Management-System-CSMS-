@@ -49,18 +49,19 @@ async function list({ chargePoint = null, user = null, from = null, to = null, p
     )`, `%${escapeLike(chargePoint)}%`);
   }
   if (user) {
-    values.push(user);
-    const userIdParameter = `$${values.length}`;
+    const userFilters = [];
+    if (/^\d+$/.test(user) && BigInt(user) <= 9223372036854775807n) {
+      values.push(user);
+      userFilters.push(`al.user_id = $${values.length}::bigint`);
+    }
     values.push(`%${escapeLike(user)}%`);
     const userTextParameter = `$${values.length}`;
-    filters.push(`(
-      al.user_id::text = ${userIdParameter}
-      OR EXISTS (
+    userFilters.push(`EXISTS (
         SELECT 1 FROM users u
         WHERE u.id = al.user_id
           AND (u.name ILIKE ${userTextParameter} ESCAPE E'\\\\' OR u.email ILIKE ${userTextParameter} ESCAPE E'\\\\')
-      )
-    )`);
+      )`);
+    filters.push(`(${userFilters.join(' OR ')})`);
   }
   if (from) addFilter(
     (parameter) => `al.created_at >= (${parameter}::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')`,
@@ -102,7 +103,7 @@ async function list({ chargePoint = null, user = null, from = null, to = null, p
   values.push(50, offset);
   const rows = await pool.query(
     `SELECT al.id, al.user_id, u.name AS user_name, al.action, al.entity, al.entity_id,
-            cp.code AS charge_point_code, al.metadata, al.result, al.created_at
+            cp.code AS charge_point_code, al.metadata, al.result, al.ip, al.created_at
      ${fromAndJoins}
      ${where}
      ORDER BY al.created_at DESC, al.id DESC

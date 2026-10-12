@@ -26,8 +26,8 @@ describe('S-27 audit logs', () => {
     );
     chargePointId = chargePoint.rows[0].id;
     await query(
-      `INSERT INTO audit_logs (user_id, action, entity, entity_id, metadata, result)
-       SELECT $1, 'RESET', 'charge_point', $2, '{"type":"Soft"}'::jsonb, 'Accepted'
+      `INSERT INTO audit_logs (user_id, action, entity, entity_id, metadata, result, ip)
+       SELECT $1, 'RESET', 'charge_point', $2, '{"type":"Soft"}'::jsonb, 'Accepted', '203.0.113.42'
        FROM generate_series(1, 51)`,
       [operator.id, chargePointId]
     );
@@ -54,6 +54,7 @@ describe('S-27 audit logs', () => {
     assert.ok(first.body.items.every((item) => item.charge_point_code === 'VCP-AUDIT-01'));
     assert.ok(first.body.items.every((item) => String(item.user_id) === String(operator.id)));
     assert.equal(first.body.items[0].result, 'Accepted');
+    assert.equal(first.body.items[0].ip, '203.0.113.42');
 
     const second = await request(app).get(`/api/audit-logs?${filters}&page=2`).set('Cookie', admin.cookie);
     assert.equal(second.status, 200);
