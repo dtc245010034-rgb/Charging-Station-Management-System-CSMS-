@@ -55,7 +55,7 @@ async function create(actor, stationId, data) {
 
   const norm = normalizePeriods(data.periods);
   if (!norm.ok) {
-    throw new BadRequestError('Khung giờ không hợp lệ', { errors: norm.errors });
+    throw new BadRequestError('Khung giờ không hợp lệ', norm.errors);
   }
 
   const tz = station.timezone || 'Asia/Ho_Chi_Minh';
