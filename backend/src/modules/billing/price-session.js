@@ -124,6 +124,7 @@ function priceSession(params) {
     samples = [],
     timezone = 'Asia/Ho_Chi_Minh',
     tariff,
+    idleInterval,
   } = params;
 
   const startMs = typeof startedAt === 'number' ? startedAt : new Date(startedAt).getTime();
@@ -176,6 +177,34 @@ function priceSession(params) {
       pricePerKwh: period.pricePerKwh,
       amountDong: amount,
     });
+  }
+
+  // Xử lý phí chiếm trụ IDLE (nếu có idleInterval)
+  if (idleInterval && idleInterval.from && idleInterval.to) {
+    const idleFromMs = typeof idleInterval.from === 'number' ? idleInterval.from : new Date(idleInterval.from).getTime();
+    const idleToMs = typeof idleInterval.to === 'number' ? idleInterval.to : new Date(idleInterval.to).getTime();
+    const graceMin = Number(tariff?.idle?.graceMin || 0);
+    const perMinDong = Number(tariff?.idle?.perMinDong || 0);
+
+    const graceEndMs = idleFromMs + graceMin * 60 * 1000;
+    if (idleToMs > graceEndMs && perMinDong > 0) {
+      const excessMs = idleToMs - graceEndMs;
+      const minutes = Math.ceil(excessMs / (60 * 1000));
+      const idleAmount = minutes * perMinDong;
+      const graceEndParts = toLocalParts(graceEndMs, timezone);
+
+      lines.push({
+        kind: 'IDLE',
+        localDate: graceEndParts.localDate,
+        from: new Date(graceEndMs).toISOString(),
+        to: new Date(idleToMs).toISOString(),
+        wh: 0,
+        pricePerKwh: null,
+        minutes,
+        perMinDong,
+        amountDong: idleAmount,
+      });
+    }
   }
 
   const totalDong = lines.reduce((sum, l) => sum + l.amountDong, 0);

@@ -152,3 +152,94 @@ describe('billing/price-session: cắt nhiều khung và qua nửa đêm [GYM-56
   });
 });
 
+describe('billing/price-session: phí chiếm trụ IDLE [GYM-54]', () => {
+  it('không phát sinh phí IDLE khi xe rời trụ trong thời gian ân hạn (C13)', () => {
+    // Phiên sạc 10 000 Wh (40 000 đ), kết thúc lúc 09:00 (02:00Z)
+    // Rời trụ lúc 09:10 (ân hạn 15 phút, từ 09:00 đến 09:15)
+    // 09:10 <= 09:15 -> 0 đ phí IDLE
+    const input = {
+      startedAt: '2026-10-12T01:00:00.000Z',
+      stoppedAt: '2026-10-12T02:00:00.000Z',
+      meterStartWh: 0,
+      meterStopWh: 10000,
+      timezone: 'Asia/Ho_Chi_Minh',
+      tariff: {
+        periods: [{ startMin: 0, endMin: 1440, pricePerKwh: 4000 }],
+        idle: { graceMin: 15, perMinDong: 1000 },
+      },
+      idleInterval: {
+        from: '2026-10-12T02:00:00.000Z',
+        to: '2026-10-12T02:10:00.000Z', // 10 phút sau sạc xong
+      },
+    };
+    const result = priceSession(input);
+    assert.equal(result.lines.length, 1);
+    assert.equal(result.lines.some((l) => l.kind === 'IDLE'), false);
+    assert.equal(result.totalDong, 40000);
+  });
+
+  it('tính phí IDLE khi quá ân hạn, mỗi phút dở dang tính trọn 1 phút (C14)', () => {
+    // Sạc xong lúc 02:00Z (40 000 đ)
+    // Ân hạn 15 phút (đến 02:15Z)
+    // Rời trụ lúc 02:52:10Z (quá hạn 37 phút 10 giây -> làm tròn trần thành 38 phút)
+    // 38 phút x 1000 đ = 38 000 đ
+    // Tổng = 40 000 + 38 000 = 78 000 đ
+    const input = {
+      startedAt: '2026-10-12T01:00:00.000Z',
+      stoppedAt: '2026-10-12T02:00:00.000Z',
+      meterStartWh: 0,
+      meterStopWh: 10000,
+      timezone: 'Asia/Ho_Chi_Minh',
+      tariff: {
+        periods: [{ startMin: 0, endMin: 1440, pricePerKwh: 4000 }],
+        idle: { graceMin: 15, perMinDong: 1000 },
+      },
+      idleInterval: {
+        from: '2026-10-12T02:00:00.000Z',
+        to: '2026-10-12T02:52:10.000Z',
+      },
+    };
+    const result = priceSession(input);
+    const idleLine = result.lines.find((l) => l.kind === 'IDLE');
+    assert.ok(idleLine);
+    assert.equal(idleLine.minutes, 38);
+    assert.equal(idleLine.perMinDong, 1000);
+    assert.equal(idleLine.amountDong, 38000);
+    assert.equal(idleLine.wh, 0);
+    assert.equal(idleLine.pricePerKwh, null);
+    assert.equal(result.totalDong, 78000);
+  });
+
+  it('tính đúng phí IDLE khi khoảng chiếm trụ vắt qua nửa đêm (C15)', () => {
+    // Sạc xong lúc 23:30 (16:30Z ngày 12/10), 40 000 đ
+    // Ân hạn 15 phút -> hết ân hạn lúc 23:45 (16:45Z)
+    // Rời trụ lúc 00:33 (17:33Z ngày 13/10)
+    // Thời gian tính phí: 23:45 đến 00:33 = 48 phút tròn
+    // 48 x 1000 = 48 000 đ
+    // Tổng = 40 000 + 48 000 = 88 000 đ
+    // localDate của dòng IDLE là ngày của mốc hết ân hạn (2026-10-12)
+    const input = {
+      startedAt: '2026-10-12T15:30:00.000Z',
+      stoppedAt: '2026-10-12T16:30:00.000Z',
+      meterStartWh: 0,
+      meterStopWh: 10000,
+      timezone: 'Asia/Ho_Chi_Minh',
+      tariff: {
+        periods: [{ startMin: 0, endMin: 1440, pricePerKwh: 4000 }],
+        idle: { graceMin: 15, perMinDong: 1000 },
+      },
+      idleInterval: {
+        from: '2026-10-12T16:30:00.000Z',
+        to: '2026-10-12T17:33:00.000Z',
+      },
+    };
+    const result = priceSession(input);
+    const idleLine = result.lines.find((l) => l.kind === 'IDLE');
+    assert.ok(idleLine);
+    assert.equal(idleLine.minutes, 48);
+    assert.equal(idleLine.amountDong, 48000);
+    assert.equal(idleLine.localDate, '2026-10-12');
+    assert.equal(result.totalDong, 88000);
+  });
+});
+
