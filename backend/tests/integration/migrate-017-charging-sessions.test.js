@@ -90,8 +90,15 @@ describe('migrations 017-031: charging sessions, remote commands, and append-onl
     assert.equal((await query('SELECT action FROM audit_logs WHERE id = $1', [id])).rows[0].action, 'APPEND_ONLY_TEST');
   });
 
-  it('down: rollback lần lượt 031 tới 017 và up lại sạch sẽ', async () => {
+  it('down: rollback lần lượt 033 tới 017 và up lại sạch sẽ', async () => {
     const rollbackChecks = [
+      { version: '033_tariffs', check: async () => {
+        assert.equal((await query("SELECT to_regclass('public.tariffs') AS t")).rows[0].t, null);
+        assert.equal((await query("SELECT to_regclass('public.tariff_periods') AS t")).rows[0].t, null);
+      } },
+      { version: '032_stations_timezone', check: async () => {
+        assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'stations' AND column_name = 'timezone'")).rowCount, 0);
+      } },
       { version: '031_audit_logs_no_truncate', check: async () => {
         assert.equal((await query("SELECT tgname FROM pg_trigger WHERE tgname = 'audit_logs_no_truncate' AND NOT tgisinternal")).rowCount, 0);
       } },
