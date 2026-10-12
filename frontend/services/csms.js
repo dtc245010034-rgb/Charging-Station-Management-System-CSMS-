@@ -39,3 +39,8 @@ export const admin = {
   roles: () => api('/api/roles'),
   createUser: (body) => api('/api/admin/users', { method: 'POST', body }),
 };
+
+export const tariffs = {
+  list: (stationId) => api(`/api/stations/${encodeURIComponent(stationId)}/tariffs`),
+  create: (stationId, body) => api(`/api/stations/${encodeURIComponent(stationId)}/tariffs`, { method: 'POST', body }),
+};

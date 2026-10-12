@@ -118,7 +118,17 @@ function render(station, { canWrite, canLock, onEdit, reload, onOpenChargePoint 
           pointStatusBadge(point, pointGroup({ ...point, connector_statuses: (point.connectors ?? []).map((c) => c.status) })))))
         : emptyState({ iconName: 'charger', title: 'Trạm chưa có trụ sạc', text: canWrite ? 'Thêm trụ đầu tiên ở bên dưới.' : undefined })),
     chargePointForm(station, canWrite, reload),
-    canWrite && h('div', {}, h('button', { class: 'btn', type: 'button', onclick: onEdit }, icon('edit'), 'Sửa thông tin trạm')),
+    h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
+      canWrite && h('button', { class: 'btn', type: 'button', onclick: onEdit }, icon('edit'), 'Sửa thông tin trạm'),
+      h('button', {
+        class: 'btn',
+        type: 'button',
+        onclick: () => {
+          const ws = location.hash.split('/')[1] || 'owner';
+          location.hash = `#/${ws}/tariffs/${station.id}`;
+        },
+      }, icon('sliders') || 'Biểu giá', 'Biểu giá trạm')
+    ),
     canLock && lockSection(station, reload),
   ];
 }
