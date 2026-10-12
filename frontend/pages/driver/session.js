@@ -145,7 +145,7 @@ export function render(ctx) {
         tile('Pin xe (SoC)', live.socEl)
       ),
       placesCard(session,
-        [infoRow('Bắt đầu lúc', formatDateTime(session.started_at)), infoRow('Mã thẻ sạc', `•••• ${session.id_tag_masked}`, { mono: true })])
+        [infoRow('Bắt đầu lúc', formatDateTime(session.started_at)), infoRow('Mã thẻ sạc', session.id_tag_masked, { mono: true })])
     );
   }
 
