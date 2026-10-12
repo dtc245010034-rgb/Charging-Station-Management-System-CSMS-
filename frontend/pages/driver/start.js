@@ -3,8 +3,10 @@ import * as csms from '../../services/csms.js';
 import { icon } from '../../components/icons.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
 import { toast } from '../../components/toast.js';
+import { startBlockReason } from './start-model.js';
 
 const POLL_INTERVAL_MS = 1500;
+const LIST_REFRESH_MS = 10000;
 
 export function render(ctx) {
   let chargePoints = [];
@@ -65,7 +67,9 @@ export function render(ctx) {
 
   function updateStartButton(button) {
     if (!button) return;
-    button.disabled = isStarting || !selectedConnector();
+    const blockReason = startBlockReason(selectedConnector());
+    button.disabled = isStarting || Boolean(blockReason);
+    button.title = !isStarting && blockReason ? blockReason : '';
     button.replaceChildren(
       icon(isStarting ? 'refresh' : 'bolt'),
       isStarting ? 'Đang chờ trụ bắt đầu…' : 'Bắt đầu sạc'
@@ -90,7 +94,7 @@ export function render(ctx) {
       },
       h('span', {},
         h('span', { class: 'cell-strong' }, `Đầu nối ${connector.connector_no}`),
-        h('span', { class: 'cell-sub' }, connector.connector_type)),
+        h('span', { class: 'cell-sub' }, ` · ${connector.connector_type}`)),
       connectorBadge(connector));
     }));
   }
@@ -188,7 +192,7 @@ export function render(ctx) {
           ),
           startButton,
           h('p', { class: 'muted', style: 'font-size:12px;text-align:center;margin:0' },
-            'Sau khi trụ chấp nhận lệnh, hệ thống chờ StartTransaction tối đa 60 giây.'
+            'Sau khi trụ chấp nhận lệnh, hệ thống chờ phiên sạc bắt đầu tối đa 60 giây.'
           ),
           refreshButton
         )
@@ -301,11 +305,8 @@ export function render(ctx) {
       await pollRequest();
     } catch (error) {
       isStarting = false;
-      const isBusy = error.status === 409 && error.code === 'CONNECTOR_BUSY';
       const isRejected = error.status === 422 || error.code === 'CHARGE_POINT_REJECTED';
-      const messageText = isBusy
-        ? 'Đầu nối đang bận hoặc đã được đặt chỗ. Hãy chọn đầu nối khác.'
-        : isRejected
+      const messageText = isRejected
           ? 'Trụ từ chối yêu cầu bắt đầu. Hãy kiểm tra súng đã cắm chắc chưa.'
           : error.message;
       showMessage(messageText, { error: true });
@@ -327,6 +328,18 @@ export function render(ctx) {
     await pollRequest();
   }
 
+  const listTimer = setInterval(async () => {
+    if (isStarting || isUnmounted || document.hidden) return;
+    try {
+      const next = await csms.remoteStart.chargePoints();
+      if (isStarting || isUnmounted || JSON.stringify(next) === JSON.stringify(chargePoints)) return;
+      chargePoints = next;
+      renderPage();
+    } catch {
+      // Lỗi mạng thoáng qua: giữ danh sách hiện tại, lần sau thử lại.
+    }
+  }, LIST_REFRESH_MS);
+
   renderPage();
   refreshChargePoints().then(resumePendingRequest).catch((error) => {
     showMessage(`Không thể khôi phục trạng thái yêu cầu bắt đầu: ${error.message}. Hãy làm mới để thử lại.`, { error: true });
@@ -335,6 +348,7 @@ export function render(ctx) {
 
   return () => {
     isUnmounted = true;
+    clearInterval(listTimer);
     stopPolling();
   };
 }
