@@ -3,17 +3,29 @@ const tariffsRepo = require('./tariffs.repository');
 const audit = require('../audit/audit.repository');
 const { denyOrNotFound } = require('../../lib/ownership');
 const { withTransaction } = require('../../db/tx');
-const { BadRequestError, ConflictError } = require('../../lib/errors');
+const { prepare } = require('../../db/pool');
+const { BadRequestError, ConflictError, NotFoundError } = require('../../lib/errors');
 const { toLocalParts } = require('./tz');
 const { normalizePeriods } = require('./tariff-periods');
 
 const NOT_FOUND = 'Không tìm thấy trạm';
 
-async function list(actor, stationId) {
+async function findStation(actor, stationId) {
+  const roles = actor.roles || [];
+  if (roles.includes('ACCOUNTANT')) {
+    const exists = await stationsRepo.existsById(stationId);
+    if (!exists) throw new NotFoundError(NOT_FOUND);
+    return prepare('SELECT * FROM stations WHERE id = ?').get(stationId);
+  }
   const station = await stationsRepo.findById(actor, stationId);
   if (!station) {
     await denyOrNotFound(actor, 'station', stationId, stationsRepo.existsById, NOT_FOUND);
   }
+  return station;
+}
+
+async function list(actor, stationId) {
+  const station = await findStation(actor, stationId);
 
   const tz = station.timezone || 'Asia/Ho_Chi_Minh';
   const todayStr = toLocalParts(new Date(), tz).localDate;
