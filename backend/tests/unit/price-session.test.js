@@ -57,3 +57,98 @@ describe('billing/price-session: một khung [GYM-56]', () => {
     assert.equal(totalWh, input.meterStopWh - input.meterStartWh);
   });
 });
+
+describe('billing/price-session: cắt nhiều khung và qua nửa đêm [GYM-56, GYM-57]', () => {
+  it('chia thành 2 đoạn khi phiên cắt qua ranh giới 22:00 và áp đúng đơn giá từng khung', () => {
+    // 21:30 VN = 14:30Z; 23:30 VN = 16:30Z; ranh giới 22:00 VN = 15:00Z
+    // Khung 1 (06:00-22:00): 3000 đ/kWh
+    // Khung 2 (22:00-06:00): 4000 đ/kWh
+    // Tổng 10 000 Wh, nội suy tuyến tính: 30 phút đầu = 2 500 Wh, 90 phút sau = 7 500 Wh
+    // Tiền đoạn 1: 2500 x 3000 / 1000 = 7 500 đ
+    // Tiền đoạn 2: 7500 x 4000 / 1000 = 30 000 đ
+    // Tổng: 37 500 đ
+    const input = {
+      startedAt: '2026-10-12T14:30:00.000Z',
+      stoppedAt: '2026-10-12T16:30:00.000Z',
+      meterStartWh: 0,
+      meterStopWh: 10000,
+      timezone: 'Asia/Ho_Chi_Minh',
+      tariff: {
+        periods: [
+          { startMin: 360, endMin: 1320, pricePerKwh: 3000, label: 'Ngày' },
+          { startMin: 1320, endMin: 1440, pricePerKwh: 4000, label: 'Đêm' },
+          { startMin: 0, endMin: 360, pricePerKwh: 4000, label: 'Đêm' },
+        ],
+      },
+    };
+    const result = priceSession(input);
+    assert.equal(result.lines.length, 2);
+    assert.equal(result.lines[0].wh, 2500);
+    assert.equal(result.lines[0].pricePerKwh, 3000);
+    assert.equal(result.lines[0].amountDong, 7500);
+    assert.equal(result.lines[1].wh, 7500);
+    assert.equal(result.lines[1].pricePerKwh, 4000);
+    assert.equal(result.lines[1].amountDong, 30000);
+    assert.equal(result.totalDong, 37500);
+  });
+
+  it('chia đoạn khi phiên cắt qua nửa đêm 00:00 giờ trạm và gắn đúng localDate', () => {
+    // 23:00 VN ngày 12/10 = 16:00Z; 01:00 VN ngày 13/10 = 18:00Z
+    // Nửa đêm 00:00 VN = 17:00Z ngày 12/10
+    // Khung 1 (22:00-24:00): 3000 đ/kWh
+    // Khung 2 (00:00-06:00): 2000 đ/kWh
+    // 8 000 Wh: 1h trước 0h = 4 000 Wh, 1h sau 0h = 4 000 Wh
+    // Đoạn 1: 4000 x 3000 / 1000 = 12 000 đ, localDate: 2026-10-12
+    // Đoạn 2: 4000 x 2000 / 1000 = 8 000 đ, localDate: 2026-10-13
+    const input = {
+      startedAt: '2026-10-12T16:00:00.000Z',
+      stoppedAt: '2026-10-12T18:00:00.000Z',
+      meterStartWh: 0,
+      meterStopWh: 8000,
+      timezone: 'Asia/Ho_Chi_Minh',
+      tariff: {
+        periods: [
+          { startMin: 0, endMin: 360, pricePerKwh: 2000, label: 'Sáng sớm' },
+          { startMin: 360, endMin: 1320, pricePerKwh: 4000, label: 'Ngày' },
+          { startMin: 1320, endMin: 1440, pricePerKwh: 3000, label: 'Đêm' },
+        ],
+      },
+    };
+    const result = priceSession(input);
+    assert.equal(result.lines.length, 2);
+    assert.equal(result.lines[0].localDate, '2026-10-12');
+    assert.equal(result.lines[0].amountDong, 12000);
+    assert.equal(result.lines[1].localDate, '2026-10-13');
+    assert.equal(result.lines[1].amountDong, 8000);
+    assert.equal(result.totalDong, 20000);
+  });
+
+  it('sử dụng số đo thực tế khi mẫu nằm đúng mốc biên hoặc nội suy khi mẫu thưa', () => {
+    // Phiên 21:00 đến 23:00 (ranh giới 22:00)
+    // 21:00 = 14:00Z, 22:00 = 15:00Z, 23:00 = 16:00Z
+    // Có mẫu đúng lúc 22:00 (15:00Z) với Wh = 3000
+    const input = {
+      startedAt: '2026-10-12T14:00:00.000Z',
+      stoppedAt: '2026-10-12T16:00:00.000Z',
+      meterStartWh: 0,
+      meterStopWh: 10000,
+      samples: [
+        { at: '2026-10-12T15:00:00.000Z', wh: 3000 },
+      ],
+      timezone: 'Asia/Ho_Chi_Minh',
+      tariff: {
+        periods: [
+          { startMin: 360, endMin: 1320, pricePerKwh: 3000 },
+          { startMin: 1320, endMin: 1440, pricePerKwh: 4000 },
+          { startMin: 0, endMin: 360, pricePerKwh: 4000 },
+        ],
+      },
+    };
+    const result = priceSession(input);
+    assert.equal(result.lines.length, 2);
+    assert.equal(result.lines[0].wh, 3000); // Lấy đúng mẫu tại mốc biên
+    assert.equal(result.lines[1].wh, 7000);
+    assert.equal(result.totalDong, 3000 * 3 + 7000 * 4);
+  });
+});
+
