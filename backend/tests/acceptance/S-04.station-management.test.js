@@ -70,9 +70,17 @@ describe('S-04/S-05 quản lý trạm, trụ và đầu nối', () => {
   });
 
   it('restricts deleting an owner while owned stations remain', async () => {
-    await query('DELETE FROM audit_logs WHERE user_id = $1', [owner.id]);
-    await query('DELETE FROM idempotency_keys WHERE user_id = $1', [owner.id]);
-    await assert.rejects(query('DELETE FROM users WHERE id = $1', [owner.id]));
+    const isolatedOwner = await query(
+      "INSERT INTO users (name, email, password_hash) VALUES ('Isolated owner', 'isolated-owner@test.invalid', 'x') RETURNING id"
+    );
+    await query(
+      "INSERT INTO stations (name, address, owner_id) VALUES ('Owned station', 'Test address', $1)",
+      [isolatedOwner.rows[0].id]
+    );
+    await assert.rejects(
+      query('DELETE FROM users WHERE id = $1', [isolatedOwner.rows[0].id]),
+      (error) => error.code === '23503'
+    );
   });
   describe('AC nghiệm thu S-04 phía máy chủ', () => {
     const countStations = async () => (await query('SELECT count(*)::int AS count FROM stations')).rows[0].count;

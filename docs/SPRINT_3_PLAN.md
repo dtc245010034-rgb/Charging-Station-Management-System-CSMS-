@@ -163,7 +163,7 @@ Ký hiệu: **Cổng** = điều kiện để story sau ghép được. Tên fil
 - **Làn:** L4 · **Bắt đầu:** T4 sáng (T-57 làm trước vì S-23/S-25 ghi vào đây) · **Xong:** T2 12/10 sáng.
 - **Việc:** **T-57** theo D10 (siết bảng sẵn có, hàm `ghi_nhat_ky(người, hành động, đối tượng, mã, dữ liệu, kết quả, ip)`; **không** ghi mã thẻ/định danh vào JSON — test quét khoá). Nối `Reset` (S-16), `RemoteStopTransaction` (T-49), đóng tay (T-54), `RemoteStart` (T-51). **T-58** `GET /api/audit-logs` (lọc trụ/người/khoảng thời gian, 50 dòng/trang, chỉ mục theo thời gian) + trang quản trị. `PUT/PATCH/DELETE /api/audit-logs/:id` → **405** kèm `Allow` (Express không tự trả 405: phải khai route tường minh; người chưa đăng nhập/không đủ quyền vẫn nhận 401/403 trước).
 - **AC:** 3 ca; `UPDATE`/`DELETE` bằng SQL bởi tài khoản ứng dụng bị DB từ chối (trigger).
-- **Quyền (Q3):** AC nói “quản trị viên”, T-58 nói “quản trị và vận hành viên”; đề xuất **chỉ ADMIN** ở sprint này (nguyên tắc ít quyền nhất), thêm OPERATOR nếu PO muốn.
+- **Quyền (Q3):** đã chốt **chỉ ADMIN** theo nguyên tắc ít quyền nhất.
 
 ## 5. Mốc kiểm tra (báo sớm — **không** có thứ tự cắt, theo quyết định 4/10)
 
@@ -181,7 +181,7 @@ Ký hiệu: **Cổng** = điều kiện để story sau ghép được. Tên fil
 
 - **Q1 — Mô hình trạng thái phiên (D1).** Tách `status` {CHARGING, COMPLETED, ABNORMAL} và `needs_review` thay vì enum 4 giá trị của T-36? *Đề xuất: tách.* Cần chốt trước 12:00 T4 vì nằm trong migration 017 (sửa sau là migration mới + dữ liệu cũ).
 - **Q2 — `StartTransaction` cho đầu nối chưa khai báo.** *Đề xuất:* không tạo phiên, ghi `orphan_messages`, `CALLERROR PropertyConstraintViolation` (giống tinh thần T-22 của S-10). Backlog bỏ ngỏ.
-- **Q3 — Ai đọc nhật ký (`audit-logs:read`).** AC: quản trị viên; T-58: quản trị + vận hành viên. *Đề xuất:* chỉ ADMIN.
+- **Q3 — Ai đọc nhật ký (`audit-logs:read`).** AC: quản trị viên; T-58: quản trị + vận hành viên. *Đã chốt theo yêu cầu triển khai S-27:* chỉ ADMIN.
 - **Q4 — Giới hạn tốc độ tin nhắn (D7).** *Đề xuất:* token bucket, nạp 50/giây, burst 500, làm trong S-21. Cần đồng ý vì chạm hành vi bảo vệ của B3.
 - **Q5 — Lưu giữ dữ liệu (NĐ 13).** Bao lâu giữ `charging_sessions` gắn tài xế, `meter_values`, `orphan_messages`? Backlog chỉ có S-57 (Sprint 8, xác nhận phạm vi lịch sử sạc). *Đề xuất tạm:* `orphan_messages` 30 ngày (có job dọn), phiên và số đo giữ đến khi PO chốt chính sách; không thêm cột vị trí vào phiên.
 - **Q6 — Staging cho DoD “AC pass trên staging với trụ ảo chạy thật”.** Cả Sprint 2 lẫn Sprint 3 chưa có URL staging (`SPRINT_STATUS.md` §7: “Chưa đạt”). *Đề xuất:* chấp nhận **bằng chứng chạy `docker compose` + trụ ảo (S-26) trên máy dự án** thay cho staging cho tới khi có URL, **ghi rõ trong hồ sơ** và để PO xác nhận; Phúc quyết định có bật staging trong sprint này không.

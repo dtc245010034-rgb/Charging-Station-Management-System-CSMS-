@@ -53,6 +53,7 @@ function createStopTransactionHandler({
   logWarning = console.warn,
   logError = console.error,
   persistTransactionData = null,
+  recordAudit = null,
 } = {}) {
   const handleMeterValues = createMeterValuesHandler({ pool, now, logWarning, logError });
   const saveTransactionData = persistTransactionData || handleMeterValues;
@@ -159,18 +160,19 @@ function createStopTransactionHandler({
       );
 
       if (updated.rowCount > 0) {
-        if (updated.rows[0]?.remote_stop_status === 'STOPPED') {
-          try {
-            await require('../../audit/audit.repository').record(updated.rows[0].remote_stop_requested_by, 'REMOTE_STOP', 'charging_session', payload.transactionId, {
-              charge_point_id: Number(chargePointId),
-              phase: 'STOP_TRANSACTION',
-              result: 'STOPPED',
-              stop_reason: stopReason,
-              stopped_at: stoppedAt,
-            });
-          } catch (auditError) {
-            logWarning('[OCPP] StopTransaction đã chốt nhưng không ghi được audit log:', sanitizeErrorMessage(auditError?.message || auditError));
-          }
+        const requesterId = updated.rows[0]?.remote_stop_requested_by;
+        if (requesterId !== null && requesterId !== undefined) {
+          const writeAudit = recordAudit || require('../../audit/audit.repository').ghi_nhat_ky;
+          await writeAudit(
+            requesterId,
+            'REMOTE_STOP',
+            'charging_session',
+            payload.transactionId,
+            { reason: stopReason, meter_stop: payload.meterStop, stopped_at: stoppedAt },
+            'STOPPED',
+            null,
+            db
+          );
         }
         publishSessionUpdateFromDb(payload.transactionId, {
           pool: db,

@@ -635,11 +635,16 @@ describe('S-19 MeterValues trên WebSocket server thật (GYM-45)', () => {
     )).rows[0];
     assert.deepEqual(session, { status: 'COMPLETED', meter_stop: '2500' });
     const audit = (await query(
-      `SELECT action, metadata->>'meter_stop_wh' AS meter_stop_wh
+      `SELECT action, metadata->>'meter_stop_wh' AS meter_stop_wh, metadata->>'reason' AS reason, result
        FROM audit_logs
        WHERE entity = 'charging_session' AND entity_id = $1 AND action = 'SESSION_MANUALLY_CLOSED'`,
       [transactionId]
     )).rows[0];
-    assert.deepEqual(audit, { action: 'SESSION_MANUALLY_CLOSED', meter_stop_wh: '2500' });
+    assert.deepEqual(audit, {
+      action: 'SESSION_MANUALLY_CLOSED',
+      meter_stop_wh: '2500',
+      reason: 'Đã đối soát số đo',
+      result: 'COMPLETED',
+    });
   });
 });

@@ -8,7 +8,6 @@ const {
 } = require('../../lib/errors');
 const connections = require('./connection-registry');
 const { sendRemoteCommand } = require('../ocpp/commands');
-const { safeLog } = require('../../lib/constants');
 
 const duplicateCode = (error) => (error.code === '23505' ? new ConflictError('Mã trụ đã tồn tại') : error);
 
@@ -53,17 +52,24 @@ async function update(actor, id, data) {
   return repo.findById(actor, id);
 }
 
-async function reset(actor, id, type, commandSender) {
+async function reset(actor, id, type, commandSender, { ip = null } = {}) {
   const point = await repo.findById(actor, id)
     || await denyOrNotFound(actor, 'charge_point', id, repo.existsById, 'Không tìm thấy trụ sạc');
-  console.info(`[OCPP] Remote Reset requested | actorId: ${safeLog(actor.id)} | chargePoint: ${safeLog(point.code)} | type: ${type}`);
-  return sendRemoteCommand({
-    commandSender,
-    chargePointCode: point.code,
-    action: 'Reset',
-    payload: { type },
-    rejectedMessage: 'Trụ sạc từ chối Reset',
-  });
+  let response;
+  try {
+    response = await sendRemoteCommand({
+      commandSender,
+      chargePointCode: point.code,
+      action: 'Reset',
+      payload: { type },
+      rejectedMessage: 'Trụ sạc từ chối Reset',
+    });
+  } catch (error) {
+    await audit.ghi_nhat_ky(actor.id, 'RESET', 'charge_point', id, { type }, error.code || 'ERROR', ip);
+    throw error;
+  }
+  await audit.ghi_nhat_ky(actor.id, 'RESET', 'charge_point', id, { type }, response.status, ip);
+  return response;
 }
 
 module.exports = { list, get, create, update, isCodeAvailable, reset };

@@ -100,6 +100,157 @@ describe('S-02 frontend: router', () => {
     assert.ok(can('ADMIN', 'sessions:unexpected:close'));
   });
 
+  it('S-27: nhật ký điều khiển chỉ hiện và chỉ tải cho Admin', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { visibleNav, WORKSPACES } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    assert.strictEqual(pageLoader('control-log', 'operator'), null);
+    assert.strictEqual(typeof pageLoader('control-log', 'admin'), 'function');
+    assert.strictEqual(pageLoader('control-log', 'accountant'), null);
+    assert.strictEqual(pageLoader('control-log', 'driver'), null);
+    assert.strictEqual(pageLoader('control-log', 'owner'), null);
+    assert.strictEqual(PAGE_NEEDS['control-log'], 'audit-logs:read');
+    assert.ok(can('ADMIN', 'audit-logs:read'));
+    assert.ok(!can('OPERATOR', 'audit-logs:read'));
+    assert.ok(!can('ACCOUNTANT', 'audit-logs:read'));
+    const operatorPages = visibleNav('operator', WORKSPACES.operator.role, can).flatMap((group) => group.items.map((item) => item.page));
+    const adminPages = visibleNav('admin', WORKSPACES.admin.role, can).flatMap((group) => group.items.map((item) => item.page));
+    assert.ok(!operatorPages.includes('control-log'));
+    assert.ok(adminPages.includes('control-log'));
+  });
+
+  it('S-27: restores filters from URL, syncs pagination, translates badges, and renders metadata as text', async () => {
+    const saved = new Map();
+    const calls = [];
+    const define = (name, value) => {
+      saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+      Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+    };
+    class Element {
+      constructor(tag) {
+        this.tag = tag;
+        this.attributes = {};
+        this.children = [];
+        this.listeners = {};
+        this.style = {};
+        this.dataset = {};
+        this.disabled = false;
+        this.value = '';
+      }
+      setAttribute(name, value) {
+        this.attributes[name] = String(value);
+        if (name === 'value') this.value = String(value);
+      }
+      addEventListener(name, handler) { this.listeners[name] = handler; }
+      append(...children) { this.children.push(...children); }
+      replaceChildren(...children) { this.children = children; }
+      get textContent() { return this.children.map((child) => child.textContent ?? '').join(''); }
+      set textContent(value) { this.children = [{ textContent: String(value) }]; }
+    }
+    const location = { pathname: '/app.html', search: '', hash: '#/admin/control-log?page=2' };
+    define('Node', Element);
+    define('document', {
+      createElement: (tag) => new Element(tag),
+      createElementNS: (_namespace, tag) => new Element(tag),
+      createTextNode: (text) => ({ textContent: String(text) }),
+    });
+    define('location', location);
+    define('history', {
+      replaceState: (_state, _title, url) => { location.hash = new URL(url, 'http://localhost').hash; },
+    });
+    let failNext = false;
+    define('fetch', async (url) => {
+      calls.push(url);
+      if (failNext) {
+        failNext = false;
+        return { ok: false, status: 500, json: async () => ({ error: { message: 'Lỗi tải nhật ký' } }) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          total: 101,
+          items: [{
+            id: '1',
+            created_at: '2026-10-11T17:00:00.000Z',
+            user_id: '7',
+            user_name: 'Admin',
+            action: 'REMOTE_START',
+            entity: 'connector',
+            entity_id: '2',
+            charge_point_code: 'CP-2',
+            result: 'ACCEPTED',
+            ip: '203.0.113.42',
+            metadata: { note: '<img src=x onerror=alert(1)>' },
+          }],
+        }),
+      };
+    });
+
+    let dispose;
+    try {
+      const { render, auditActionLabel, auditResultLabel } = await load('pages/shared/audit-logs.js');
+      const root = new Element('root');
+      dispose = render({
+        root,
+        workspace: 'admin',
+        params: { query: { page: '2', charge_point: 'CP & 2', user: 'Admin', from: '2026-10-11', to: '2026-10-12' } },
+        can: () => true,
+      });
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.match(calls[0], /page=2/);
+      assert.match(calls[0], /charge_point=CP\+%26\+2/);
+      assert.match(calls[0], /from=2026-10-11/);
+
+      const find = (node, predicate) => [
+        ...(predicate(node) ? [node] : []),
+        ...node.children.flatMap((child) => child instanceof Element ? find(child, predicate) : []),
+      ];
+      const pre = find(root, (node) => node.tag === 'pre')[0];
+      assert.ok(pre);
+      assert.match(pre.textContent, /<img src=x onerror=alert\(1\)>/);
+      assert.equal(find(root, (node) => node.tag === 'img').length, 0);
+      assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Bắt đầu sạc từ xa'));
+      assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Đã chấp nhận'));
+      assert.ok(find(root, (node) => node.tag === 'td').some((node) => node.textContent === '203.0.113.42'));
+      assert.ok(find(root, (node) => node.tag === 'span' && node.attributes.class === 'badge badge--ready').length > 0);
+      assert.equal(auditActionLabel('UNKNOWN_ACTION'), 'UNKNOWN_ACTION');
+      assert.equal(auditResultLabel('TIMED_OUT'), 'Hết thời gian');
+      assert.equal(auditResultLabel('Accepted'), 'Đã chấp nhận');
+
+      const next = find(root, (node) => node.tag === 'button' && node.textContent === 'Trang sau')[0];
+      next.listeners.click();
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.match(location.hash, /page=3/);
+      assert.match(location.hash, /user=Admin/);
+
+      const inputs = find(root, (node) => node.tag === 'input');
+      inputs.find((node) => node.attributes.name === 'charge_point').value = 'CP-3';
+      const form = find(root, (node) => node.tag === 'form')[0];
+      form.listeners.submit({ preventDefault() {} });
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.match(location.hash, /page=1/);
+      assert.match(location.hash, /charge_point=CP-3/);
+
+      failNext = true;
+      const refresh = find(root, (node) => node.tag === 'button' && node.textContent.includes('Làm mới'))[0];
+      refresh.listeners.click();
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.ok(find(root, (node) => node.attributes.class === 'state state--error').length > 0);
+      assert.ok(find(root, (node) => node.tag === 'p' && node.textContent === 'Lỗi tải nhật ký').length > 0);
+      const retry = find(root, (node) => node.tag === 'button' && node.textContent.includes('Thử lại'))[0];
+      retry.listeners.click();
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.ok(find(root, (node) => node.tag === 'pre').length > 0);
+    } finally {
+      dispose?.();
+      for (const [name, descriptor] of saved) {
+        if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+        else delete globalThis[name];
+      }
+    }
+  });
+
   it('S-25: sửa ô lý do xóa custom validity sau khi submit lý do trắng', async () => {
     const saved = new Map();
     const define = (name, value) => {

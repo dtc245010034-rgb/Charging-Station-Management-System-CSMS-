@@ -3,7 +3,7 @@ const { publishSessionUpdateFromDb } = require('./sessions.events');
 
 const REMOTE_STOP_SCAN_INTERVAL_MS = 5000;
 
-async function markExpiredRemoteStops(db, { recordAudit = null } = {}) {
+async function markExpiredRemoteStops(db, { recordAudit = null, logError = console.error } = {}) {
   const database = db || require('../../db/pool').pool;
   const result = await database.query(
     `UPDATE charging_sessions
@@ -24,13 +24,12 @@ async function markExpiredRemoteStops(db, { recordAudit = null } = {}) {
     try {
       const writeAudit = recordAudit || require('../audit/audit.repository').record;
       await writeAudit(row.remote_stop_requested_by, 'REMOTE_STOP', 'charging_session', row.id, {
-        charge_point_id: Number(row.charge_point_id),
         phase: row.remote_stop_status === 'TIMED_OUT' ? 'TIMEOUT' : 'RESULT_UNKNOWN',
         result: row.remote_stop_status,
         deadline: row.remote_stop_deadline ? new Date(row.remote_stop_deadline).toISOString() : null,
-      }, null);
-    } catch {
-      // Timeout state is durable even if its secondary audit write must be retried operationally.
+      }, null, database, row.remote_stop_status);
+    } catch (error) {
+      logError(`[Job] Failed to audit expired remote stop for session ${row.id}: ${sanitizeErrorMessage(error?.message || error)}`);
     }
     publishSessionUpdateFromDb(row.id, { pool: database, driverId: row.driver_id }).catch(() => {});
   }
@@ -50,7 +49,7 @@ function startRemoteStopTimeoutJob({
     if (running) return;
     running = true;
     try {
-      const result = await markExpiredRemoteStops(db, { recordAudit });
+      const result = await markExpiredRemoteStops(db, { recordAudit, logError });
       if (result.rowCount > 0) logInfo(`[Job] Marked ${result.rowCount} remote stop request(s) for review`);
     } catch (error) {
       logError(`[Job] Failed to mark expired remote stops: ${sanitizeErrorMessage(error?.message || error)}`);

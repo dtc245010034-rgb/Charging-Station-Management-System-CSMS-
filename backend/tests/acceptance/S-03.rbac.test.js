@@ -1,7 +1,7 @@
 const { describe, it, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert');
 const request = require('supertest');
-const { run, query, resetSchema, truncateAll } = require('../helpers/db');
+const { run, query, resetSchema, truncateAll, truncateAuditLogs } = require('../helpers/db');
 const { app, closePool } = require('../helpers/app');
 const { createUser } = require('../helpers/auth');
 const { stationBody, postStation } = require('../helpers/station');
@@ -33,7 +33,7 @@ describe('S-03 lọc sở hữu ở tầng truy vấn (2 chủ trạm A/B)', () 
     cpA = (await as(u.A).post(`/api/stations/${stationA.id}/charge-points`, { code: 'CP-A' })).body;
     cpB = (await as(u.B).post(`/api/stations/${stationB.id}/charge-points`, { code: 'CP-B' })).body;
   });
-  beforeEach(async () => { await query('TRUNCATE audit_logs RESTART IDENTITY'); });
+  beforeEach(truncateAuditLogs);
   after(async () => { await resetSchema(); await closePool(); });
 
   it('S-03 AC1: chủ trạm A chỉ thấy trạm và trụ của mình', async () => {

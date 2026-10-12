@@ -57,6 +57,39 @@ describe('S-18 StopTransaction handler', () => {
     assert.match(update.sql, /status = 'COMPLETED'/);
   });
 
+  it('ghi audit khi StopTransaction hoàn tất yêu cầu RemoteStop', async () => {
+    let auditArgs;
+    const pool = {
+      query: async (sql) => {
+        if (sql.includes('UPDATE charging_sessions')) {
+          return {
+            rowCount: 1,
+            rows: [{ driver_id: null, remote_stop_requested_by: '9', remote_stop_status: 'STOPPED' }],
+          };
+        }
+        return { rowCount: 1, rows: [] };
+      },
+    };
+    const handler = createStopTransactionHandler({
+      pool,
+      now: () => NOW,
+      logError: () => {},
+      recordAudit: async (...args) => { auditArgs = args; },
+    });
+
+    await handler(validPayload(), { connection: CONNECTION });
+    assert.deepEqual(auditArgs, [
+      '9',
+      'REMOTE_STOP',
+      'charging_session',
+      17,
+      { reason: 'Remote', meter_stop: 1250, stopped_at: new Date(NOW).toISOString() },
+      'STOPPED',
+      null,
+      pool,
+    ]);
+  });
+
   it('transactionData bị lỗi vẫn chốt phiên COMPLETED và bật needs_review kèm lý do INVALID_TRANSACTION_DATA', async () => {
     let update;
     const warnings = [];

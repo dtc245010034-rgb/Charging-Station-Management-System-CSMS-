@@ -30,14 +30,6 @@ describe('S-16 Reset từ xa', () => {
     });
   }
 
-  async function waitForServerOutput(pattern) {
-    const deadline = Date.now() + 1000;
-    while (!pattern.test(server.child.output) && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    assert.match(server.child.output, pattern);
-  }
-
   before(async () => {
     await resetSchema();
     assert.equal(run('src/db/migrate.js').status, 0);
@@ -89,7 +81,7 @@ describe('S-16 Reset từ xa', () => {
     assert.equal(resetCalls.length, 0);
   });
 
-  it('ADMIN và OPERATOR gửi Reset Soft, ghép CALLRESULT và ghi nhật ký ứng dụng', async () => {
+  it('ADMIN và OPERATOR gửi Reset Soft, ghép CALLRESULT và mỗi lần ghi một dòng audit', async () => {
     for (const user of [operator, admin]) {
       const response = await sendReset(user.cookie);
       assert.equal(response.status, 200);
@@ -102,7 +94,18 @@ describe('S-16 Reset từ xa', () => {
       assert.deepEqual(call.slice(2), ['Reset', { type: 'Soft' }]);
     }
 
-    await waitForServerOutput(/Remote Reset requested.*type: Soft/);
+    const audit = await query(
+      "SELECT user_id, action, entity, entity_id, metadata, result FROM audit_logs WHERE action = 'RESET' AND entity_id = $1 ORDER BY id",
+      [chargePointId]
+    );
+    assert.equal(audit.rowCount, 2);
+    assert.deepEqual(audit.rows.map((row) => row.user_id), [operator.id, admin.id]);
+    for (const row of audit.rows) {
+      assert.equal(row.action, 'RESET');
+      assert.equal(row.entity, 'charge_point');
+      assert.deepEqual(row.metadata, { type: 'Soft' });
+      assert.equal(row.result, 'Accepted');
+    }
   });
 
   it('trụ ảo khởi động lại sau Reset, chuyển ngoại tuyến rồi trực tuyến khi Boot lại', async () => {
