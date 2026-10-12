@@ -144,6 +144,14 @@ async function claimRemoteStart(driver, connectorId, db) {
       throw new AppError(409, 'DRIVER_BUSY', 'Bạn đang có một yêu cầu bắt đầu sạc chưa hoàn tất. Vui lòng chờ.');
     }
 
+    const driverActiveSession = await client.query(
+      "SELECT 1 FROM charging_sessions WHERE driver_id = $1 AND status = 'CHARGING' LIMIT 1",
+      [driver.id]
+    );
+    if (driverActiveSession.rowCount) {
+      throw new AppError(409, 'DRIVER_HAS_ACTIVE_SESSION', 'Bạn đang có một phiên sạc. Hãy kết thúc phiên đó trước khi bắt đầu phiên mới.');
+    }
+
     let tagResult = await client.query(
       `SELECT id, tag FROM id_tags
        WHERE user_id = $1 AND is_virtual = TRUE AND status = 'ACTIVE'
