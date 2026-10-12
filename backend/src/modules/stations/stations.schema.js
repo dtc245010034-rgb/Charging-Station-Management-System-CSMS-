@@ -9,11 +9,21 @@ const coordinate = (label, min, max) => z.union([
   z.string().trim().regex(/^-?\d+(?:\.\d{1,8})?$/, `${label} phải có tối đa 8 chữ số thập phân`),
 ]).refine((value) => Number(value) >= min && Number(value) <= max, `${label} phải từ ${min} đến ${max}`);
 
+const timezoneSchema = z.string().trim().refine((val) => {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: val });
+    return true;
+  } catch {
+    return false;
+  }
+}, 'Múi giờ không hợp lệ');
+
 const createBody = z.object({
   name: text(REQUIRED),
   address: text(REQUIRED),
   latitude: coordinate('Vĩ độ', -90, 90),
   longitude: coordinate('Kinh độ', -180, 180),
+  timezone: timezoneSchema.optional(),
   status: z.undefined({ message: NO_STATUS }).optional(),
 }, { message: REQUIRED });
 
@@ -22,6 +32,7 @@ const updateBody = z.object({
   address: z.string().trim().min(1).optional(),
   latitude: coordinate('Vĩ độ', -90, 90).optional(),
   longitude: coordinate('Kinh độ', -180, 180).optional(),
+  timezone: timezoneSchema.optional(),
   status: status.optional(),
 }).superRefine((data, context) => {
   if ((data.latitude !== undefined) !== (data.longitude !== undefined)) {

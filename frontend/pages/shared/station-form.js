@@ -23,6 +23,17 @@ export function openStationForm({ station = null, onSaved }) {
   const status = h('select', { class: 'select', id: 'sf-status' },
     Object.entries(stationStatusLabels).map(([value, label]) => h('option', { value, selected: (station?.status ?? 'INACTIVE') === value }, label)));
 
+const TIMEZONES = [
+  { value: 'Asia/Ho_Chi_Minh', label: 'Việt Nam (Asia/Ho_Chi_Minh, GMT+7)' },
+  { value: 'Asia/Bangkok', label: 'Bangkok (Asia/Bangkok, GMT+7)' },
+  { value: 'Asia/Kolkata', label: 'Ấn Độ (Asia/Kolkata, GMT+5:30)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (Asia/Tokyo, GMT+9)' },
+  { value: 'UTC', label: 'UTC (GMT+0)' },
+];
+
+  const tz = h('select', { class: 'select', id: 'sf-timezone' },
+    TIMEZONES.map(({ value, label }) => h('option', { value, selected: (station?.timezone ?? 'Asia/Ho_Chi_Minh') === value }, label)));
+
   const errors = { name: h('p', { class: 'field__error', hidden: true }), address: h('p', { class: 'field__error', hidden: true }), coords: h('p', { class: 'field__error', hidden: true }) };
   const formError = h('p', { class: 'form-alert', role: 'alert', hidden: true });
   const setError = (field, message) => { errors[field].textContent = message || ''; errors[field].hidden = !message; fieldError[field] = message; };
@@ -41,7 +52,8 @@ export function openStationForm({ station = null, onSaved }) {
     h('div', { class: 'form-grid' },
       h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Tên trạm'), name, errors.name),
       h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Địa chỉ'), address, errors.address),
-      editing && h('label', { class: 'field span-2' }, h('span', { class: 'field__label' }, 'Trạng thái'), status)),
+      h('label', { class: editing ? 'field' : 'field span-2' }, h('span', { class: 'field__label' }, 'Múi giờ'), tz),
+      editing && h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Trạng thái'), status)),
     locked
       ? h('p', { class: 'field__hint' }, 'Trạm đang hoạt động nên không sửa được toạ độ. Chuyển sang “Chưa hoạt động” và lưu trước.')
       : h('p', { class: 'field__hint' }, 'Bấm vào bản đồ để đặt vị trí, hoặc nhập toạ độ bên dưới.'),
@@ -72,9 +84,9 @@ export function openStationForm({ station = null, onSaved }) {
 
   function payload() {
     const body = {};
-    const next = { name: name.value.trim(), address: address.value.trim() };
+    const next = { name: name.value.trim(), address: address.value.trim(), timezone: tz.value };
     if (!editing) return { ...next, latitude: lat.value.trim(), longitude: lng.value.trim() };
-    for (const field of ['name', 'address']) if (next[field] !== station[field]) body[field] = next[field];
+    for (const field of ['name', 'address', 'timezone']) if (next[field] !== station[field]) body[field] = next[field];
     if (!locked && lat.value.trim() && (Number(lat.value) !== Number(station.latitude) || Number(lng.value) !== Number(station.longitude))) {
       body.latitude = lat.value.trim();
       body.longitude = lng.value.trim();

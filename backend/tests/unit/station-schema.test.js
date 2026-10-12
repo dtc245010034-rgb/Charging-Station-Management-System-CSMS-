@@ -49,4 +49,15 @@ describe('S-04/S-05 input validation', () => {
     assert.strictEqual(validUnderscore.success, true);
     assert.strictEqual(validUnderscore.data.code, 'CP_02');
   });
+
+  it('GYM-57 S-31 NFR: validates station timezone using Intl.DateTimeFormat', () => {
+    const { updateBody } = require('../../src/modules/stations/stations.schema');
+    assert.strictEqual(createStation.safeParse({ name: 'A', address: 'B', latitude: 1, longitude: 1, timezone: 'Asia/Ho_Chi_Minh' }).success, true);
+    assert.strictEqual(createStation.safeParse({ name: 'A', address: 'B', latitude: 1, longitude: 1, timezone: 'Asia/Kolkata' }).success, true);
+    assert.strictEqual(createStation.safeParse({ name: 'A', address: 'B', latitude: 1, longitude: 1, timezone: 'UTC' }).success, true);
+    assert.strictEqual(createStation.safeParse({ name: 'A', address: 'B', latitude: 1, longitude: 1, timezone: 'Mars/Phobos' }).success, false);
+    assert.strictEqual(createStation.safeParse({ name: 'A', address: 'B', latitude: 1, longitude: 1, timezone: 'Invalid/Zone' }).success, false);
+    assert.strictEqual(updateBody.safeParse({ timezone: 'Asia/Tokyo' }).success, true);
+    assert.strictEqual(updateBody.safeParse({ timezone: 'Invalid/Zone' }).success, false);
+  });
 });
