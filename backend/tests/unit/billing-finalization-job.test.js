@@ -18,13 +18,15 @@ describe('billing finalization job', () => {
         queryArgs = args;
         return expected;
       },
-    }, 12);
+    }, 12, 45);
 
     assert.match(queryArgs[0], /billing_status IS NULL/);
     assert.match(queryArgs[0], /billing_status = 'ERROR'/);
     assert.match(queryArgs[0], /billing_next_at <= CURRENT_TIMESTAMP/);
+    assert.match(queryArgs[0], /billing_status = 'WAITING_IDLE'/);
+    assert.match(queryArgs[0], /billing_idle_from <= CURRENT_TIMESTAMP - make_interval\(mins => \$2::int\)/);
     assert.match(queryArgs[0], /FOR UPDATE SKIP LOCKED/);
-    assert.deepEqual(queryArgs[1], [12]);
+    assert.deepEqual(queryArgs[1], [12, 45]);
     assert.equal(result, expected);
   });
 
@@ -32,6 +34,13 @@ describe('billing finalization job', () => {
     await assert.rejects(() => findSessionsForFinalization({ query: async () => ({}) }, 0), {
       name: 'TypeError',
       message: 'limit must be a positive safe integer',
+    });
+  });
+
+  it('rejects an invalid idle wait limit', async () => {
+    await assert.rejects(() => findSessionsForFinalization({ query: async () => ({}) }, 10, 0), {
+      name: 'TypeError',
+      message: 'idleMaxWaitMinutes must be a positive safe integer',
     });
   });
 

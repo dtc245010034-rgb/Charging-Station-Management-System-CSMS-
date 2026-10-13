@@ -128,6 +128,7 @@ async function start() {
 	stopBillingFinalizationJob = startBillingFinalizationJob({
 		db: pool,
 		intervalMs: env.BILLING_JOB_INTERVAL_MS,
+		idleMaxWaitMinutes: env.IDLE_MAX_WAIT_MIN,
 	}).stop;
 	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
 }

@@ -9,6 +9,7 @@ process.env.JWT_SECRET ||= 'z'.repeat(40);
 process.env.APP_ORIGIN ||= 'http://localhost:3000';
 
 const { finalizeSession, registerAfterInvoice } = require('../../src/modules/billing/finalize-session');
+const { findSessionsForFinalization } = require('../../src/modules/billing/finalization-job');
 const { createStatusNotificationHandler } = require('../../src/modules/ocpp/handlers/status-notification');
 const handCases = JSON.parse(fs.readFileSync(
   path.join(__dirname, '../fixtures/billing/hand-cases.json'),
@@ -305,5 +306,31 @@ describe('finalizeSession [GYM-59]', () => {
     assert.equal(String(result.invoice.totalDong), '85000');
     const session = await query('SELECT billing_reason FROM charging_sessions WHERE id = $1', [fixture.sessionId]);
     assert.equal(session.rows[0].billing_reason, 'IDLE_CAPPED');
+  });
+
+  it('billing job chọn phiên WAITING_IDLE sau hạn chờ và bỏ qua phiên chưa tới hạn', async () => {
+    const testCase = handCases.find((item) => item.id === 'C14');
+    const expired = await createCompletedSession(testCase.input);
+    const notExpired = await createCompletedSession(testCase.input);
+    await query(
+      `UPDATE charging_sessions
+       SET billing_status = 'WAITING_IDLE',
+           billing_idle_from = CURRENT_TIMESTAMP - INTERVAL '61 minutes'
+       WHERE id = $1`,
+      [expired.sessionId]
+    );
+    await query(
+      `UPDATE charging_sessions
+       SET billing_status = 'WAITING_IDLE',
+           billing_idle_from = CURRENT_TIMESTAMP - INTERVAL '59 minutes'
+       WHERE id = $1`,
+      [notExpired.sessionId]
+    );
+
+    const { pool } = require('../../src/db/pool');
+    const result = await findSessionsForFinalization(pool, 50, 60);
+    const selectedIds = result.rows.map((row) => String(row.id));
+    assert.ok(selectedIds.includes(String(expired.sessionId)));
+    assert.ok(!selectedIds.includes(String(notExpired.sessionId)));
   });
 });
