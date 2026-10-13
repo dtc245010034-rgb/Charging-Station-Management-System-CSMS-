@@ -1,5 +1,9 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
+process.env.CSMS_SKIP_DOTENV = '1';
+process.env.DATABASE_URL ||= 'postgresql://localhost/csms_test';
+process.env.JWT_SECRET ||= 'x'.repeat(40);
+process.env.APP_ORIGIN ||= 'http://localhost:3000';
 const { createStopTransactionHandler } = require('../../src/modules/ocpp/handlers/stop-transaction');
 const { OcppCallError } = require('../../src/modules/ocpp/frames');
 
@@ -16,7 +20,39 @@ function validPayload(overrides = {}) {
   };
 }
 
+function createHandler(options = {}) {
+  return createStopTransactionHandler({
+    finalizeSession: async () => ({ status: 'IGNORED' }),
+    ...options,
+  });
+}
+
 describe('S-18 StopTransaction handler', () => {
+  it('triggers invoice finalization without delaying the OCPP response', async () => {
+    let finalizedSessionId;
+    let resolveFinalization;
+    const finalization = new Promise((resolve) => {
+      resolveFinalization = resolve;
+    });
+    const handler = createHandler({
+      pool: {
+        query: async (sql) => sql.includes('UPDATE charging_sessions')
+          ? { rowCount: 1, rows: [{ driver_id: 21, remote_stop_requested_by: null }] }
+          : { rowCount: 1, rows: [] },
+      },
+      now: () => NOW,
+      logError: () => {},
+      finalizeSession: (sessionId) => {
+        finalizedSessionId = sessionId;
+        return finalization;
+      },
+    });
+
+    assert.deepEqual(await handler(validPayload(), { connection: CONNECTION }), {});
+    assert.equal(finalizedSessionId, 17);
+    resolveFinalization({ status: 'FINAL' });
+  });
+
   it('chốt phiên theo transactionId/trụ, giữ số đo, timestamp và lý do', async () => {
     let update;
     const transactionData = [{
@@ -24,7 +60,7 @@ describe('S-18 StopTransaction handler', () => {
       sampledValue: [{ value: '1250', measurand: 'Energy.Active.Import.Register', unit: 'Wh' }],
     }];
     let meterValues;
-    const handler = createStopTransactionHandler({
+    const handler = createHandler({
       pool: {
         query: async (sql, params) => {
           if (sql.includes('SELECT connector_no')) {
@@ -70,7 +106,7 @@ describe('S-18 StopTransaction handler', () => {
         return { rowCount: 1, rows: [] };
       },
     };
-    const handler = createStopTransactionHandler({
+    const handler = createHandler({
       pool,
       now: () => NOW,
       logError: () => {},
@@ -94,7 +130,7 @@ describe('S-18 StopTransaction handler', () => {
     let update;
     const warnings = [];
     const transactionData = [{ bad: 'sample' }];
-    const handler = createStopTransactionHandler({
+    const handler = createHandler({
       pool: {
         query: async (sql, params) => {
           if (sql.includes('SELECT connector_no')) {
@@ -126,7 +162,7 @@ describe('S-18 StopTransaction handler', () => {
 
   it('mặc định reason là Local; số đo lùi đánh dấu needs_review', async () => {
     let update;
-    const handler = createStopTransactionHandler({
+    const handler = createHandler({
       pool: {
         query: async (sql, params) => {
           update = { sql, params };
@@ -148,7 +184,7 @@ describe('S-18 StopTransaction handler', () => {
 
   it('timestamp lệch quá 24 giờ thay bằng giờ nhận và bật needs_review', async () => {
     let update;
-    const handler = createStopTransactionHandler({
+    const handler = createHandler({
       pool: {
         query: async (sql, params) => {
           update = { sql, params };
@@ -168,7 +204,7 @@ describe('S-18 StopTransaction handler', () => {
   it('transactionId lạ lưu orphan với payload đã che idTag và trả object rỗng', async () => {
     const queries = [];
     const warnings = [];
-    const handler = createStopTransactionHandler({
+    const handler = createHandler({
       pool: {
         query: async (sql, params) => {
           queries.push({ sql, params });
@@ -194,7 +230,7 @@ describe('S-18 StopTransaction handler', () => {
 
   it('phiên đã đóng không bị cập nhật lần nữa và trụ khác ghi orphan', async () => {
     let orphanCount = 0;
-    const handler = createStopTransactionHandler({
+    const handler = createHandler({
       pool: {
         query: async (sql) => {
           if (sql.startsWith('UPDATE charging_sessions')) return { rowCount: 0, rows: [] };
@@ -220,7 +256,7 @@ describe('S-18 StopTransaction handler', () => {
 
   it('chấp nhận lý do DeAuthorized chuẩn OCPP 1.6', async () => {
     let update;
-    const handler = createStopTransactionHandler({
+    const handler = createHandler({
       pool: {
         query: async (sql, params) => {
           update = { sql, params };
@@ -236,7 +272,7 @@ describe('S-18 StopTransaction handler', () => {
   });
 
   it('payload sai và lý do ngoài OCPP trả PropertyConstraintViolation', async () => {
-    const handler = createStopTransactionHandler({ pool: { query: async () => assert.fail('không được truy vấn DB') } });
+    const handler = createHandler({ pool: { query: async () => assert.fail('không được truy vấn DB') } });
     await assert.rejects(
       () => handler(validPayload({ reason: 'Unexpected' }), { connection: CONNECTION }),
       (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
@@ -260,7 +296,7 @@ describe('S-18 StopTransaction handler', () => {
       },
     };
     const logged = [];
-    const handler = createStopTransactionHandler({
+    const handler = createHandler({
       pool,
       now: () => NOW,
       logError: (msg, err) => { logged.push({ msg, err }); },

@@ -3,6 +3,7 @@ const { OcppCallError } = require('../frames');
 const { maskIdTag } = require('./authorize');
 const { createMeterValuesHandler } = require('./meter-values');
 const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
+const { finalizeSession: finalizeSessionByDefault } = require('../../billing/finalize-session');
 
 const MAX_TRANSACTION_ID = 2147483647;
 const MAX_ID_TAG_LENGTH = 20;
@@ -54,6 +55,7 @@ function createStopTransactionHandler({
   logError = console.error,
   persistTransactionData = null,
   recordAudit = null,
+  finalizeSession = finalizeSessionByDefault,
 } = {}) {
   const handleMeterValues = createMeterValuesHandler({ pool, now, logWarning, logError });
   const saveTransactionData = persistTransactionData || handleMeterValues;
@@ -185,6 +187,14 @@ function createStopTransactionHandler({
           pool: db,
           driverId: updated.rows[0]?.driver_id ?? null,
         }).catch(() => {});
+        void Promise.resolve()
+          .then(() => finalizeSession(payload.transactionId))
+          .catch((error) => {
+            logError(
+              `[OCPP] StopTransaction: Không thể kích hoạt lập hóa đơn cho phiên ${payload.transactionId}:`,
+              sanitizeErrorMessage(error?.message || error)
+            );
+          });
         return {};
       }
 

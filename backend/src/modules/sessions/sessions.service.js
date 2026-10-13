@@ -12,6 +12,7 @@ const { withTransaction } = require('../../db/tx');
 const { meterValueToWh } = require('./meter-values.repository');
 const connections = require('../charge-points/connection-registry');
 const { sendRemoteCommand } = require('../ocpp/commands');
+const { sanitizeErrorMessage } = require('../../lib/constants');
 const {
   AppError,
   ConflictError,
@@ -247,7 +248,13 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
   }
 }
 
-async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db = null, allowZeroEnergy = false } = {}) {
+async function closeUnexpectedSession(actor, sessionId, reason, {
+  ip = null,
+  db = null,
+  allowZeroEnergy = false,
+  finalizeSession = null,
+  logError = console.error,
+} = {}) {
   const client = db || require('../../db/pool').pool;
   const normalizedReason = typeof reason === 'string' ? reason.trim() : '';
   if (!normalizedReason || normalizedReason.length > 1000) {
@@ -338,6 +345,15 @@ async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db 
 
   void require('./sessions.events')
     .publishSessionUpdateFromDb(closed.id, { pool: client, driverId: closed.driverId });
+  const finalize = finalizeSession || require('../billing/finalize-session').finalizeSession;
+  void Promise.resolve()
+    .then(() => finalize(closed.id))
+    .catch((error) => {
+      logError(
+        `[Billing] Không thể kích hoạt lập hóa đơn cho phiên ${closed.id}:`,
+        sanitizeErrorMessage(error?.message || error)
+      );
+    });
 
   return {
     id: Number(closed.id),
