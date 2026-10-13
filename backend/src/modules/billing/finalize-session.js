@@ -5,7 +5,6 @@ const { fetchConnectorStatusEvents, resolveIdleInterval } = require('./resolve-i
 const { priceSession } = require('./price-session');
 const { findEffectiveTariff } = require('./tariffs.repository');
 const { toLocalParts } = require('./tz');
-const env = require('../../config/env');
 
 const afterInvoiceHooks = new Set();
 
@@ -16,7 +15,7 @@ function registerAfterInvoice(fn) {
 }
 
 function idleMaxWaitMinutes(override) {
-  const value = override ?? env.IDLE_MAX_WAIT_MIN;
+  const value = override ?? require('../../config/env').IDLE_MAX_WAIT_MIN;
   if (!Number.isSafeInteger(value) || value < 1) {
     throw new TypeError('IDLE_MAX_WAIT_MIN must be a positive integer');
   }
