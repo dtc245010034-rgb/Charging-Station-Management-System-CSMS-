@@ -67,6 +67,7 @@ describe('S-28 (GYM-54): Khai báo biểu giá trạm sạc và phí chiếm tr�
     assert.equal(listRes.status, 200);
     assert.equal(listRes.body.length, 1);
     assert.equal(listRes.body[0].state, 'ACTIVE');
+    assert.equal(listRes.body[0].expiredFrom, null);
 
     // Kiểm tra có audit log TARIFF_CREATED
     const auditRows = (await query('SELECT action, entity, entity_id FROM audit_logs WHERE user_id = $1 AND action = $2', [owner.id, 'TARIFF_CREATED'])).rows;
@@ -163,6 +164,14 @@ describe('S-28 (GYM-54): Khai báo biểu giá trạm sạc và phí chiếm tr�
         periods: [{ from: '00:00', to: '24:00', pricePerKwh: 3800 }],
       });
     assert.equal(resDuplicate.status, 409);
+
+    const listRes = await request(app)
+      .get(`/api/stations/${stationId}/tariffs`)
+      .set('Cookie', owner.cookie);
+    const activeTariff = listRes.body.find((tariff) => tariff.state === 'ACTIVE');
+    const scheduledTariff = listRes.body.find((tariff) => tariff.state === 'SCHEDULED');
+    assert.equal(activeTariff.expiredFrom, '2099-01-01');
+    assert.equal(scheduledTariff.expiredFrom, null);
   });
 
   it('Quyền sở hữu (scopeByOwner): Chủ trạm B gọi biểu giá của trạm A → 403 Forbidden và có dòng ACCESS_DENIED trong audit log', async () => {
