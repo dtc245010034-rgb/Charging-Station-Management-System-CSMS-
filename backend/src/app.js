@@ -15,6 +15,7 @@ const fleetStatusRoutes = require('./modules/fleet-status/fleet-status.routes');
 const sessionsRoutes = require('./modules/sessions/sessions.routes');
 const auditRoutes = require('./modules/audit/audit.routes');
 const tariffsRoutes = require('./modules/billing/tariffs.routes');
+const invoicesRoutes = require('./modules/billing/invoices.routes');
 
 function createApp({ commandSender } = {}) {
   const app = express();
@@ -26,7 +27,7 @@ function createApp({ commandSender } = {}) {
   app.use(cookieParser());
   app.use(express.static(path.resolve(__dirname, '../../frontend')));
 
-  app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, createChargePointsRouter({ commandSender }), remoteStartRoutes, fleetStatusRoutes, sessionsRoutes, auditRoutes, tariffsRoutes);
+  app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, createChargePointsRouter({ commandSender }), remoteStartRoutes, fleetStatusRoutes, sessionsRoutes, auditRoutes, tariffsRoutes, invoicesRoutes);
   app.use(errorHandler);
 
   return app;

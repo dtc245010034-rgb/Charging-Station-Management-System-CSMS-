@@ -362,7 +362,7 @@ Công nghệ: Node ≥ 22.7 · Express 5 · PostgreSQL 16 · Zod · argon2id · 
 
 ### API hiện có
 
-`/api/auth/{register,login,logout,me}` · `/api/admin/users` · `/api/admin/stations/:id/lock` · `/api/roles` · `/api/stations` (+`/:id`) · `/api/stations/:id/charge-points` · `/api/charge-points` (+`/:id`, `/check-code`, `POST /:id/reset`) · `/api/fleet-status` (+`/events`, SSE) · `/api/sessions` (+`/:id`, `/unexpected`, `/events`, `POST /:id/stop`, `POST /:id/close`) · `/api/me/sessions/{current,events}` · `/api/driver/charge-points` · `POST /api/connectors/:id/start` · `/api/me/remote-start-requests/{pending,:id}` · `/api/audit-logs` (chỉ Quản trị) · `/api/health` · WebSocket `/ocpp/<mã>`. Chi tiết: [`backend/README.md`](backend/README.md).
+`/api/auth/{register,login,logout,me}` · `/api/admin/users` · `/api/admin/stations/:id/lock` · `/api/roles` · `/api/stations` (+`/:id`) · `/api/stations/:id/charge-points` · `/api/charge-points` (+`/:id`, `/check-code`, `POST /:id/reset`) · `/api/fleet-status` (+`/events`, SSE) · `/api/sessions` (+`/:id`, `/:id/invoice`, `/unexpected`, `/events`, `POST /:id/stop`, `POST /:id/close`) · `/api/me/sessions/{current,events}` · `/api/driver/charge-points` · `POST /api/connectors/:id/start` · `/api/me/remote-start-requests/{pending,:id}` · `/api/audit-logs` (chỉ Quản trị) · `/api/health` · WebSocket `/ocpp/<mã>`. Chi tiết: [`backend/README.md`](backend/README.md).
 
 ### Giới hạn đã biết
 
