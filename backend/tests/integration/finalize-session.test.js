@@ -9,6 +9,7 @@ process.env.JWT_SECRET ||= 'z'.repeat(40);
 process.env.APP_ORIGIN ||= 'http://localhost:3000';
 
 const { finalizeSession, registerAfterInvoice } = require('../../src/modules/billing/finalize-session');
+const { createStatusNotificationHandler } = require('../../src/modules/ocpp/handlers/status-notification');
 const handCases = JSON.parse(fs.readFileSync(
   path.join(__dirname, '../fixtures/billing/hand-cases.json'),
   'utf8'
@@ -84,7 +85,13 @@ async function createCompletedSession(input, { needsReview = false, withoutDrive
     );
   }
 
-  return { sessionId: session.rows[0].id, stationId: station.rows[0].id, tariffId };
+  return {
+    sessionId: session.rows[0].id,
+    stationId: station.rows[0].id,
+    tariffId,
+    connectorId: connector.rows[0].id,
+    chargePointCode: `CP-${codeSuffix}`,
+  };
 }
 
 describe('finalizeSession [GYM-59]', () => {
@@ -182,5 +189,121 @@ describe('finalizeSession [GYM-59]', () => {
     const result = await finalizeSession(sessionId);
     assert.equal(result.status, 'SKIPPED');
     assert.equal((await query('SELECT 1 FROM session_invoices WHERE session_id = $1', [sessionId])).rowCount, 0);
+  });
+
+  it('S-28 AC2: chờ rút súng, tính phí C13-C15 và chốt khi đầu nối rời idle set', async () => {
+    for (const caseId of ['C13', 'C14', 'C15']) {
+      const testCase = handCases.find((item) => item.id === caseId);
+      const fixture = await createCompletedSession(testCase.input);
+      const { idleInterval } = testCase.input;
+
+      await query(
+        `INSERT INTO connector_status_events (charge_point_id, connector_id, connector_no, ocpp_status, occurred_at)
+         VALUES ((SELECT id FROM charge_points WHERE code = $1), $2, 1, 'Finishing', $3)`,
+        [fixture.chargePointCode, fixture.connectorId, idleInterval.from]
+      );
+
+      if (caseId === 'C13') {
+        await query(
+          `INSERT INTO connector_status_events (charge_point_id, connector_id, connector_no, ocpp_status, occurred_at)
+           VALUES ((SELECT id FROM charge_points WHERE code = $1), $2, 1, 'Available', $3)`,
+          [fixture.chargePointCode, fixture.connectorId, idleInterval.to]
+        );
+        const result = await finalizeSession(fixture.sessionId);
+        assert.equal(result.status, 'FINAL');
+        assert.equal(String(result.invoice.totalDong), String(testCase.expected.totalDong));
+        assert.equal(result.invoice.lines.some((line) => line.kind === 'IDLE'), false);
+        continue;
+      }
+
+      const waiting = await finalizeSession(fixture.sessionId, {
+        now: () => Date.parse(idleInterval.from) + 60_000,
+      });
+      assert.equal(waiting.status, 'WAITING_IDLE', `Ca ${caseId} phải chờ rút súng`);
+      await query(
+        `INSERT INTO connector_status_events (charge_point_id, connector_id, connector_no, ocpp_status, occurred_at)
+         VALUES ((SELECT id FROM charge_points WHERE code = $1), $2, 1, 'Available', $3)`,
+        [fixture.chargePointCode, fixture.connectorId, idleInterval.to]
+      );
+      const result = await finalizeSession(fixture.sessionId);
+      assert.equal(result.status, 'FINAL');
+      assert.equal(String(result.invoice.totalDong), String(testCase.expected.totalDong), `Ca ${caseId}: tổng tiền`);
+      assert.deepEqual(
+        result.invoice.lines.map((line) => String(line.amountDong)),
+        testCase.expected.lines.map((line) => String(line.amountDong)),
+        `Ca ${caseId}: tiền từng dòng theo fixture đã ký`
+      );
+    }
+  });
+
+  it('S-28 AC2: StatusNotification rời Finishing kích hoạt chốt hóa đơn đang chờ', async () => {
+    const testCase = handCases.find((item) => item.id === 'C14');
+    const fixture = await createCompletedSession(testCase.input);
+    const idleInterval = testCase.input.idleInterval;
+    const now = Date.parse(idleInterval.to);
+    let resolveFinalization;
+    const finalizationDone = new Promise((resolve) => {
+      resolveFinalization = resolve;
+    });
+    const handler = createStatusNotificationHandler({
+      pool: { query },
+      now: () => now,
+      logError: () => {},
+      logWarning: () => {},
+      finalizeSession: async (sessionId) => {
+        try {
+          return await finalizeSession(sessionId);
+        } finally {
+          resolveFinalization();
+        }
+      },
+    });
+
+    await handler({
+      connectorId: 1,
+      status: 'Finishing',
+      errorCode: 'NoError',
+      timestamp: idleInterval.from,
+    }, { connection: { chargePointCode: fixture.chargePointCode } });
+    assert.equal(
+      (await finalizeSession(fixture.sessionId, {
+        now: () => Date.parse(idleInterval.from) + 60_000,
+      })).status,
+      'WAITING_IDLE'
+    );
+
+    await handler({
+      connectorId: 1,
+      status: 'Available',
+      errorCode: 'NoError',
+      timestamp: idleInterval.to,
+    }, { connection: { chargePointCode: fixture.chargePointCode } });
+    await finalizationDone;
+
+    const invoice = await query(
+      'SELECT total_dong FROM session_invoices WHERE session_id = $1',
+      [fixture.sessionId]
+    );
+    assert.equal(String(invoice.rows[0].total_dong), String(testCase.expected.totalDong));
+  });
+
+  it('S-28 AC2: phiên đang Finishing được chốt tại IDLE_MAX_WAIT_MIN và ghi IDLE_CAPPED', async () => {
+    const testCase = handCases.find((item) => item.id === 'C14');
+    const fixture = await createCompletedSession(testCase.input);
+    const idleFrom = testCase.input.stoppedAt;
+    await query(
+      `INSERT INTO connector_status_events (charge_point_id, connector_id, connector_no, ocpp_status, occurred_at)
+       VALUES ((SELECT id FROM charge_points WHERE code = $1), $2, 1, 'Finishing', $3)`,
+      [fixture.chargePointCode, fixture.connectorId, idleFrom]
+    );
+    const result = await finalizeSession(fixture.sessionId, {
+      now: () => Date.parse(idleFrom) + 3_600_000,
+      idleMaxWaitMinutes: 60,
+    });
+    assert.equal(result.status, 'FINAL');
+    assert.equal(result.invoice.lines.find((line) => line.kind === 'IDLE').minutes, 45);
+    assert.equal(String(result.invoice.totalDong), '85000');
+    const session = await query('SELECT billing_reason FROM charging_sessions WHERE id = $1', [fixture.sessionId]);
+    assert.equal(session.rows[0].billing_reason, 'IDLE_CAPPED');
   });
 });

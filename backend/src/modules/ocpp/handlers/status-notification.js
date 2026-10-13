@@ -2,12 +2,14 @@ const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
 const { mapOcppConnectorStatus, OCPP_CONNECTOR_STATUS_MAP } = require('../../connectors/status-mapping');
 const { publish } = require('../../fleet-status/fleet-status.events');
+const { finalizeSession: finalizeSessionByDefault } = require('../../billing/finalize-session');
 
 const MAX_TEXT_LENGTH = 50;
 const MAX_CONNECTOR_ID = 2147483647;
 const MAX_CLOCK_SKEW_MS = 24 * 3600 * 1000;
 const OTHER_ERROR = 'OtherError';
 const AVAILABLE_WITH_OPEN_SESSION = 'CONNECTOR_AVAILABLE_WITH_OPEN_SESSION';
+const IDLE_STATUSES = new Set(['SuspendedEV', 'Finishing']);
 const OCPP_ERROR_CODES = new Set([
   'ConnectorLockFailure', 'EVCommunicationError', 'GroundFailure', 'HighTemperature', 'InternalError', 'LocalListConflict',
   'NoError', OTHER_ERROR, 'OverCurrentFailure', 'PowerMeterFailure', 'PowerSwitchFailure', 'ReaderFailure', 'ResetFailure',
@@ -37,6 +39,7 @@ function createStatusNotificationHandler({
   pool = null,
   logWarning = console.warn,
   logError = console.error,
+  finalizeSession = finalizeSessionByDefault,
   now = Date.now,
   warningIntervalMs = 60000,
   errorDedupSeconds = 60,
@@ -74,6 +77,34 @@ function createStatusNotificationHandler({
     return Number.isFinite(reportedAt) && Math.abs(reportedAt - now()) <= MAX_CLOCK_SKEW_MS
       ? new Date(reportedAt).toISOString()
       : null;
+  }
+
+  async function finalizeWaitingIdleSessions(db, connectorId, code, finalizeSession, log) {
+    try {
+      const result = await db.query(
+        `SELECT id
+         FROM charging_sessions
+         WHERE connector_id = $1
+           AND status = 'COMPLETED'
+           AND billing_status = 'WAITING_IDLE'`,
+        [connectorId]
+      );
+      for (const session of result.rows || []) {
+        try {
+          await finalizeSession(session.id);
+        } catch (error) {
+          log(
+            `[OCPP] StatusNotification: Không thể chốt hóa đơn phiên ${session.id} khi trụ ${safeLog(code)} rời trạng thái chiếm chỗ:`,
+            sanitizeErrorMessage(error?.message || error)
+          );
+        }
+      }
+    } catch (error) {
+      log(
+        `[OCPP] StatusNotification: Không thể tìm phiên chờ hóa đơn của trụ ${safeLog(code)}:`,
+        sanitizeErrorMessage(error?.message || error)
+      );
+    }
   }
 
   async function recordStationLevel(db, code, payload, status, errorCode) {
@@ -184,6 +215,9 @@ function createStatusNotificationHandler({
           `[OCPP] StatusNotification: Lỗi lưu sự kiện trạng thái đầu nối trụ ${safeLog(code)} | connectorId: ${connectorId}:`,
           sanitizeErrorMessage(eventError?.message || eventError)
         );
+      }
+      if (IDLE_STATUSES.has(updated.previous_ocpp_status) && !IDLE_STATUSES.has(status)) {
+        void finalizeWaitingIdleSessions(db, updated.connector_id, code, finalizeSession, logError);
       }
     }
     if (status === 'Available') {

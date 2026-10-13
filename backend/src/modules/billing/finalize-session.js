@@ -5,6 +5,7 @@ const { fetchConnectorStatusEvents, resolveIdleInterval } = require('./resolve-i
 const { priceSession } = require('./price-session');
 const { findEffectiveTariff } = require('./tariffs.repository');
 const { toLocalParts } = require('./tz');
+const env = require('../../config/env');
 
 const afterInvoiceHooks = new Set();
 
@@ -14,10 +15,8 @@ function registerAfterInvoice(fn) {
   return () => afterInvoiceHooks.delete(fn);
 }
 
-function idleMaxWaitMinutes() {
-  const raw = process.env.IDLE_MAX_WAIT_MIN;
-  if (raw === undefined) return 60;
-  const value = Number(raw);
+function idleMaxWaitMinutes(override) {
+  const value = override ?? env.IDLE_MAX_WAIT_MIN;
   if (!Number.isSafeInteger(value) || value < 1) {
     throw new TypeError('IDLE_MAX_WAIT_MIN must be a positive integer');
   }
@@ -92,7 +91,7 @@ async function markError(sessionId, poolInstance, error, logError) {
   );
 }
 
-async function finalizeInTransaction(client, sessionId, now) {
+async function finalizeInTransaction(client, sessionId, now, maxWaitMinutes) {
   const sessionResult = await client.query(
     `SELECT cs.id, cs.status, cs.billing_status, cs.needs_review, cs.driver_id,
             cs.meter_start, cs.meter_stop, cs.started_at, cs.stopped_at,
@@ -155,7 +154,7 @@ async function finalizeInTransaction(client, sessionId, now) {
     const events = await fetchConnectorStatusEvents(client, session.connector_id);
     const resolved = resolveIdleInterval(events, {
       stoppedAt: session.stopped_at,
-      maxWaitMinutes: idleMaxWaitMinutes(),
+      maxWaitMinutes: idleMaxWaitMinutes(maxWaitMinutes),
       now,
     });
     if (resolved.isOpen) {
@@ -272,10 +271,15 @@ async function finalizeInTransaction(client, sessionId, now) {
   return { status: 'FINAL', invoice };
 }
 
-async function finalizeSession(sessionId, { pool: poolInstance = null, now = Date.now, logError = console.error } = {}) {
+async function finalizeSession(sessionId, {
+  pool: poolInstance = null,
+  now = Date.now,
+  idleMaxWaitMinutes: maxWaitMinutes,
+  logError = console.error,
+} = {}) {
   try {
     return await withTransaction(
-      (client) => finalizeInTransaction(client, sessionId, now()),
+      (client) => finalizeInTransaction(client, sessionId, now(), maxWaitMinutes),
       poolInstance
     );
   } catch (error) {
