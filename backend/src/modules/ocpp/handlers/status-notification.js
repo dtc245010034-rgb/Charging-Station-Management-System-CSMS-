@@ -99,8 +99,23 @@ function createStatusNotificationHandler({
       return;
     }
     const updated = result.rows?.[0];
-    if (updated?.changed) {
-      publish({ ownerId: updated.owner_id, stationId: updated.station_id, chargePointId: updated.charge_point_id });
+    if (updated) {
+      if (updated.changed) {
+        publish({ ownerId: updated.owner_id, stationId: updated.station_id, chargePointId: updated.charge_point_id });
+      }
+      try {
+        const occurredAt = trustedTimestamp(payload.timestamp) || new Date(now()).toISOString();
+        await db.query(
+          `INSERT INTO connector_status_events (charge_point_id, connector_id, connector_no, ocpp_status, error_code, occurred_at)
+           VALUES ($1, NULL, 0, $2, $3, $4::timestamptz)`,
+          [updated.charge_point_id, status, errorCode || null, occurredAt]
+        );
+      } catch (eventError) {
+        logError(
+          `[OCPP] StatusNotification: Lỗi lưu sự kiện trạng thái mức trụ ${safeLog(code)}:`,
+          sanitizeErrorMessage(eventError?.message || eventError)
+        );
+      }
     }
     if (!hasError) return;
 
@@ -148,13 +163,28 @@ function createStatusNotificationHandler({
       return;
     }
     const updated = result.rows?.[0];
-    if (updated?.changed) {
-      publish({
-        ownerId: updated.owner_id,
-        stationId: updated.station_id,
-        chargePointId: updated.charge_point_id,
-        connectorId: updated.connector_id,
-      });
+    if (updated) {
+      if (updated.changed) {
+        publish({
+          ownerId: updated.owner_id,
+          stationId: updated.station_id,
+          chargePointId: updated.charge_point_id,
+          connectorId: updated.connector_id,
+        });
+      }
+      try {
+        const occurredAt = trustedTimestamp(payload.timestamp) || new Date(now()).toISOString();
+        await db.query(
+          `INSERT INTO connector_status_events (charge_point_id, connector_id, connector_no, ocpp_status, error_code, occurred_at)
+           VALUES ($1, $2, $3, $4, $5, $6::timestamptz)`,
+          [updated.charge_point_id, updated.connector_id, connectorId, status, errorCode || null, occurredAt]
+        );
+      } catch (eventError) {
+        logError(
+          `[OCPP] StatusNotification: Lỗi lưu sự kiện trạng thái đầu nối trụ ${safeLog(code)} | connectorId: ${connectorId}:`,
+          sanitizeErrorMessage(eventError?.message || eventError)
+        );
+      }
     }
     if (status === 'Available') {
       const sessions = await db.query(

@@ -308,3 +308,93 @@ describe('F5: connectorId = 0 (trạng thái cả trụ)', () => {
     assert.match(warnings[0], /CP-TEST/);
   });
 });
+
+describe('F6: Ghi lịch sử sự kiện trạng thái đầu nối (connector_status_events)', () => {
+  it('lưu sự kiện trạng thái với timestamp hợp lệ của trụ', async () => {
+    const queries = [];
+    const reportedTime = '2026-10-13T10:00:00.000Z';
+    const handler = createStatusNotificationHandler({
+      pool: {
+        query: async (sql, params) => {
+          queries.push({ sql, params });
+          if (/UPDATE connectors/.test(sql)) {
+            return {
+              rowCount: 1,
+              rows: [{ charge_point_id: 42, connector_id: 101, owner_id: 1, station_id: 2, changed: false }],
+            };
+          }
+          return { rowCount: 1, rows: [] };
+        },
+      },
+      now: () => Date.parse('2026-10-13T10:01:00.000Z'),
+    });
+
+    const res = await handler(
+      { connectorId: 1, status: 'Finishing', timestamp: reportedTime },
+      { connection: { chargePointCode: 'CP-TEST' } }
+    );
+    assert.deepEqual(res, {});
+    const insertEvent = queries.find((q) => /INSERT INTO connector_status_events/.test(q.sql));
+    assert.ok(insertEvent, 'Phải có truy vấn INSERT INTO connector_status_events');
+    assert.deepEqual(insertEvent.params, [42, 101, 1, 'Finishing', null, reportedTime]);
+  });
+
+  it('lưu sự kiện trạng thái dùng giờ máy chủ khi timestamp không hợp lệ', async () => {
+    const queries = [];
+    const serverTime = '2026-10-13T12:00:00.000Z';
+    const handler = createStatusNotificationHandler({
+      pool: {
+        query: async (sql, params) => {
+          queries.push({ sql, params });
+          if (/UPDATE connectors/.test(sql)) {
+            return {
+              rowCount: 1,
+              rows: [{ charge_point_id: 42, connector_id: 101, owner_id: 1, station_id: 2, changed: false }],
+            };
+          }
+          return { rowCount: 1, rows: [] };
+        },
+      },
+      now: () => Date.parse(serverTime),
+    });
+
+    const res = await handler(
+      { connectorId: 1, status: 'Available', timestamp: 'invalid-date' },
+      { connection: { chargePointCode: 'CP-TEST' } }
+    );
+    assert.deepEqual(res, {});
+    const insertEvent = queries.find((q) => /INSERT INTO connector_status_events/.test(q.sql));
+    assert.ok(insertEvent);
+    assert.deepEqual(insertEvent.params, [42, 101, 1, 'Available', null, serverTime]);
+  });
+
+  it('lỗi ghi sự kiện trạng thái chỉ log, không làm hỏng phản hồi cho trụ (K4)', async () => {
+    const errors = [];
+    const handler = createStatusNotificationHandler({
+      pool: {
+        query: async (sql) => {
+          if (/UPDATE connectors/.test(sql)) {
+            return {
+              rowCount: 1,
+              rows: [{ charge_point_id: 42, connector_id: 101, owner_id: 1, station_id: 2, changed: false }],
+            };
+          }
+          if (/INSERT INTO connector_status_events/.test(sql)) {
+            throw new Error('Deadlock or table locked');
+          }
+          return { rowCount: 1, rows: [] };
+        },
+      },
+      logError: (msg, detail) => errors.push(`${msg} ${detail}`),
+    });
+
+    const res = await handler(
+      { connectorId: 1, status: 'SuspendedEV' },
+      { connection: { chargePointCode: 'CP-TEST' } }
+    );
+    assert.deepEqual(res, {});
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /sự kiện trạng thái/i);
+  });
+});
+
