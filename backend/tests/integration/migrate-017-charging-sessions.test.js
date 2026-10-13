@@ -6,7 +6,7 @@ const tableSessions = async () => (await query("SELECT to_regclass('public.charg
 const tableMeterValues = async () => (await query("SELECT to_regclass('public.meter_values') AS t")).rows[0].t;
 const tableOrphanMessages = async () => (await query("SELECT to_regclass('public.orphan_messages') AS t")).rows[0].t;
 
-describe('migrations 017-031: charging sessions, remote commands, and append-only audit logs', () => {
+describe('migrations 017-035: charging sessions, billing, and append-only audit logs', () => {
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
@@ -90,8 +90,16 @@ describe('migrations 017-031: charging sessions, remote commands, and append-onl
     assert.equal((await query('SELECT action FROM audit_logs WHERE id = $1', [id])).rows[0].action, 'APPEND_ONLY_TEST');
   });
 
-  it('down: rollback lần lượt 033 tới 017 và up lại sạch sẽ', async () => {
+  it('down: rollback lần lượt 035 tới 017 và up lại sạch sẽ', async () => {
     const rollbackChecks = [
+      { version: '035_session_invoices', check: async () => {
+        assert.equal((await query("SELECT to_regclass('public.session_invoices') AS t")).rows[0].t, null);
+        assert.equal((await query("SELECT to_regclass('public.invoice_lines') AS t")).rows[0].t, null);
+        assert.equal((await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'charging_sessions' AND column_name = 'billing_status'")).rowCount, 0);
+      } },
+      { version: '034_connector_status_events', check: async () => {
+        assert.equal((await query("SELECT to_regclass('public.connector_status_events') AS t")).rows[0].t, null);
+      } },
       { version: '033_tariffs', check: async () => {
         assert.equal((await query("SELECT to_regclass('public.tariffs') AS t")).rows[0].t, null);
         assert.equal((await query("SELECT to_regclass('public.tariff_periods') AS t")).rows[0].t, null);

@@ -1,5 +1,9 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
+process.env.CSMS_SKIP_DOTENV = '1';
+process.env.DATABASE_URL ||= 'postgresql://localhost/csms_test';
+process.env.JWT_SECRET ||= 'x'.repeat(40);
+process.env.APP_ORIGIN ||= 'http://localhost:3000';
 const {
   OCPP_CONNECTOR_STATUS_MAP,
   UNKNOWN_CONNECTOR_STATUS,
@@ -397,4 +401,3 @@ describe('F6: Ghi lịch sử sự kiện trạng thái đầu nối (connector_
     assert.match(errors[0], /sự kiện trạng thái/i);
   });
 });
-
