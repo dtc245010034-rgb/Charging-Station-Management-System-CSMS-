@@ -78,6 +78,30 @@ async function findLatestMeterValue(db, sessionId) {
   return result.rows[0] || null;
 }
 
+async function listEnergySamples(db, sessionId, startedAt, stoppedAt, meterStartWh) {
+  const result = await db.query(
+    `SELECT sampled_at, value, COALESCE(raw_unit, unit) AS unit
+     FROM meter_values
+     WHERE session_id = $1
+       AND measurand = 'Energy.Active.Import.Register'
+       AND (phase IS NULL OR phase = '')
+       AND sampled_at > $2::timestamptz
+       AND sampled_at < $3::timestamptz
+     ORDER BY sampled_at ASC, id ASC`,
+    [sessionId, startedAt, stoppedAt]
+  );
+
+  let previousWh = Number(meterStartWh);
+  const samples = [];
+  for (const row of result.rows) {
+    const wh = meterValueToWh(row);
+    if (wh <= previousWh) continue;
+    samples.push({ at: row.sampled_at, wh });
+    previousWh = wh;
+  }
+  return samples;
+}
+
 /**
  * Chuyển đổi số đo Wh hoặc kWh sang đơn vị Wh nguyên, không bị sai số dấu phẩy động.
  * Quy ước: phần dưới 1 Wh bị cắt bỏ (1.0005 kWh -> 1000) và kết quả đi qua `Number`
@@ -112,5 +136,6 @@ module.exports = {
   recordMeterValues,
   findLatestMeterValues,
   findLatestMeterValue,
+  listEnergySamples,
   meterValueToWh,
 };
