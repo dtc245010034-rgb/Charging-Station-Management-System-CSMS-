@@ -32,6 +32,10 @@ const schema = z.object({
   REMOTE_STOP_WAIT_SECONDS: z.coerce.number().int().positive().default(120),
   // Thời gian trụ không gửi tin trước khi phiên sạc bị đánh dấu bất thường, mặc định 6 giờ
   SESSION_ABNORMAL_AFTER_SECONDS: z.coerce.number().int().positive().default(21600),
+  // Trần chờ trụ rời Finishing/SuspendedEV trước khi chốt phí chiếm chỗ
+  IDLE_MAX_WAIT_MIN: z.coerce.number().int().positive().default(60),
+  // Chu kỳ job nền thử lại và tìm phiên cần lập hóa đơn
+  BILLING_JOB_INTERVAL_MS: z.coerce.number().int().positive().default(30000),
   // Khử trùng connector_errors: bỏ qua lỗi y hệt đã ghi trong N giây gần nhất (0 = tắt), mặc định 60
   OCPP_ERROR_DEDUP_SECONDS: z.coerce.number().int().min(0).default(60),
   // Số ngày giữ câu trả lời đã gửi để nhận ra tin OCPP trùng messageId (S-14), mặc định 7

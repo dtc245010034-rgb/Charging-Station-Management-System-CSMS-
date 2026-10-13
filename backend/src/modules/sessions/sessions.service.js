@@ -7,14 +7,19 @@ const {
   findSessionControlById,
   listActiveSessions,
   listUnexpectedSessions,
+  listDriverSessionHistory,
+  countDriverSessionHistory,
 } = require('./sessions.repository');
 const { withTransaction } = require('../../db/tx');
 const { meterValueToWh } = require('./meter-values.repository');
 const connections = require('../charge-points/connection-registry');
 const { sendRemoteCommand } = require('../ocpp/commands');
+const { sanitizeErrorMessage } = require('../../lib/constants');
 const {
   AppError,
+  BadRequestError,
   ConflictError,
+  ForbiddenError,
   GatewayTimeoutError,
   NotFoundError,
   ServiceUnavailableError,
@@ -87,6 +92,130 @@ async function getCurrentSessionForDriver(user, options = {}) {
   const row = await findActiveSessionByDriverId(db, user.id);
   if (!row) return null;
   return formatSession(row);
+}
+
+const DRIVER_HISTORY_PAGE_SIZE = 50;
+const DRIVER_HISTORY_CURSOR_PAGE_SIZE = 20;
+const MAX_DATABASE_ID = 9223372036854775807n;
+
+function formatHistoryRow(row) {
+  const meterStart = row.meter_start === null ? null : Number(row.meter_start);
+  const meterStop = row.meter_stop === null ? null : Number(row.meter_stop);
+  const currentKwh = Number.isFinite(meterStart)
+    && Number.isFinite(meterStop)
+    && meterStop >= meterStart
+    ? (meterStop - meterStart) / 1000
+    : null;
+  return {
+    id: String(row.id),
+    status: row.status,
+    stationName: row.station_name,
+    stationAddress: row.station_address,
+    chargePointCode: row.charge_point_code,
+    connectorNo: row.connector_no,
+    startedAt: row.started_at,
+    stoppedAt: row.stopped_at,
+    stopReason: row.stop_reason,
+    currentKwh,
+    billingStatus: row.billing_status,
+    billingReason: row.billing_reason,
+    invoiceTotalDong: row.invoice_total_dong,
+  };
+}
+
+function decodeHistoryCursor(cursor) {
+  if (cursor === undefined || cursor === null || cursor === '') return null;
+  if (typeof cursor !== 'string' || cursor.length > 300) {
+    throw new BadRequestError('Con trỏ lịch sử phiên không hợp lệ');
+  }
+
+  try {
+    const value = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+    const stoppedAt = new Date(value.stoppedAt);
+    const sessionId = BigInt(value.id);
+    if (
+      !Number.isFinite(stoppedAt.getTime())
+      || stoppedAt.toISOString() !== value.stoppedAt
+      || sessionId < 1n
+      || sessionId > MAX_DATABASE_ID
+    ) {
+      throw new Error('Invalid cursor fields');
+    }
+    return { stoppedAt: stoppedAt.toISOString(), sessionId: sessionId.toString() };
+  } catch {
+    throw new BadRequestError('Con trỏ lịch sử phiên không hợp lệ');
+  }
+}
+
+function encodeHistoryCursor(row) {
+  return Buffer.from(JSON.stringify({
+    stoppedAt: new Date(row.stopped_at).toISOString(),
+    id: String(row.id),
+  })).toString('base64url');
+}
+
+async function getDriverSessionHistory(user, {
+  cursor,
+  month = null,
+  page = null,
+  limit = null,
+  db = null,
+} = {}) {
+  const roles = user?.roles || [user?.role];
+  if (!roles.includes('DRIVER')) throw new ForbiddenError();
+
+  const normalizedMonth = typeof month === 'string' && month.trim().length > 0
+    ? month.trim()
+    : null;
+  if (normalizedMonth && !/^\d{4}-(?:0[1-9]|1[0-2])$/.test(normalizedMonth)) {
+    throw new BadRequestError('Định dạng tháng phải là YYYY-MM');
+  }
+
+  const isPageMode = page !== null && page !== undefined;
+
+  if (isPageMode) {
+    const total = await countDriverSessionHistory(db, user.id, { month: normalizedMonth });
+    const pageNum = Number(page);
+    if (!Number.isSafeInteger(pageNum) || pageNum < 1) {
+      throw new BadRequestError('Số trang phải là số nguyên dương >= 1');
+    }
+    const pageSize = limit && Number.isSafeInteger(Number(limit)) && Number(limit) > 0
+      ? Number(limit)
+      : DRIVER_HISTORY_PAGE_SIZE;
+    const offset = (pageNum - 1) * pageSize;
+    const rows = await listDriverSessionHistory(db, user.id, {
+      month: normalizedMonth,
+      limit: pageSize,
+      offset,
+    });
+    const items = rows.map(formatHistoryRow);
+    const totalPages = Math.ceil(total / pageSize) || 1;
+    return {
+      items,
+      total,
+      page: pageNum,
+      pageSize,
+      totalPages,
+    };
+  }
+
+  const decoded = decodeHistoryCursor(cursor);
+  const pageSize = limit && Number.isSafeInteger(Number(limit)) && Number(limit) > 0
+    ? Number(limit)
+    : DRIVER_HISTORY_CURSOR_PAGE_SIZE;
+  const rows = await listDriverSessionHistory(db, user.id, {
+    month: normalizedMonth,
+    stoppedAt: decoded?.stoppedAt || null,
+    sessionId: decoded?.sessionId || null,
+    limit: pageSize + 1,
+  });
+  const hasMore = rows.length > pageSize;
+  const pageRows = rows.slice(0, pageSize);
+  const items = pageRows.map(formatHistoryRow);
+  return {
+    items,
+    nextCursor: hasMore ? encodeHistoryCursor(pageRows[pageRows.length - 1]) : null,
+  };
 }
 
 async function getSessionById(user, sessionId, options = {}) {
@@ -247,7 +376,13 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
   }
 }
 
-async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db = null, allowZeroEnergy = false } = {}) {
+async function closeUnexpectedSession(actor, sessionId, reason, {
+  ip = null,
+  db = null,
+  allowZeroEnergy = false,
+  finalizeSession = null,
+  logError = console.error,
+} = {}) {
   const client = db || require('../../db/pool').pool;
   const normalizedReason = typeof reason === 'string' ? reason.trim() : '';
   if (!normalizedReason || normalizedReason.length > 1000) {
@@ -338,6 +473,15 @@ async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db 
 
   void require('./sessions.events')
     .publishSessionUpdateFromDb(closed.id, { pool: client, driverId: closed.driverId });
+  const finalize = finalizeSession || require('../billing/finalize-session').finalizeSession;
+  void Promise.resolve()
+    .then(() => finalize(closed.id))
+    .catch((error) => {
+      logError(
+        `[Billing] Không thể kích hoạt lập hóa đơn cho phiên ${closed.id}:`,
+        sanitizeErrorMessage(error?.message || error)
+      );
+    });
 
   return {
     id: Number(closed.id),
@@ -349,6 +493,7 @@ async function closeUnexpectedSession(actor, sessionId, reason, { ip = null, db 
 
 module.exports = {
   getCurrentSessionForDriver,
+  getDriverSessionHistory,
   getSessionById,
   getActiveSessions,
   getUnexpectedSessions,

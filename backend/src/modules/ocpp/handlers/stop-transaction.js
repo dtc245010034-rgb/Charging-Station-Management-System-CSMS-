@@ -3,6 +3,7 @@ const { OcppCallError } = require('../frames');
 const { maskIdTag } = require('./authorize');
 const { createMeterValuesHandler } = require('./meter-values');
 const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
+const { finalizeSession: finalizeSessionByDefault } = require('../../billing/finalize-session');
 
 const MAX_TRANSACTION_ID = 2147483647;
 const MAX_ID_TAG_LENGTH = 20;
@@ -54,6 +55,7 @@ function createStopTransactionHandler({
   logError = console.error,
   persistTransactionData = null,
   recordAudit = null,
+  finalizeSession = finalizeSessionByDefault,
 } = {}) {
   const handleMeterValues = createMeterValuesHandler({ pool, now, logWarning, logError });
   const saveTransactionData = persistTransactionData || handleMeterValues;
@@ -162,22 +164,37 @@ function createStopTransactionHandler({
       if (updated.rowCount > 0) {
         const requesterId = updated.rows[0]?.remote_stop_requested_by;
         if (requesterId !== null && requesterId !== undefined) {
-          const writeAudit = recordAudit || require('../../audit/audit.repository').ghi_nhat_ky;
-          await writeAudit(
-            requesterId,
-            'REMOTE_STOP',
-            'charging_session',
-            payload.transactionId,
-            { reason: stopReason, meter_stop: payload.meterStop, stopped_at: stoppedAt },
-            'STOPPED',
-            null,
-            db
-          );
+          try {
+            const writeAudit = recordAudit || require('../../audit/audit.repository').ghi_nhat_ky;
+            await writeAudit(
+              requesterId,
+              'REMOTE_STOP',
+              'charging_session',
+              payload.transactionId,
+              { reason: stopReason, meter_stop: payload.meterStop, stopped_at: stoppedAt },
+              'STOPPED',
+              null,
+              db
+            );
+          } catch (auditError) {
+            logError(
+              `[OCPP] StopTransaction: Ghi audit thất bại cho phiên ${payload.transactionId}:`,
+              sanitizeErrorMessage(auditError?.message || auditError)
+            );
+          }
         }
         publishSessionUpdateFromDb(payload.transactionId, {
           pool: db,
           driverId: updated.rows[0]?.driver_id ?? null,
         }).catch(() => {});
+        void Promise.resolve()
+          .then(() => finalizeSession(payload.transactionId))
+          .catch((error) => {
+            logError(
+              `[OCPP] StopTransaction: Không thể kích hoạt lập hóa đơn cho phiên ${payload.transactionId}:`,
+              sanitizeErrorMessage(error?.message || error)
+            );
+          });
         return {};
       }
 

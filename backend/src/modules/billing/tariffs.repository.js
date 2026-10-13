@@ -21,6 +21,49 @@ const periodsOfTariff = async (tariffId) => {
   ).all(tariffId);
 };
 
+const findEffectiveTariff = async (client, stationId, instant) => {
+  const tariffResult = await client.query(
+    `SELECT t.id, t.station_id, t.version,
+            TO_CHAR(t.effective_from, 'YYYY-MM-DD') AS effective_from,
+            t.idle_grace_min, t.idle_per_min_dong, s.timezone
+     FROM tariffs t
+     JOIN stations s ON s.id = t.station_id
+     WHERE t.station_id = $1
+       AND t.effective_from <= (($2::timestamptz AT TIME ZONE s.timezone)::date)
+     ORDER BY t.effective_from DESC, t.version DESC
+     LIMIT 1`,
+    [stationId, instant]
+  );
+  const tariff = tariffResult.rows[0];
+  if (!tariff) return null;
+
+  const periodResult = await client.query(
+    `SELECT start_minute, end_minute, price_per_kwh_dong, label
+     FROM tariff_periods
+     WHERE tariff_id = $1
+     ORDER BY start_minute ASC`,
+    [tariff.id]
+  );
+
+  return {
+    id: tariff.id,
+    stationId: tariff.station_id,
+    version: tariff.version,
+    effectiveFrom: tariff.effective_from,
+    timezone: tariff.timezone,
+    idle: {
+      graceMin: tariff.idle_grace_min,
+      perMinDong: tariff.idle_per_min_dong,
+    },
+    periods: periodResult.rows.map((period) => ({
+      startMin: period.start_minute,
+      endMin: period.end_minute,
+      pricePerKwh: period.price_per_kwh_dong,
+      label: period.label,
+    })),
+  };
+};
+
 const countTariffs = async (stationId) => {
   const row = await prepare('SELECT COUNT(*)::int AS count FROM tariffs WHERE station_id = ?').get(stationId);
   return row ? row.count : 0;
@@ -79,6 +122,7 @@ const insertTariffWithPeriods = async (client, tariffData, periods) => {
 module.exports = {
   listByStation,
   periodsOfTariff,
+  findEffectiveTariff,
   countTariffs,
   maxVersion,
   existsForDate,

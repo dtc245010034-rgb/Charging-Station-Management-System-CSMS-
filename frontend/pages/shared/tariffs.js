@@ -346,6 +346,9 @@ export function render(ctx) {
             ),
             h('span', { class: 'muted', style: 'font-size:13px' },
               'Hiệu lực từ: ', h('strong', {}, t.effective_from)
+            ),
+            t.expiredFrom && h('span', { class: 'muted', style: 'font-size:13px' },
+              'Hết hiệu lực từ: ', h('strong', {}, t.expiredFrom)
             )
           ),
           h('div', { style: 'display:flex;gap:20px;font-size:13px;flex-wrap:wrap', class: 'muted' },

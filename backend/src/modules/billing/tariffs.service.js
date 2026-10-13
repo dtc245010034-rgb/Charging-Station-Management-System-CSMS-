@@ -37,7 +37,7 @@ async function list(actor, stationId) {
   const activeId = activeTariff ? activeTariff.id : null;
 
   const tariffs = await Promise.all(
-    rawTariffs.map(async (t) => {
+    rawTariffs.map(async (t, index) => {
       let state = 'SCHEDULED';
       if (t.effective_from > todayStr) {
         state = 'SCHEDULED';
@@ -51,6 +51,7 @@ async function list(actor, stationId) {
       return {
         ...t,
         state,
+        expiredFrom: rawTariffs[index - 1]?.effective_from ?? null,
         periods,
       };
     })

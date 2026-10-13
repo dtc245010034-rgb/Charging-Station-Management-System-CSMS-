@@ -77,6 +77,7 @@ describe('S-25 unexpected charging sessions', () => {
 
   it('closes using the latest trusted energy reading and audits the action atomically', async () => {
     const queries = [];
+    let finalizedSessionId;
     const client = {
       async query(sql, values = []) {
         queries.push({ sql, values });
@@ -90,7 +91,16 @@ describe('S-25 unexpected charging sessions', () => {
     };
     const db = { connect: async () => client };
 
-    const result = await closeUnexpectedSession({ id: 3 }, 10, 'Trụ mất liên lạc', { db, ip: '127.0.0.1' });
+    const result = await closeUnexpectedSession({ id: 3 }, 10, 'Trụ mất liên lạc', {
+      db,
+      ip: '127.0.0.1',
+      finalizeSession: async (sessionId) => {
+        finalizedSessionId = sessionId;
+        return new Promise(() => {});
+      },
+      logError: () => {},
+    });
+    await new Promise((resolve) => setImmediate(resolve));
     const update = queries.find(({ sql }) => sql.includes('UPDATE charging_sessions'));
     const finalMeterQuery = queries.find(({ sql }) => sql.includes('FROM meter_values'));
     const audit = queries.find(({ sql }) => sql.includes('INSERT INTO audit_logs'));
@@ -115,6 +125,7 @@ describe('S-25 unexpected charging sessions', () => {
     assert.equal(audit.values[5], 'COMPLETED');
     assert.equal(audit.values[6], '127.0.0.1');
     assert.ok(queries.some(({ sql }) => sql === 'COMMIT'));
+    assert.equal(finalizedSessionId, 10);
   });
 
   it('does not close a session without a usable final energy reading', async () => {
@@ -159,6 +170,8 @@ describe('S-25 unexpected charging sessions', () => {
       db,
       ip: '127.0.0.1',
       allowZeroEnergy: true,
+      finalizeSession: async () => ({ status: 'IGNORED' }),
+      logError: () => {},
     });
     assert.deepEqual(result, { id: 10, status: 'COMPLETED', meter_stop: 10000, current_kwh: 0 });
     const update = queries.find(({ sql }) => sql.includes('UPDATE charging_sessions'));

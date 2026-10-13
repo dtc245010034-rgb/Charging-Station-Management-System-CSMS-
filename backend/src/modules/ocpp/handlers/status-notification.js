@@ -2,12 +2,14 @@ const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
 const { mapOcppConnectorStatus, OCPP_CONNECTOR_STATUS_MAP } = require('../../connectors/status-mapping');
 const { publish } = require('../../fleet-status/fleet-status.events');
+const { finalizeSession: finalizeSessionByDefault } = require('../../billing/finalize-session');
 
 const MAX_TEXT_LENGTH = 50;
 const MAX_CONNECTOR_ID = 2147483647;
 const MAX_CLOCK_SKEW_MS = 24 * 3600 * 1000;
 const OTHER_ERROR = 'OtherError';
 const AVAILABLE_WITH_OPEN_SESSION = 'CONNECTOR_AVAILABLE_WITH_OPEN_SESSION';
+const IDLE_STATUSES = new Set(['SuspendedEV', 'Finishing']);
 const OCPP_ERROR_CODES = new Set([
   'ConnectorLockFailure', 'EVCommunicationError', 'GroundFailure', 'HighTemperature', 'InternalError', 'LocalListConflict',
   'NoError', OTHER_ERROR, 'OverCurrentFailure', 'PowerMeterFailure', 'PowerSwitchFailure', 'ReaderFailure', 'ResetFailure',
@@ -37,6 +39,7 @@ function createStatusNotificationHandler({
   pool = null,
   logWarning = console.warn,
   logError = console.error,
+  finalizeSession = finalizeSessionByDefault,
   now = Date.now,
   warningIntervalMs = 60000,
   errorDedupSeconds = 60,
@@ -76,6 +79,34 @@ function createStatusNotificationHandler({
       : null;
   }
 
+  async function finalizeWaitingIdleSessions(db, connectorId, code, finalizeSession, log) {
+    try {
+      const result = await db.query(
+        `SELECT id
+         FROM charging_sessions
+         WHERE connector_id = $1
+           AND status = 'COMPLETED'
+           AND billing_status = 'WAITING_IDLE'`,
+        [connectorId]
+      );
+      for (const session of result.rows || []) {
+        try {
+          await finalizeSession(session.id);
+        } catch (error) {
+          log(
+            `[OCPP] StatusNotification: Không thể chốt hóa đơn phiên ${session.id} khi trụ ${safeLog(code)} rời trạng thái chiếm chỗ:`,
+            sanitizeErrorMessage(error?.message || error)
+          );
+        }
+      }
+    } catch (error) {
+      log(
+        `[OCPP] StatusNotification: Không thể tìm phiên chờ hóa đơn của trụ ${safeLog(code)}:`,
+        sanitizeErrorMessage(error?.message || error)
+      );
+    }
+  }
+
   async function recordStationLevel(db, code, payload, status, errorCode) {
     const hasError = errorCode !== undefined && errorCode !== 'NoError';
     const knownCode = hasError && OCPP_ERROR_CODES.has(errorCode);
@@ -99,8 +130,23 @@ function createStatusNotificationHandler({
       return;
     }
     const updated = result.rows?.[0];
-    if (updated?.changed) {
-      publish({ ownerId: updated.owner_id, stationId: updated.station_id, chargePointId: updated.charge_point_id });
+    if (updated) {
+      if (updated.changed) {
+        publish({ ownerId: updated.owner_id, stationId: updated.station_id, chargePointId: updated.charge_point_id });
+      }
+      try {
+        const occurredAt = trustedTimestamp(payload.timestamp) || new Date(now()).toISOString();
+        await db.query(
+          `INSERT INTO connector_status_events (charge_point_id, connector_id, connector_no, ocpp_status, error_code, occurred_at)
+           VALUES ($1, NULL, 0, $2, $3, $4::timestamptz)`,
+          [updated.charge_point_id, status, errorCode || null, occurredAt]
+        );
+      } catch (eventError) {
+        logError(
+          `[OCPP] StatusNotification: Lỗi lưu sự kiện trạng thái mức trụ ${safeLog(code)}:`,
+          sanitizeErrorMessage(eventError?.message || eventError)
+        );
+      }
     }
     if (!hasError) return;
 
@@ -148,13 +194,31 @@ function createStatusNotificationHandler({
       return;
     }
     const updated = result.rows?.[0];
-    if (updated?.changed) {
-      publish({
-        ownerId: updated.owner_id,
-        stationId: updated.station_id,
-        chargePointId: updated.charge_point_id,
-        connectorId: updated.connector_id,
-      });
+    if (updated) {
+      if (updated.changed) {
+        publish({
+          ownerId: updated.owner_id,
+          stationId: updated.station_id,
+          chargePointId: updated.charge_point_id,
+          connectorId: updated.connector_id,
+        });
+      }
+      try {
+        const occurredAt = trustedTimestamp(payload.timestamp) || new Date(now()).toISOString();
+        await db.query(
+          `INSERT INTO connector_status_events (charge_point_id, connector_id, connector_no, ocpp_status, error_code, occurred_at)
+           VALUES ($1, $2, $3, $4, $5, $6::timestamptz)`,
+          [updated.charge_point_id, updated.connector_id, connectorId, status, errorCode || null, occurredAt]
+        );
+      } catch (eventError) {
+        logError(
+          `[OCPP] StatusNotification: Lỗi lưu sự kiện trạng thái đầu nối trụ ${safeLog(code)} | connectorId: ${connectorId}:`,
+          sanitizeErrorMessage(eventError?.message || eventError)
+        );
+      }
+      if (IDLE_STATUSES.has(updated.previous_ocpp_status) && !IDLE_STATUSES.has(status)) {
+        void finalizeWaitingIdleSessions(db, updated.connector_id, code, finalizeSession, logError);
+      }
     }
     if (status === 'Available') {
       const sessions = await db.query(

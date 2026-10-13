@@ -25,6 +25,8 @@ const permissions = {
   'sessions:stop': ['ADMIN', 'OPERATOR'],
   'sessions:unexpected:read': ['OPERATOR', 'ACCOUNTANT', 'ADMIN'],
   'sessions:unexpected:close': ['OPERATOR', 'ADMIN'],
+  'invoices:read-own': ['DRIVER'],
+  'invoices:read': ['ADMIN', 'OPERATOR', 'ACCOUNTANT', 'STATION_OWNER'],
   'audit-logs:read': ADMIN,
   'tariffs:read': ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT'],
   'tariffs:write': WRITE_OPERATIONS,

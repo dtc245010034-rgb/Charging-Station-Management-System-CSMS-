@@ -189,7 +189,13 @@ export function render(ctx) {
         infoRow('Kết thúc lúc', formatDateTime(session.stopped_at)),
         infoRow('Thời gian sạc', seconds === null ? '—' : formatDuration(seconds)),
       ]),
-      h('button', { class: 'btn', type: 'button', onclick: () => loadSession() }, 'Xong')
+      h('div', { style: 'display:flex;gap:12px;justify-content:center;margin-top:8px' },
+        isCompleted ? h('a', {
+          class: 'btn btn--primary',
+          href: `#/driver/invoice/${encodeURIComponent(session.id)}`,
+        }, 'Xem hóa đơn') : null,
+        h('button', { class: 'btn', type: 'button', onclick: () => loadSession() }, 'Xong')
+      )
     );
   }
 
