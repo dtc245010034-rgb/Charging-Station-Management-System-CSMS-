@@ -100,6 +100,16 @@ describe('S-02 frontend: router', () => {
     assert.ok(can('ADMIN', 'sessions:unexpected:close'));
   });
 
+  it('S-33: trang hóa đơn chỉ được tải cho tài xế có quyền đọc hóa đơn của mình', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { can } = await load('app/permissions.js');
+    assert.strictEqual(typeof pageLoader('invoice', 'driver'), 'function');
+    assert.strictEqual(pageLoader('invoice', 'operator'), null);
+    assert.strictEqual(PAGE_NEEDS.invoice, 'invoices:read-own');
+    assert.ok(can('DRIVER', 'invoices:read-own'));
+    assert.ok(!can('DRIVER', 'invoices:read'));
+  });
+
   it('S-27: nhật ký điều khiển chỉ hiện và chỉ tải cho Admin', async () => {
     const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
     const { visibleNav, WORKSPACES } = await load('app/workspace.js');
