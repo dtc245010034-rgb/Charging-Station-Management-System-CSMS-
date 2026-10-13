@@ -65,10 +65,18 @@ async function reset(actor, id, type, commandSender, { ip = null } = {}) {
       rejectedMessage: 'Trụ sạc từ chối Reset',
     });
   } catch (error) {
-    await audit.ghi_nhat_ky(actor.id, 'RESET', 'charge_point', id, { type }, error.code || 'ERROR', ip);
+    try {
+      await audit.ghi_nhat_ky(actor.id, 'RESET', 'charge_point', id, { type }, error.code || 'ERROR', ip);
+    } catch (auditError) {
+      console.error(`[Reset] Ghi audit thất bại cho trụ ${id}:`, auditError?.message || auditError);
+    }
     throw error;
   }
-  await audit.ghi_nhat_ky(actor.id, 'RESET', 'charge_point', id, { type }, response.status, ip);
+  try {
+    await audit.ghi_nhat_ky(actor.id, 'RESET', 'charge_point', id, { type }, response.status, ip);
+  } catch (auditError) {
+    console.error(`[Reset] Ghi audit thất bại cho trụ ${id}:`, auditError?.message || auditError);
+  }
   return response;
 }
 

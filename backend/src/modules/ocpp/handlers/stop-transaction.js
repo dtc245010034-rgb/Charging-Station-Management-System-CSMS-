@@ -162,17 +162,24 @@ function createStopTransactionHandler({
       if (updated.rowCount > 0) {
         const requesterId = updated.rows[0]?.remote_stop_requested_by;
         if (requesterId !== null && requesterId !== undefined) {
-          const writeAudit = recordAudit || require('../../audit/audit.repository').ghi_nhat_ky;
-          await writeAudit(
-            requesterId,
-            'REMOTE_STOP',
-            'charging_session',
-            payload.transactionId,
-            { reason: stopReason, meter_stop: payload.meterStop, stopped_at: stoppedAt },
-            'STOPPED',
-            null,
-            db
-          );
+          try {
+            const writeAudit = recordAudit || require('../../audit/audit.repository').ghi_nhat_ky;
+            await writeAudit(
+              requesterId,
+              'REMOTE_STOP',
+              'charging_session',
+              payload.transactionId,
+              { reason: stopReason, meter_stop: payload.meterStop, stopped_at: stoppedAt },
+              'STOPPED',
+              null,
+              db
+            );
+          } catch (auditError) {
+            logError(
+              `[OCPP] StopTransaction: Ghi audit thất bại cho phiên ${payload.transactionId}:`,
+              sanitizeErrorMessage(auditError?.message || auditError)
+            );
+          }
         }
         publishSessionUpdateFromDb(payload.transactionId, {
           pool: db,

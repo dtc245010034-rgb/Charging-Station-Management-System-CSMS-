@@ -246,4 +246,32 @@ describe('S-18 StopTransaction handler', () => {
       (error) => error instanceof OcppCallError && error.code === 'PropertyConstraintViolation'
     );
   });
+
+  it('ghi audit lỗi không làm hỏng StopTransaction (vẫn trả phản hồi rỗng)', async () => {
+    const pool = {
+      query: async (sql) => {
+        if (sql.includes('UPDATE charging_sessions')) {
+          return {
+            rowCount: 1,
+            rows: [{ driver_id: null, remote_stop_requested_by: '9', remote_stop_status: 'STOPPED' }],
+          };
+        }
+        return { rowCount: 1, rows: [] };
+      },
+    };
+    const logged = [];
+    const handler = createStopTransactionHandler({
+      pool,
+      now: () => NOW,
+      logError: (msg, err) => { logged.push({ msg, err }); },
+      recordAudit: async () => {
+        throw new Error('Audit connection failed');
+      },
+    });
+
+    const result = await handler(validPayload(), { connection: CONNECTION });
+    assert.deepEqual(result, {});
+    assert.equal(logged.length, 1);
+    assert.match(logged[0].msg, /audit/i);
+  });
 });
