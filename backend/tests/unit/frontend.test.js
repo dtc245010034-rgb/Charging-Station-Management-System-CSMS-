@@ -110,6 +110,17 @@ describe('S-02 frontend: router', () => {
     assert.ok(!can('DRIVER', 'invoices:read'));
   });
 
+  it('S-64: trang lịch sử chỉ hiện và tải cho tài xế', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { visibleNav } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    const driverPages = visibleNav('driver', 'DRIVER', can).flatMap((group) => group.items.map((item) => item.page));
+    assert.strictEqual(typeof pageLoader('history', 'driver'), 'function');
+    assert.strictEqual(pageLoader('history', 'operator'), null);
+    assert.strictEqual(PAGE_NEEDS.history, 'sessions:read-own');
+    assert.ok(driverPages.includes('history'));
+  });
+
   it('S-27: nhật ký điều khiển chỉ hiện và chỉ tải cho Admin', async () => {
     const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
     const { visibleNav, WORKSPACES } = await load('app/workspace.js');

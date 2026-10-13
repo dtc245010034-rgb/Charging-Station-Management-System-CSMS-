@@ -13,6 +13,7 @@ export const PAGE_NEEDS = {
   map: 'stations:read',
   users: 'users:create',
   sessions: ['sessions:read-own', 'sessions:read'],
+  history: 'sessions:read-own',
   invoice: 'invoices:read-own',
   'unexpected-sessions': 'sessions:unexpected:read',
   'control-log': 'audit-logs:read',
@@ -41,6 +42,9 @@ const PAGES = {
   },
   invoice: {
     driver: () => import('../pages/driver/invoice.js'),
+  },
+  history: {
+    driver: () => import('../pages/driver/history.js'),
   },
   'unexpected-sessions': {
     operator: () => import('../pages/shared/unexpected-sessions.js'),

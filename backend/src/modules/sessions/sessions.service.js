@@ -7,6 +7,7 @@ const {
   findSessionControlById,
   listActiveSessions,
   listUnexpectedSessions,
+  listDriverSessionHistory,
 } = require('./sessions.repository');
 const { withTransaction } = require('../../db/tx');
 const { meterValueToWh } = require('./meter-values.repository');
@@ -15,7 +16,9 @@ const { sendRemoteCommand } = require('../ocpp/commands');
 const { sanitizeErrorMessage } = require('../../lib/constants');
 const {
   AppError,
+  BadRequestError,
   ConflictError,
+  ForbiddenError,
   GatewayTimeoutError,
   NotFoundError,
   ServiceUnavailableError,
@@ -88,6 +91,81 @@ async function getCurrentSessionForDriver(user, options = {}) {
   const row = await findActiveSessionByDriverId(db, user.id);
   if (!row) return null;
   return formatSession(row);
+}
+
+const DRIVER_HISTORY_PAGE_SIZE = 20;
+const MAX_DATABASE_ID = 9223372036854775807n;
+
+function decodeHistoryCursor(cursor) {
+  if (cursor === undefined || cursor === null || cursor === '') return null;
+  if (typeof cursor !== 'string' || cursor.length > 300) {
+    throw new BadRequestError('Con trỏ lịch sử phiên không hợp lệ');
+  }
+
+  try {
+    const value = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+    const stoppedAt = new Date(value.stoppedAt);
+    const sessionId = BigInt(value.id);
+    if (
+      !Number.isFinite(stoppedAt.getTime())
+      || stoppedAt.toISOString() !== value.stoppedAt
+      || sessionId < 1n
+      || sessionId > MAX_DATABASE_ID
+    ) {
+      throw new Error('Invalid cursor fields');
+    }
+    return { stoppedAt: stoppedAt.toISOString(), sessionId: sessionId.toString() };
+  } catch {
+    throw new BadRequestError('Con trỏ lịch sử phiên không hợp lệ');
+  }
+}
+
+function encodeHistoryCursor(row) {
+  return Buffer.from(JSON.stringify({
+    stoppedAt: new Date(row.stopped_at).toISOString(),
+    id: String(row.id),
+  })).toString('base64url');
+}
+
+async function getDriverSessionHistory(user, { cursor, db = null } = {}) {
+  const roles = user?.roles || [user?.role];
+  if (!roles.includes('DRIVER')) throw new ForbiddenError();
+  const decoded = decodeHistoryCursor(cursor);
+  const rows = await listDriverSessionHistory(db, user.id, {
+    stoppedAt: decoded?.stoppedAt || null,
+    sessionId: decoded?.sessionId || null,
+    limit: DRIVER_HISTORY_PAGE_SIZE + 1,
+  });
+  const hasMore = rows.length > DRIVER_HISTORY_PAGE_SIZE;
+  const page = rows.slice(0, DRIVER_HISTORY_PAGE_SIZE);
+  const items = page.map((row) => {
+    const meterStart = row.meter_start === null ? null : Number(row.meter_start);
+    const meterStop = row.meter_stop === null ? null : Number(row.meter_stop);
+    const currentKwh = Number.isFinite(meterStart)
+      && Number.isFinite(meterStop)
+      && meterStop >= meterStart
+      ? (meterStop - meterStart) / 1000
+      : null;
+    return {
+      id: String(row.id),
+      status: row.status,
+      stationName: row.station_name,
+      stationAddress: row.station_address,
+      chargePointCode: row.charge_point_code,
+      connectorNo: row.connector_no,
+      startedAt: row.started_at,
+      stoppedAt: row.stopped_at,
+      stopReason: row.stop_reason,
+      currentKwh,
+      billingStatus: row.billing_status,
+      billingReason: row.billing_reason,
+      invoiceTotalDong: row.invoice_total_dong,
+    };
+  });
+  return {
+    items,
+    nextCursor: hasMore ? encodeHistoryCursor(page[page.length - 1]) : null,
+  };
 }
 
 async function getSessionById(user, sessionId, options = {}) {
@@ -365,6 +443,7 @@ async function closeUnexpectedSession(actor, sessionId, reason, {
 
 module.exports = {
   getCurrentSessionForDriver,
+  getDriverSessionHistory,
   getSessionById,
   getActiveSessions,
   getUnexpectedSessions,

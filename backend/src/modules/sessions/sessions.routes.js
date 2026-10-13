@@ -36,6 +36,10 @@ router.get('/me/sessions/current', { access: access('sessions:read-own') }, asyn
   return res.status(200).json(session);
 });
 
+router.get('/me/sessions/history', { access: access('sessions:read-own') }, async (req, res) => {
+  res.json(await service.getDriverSessionHistory(req.user, { cursor: req.query.cursor }));
+});
+
 // T-48: Luồng SSE thời gian thực cho tài xế (lọc theo driver_id, heartbeat 20s, tự đóng khi JWT hết hạn)
 function handleSessionEvents(req, res) {
   let closed = false;

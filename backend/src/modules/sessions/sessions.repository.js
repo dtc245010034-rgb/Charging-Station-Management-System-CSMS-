@@ -304,6 +304,33 @@ async function listUnexpectedSessions(dbOrPool) {
   return result.rows;
 }
 
+async function listDriverSessionHistory(dbOrPool, driverId, { stoppedAt = null, sessionId = null, limit = 21 } = {}) {
+  const client = dbOrPool || getDefaultPool();
+  const result = await client.query(
+    `SELECT cs.id, cs.status, cs.started_at, cs.stopped_at, cs.stop_reason,
+            cs.meter_start, cs.meter_stop, cs.billing_status, cs.billing_reason,
+            cp.code AS charge_point_code, c.connector_no,
+            s.name AS station_name, s.address AS station_address,
+            si.total_dong AS invoice_total_dong
+     FROM charging_sessions cs
+     JOIN charge_points cp ON cp.id = cs.charge_point_id
+     JOIN connectors c ON c.id = cs.connector_id
+     JOIN stations s ON s.id = cp.station_id
+     LEFT JOIN session_invoices si ON si.session_id = cs.id
+     WHERE cs.driver_id = $1
+       AND cs.status = 'COMPLETED'
+       AND cs.stopped_at IS NOT NULL
+       AND (
+         $2::timestamptz IS NULL
+         OR (cs.stopped_at, cs.id) < ($2::timestamptz, $3::bigint)
+       )
+     ORDER BY cs.stopped_at DESC, cs.id DESC
+     LIMIT $4`,
+    [driverId, stoppedAt, sessionId, limit]
+  );
+  return result.rows;
+}
+
 module.exports = {
   findConnectorWithStation,
   findTagByTagValue,
@@ -319,4 +346,5 @@ module.exports = {
   findSessionControlById,
   listActiveSessions,
   listUnexpectedSessions,
+  listDriverSessionHistory,
 };

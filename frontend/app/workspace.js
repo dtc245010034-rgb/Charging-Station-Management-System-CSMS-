@@ -97,7 +97,7 @@ export const WORKSPACES = {
           { page: 'start', label: 'Bắt đầu sạc', icon: 'bolt', enabled: true, needs: 'remote-start:create' },
           { page: 'find', label: 'Tìm trạm', icon: 'station', enabled: false, since: 'S-47' },
           { page: 'sessions', label: 'Phiên sạc', icon: 'bolt', enabled: true, needs: 'sessions:read-own' },
-          { page: 'history', label: 'Lịch sử', icon: 'history', enabled: false, since: 'S-64' },
+          { page: 'history', label: 'Lịch sử', icon: 'history', enabled: true, needs: 'sessions:read-own' },
           { page: 'wallet', label: 'Ví', icon: 'wallet', enabled: false, since: 'S-40' },
           { page: 'account', label: 'Tài khoản', icon: 'user', enabled: true },
         ],
