@@ -7,7 +7,10 @@ class AppError extends Error {
 }
 
 class BadRequestError extends AppError {
-  constructor(message = 'Yêu cầu không hợp lệ') { super(400, 'BAD_REQUEST', message); }
+  constructor(message = 'Yêu cầu không hợp lệ', details) {
+    super(400, 'BAD_REQUEST', message);
+    if (details) this.details = details;
+  }
 }
 class UnauthorizedError extends AppError {
   constructor(message = 'Yêu cầu đăng nhập') { super(401, 'UNAUTHORIZED', message); }

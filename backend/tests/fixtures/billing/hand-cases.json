@@ -1,0 +1,1020 @@
+[
+  {
+    "id": "C01",
+    "description": "Một khung, kWh tròn",
+    "input": {
+      "startedAt": "2026-10-12T01:00:00.000Z",
+      "stoppedAt": "2026-10-12T03:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 10000,
+      "samples": [],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 1440,
+            "pricePerKwh": 4000,
+            "label": "Cả ngày"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 40000,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T01:00:00.000Z",
+          "to": "2026-10-12T03:00:00.000Z",
+          "wh": 10000,
+          "pricePerKwh": 4000,
+          "amountDong": 40000
+        }
+      ]
+    }
+  },
+  {
+    "id": "C02",
+    "description": "Một khung, kWh lẻ → làm tròn nửa lên",
+    "input": {
+      "startedAt": "2026-10-12T01:00:00.000Z",
+      "stoppedAt": "2026-10-12T02:00:00.000Z",
+      "meterStartWh": 1000,
+      "meterStopWh": 4001,
+      "samples": [],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 1440,
+            "pricePerKwh": 2500,
+            "label": "Cả ngày"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 7503,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T01:00:00.000Z",
+          "to": "2026-10-12T02:00:00.000Z",
+          "wh": 3001,
+          "pricePerKwh": 2500,
+          "amountDong": 7503
+        }
+      ]
+    }
+  },
+  {
+    "id": "C03",
+    "description": "Cắt ở 22:00, mẫu thưa → nội suy",
+    "input": {
+      "startedAt": "2026-10-12T14:30:00.000Z",
+      "stoppedAt": "2026-10-12T16:30:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 18000,
+      "samples": [
+        {
+          "at": "2026-10-12T14:45:00.000Z",
+          "wh": 2250
+        },
+        {
+          "at": "2026-10-12T15:15:00.000Z",
+          "wh": 6752
+        }
+      ],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 360,
+            "endMin": 1320,
+            "pricePerKwh": 4000,
+            "label": "Ngày"
+          },
+          {
+            "startMin": 1320,
+            "endMin": 1440,
+            "pricePerKwh": 3000,
+            "label": "Đêm"
+          },
+          {
+            "startMin": 0,
+            "endMin": 360,
+            "pricePerKwh": 3000,
+            "label": "Đêm"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 58501,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T14:30:00.000Z",
+          "to": "2026-10-12T15:00:00.000Z",
+          "wh": 4501,
+          "pricePerKwh": 4000,
+          "amountDong": 18004
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T15:00:00.000Z",
+          "to": "2026-10-12T16:30:00.000Z",
+          "wh": 13499,
+          "pricePerKwh": 3000,
+          "amountDong": 40497
+        }
+      ]
+    }
+  },
+  {
+    "id": "C04",
+    "description": "Mẫu đúng mốc biên 22:00 (không cần nội suy)",
+    "input": {
+      "startedAt": "2026-10-12T14:30:00.000Z",
+      "stoppedAt": "2026-10-12T15:30:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 6000,
+      "samples": [
+        {
+          "at": "2026-10-12T15:00:00.000Z",
+          "wh": 3333
+        }
+      ],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 360,
+            "endMin": 1320,
+            "pricePerKwh": 4000,
+            "label": "Ngày"
+          },
+          {
+            "startMin": 1320,
+            "endMin": 1440,
+            "pricePerKwh": 3000,
+            "label": "Đêm"
+          },
+          {
+            "startMin": 0,
+            "endMin": 360,
+            "pricePerKwh": 3000,
+            "label": "Đêm"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 21333,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T14:30:00.000Z",
+          "to": "2026-10-12T15:00:00.000Z",
+          "wh": 3333,
+          "pricePerKwh": 4000,
+          "amountDong": 13332
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T15:00:00.000Z",
+          "to": "2026-10-12T15:30:00.000Z",
+          "wh": 2667,
+          "pricePerKwh": 3000,
+          "amountDong": 8001
+        }
+      ]
+    }
+  },
+  {
+    "id": "C05",
+    "description": "Hai biên trong một phiên (06:00 và 22:00), ba khung",
+    "input": {
+      "startedAt": "2026-10-11T22:00:00.000Z",
+      "stoppedAt": "2026-10-12T16:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 82814,
+      "samples": [
+        {
+          "at": "2026-10-11T23:00:00.000Z",
+          "wh": 3000
+        },
+        {
+          "at": "2026-10-12T15:00:00.000Z",
+          "wh": 79812
+        }
+      ],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 360,
+            "pricePerKwh": 2500,
+            "label": "Sáng sớm"
+          },
+          {
+            "startMin": 360,
+            "endMin": 1320,
+            "pricePerKwh": 4000,
+            "label": "Ngày"
+          },
+          {
+            "startMin": 1320,
+            "endMin": 1440,
+            "pricePerKwh": 3000,
+            "label": "Đêm"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 323754,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-11T22:00:00.000Z",
+          "to": "2026-10-11T23:00:00.000Z",
+          "wh": 3000,
+          "pricePerKwh": 2500,
+          "amountDong": 7500
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-11T23:00:00.000Z",
+          "to": "2026-10-12T15:00:00.000Z",
+          "wh": 76812,
+          "pricePerKwh": 4000,
+          "amountDong": 307248
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T15:00:00.000Z",
+          "to": "2026-10-12T16:00:00.000Z",
+          "wh": 3002,
+          "pricePerKwh": 3000,
+          "amountDong": 9006
+        }
+      ]
+    }
+  },
+  {
+    "id": "C06",
+    "description": "Bắt đầu và kết thúc đúng biên → không có đoạn rỗng",
+    "input": {
+      "startedAt": "2026-10-11T23:00:00.000Z",
+      "stoppedAt": "2026-10-12T15:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 60000,
+      "samples": [],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 360,
+            "pricePerKwh": 2500,
+            "label": "Đêm"
+          },
+          {
+            "startMin": 360,
+            "endMin": 1320,
+            "pricePerKwh": 4000,
+            "label": "Ngày"
+          },
+          {
+            "startMin": 1320,
+            "endMin": 1440,
+            "pricePerKwh": 2500,
+            "label": "Đêm"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 240000,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-11T23:00:00.000Z",
+          "to": "2026-10-12T15:00:00.000Z",
+          "wh": 60000,
+          "pricePerKwh": 4000,
+          "amountDong": 240000
+        }
+      ]
+    }
+  },
+  {
+    "id": "C07",
+    "description": "Khung vòng nửa đêm 22:00–02:00 (đã tách), phiên cắt ở 02:00",
+    "input": {
+      "startedAt": "2026-10-12T18:00:00.000Z",
+      "stoppedAt": "2026-10-12T20:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 16000,
+      "samples": [
+        {
+          "at": "2026-10-12T19:00:00.000Z",
+          "wh": 8000
+        }
+      ],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 120,
+            "pricePerKwh": 4000,
+            "label": "22:00-02:00"
+          },
+          {
+            "startMin": 120,
+            "endMin": 1320,
+            "pricePerKwh": 3000,
+            "label": "Ngày"
+          },
+          {
+            "startMin": 1320,
+            "endMin": 1440,
+            "pricePerKwh": 4000,
+            "label": "22:00-02:00"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 56000,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-13",
+          "from": "2026-10-12T18:00:00.000Z",
+          "to": "2026-10-12T19:00:00.000Z",
+          "wh": 8000,
+          "pricePerKwh": 4000,
+          "amountDong": 32000
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-13",
+          "from": "2026-10-12T19:00:00.000Z",
+          "to": "2026-10-12T20:00:00.000Z",
+          "wh": 8000,
+          "pricePerKwh": 3000,
+          "amountDong": 24000
+        }
+      ]
+    }
+  },
+  {
+    "id": "C08",
+    "description": "Qua 0 giờ, cùng đơn giá hai bên",
+    "input": {
+      "startedAt": "2026-10-12T16:00:00.000Z",
+      "stoppedAt": "2026-10-12T18:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 8000,
+      "samples": [],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 1440,
+            "pricePerKwh": 4000,
+            "label": "Cả ngày"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 32000,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T16:00:00.000Z",
+          "to": "2026-10-12T17:00:00.000Z",
+          "wh": 4000,
+          "pricePerKwh": 4000,
+          "amountDong": 16000
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-13",
+          "from": "2026-10-12T17:00:00.000Z",
+          "to": "2026-10-12T18:00:00.000Z",
+          "wh": 4000,
+          "pricePerKwh": 4000,
+          "amountDong": 16000
+        }
+      ]
+    }
+  },
+  {
+    "id": "C09",
+    "description": "Qua 0 giờ, đơn giá hai bên khác nhau (23:00→00:00 khác 00:00→01:00)",
+    "input": {
+      "startedAt": "2026-10-12T16:00:00.000Z",
+      "stoppedAt": "2026-10-12T18:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 8001,
+      "samples": [
+        {
+          "at": "2026-10-12T17:00:00.000Z",
+          "wh": 4000
+        }
+      ],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 360,
+            "pricePerKwh": 2500,
+            "label": "Sáng"
+          },
+          {
+            "startMin": 360,
+            "endMin": 1320,
+            "pricePerKwh": 4000,
+            "label": "Ngày"
+          },
+          {
+            "startMin": 1320,
+            "endMin": 1440,
+            "pricePerKwh": 3000,
+            "label": "Đêm"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 22003,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T16:00:00.000Z",
+          "to": "2026-10-12T17:00:00.000Z",
+          "wh": 4000,
+          "pricePerKwh": 3000,
+          "amountDong": 12000
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-13",
+          "from": "2026-10-12T17:00:00.000Z",
+          "to": "2026-10-12T18:00:00.000Z",
+          "wh": 4001,
+          "pricePerKwh": 2500,
+          "amountDong": 10003
+        }
+      ]
+    }
+  },
+  {
+    "id": "C10",
+    "description": "Phiên 33 giờ qua hai nửa đêm, 3 ngày, 6 đoạn",
+    "input": {
+      "startedAt": "2026-10-12T11:00:00.000Z",
+      "stoppedAt": "2026-10-13T20:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 98120,
+      "samples": [],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 360,
+            "pricePerKwh": 2500,
+            "label": "Đêm"
+          },
+          {
+            "startMin": 360,
+            "endMin": 1320,
+            "pricePerKwh": 4000,
+            "label": "Ngày"
+          },
+          {
+            "startMin": 1320,
+            "endMin": 1440,
+            "pricePerKwh": 2500,
+            "label": "Đêm"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 334500,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T11:00:00.000Z",
+          "to": "2026-10-12T15:00:00.000Z",
+          "wh": 11893,
+          "pricePerKwh": 4000,
+          "amountDong": 47572
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T15:00:00.000Z",
+          "to": "2026-10-12T17:00:00.000Z",
+          "wh": 5947,
+          "pricePerKwh": 2500,
+          "amountDong": 14868
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-13",
+          "from": "2026-10-12T17:00:00.000Z",
+          "to": "2026-10-12T23:00:00.000Z",
+          "wh": 17840,
+          "pricePerKwh": 2500,
+          "amountDong": 44600
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-13",
+          "from": "2026-10-12T23:00:00.000Z",
+          "to": "2026-10-13T15:00:00.000Z",
+          "wh": 47573,
+          "pricePerKwh": 4000,
+          "amountDong": 190292
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-13",
+          "from": "2026-10-13T15:00:00.000Z",
+          "to": "2026-10-13T17:00:00.000Z",
+          "wh": 5947,
+          "pricePerKwh": 2500,
+          "amountDong": 14868
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-14",
+          "from": "2026-10-13T17:00:00.000Z",
+          "to": "2026-10-13T20:00:00.000Z",
+          "wh": 8920,
+          "pricePerKwh": 2500,
+          "amountDong": 22300
+        }
+      ]
+    }
+  },
+  {
+    "id": "C11",
+    "description": "Chỉ có mẫu đầu và cuối (không mẫu giữa), cắt 22:00",
+    "input": {
+      "startedAt": "2026-10-12T14:00:00.000Z",
+      "stoppedAt": "2026-10-12T16:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 10001,
+      "samples": [],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 360,
+            "endMin": 1320,
+            "pricePerKwh": 4000,
+            "label": "Ngày"
+          },
+          {
+            "startMin": 1320,
+            "endMin": 1440,
+            "pricePerKwh": 3000,
+            "label": "Đêm"
+          },
+          {
+            "startMin": 0,
+            "endMin": 360,
+            "pricePerKwh": 3000,
+            "label": "Đêm"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 35004,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T14:00:00.000Z",
+          "to": "2026-10-12T15:00:00.000Z",
+          "wh": 5001,
+          "pricePerKwh": 4000,
+          "amountDong": 20004
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T15:00:00.000Z",
+          "to": "2026-10-12T16:00:00.000Z",
+          "wh": 5000,
+          "pricePerKwh": 3000,
+          "amountDong": 15000
+        }
+      ]
+    }
+  },
+  {
+    "id": "C12",
+    "description": "Làm tròn từng đoạn rồi cộng ≠ làm tròn cả phiên",
+    "input": {
+      "startedAt": "2026-10-12T14:00:00.000Z",
+      "stoppedAt": "2026-10-12T16:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 2665,
+      "samples": [
+        {
+          "at": "2026-10-12T15:00:00.000Z",
+          "wh": 1166
+        }
+      ],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 1320,
+            "pricePerKwh": 2001,
+            "label": "Trước 22:00"
+          },
+          {
+            "startMin": 1320,
+            "endMin": 1440,
+            "pricePerKwh": 2001,
+            "label": "Sau 22:00"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 5332,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T14:00:00.000Z",
+          "to": "2026-10-12T15:00:00.000Z",
+          "wh": 1166,
+          "pricePerKwh": 2001,
+          "amountDong": 2333
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T15:00:00.000Z",
+          "to": "2026-10-12T16:00:00.000Z",
+          "wh": 1499,
+          "pricePerKwh": 2001,
+          "amountDong": 2999
+        }
+      ]
+    }
+  },
+  {
+    "id": "C13",
+    "description": "Phí chiếm trụ: nằm trong ân hạn → 0 đồng",
+    "input": {
+      "startedAt": "2026-10-12T01:00:00.000Z",
+      "stoppedAt": "2026-10-12T02:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 10000,
+      "samples": [],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 1440,
+            "pricePerKwh": 4000,
+            "label": "Cả ngày"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      },
+      "idleInterval": {
+        "from": "2026-10-12T02:00:00.000Z",
+        "to": "2026-10-12T02:10:00.000Z"
+      }
+    },
+    "expected": {
+      "totalDong": 40000,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T01:00:00.000Z",
+          "to": "2026-10-12T02:00:00.000Z",
+          "wh": 10000,
+          "pricePerKwh": 4000,
+          "amountDong": 40000
+        }
+      ]
+    }
+  },
+  {
+    "id": "C14",
+    "description": "Phí chiếm trụ: quá ân hạn, phút dở tính trọn",
+    "input": {
+      "startedAt": "2026-10-12T01:00:00.000Z",
+      "stoppedAt": "2026-10-12T02:00:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 10000,
+      "samples": [],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 1440,
+            "pricePerKwh": 4000,
+            "label": "Cả ngày"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      },
+      "idleInterval": {
+        "from": "2026-10-12T02:00:00.000Z",
+        "to": "2026-10-12T02:52:10.000Z"
+      }
+    },
+    "expected": {
+      "totalDong": 78000,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T01:00:00.000Z",
+          "to": "2026-10-12T02:00:00.000Z",
+          "wh": 10000,
+          "pricePerKwh": 4000,
+          "amountDong": 40000
+        },
+        {
+          "kind": "IDLE",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T02:15:00.000Z",
+          "to": "2026-10-12T02:52:10.000Z",
+          "wh": 0,
+          "pricePerKwh": null,
+          "minutes": 38,
+          "perMinDong": 1000,
+          "amountDong": 38000
+        }
+      ]
+    }
+  },
+  {
+    "id": "C15",
+    "description": "Phí chiếm trụ: qua 0 giờ, biên phút tròn",
+    "input": {
+      "startedAt": "2026-10-12T15:30:00.000Z",
+      "stoppedAt": "2026-10-12T16:30:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 10000,
+      "samples": [],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 1440,
+            "pricePerKwh": 4000,
+            "label": "Cả ngày"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      },
+      "idleInterval": {
+        "from": "2026-10-12T16:30:00.000Z",
+        "to": "2026-10-12T17:33:00.000Z"
+      }
+    },
+    "expected": {
+      "totalDong": 88000,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T15:30:00.000Z",
+          "to": "2026-10-12T16:30:00.000Z",
+          "wh": 10000,
+          "pricePerKwh": 4000,
+          "amountDong": 40000
+        },
+        {
+          "kind": "IDLE",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T16:45:00.000Z",
+          "to": "2026-10-12T17:33:00.000Z",
+          "wh": 0,
+          "pricePerKwh": null,
+          "minutes": 48,
+          "perMinDong": 1000,
+          "amountDong": 48000
+        }
+      ]
+    }
+  },
+  {
+    "id": "C16",
+    "description": "Trạm ở múi giờ khác (Asia/Kolkata, UTC+05:30)",
+    "input": {
+      "startedAt": "2026-10-12T15:30:00.000Z",
+      "stoppedAt": "2026-10-12T17:30:00.000Z",
+      "meterStartWh": 0,
+      "meterStopWh": 10637,
+      "samples": [],
+      "timezone": "Asia/Kolkata",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 360,
+            "endMin": 1320,
+            "pricePerKwh": 3500,
+            "label": "Day"
+          },
+          {
+            "startMin": 1320,
+            "endMin": 1440,
+            "pricePerKwh": 2000,
+            "label": "Night"
+          },
+          {
+            "startMin": 0,
+            "endMin": 360,
+            "pricePerKwh": 2000,
+            "label": "Night"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 29253,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T15:30:00.000Z",
+          "to": "2026-10-12T16:30:00.000Z",
+          "wh": 5319,
+          "pricePerKwh": 3500,
+          "amountDong": 18617
+        },
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T16:30:00.000Z",
+          "to": "2026-10-12T17:30:00.000Z",
+          "wh": 5318,
+          "pricePerKwh": 2000,
+          "amountDong": 10636
+        }
+      ]
+    }
+  },
+  {
+    "id": "C17",
+    "description": "Phiên 0 kWh",
+    "input": {
+      "startedAt": "2026-10-12T01:00:00.000Z",
+      "stoppedAt": "2026-10-12T01:30:00.000Z",
+      "meterStartWh": 5000,
+      "meterStopWh": 5000,
+      "samples": [],
+      "timezone": "Asia/Ho_Chi_Minh",
+      "tariff": {
+        "periods": [
+          {
+            "startMin": 0,
+            "endMin": 1440,
+            "pricePerKwh": 4000,
+            "label": "Cả ngày"
+          }
+        ],
+        "idle": {
+          "graceMin": 15,
+          "perMinDong": 1000
+        }
+      }
+    },
+    "expected": {
+      "totalDong": 0,
+      "roundingRule": "PER_SEGMENT_HALF_UP",
+      "lines": [
+        {
+          "kind": "ENERGY",
+          "localDate": "2026-10-12",
+          "from": "2026-10-12T01:00:00.000Z",
+          "to": "2026-10-12T01:30:00.000Z",
+          "wh": 0,
+          "pricePerKwh": 4000,
+          "amountDong": 0
+        }
+      ]
+    }
+  }
+]

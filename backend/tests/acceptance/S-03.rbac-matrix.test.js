@@ -41,6 +41,8 @@ describe('S-03 ma trận quyền Sprint 1 (PO đã xác nhận) trên API thật
     { name: 'POST /api/stations/:id/charge-points', allowed: WRITE, ok: 201, call: (r, t) => r.post(`/api/stations/${t.stationId}/charge-points`).send({ code: `CP-${++seq}` }) },
     { name: 'PATCH /api/charge-points/:id', allowed: WRITE, ok: 200, call: (r, t) => r.patch(`/api/charge-points/${t.chargePointId}`).send({ model: 'M1' }) },
     { name: 'GET /api/roles', allowed: ['ADMIN'], ok: 200, call: (r) => r.get('/api/roles') },
+    { name: 'GET /api/stations/:id/tariffs', allowed: ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT'], ok: 200, call: (r, t) => r.get(`/api/stations/${t.stationId}/tariffs`) },
+    { name: 'POST /api/stations/:id/tariffs', allowed: WRITE, ok: 201, call: (r, t) => r.post(`/api/stations/${t.stationId}/tariffs`).send({ effectiveFrom: `2099-01-${String(++seq).padStart(2, '0')}`, periods: [{ from: '00:00', to: '24:00', pricePerKwh: 4000 }] }) },
   ];
 
   for (const c of cases) {

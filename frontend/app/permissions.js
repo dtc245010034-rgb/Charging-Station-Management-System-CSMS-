@@ -21,6 +21,8 @@ export const PERMISSIONS = {
   'sessions:unexpected:read': ['OPERATOR', 'ACCOUNTANT', 'ADMIN'],
   'sessions:unexpected:close': ['OPERATOR', 'ADMIN'],
   'audit-logs:read': ['ADMIN'],
+  'tariffs:read': ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT'],
+  'tariffs:write': WRITE,
 };
 
 export const can = (role, key) => (PERMISSIONS[key] ?? []).includes(role);

@@ -41,7 +41,11 @@ async function truncateAll() {
   await query(`
     BEGIN;
     ALTER TABLE audit_logs DISABLE TRIGGER audit_logs_no_truncate;
-    TRUNCATE audit_logs, login_throttle, connectors, charge_points, stations, user_roles, users RESTART IDENTITY CASCADE;
+    ALTER TABLE tariffs DISABLE TRIGGER tariffs_no_truncate;
+    ALTER TABLE tariff_periods DISABLE TRIGGER tariff_periods_no_truncate;
+    TRUNCATE audit_logs, login_throttle, connectors, charge_points, stations, user_roles, users, tariffs, tariff_periods RESTART IDENTITY CASCADE;
+    ALTER TABLE tariff_periods ENABLE TRIGGER tariff_periods_no_truncate;
+    ALTER TABLE tariffs ENABLE TRIGGER tariffs_no_truncate;
     ALTER TABLE audit_logs ENABLE TRIGGER audit_logs_no_truncate;
     COMMIT;
   `);

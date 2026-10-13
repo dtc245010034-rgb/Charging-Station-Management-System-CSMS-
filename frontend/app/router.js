@@ -16,6 +16,7 @@ export const PAGE_NEEDS = {
   'unexpected-sessions': 'sessions:unexpected:read',
   'control-log': 'audit-logs:read',
   start: 'remote-start:create',
+  tariffs: 'tariffs:read',
 };
 
 const fleetOverview = () => import('../pages/shared/fleet-overview.js');
@@ -51,6 +52,7 @@ const PAGES = {
   map: () => import('../pages/shared/map-page.js'),
   users: () => import('../pages/admin/users.js'),
   account: () => import('../pages/shared/account.js'),
+  tariffs: () => import('../pages/shared/tariffs.js'),
 };
 
 export function pageLoader(page, workspace) {

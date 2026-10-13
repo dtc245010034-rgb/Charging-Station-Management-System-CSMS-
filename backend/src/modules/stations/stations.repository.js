@@ -15,13 +15,13 @@ const chargePointsOf = (stationId) => prepare('SELECT * FROM charge_points WHERE
 const connectorsOf = (chargePointId) => prepare('SELECT * FROM connectors WHERE charge_point_id = ? ORDER BY connector_no').all(chargePointId);
 const insertForIdempotency = async (client, actor, station) => {
   const result = await client.query(
-    'INSERT INTO stations (name, address, latitude, longitude, owner_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-    [station.name, station.address, station.latitude, station.longitude, actor.id]
+    'INSERT INTO stations (name, address, latitude, longitude, owner_id, timezone) VALUES ($1, $2, $3, $4, $5, COALESCE($6, \'Asia/Ho_Chi_Minh\')) RETURNING *',
+    [station.name, station.address, station.latitude, station.longitude, actor.id, station.timezone || null]
   );
   return result.rows[0];
 };
 
-const UPDATABLE = ['name', 'address', 'latitude', 'longitude', 'status'];
+const UPDATABLE = ['name', 'address', 'latitude', 'longitude', 'status', 'timezone'];
 const update = (id, fields) => {
   const keys = UPDATABLE.filter((key) => fields[key] !== undefined);
   return prepare(`UPDATE stations SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
