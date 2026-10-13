@@ -304,13 +304,64 @@ async function listUnexpectedSessions(dbOrPool) {
   return result.rows;
 }
 
-async function listDriverSessionHistory(dbOrPool, driverId, { stoppedAt = null, sessionId = null, limit = 21 } = {}) {
+async function countDriverSessionHistory(dbOrPool, driverId, { month = null } = {}) {
   const client = dbOrPool || getDefaultPool();
+  const result = await client.query(
+    `SELECT COUNT(*)::int AS total
+     FROM charging_sessions cs
+     JOIN charge_points cp ON cp.id = cs.charge_point_id
+     JOIN stations s ON s.id = cp.station_id
+     WHERE cs.driver_id = $1
+       AND cs.status = 'COMPLETED'
+       AND cs.stopped_at IS NOT NULL
+       AND ($2::text IS NULL OR to_char(cs.started_at AT TIME ZONE s.timezone, 'YYYY-MM') = $2::text)`,
+    [driverId, month]
+  );
+  return result.rows[0]?.total ?? 0;
+}
+
+async function listDriverSessionHistory(dbOrPool, driverId, {
+  stoppedAt = null,
+  sessionId = null,
+  limit = 21,
+  offset = 0,
+  month = null,
+} = {}) {
+  const client = dbOrPool || getDefaultPool();
+  if (offset > 0 || month !== null) {
+    const result = await client.query(
+      `SELECT cs.id, cs.status, cs.started_at, cs.stopped_at, cs.stop_reason,
+              cs.meter_start, cs.meter_stop, cs.billing_status, cs.billing_reason,
+              cp.code AS charge_point_code, c.connector_no,
+              s.name AS station_name, s.address AS station_address,
+              s.timezone AS station_timezone,
+              si.total_dong AS invoice_total_dong
+       FROM charging_sessions cs
+       JOIN charge_points cp ON cp.id = cs.charge_point_id
+       JOIN connectors c ON c.id = cs.connector_id
+       JOIN stations s ON s.id = cp.station_id
+       LEFT JOIN session_invoices si ON si.session_id = cs.id
+       WHERE cs.driver_id = $1
+         AND cs.status = 'COMPLETED'
+         AND cs.stopped_at IS NOT NULL
+         AND ($2::text IS NULL OR to_char(cs.started_at AT TIME ZONE s.timezone, 'YYYY-MM') = $2::text)
+         AND (
+           $3::timestamptz IS NULL
+           OR (cs.stopped_at, cs.id) < ($3::timestamptz, $4::bigint)
+         )
+       ORDER BY cs.stopped_at DESC, cs.id DESC
+       LIMIT $5 OFFSET $6`,
+      [driverId, month, stoppedAt, sessionId, limit, offset]
+    );
+    return result.rows;
+  }
+
   const result = await client.query(
     `SELECT cs.id, cs.status, cs.started_at, cs.stopped_at, cs.stop_reason,
             cs.meter_start, cs.meter_stop, cs.billing_status, cs.billing_reason,
             cp.code AS charge_point_code, c.connector_no,
             s.name AS station_name, s.address AS station_address,
+            s.timezone AS station_timezone,
             si.total_dong AS invoice_total_dong
      FROM charging_sessions cs
      JOIN charge_points cp ON cp.id = cs.charge_point_id
@@ -347,4 +398,5 @@ module.exports = {
   listActiveSessions,
   listUnexpectedSessions,
   listDriverSessionHistory,
+  countDriverSessionHistory,
 };

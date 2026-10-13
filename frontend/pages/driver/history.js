@@ -36,71 +36,112 @@ function sessionCard(session) {
 export function render(ctx) {
   let disposed = false;
   let loading = false;
-  let cursor = null;
-  let items = [];
+  let currentPage = 1;
+  let totalPages = 1;
+  let selectedMonth = '';
+
   const root = h('div', { class: 'page-stack', style: 'max-width:720px;margin:0 auto' });
   const list = h('div', { style: 'display:grid;gap:12px' }, loadingState(3));
-  const loadMore = h('button', {
-    class: 'btn',
-    type: 'button',
-    style: 'display:none',
-    onclick: () => { void loadPage({ append: true }); },
-  }, 'Tải thêm');
-  const refresh = h('button', {
+
+  const monthInput = h('input', {
+    type: 'month',
+    id: 'driver-history-month',
+    class: 'input',
+    style: 'max-width:160px;padding:6px 10px',
+    'aria-label': 'Lọc theo tháng',
+    onchange: (e) => {
+      selectedMonth = e.target.value || '';
+      currentPage = 1;
+      void loadPage();
+    },
+  });
+
+  const refreshBtn = h('button', {
     class: 'btn btn--ghost',
     type: 'button',
     'aria-label': 'Làm mới lịch sử',
-    onclick: () => { void loadPage({ append: false }); },
+    onclick: () => { void loadPage(); },
   }, icon('refresh'));
+
+  const prevBtn = h('button', {
+    class: 'btn',
+    type: 'button',
+    disabled: true,
+    onclick: () => {
+      if (currentPage > 1) {
+        currentPage -= 1;
+        void loadPage();
+      }
+    },
+  }, '« Trang trước');
+
+  const pageInfo = h('span', { class: 'muted', style: 'font-size:14px' }, 'Trang 1 / 1');
+
+  const nextBtn = h('button', {
+    class: 'btn',
+    type: 'button',
+    disabled: true,
+    onclick: () => {
+      if (currentPage < totalPages) {
+        currentPage += 1;
+        void loadPage();
+      }
+    },
+  }, 'Trang sau »');
+
+  const paginationBar = h('div', {
+    style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px',
+  }, prevBtn, pageInfo, nextBtn);
+
   root.append(
-    h('header', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px' },
+    h('header', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap' },
       h('div', {}, h('p', { class: 'eyebrow' }, 'Tài xế'), h('h1', { class: 'page-head__title' }, 'Lịch sử phiên sạc')),
-      refresh
+      h('div', { style: 'display:flex;align-items:center;gap:8px' }, monthInput, refreshBtn)
     ),
     list,
-    loadMore
+    paginationBar
   );
   ctx.root.replaceChildren(root);
 
-  async function loadPage({ append }) {
+  async function loadPage() {
     if (loading || disposed) return;
     loading = true;
-    loadMore.disabled = true;
-    if (!append) {
-      cursor = null;
-      items = [];
-      mount(list, loadingState(3));
-    }
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+    mount(list, loadingState(3));
+
     try {
-      const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
-      const result = await api(`/api/me/sessions/history${query}`);
+      const monthQuery = selectedMonth ? `&month=${encodeURIComponent(selectedMonth)}` : '';
+      const result = await api(`/api/me/sessions/history?page=${currentPage}${monthQuery}`);
       if (disposed) return;
-      items = append ? [...items, ...result.items] : result.items;
-      cursor = result.nextCursor;
-      loadMore.textContent = 'Tải thêm';
+
+      const items = result.items || [];
+      totalPages = result.totalPages || 1;
+      currentPage = result.page || 1;
+
       mount(list, items.length
         ? items.map(sessionCard)
         : h('section', { class: 'card', style: 'padding:20px' }, emptyState({
           iconName: 'history',
-          title: 'Chưa có phiên sạc đã kết thúc',
+          title: selectedMonth ? `Không có phiên sạc nào trong tháng ${selectedMonth}` : 'Chưa có phiên sạc đã kết thúc',
           text: 'Các phiên sạc của bạn sẽ xuất hiện ở đây sau khi kết thúc.',
         }))
       );
-      loadMore.style.display = cursor ? 'block' : 'none';
+
+      pageInfo.textContent = `Trang ${currentPage} / ${totalPages} (${result.total || items.length} phiên)`;
+      prevBtn.disabled = currentPage <= 1;
+      nextBtn.disabled = currentPage >= totalPages;
+      paginationBar.style.display = (totalPages > 1 || items.length > 0) ? 'flex' : 'none';
     } catch (error) {
       if (!disposed) {
-        if (!append) mount(list, errorState({ message: error.message, onRetry: () => { void loadPage({ append: false }); } }));
-        else {
-          loadMore.textContent = 'Không tải được — thử lại';
-          loadMore.dataset.cursor = cursor || '';
-        }
+        mount(list, errorState({ message: error.message, onRetry: () => { void loadPage(); } }));
+        paginationBar.style.display = 'none';
       }
     } finally {
       loading = false;
-      loadMore.disabled = false;
     }
   }
 
-  void loadPage({ append: false });
+  void loadPage();
   return () => { disposed = true; };
 }

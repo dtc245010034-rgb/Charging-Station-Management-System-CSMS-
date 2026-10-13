@@ -90,12 +90,10 @@ describe('billing invoices service', () => {
     };
 
     const result = await getBySessionId({ id: '42', roles: ['DRIVER'] }, 7, { db });
-    assert.deepEqual(result, {
-      sessionId: '7',
-      billingStatus: 'WAITING_IDLE',
-      billingReason: null,
-      invoice: null,
-    });
+    assert.equal(result.sessionId, '7');
+    assert.equal(result.status, 'PENDING');
+    assert.equal(result.billingStatus, 'WAITING_IDLE');
+    assert.equal(result.invoice, null);
   });
 
   it('denies another driver before querying invoice data', async () => {

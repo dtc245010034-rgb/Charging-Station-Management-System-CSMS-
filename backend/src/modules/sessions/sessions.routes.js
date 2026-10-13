@@ -37,7 +37,17 @@ router.get('/me/sessions/current', { access: access('sessions:read-own') }, asyn
 });
 
 router.get('/me/sessions/history', { access: access('sessions:read-own') }, async (req, res) => {
-  res.json(await service.getDriverSessionHistory(req.user, { cursor: req.query.cursor }));
+  const month = typeof req.query.month === 'string' && req.query.month.trim() !== ''
+    ? req.query.month.trim()
+    : null;
+  const page = req.query.page !== undefined ? Number(req.query.page) : null;
+  const limit = req.query.limit !== undefined ? Number(req.query.limit) : null;
+  res.json(await service.getDriverSessionHistory(req.user, {
+    cursor: req.query.cursor,
+    month,
+    page,
+    limit,
+  }));
 });
 
 // T-48: Luồng SSE thời gian thực cho tài xế (lọc theo driver_id, heartbeat 20s, tự đóng khi JWT hết hạn)

@@ -18,8 +18,15 @@ async function findBySessionId(dbOrPool, sessionId) {
   if (row.id === null) {
     return {
       sessionId: row.session_id,
+      status: 'PENDING',
       billingStatus: row.billing_status,
       billingReason: row.billing_reason,
+      reason: row.billing_reason || row.billing_status || 'PROCESSING',
+      message: row.billing_status === 'WAITING_IDLE'
+        ? 'Đang chờ xe rút súng sạc'
+        : (row.billing_status === 'REVIEW'
+          ? 'Hóa đơn đang cần xem xét'
+          : (row.billing_status === 'ERROR' ? 'Chưa thể lập hóa đơn' : 'Đang xử lý hóa đơn')),
       invoice: null,
     };
   }
@@ -34,6 +41,7 @@ async function findBySessionId(dbOrPool, sessionId) {
   );
   return {
     sessionId: row.session_id,
+    status: row.billing_status === 'FINAL' ? 'FINAL' : 'PENDING',
     billingStatus: row.billing_status,
     billingReason: row.billing_reason,
     invoice: {
@@ -42,6 +50,10 @@ async function findBySessionId(dbOrPool, sessionId) {
       stationId: row.station_id,
       tariffId: row.tariff_id,
       tariffSnapshot: row.tariff_snapshot,
+      tariff: {
+        version: row.tariff_snapshot?.version,
+        effectiveFrom: row.tariff_snapshot?.effective_from || row.tariff_snapshot?.effectiveFrom,
+      },
       timezone: row.timezone,
       roundingRule: row.rounding_rule,
       totalDong: row.total_dong,
