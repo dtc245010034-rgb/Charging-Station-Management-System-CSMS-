@@ -76,4 +76,21 @@ describe('S-01 env: cấu hình bắt buộc', () => {
     assert.strictEqual(r.status, 0, r.stderr);
     assert.strictEqual(JSON.parse(r.stdout).OCPP_COMMAND_TIMEOUT_SECONDS, 7);
   });
+
+  it('WALLET_MIN_BALANCE_DONG bỏ trống để dùng ngưỡng động', () => {
+    for (const value of [undefined, '']) {
+      const walletConfig = value === undefined
+        ? valid
+        : { ...valid, WALLET_MIN_BALANCE_DONG: value };
+      const r = load(walletConfig);
+      assert.strictEqual(r.status, 0, r.stderr);
+      assert.strictEqual(JSON.parse(r.stdout).WALLET_MIN_BALANCE_DONG, undefined);
+    }
+  });
+
+  it('WALLET_MIN_BALANCE_DONG nhận số nguyên không âm tường minh', () => {
+    const r = load({ ...valid, WALLET_MIN_BALANCE_DONG: '250000' });
+    assert.strictEqual(r.status, 0, r.stderr);
+    assert.strictEqual(JSON.parse(r.stdout).WALLET_MIN_BALANCE_DONG, 250000);
+  });
 });
