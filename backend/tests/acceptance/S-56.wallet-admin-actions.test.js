@@ -6,6 +6,10 @@ const { query, run, resetSchema, truncateAll } = require('../helpers/db');
 const { createUser } = require('../helpers/auth');
 const { withTransaction } = require('../../src/db/tx');
 const { postEntry } = require('../../src/modules/wallet/ledger.service');
+const { runWalletAudit } = require('../../src/modules/wallet/wallet-audit-job');
+const { pool } = require('../../src/db/pool');
+const { createAuthorizeHandler } = require('../../src/modules/ocpp/handlers/authorize');
+const { createOcppMessageHandler } = require('../../src/modules/ocpp/message-handler');
 
 describe('S-56 wallet adjustment and unlock APIs', { concurrency: false }, () => {
   let admin;
@@ -89,6 +93,19 @@ describe('S-56 wallet adjustment and unlock APIs', { concurrency: false }, () =>
     }
   });
 
+  it('S-56 AC: ADMIN tìm tài xế theo email hoặc mã tài xế', async () => {
+    for (const queryValue of [driver.email, String(driver.id)]) {
+      const response = await request(app)
+        .get(`/api/admin/wallets?query=${encodeURIComponent(queryValue)}`)
+        .set('Cookie', admin.cookie);
+
+      assert.equal(response.status, 200);
+      assert.equal(response.body.items.length, 1);
+      assert.equal(response.body.items[0].driverId, String(driver.id));
+      assert.equal(response.body.items[0].email, driver.email);
+    }
+  });
+
   it('S-56 AC: chỉ mở khóa ví đang khóa, cần lý do và ghi audit', async () => {
     const unlocked = await request(app)
       .post(`/api/admin/wallets/${driver.id}/unlock`)
@@ -132,5 +149,77 @@ describe('S-56 wallet adjustment and unlock APIs', { concurrency: false }, () =>
       driver_id: Number(driver.id),
       reason: 'Đã đối chiếu sổ cái',
     });
+  });
+
+  it('V08: mismatch khóa ví, Authorize bị Blocked, admin mở khóa và có audit', async () => {
+    const mismatchDriver = await createUser('wallet-mismatch-driver@test.invalid', 'DRIVER');
+    await withTransaction((client) => postEntry(client, {
+      driverId: mismatchDriver.id,
+      entryType: 'TOPUP_MANUAL',
+      amountDong: 5000,
+      receiptCode: 'WALLET-MISMATCH-SEED',
+      createdBy: admin.id,
+    }));
+    await query('INSERT INTO id_tags (tag, user_id, status) VALUES ($1, $2, $3)', [
+      `WALLET-${mismatchDriver.id}`,
+      mismatchDriver.id,
+      'ACTIVE',
+    ]);
+    await query('UPDATE wallets SET balance_dong = balance_dong + 1 WHERE driver_id = $1', [mismatchDriver.id]);
+
+    const auditResult = await runWalletAudit(pool);
+    assert.deepEqual(auditResult, { checked: 2, mismatches: 1, locked: 1 });
+
+    const sent = [];
+    const server = createOcppMessageHandler({
+      handlers: { Authorize: createAuthorizeHandler({ pool }) },
+      logWarning: () => {},
+      logInfo: () => {},
+      logError: () => {},
+    });
+    await server.handleMessage({
+      chargePointCode: 'WALLET-MISMATCH-CP',
+      isBootAccepted: true,
+      send: (frame, callback) => {
+        sent.push(JSON.parse(frame));
+        callback?.();
+      },
+    }, JSON.stringify([2, 'wallet-mismatch-authorize', 'Authorize', { idTag: `WALLET-${mismatchDriver.id}` }]));
+    assert.deepEqual(sent[0][2], { idTagInfo: { status: 'Blocked' } });
+
+    await query(
+      `UPDATE wallets SET balance_dong = (
+         SELECT COALESCE(SUM(amount_dong), 0) FROM wallet_ledger WHERE driver_id = $1
+       ) WHERE driver_id = $1`,
+      [mismatchDriver.id]
+    );
+    const unlocked = await request(app)
+      .post(`/api/admin/wallets/${mismatchDriver.id}/unlock`)
+      .set('Cookie', admin.cookie)
+      .send({ reason: 'Đã đối chiếu sai lệch sổ cái' });
+    assert.equal(unlocked.status, 200);
+
+    const events = await query(
+      `SELECT action, user_id, metadata FROM audit_logs
+       WHERE entity = 'wallet' AND entity_id = $1
+         AND action IN ('WALLET_MISMATCH', 'WALLET_UNLOCK')
+       ORDER BY action`,
+      [mismatchDriver.id]
+    );
+    assert.deepEqual(events.rows.map(({ action, user_id }) => ({ action, user_id })), [
+      { action: 'WALLET_MISMATCH', user_id: null },
+      { action: 'WALLET_UNLOCK', user_id: admin.id },
+    ]);
+
+    sent.length = 0;
+    await server.handleMessage({
+      chargePointCode: 'WALLET-MISMATCH-CP',
+      isBootAccepted: true,
+      send: (frame, callback) => {
+        sent.push(JSON.parse(frame));
+        callback?.();
+      },
+    }, JSON.stringify([2, 'wallet-unlocked-authorize', 'Authorize', { idTag: `WALLET-${mismatchDriver.id}` }]));
+    assert.deepEqual(sent[0][2], { idTagInfo: { status: 'Accepted' } });
   });
 });
