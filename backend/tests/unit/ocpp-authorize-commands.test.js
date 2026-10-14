@@ -2,7 +2,7 @@ process.env.CSMS_SKIP_DOTENV = '1';
 process.env.DATABASE_URL ||= 'postgresql://postgres:postgres@localhost:5433/csms_test';
 process.env.JWT_SECRET ||= 'z'.repeat(40);
 process.env.APP_ORIGIN ||= 'http://localhost:3000';
-process.env.WALLET_MIN_BALANCE_DONG ||= '1000';
+process.env.WALLET_MIN_BALANCE_DONG ||= '20000';
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
@@ -29,9 +29,9 @@ describe('S-15 Authorize unit tests', () => {
       if (sql.includes('FROM wallets')) {
         assert.match(sql, /WHERE driver_id = \$1/);
         const driverId = Number(params[0]);
-        if (driverId === 100) return { rows: [{ driver_id: 100, balance_dong: '5000', locked: false, locked_at: null, locked_reason: null }] };
-        if (driverId === 200) return { rows: [{ driver_id: 200, balance_dong: '1', locked: false, locked_at: null, locked_reason: null }] };
-        if (driverId === 300) return { rows: [{ driver_id: 300, balance_dong: '5000', locked: true, locked_at: new Date(), locked_reason: 'LEDGER_MISMATCH' }] };
+        if (driverId === 100) return { rows: [{ driver_id: 100, balance_dong: '20000', locked: false, locked_at: null, locked_reason: null }] };
+        if (driverId === 200) return { rows: [{ driver_id: 200, balance_dong: '19999', locked: false, locked_at: null, locked_reason: null }] };
+        if (driverId === 300) return { rows: [{ driver_id: 300, balance_dong: '20000', locked: true, locked_at: new Date(), locked_reason: 'LEDGER_MISMATCH' }] };
         return { rows: [] };
       }
       return { rows: [] };

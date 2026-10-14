@@ -2,7 +2,7 @@ process.env.CSMS_SKIP_DOTENV = '1';
 process.env.DATABASE_URL ||= 'postgresql://csms:csms_test_only@localhost:5433/csms_test';
 process.env.JWT_SECRET ||= 'z'.repeat(40);
 process.env.APP_ORIGIN ||= 'http://localhost:3000';
-process.env.WALLET_MIN_BALANCE_DONG ||= '1000';
+process.env.WALLET_MIN_BALANCE_DONG ||= '20000';
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
@@ -67,7 +67,7 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
       tagRecord = { id: 10, tag: 'TAG-VALID', status: 'ACTIVE', expires_at: null, user_id: 99 },
       stationStatus = 'ACTIVE',
       stationLocked = false,
-      walletBalance = '5000',
+      walletBalance = '20000',
       walletLocked = false,
       existingActiveSession = null,
       existingNaturalSession = null,
@@ -206,7 +206,7 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
     });
 
     it('AC wallet: số dư dưới ngưỡng -> Blocked và phiên được đánh dấu needs_review', async () => {
-      const { mockPool, dbCalls } = createMockEnvironment({ walletBalance: '999' });
+      const { mockPool, dbCalls } = createMockEnvironment({ walletBalance: '19999' });
       const handler = createStartTransactionHandler({
         pool: mockPool,
         now: () => new Date('2026-10-07T10:00:00.000Z'),
