@@ -37,6 +37,9 @@ const walletAdjustmentBody = z.object({
   reason: walletReason,
 });
 const walletUnlockBody = z.object({ reason: walletReason });
+const walletSearchQuery = z.object({
+  query: z.string().trim().max(200, 'Từ khóa tìm kiếm quá dài').optional().transform((value) => value || ''),
+});
 
 module.exports = {
   idParam,
@@ -46,4 +49,5 @@ module.exports = {
   manualTopupBody,
   walletAdjustmentBody,
   walletUnlockBody,
+  walletSearchQuery,
 };

@@ -4,6 +4,10 @@ const audit = require('../audit/audit.repository');
 const { withTransaction } = require('../../db/tx');
 const { postEntry } = require('./ledger.service');
 
+function escapeLike(value) {
+  return value.replace(/[\\%_]/g, '\\$&');
+}
+
 async function requireDriver(client, driverId) {
   const result = await client.query(
     `SELECT u.id
@@ -15,6 +19,39 @@ async function requireDriver(client, driverId) {
     [driverId]
   );
   if (!result.rows[0]) throw new NotFoundError('Không tìm thấy tài xế');
+}
+
+async function searchDrivers(query, db = pool) {
+  const search = query.trim();
+  if (!search) return { items: [], hasMore: false };
+
+  const numericId = /^\d+$/.test(search) && BigInt(search) <= 9223372036854775807n
+    ? BigInt(search).toString()
+    : null;
+  const result = await db.query(
+    `SELECT u.id, u.name, u.email,
+            COALESCE(w.balance_dong, 0)::text AS balance_dong,
+            COALESCE(w.locked, FALSE) AS locked
+     FROM users u
+     JOIN user_roles ur ON ur.user_id = u.id
+     JOIN roles r ON r.id = ur.role_id AND r.code = 'DRIVER'
+     LEFT JOIN wallets w ON w.driver_id = u.id
+     WHERE ($1::bigint IS NOT NULL AND u.id = $1)
+        OR u.email ILIKE $2 ESCAPE E'\\\\'
+     ORDER BY u.id DESC
+     LIMIT 51`,
+    [numericId, `%${escapeLike(search)}%`]
+  );
+  return {
+    items: result.rows.slice(0, 50).map((row) => ({
+      driverId: String(row.id),
+      name: row.name,
+      email: row.email,
+      balanceDong: String(row.balance_dong),
+      locked: Boolean(row.locked),
+    })),
+    hasMore: result.rows.length > 50,
+  };
 }
 
 async function manualTopup(actor, driverId, { amountDong, receiptCode, note }, ip = null, db = pool) {
@@ -86,4 +123,4 @@ async function unlockWallet(actor, driverId, { reason }, ip = null, db = pool) {
   }, db);
 }
 
-module.exports = { manualTopup, adjustWallet, unlockWallet };
+module.exports = { searchDrivers, manualTopup, adjustWallet, unlockWallet };

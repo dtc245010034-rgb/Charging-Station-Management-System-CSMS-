@@ -16,6 +16,7 @@ export const PAGE_NEEDS = {
   history: 'sessions:read-own',
   invoice: 'invoices:read-own',
   wallet: 'wallets:read-own',
+  wallets: 'wallets:manage',
   'unexpected-sessions': 'sessions:unexpected:read',
   'control-log': 'audit-logs:read',
   start: 'remote-start:create',
@@ -49,6 +50,9 @@ const PAGES = {
   },
   wallet: {
     driver: () => import('../pages/driver/wallet.js'),
+  },
+  wallets: {
+    admin: () => import('../pages/admin/wallets.js'),
   },
   'unexpected-sessions': {
     operator: () => import('../pages/shared/unexpected-sessions.js'),

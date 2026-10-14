@@ -6,6 +6,7 @@ const {
   manualTopupBody,
   walletAdjustmentBody,
   walletUnlockBody,
+  walletSearchQuery,
 } = require('../../lib/schemas');
 const walletReadService = require('./wallet-read.service');
 const walletAdminService = require('./wallet-admin.service');
@@ -40,6 +41,11 @@ router.post('/admin/wallets/:driverId/unlock', { access: access('wallets:manage'
   const { driverId } = walletDriverIdParam.parse(req.params);
   const data = walletUnlockBody.parse(req.body);
   res.json(await walletAdminService.unlockWallet(req.user, Number(driverId), data, req.ip));
+});
+
+router.get('/admin/wallets', { access: access('wallets:manage') }, async (req, res) => {
+  const { query } = walletSearchQuery.parse(req.query);
+  res.json(await walletAdminService.searchDrivers(query));
 });
 
 module.exports = router;
