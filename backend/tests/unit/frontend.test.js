@@ -42,6 +42,21 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(homePathFor(null), '/index.html');
   });
 
+  describe('S-38 wallet errors on driver start page', () => {
+    it('explains when the wallet is below minimum or locked', async () => {
+      const { startErrorMessage } = await load('pages/driver/start-model.js');
+      assert.equal(
+        startErrorMessage({ code: 'WALLET_BELOW_MIN', message: 'server message' }),
+        'Số dư ví chưa đủ để bắt đầu sạc. Vui lòng nạp thêm tiền.'
+      );
+      assert.equal(
+        startErrorMessage({ code: 'WALLET_LOCKED', message: 'server message' }),
+        'Ví đang bị khóa để kiểm tra. Vui lòng liên hệ hỗ trợ.'
+      );
+      assert.equal(startErrorMessage({ message: 'Lỗi khác' }), 'Lỗi khác');
+    });
+  });
+
   it('parseHash: tách workspace, trang, id và query; thiếu trang thì là overview', async () => {
     const { parseHash } = await load('app/router.js');
     assert.deepStrictEqual(parseHash('#/operator/charge-points/12?status=fault'), { workspace: 'operator', page: 'charge-points', id: '12', query: { status: 'fault' } });

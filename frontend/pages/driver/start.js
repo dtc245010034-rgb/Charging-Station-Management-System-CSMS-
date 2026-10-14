@@ -3,7 +3,7 @@ import * as csms from '../../services/csms.js';
 import { icon } from '../../components/icons.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
 import { toast } from '../../components/toast.js';
-import { startBlockReason } from './start-model.js';
+import { startBlockReason, startErrorMessage } from './start-model.js';
 
 const POLL_INTERVAL_MS = 1500;
 const LIST_REFRESH_MS = 10000;
@@ -308,7 +308,7 @@ export function render(ctx) {
       const isRejected = error.status === 422 || error.code === 'CHARGE_POINT_REJECTED';
       const messageText = isRejected
           ? 'Trụ từ chối yêu cầu bắt đầu. Hãy kiểm tra súng đã cắm chắc chưa.'
-          : error.message;
+          : startErrorMessage(error);
       showMessage(messageText, { error: true });
       toast(messageText, { kind: 'error' });
       updateStartButton(content.querySelector('[data-start-button]'));
