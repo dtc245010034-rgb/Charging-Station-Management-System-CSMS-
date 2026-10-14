@@ -422,7 +422,9 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     const response = await postStart(otherDriver.cookie, connectorIds[1]);
 
     assert.equal(response.status, 409);
-    assert.equal((await response.json()).error.code, 'WALLET_BELOW_MIN');
+    const error = (await response.json()).error;
+    assert.equal(error.code, 'WALLET_BELOW_MIN');
+    assert.deepEqual(error.details, { balanceDong: '4999', minBalanceDong: '5000' });
     assert.equal(remoteCalls.length, beforeCalls);
     assert.equal((await query(
       'SELECT COUNT(*)::int AS count FROM remote_start_requests WHERE driver_id = $1',

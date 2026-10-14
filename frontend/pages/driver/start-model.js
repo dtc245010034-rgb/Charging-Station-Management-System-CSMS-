@@ -18,3 +18,10 @@ export function startErrorMessage(error) {
   }
   return error?.message || 'Không thể bắt đầu sạc. Vui lòng thử lại.';
 }
+
+export function startErrorAction(error) {
+  if (error?.code === 'WALLET_BELOW_MIN') {
+    return { label: 'Nạp tiền', href: '#/driver/wallet' };
+  }
+  return null;
+}

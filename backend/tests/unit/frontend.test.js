@@ -44,7 +44,7 @@ describe('S-02 frontend: router', () => {
 
   describe('S-38 wallet errors on driver start page', () => {
     it('explains when the wallet is below minimum or locked', async () => {
-      const { startErrorMessage } = await load('pages/driver/start-model.js');
+      const { startErrorAction, startErrorMessage } = await load('pages/driver/start-model.js');
       assert.equal(
         startErrorMessage({ code: 'WALLET_BELOW_MIN', message: 'server message' }),
         'Số dư ví chưa đủ để bắt đầu sạc. Vui lòng nạp thêm tiền.'
@@ -54,6 +54,11 @@ describe('S-02 frontend: router', () => {
         'Ví đang bị khóa để kiểm tra. Vui lòng liên hệ hỗ trợ.'
       );
       assert.equal(startErrorMessage({ message: 'Lỗi khác' }), 'Lỗi khác');
+      assert.deepEqual(startErrorAction({ code: 'WALLET_BELOW_MIN' }), {
+        label: 'Nạp tiền',
+        href: '#/driver/wallet',
+      });
+      assert.equal(startErrorAction({ code: 'WALLET_LOCKED' }), null);
     });
   });
 
