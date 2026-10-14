@@ -175,6 +175,7 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `SESSION_ABNORMAL_AFTER_SECONDS` | Thời gian không nhận tin từ trụ trước khi job đánh dấu phiên đang sạc `ABNORMAL` (job cũng đánh dấu bất thường khi quá 120 giây chờ `StopTransaction`) | Giây | `21600` |
 | `IDLE_MAX_WAIT_MIN` | Thời gian tối đa chờ đầu nối rời `Finishing`/`SuspendedEV` trước khi chốt hóa đơn phí chiếm chỗ | Phút | `60` |
 | `BILLING_JOB_INTERVAL_MS` | Chu kỳ job nền tìm phiên cần lập hóa đơn và thử lại phiên lỗi | Mili giây | `30000` |
+| `WALLET_AUDIT_INTERVAL_MS` | Chu kỳ job nền đối chiếu số dư ví với sổ cái và khóa ví lệch | Mili giây | `300000` |
 | `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | Số lần gọi `GET /api/charge-points/check-code` mỗi tài khoản (quá mức trả 429 + `Retry-After`) | Lần/phút | `30` |
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
 | `OCPP_HANDSHAKE_LIMIT_PER_10S` | Số lần bắt tay WebSocket mỗi cặp (IP, mã trụ), kiểm tra trước khi truy vấn DB; quá mức trả 429 | Lần/10 giây | `5` |

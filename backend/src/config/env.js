@@ -54,6 +54,8 @@ const schema = z.object({
   OCPP_HANDSHAKE_LIMIT_PER_10S: z.coerce.number().int().positive().default(5),
   // Số dòng ACCESS_DENIED tối đa ghi vào audit_logs mỗi phút cho mỗi tài khoản
   AUDIT_DENIED_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(20),
+  WALLET_MIN_BALANCE_DONG: z.coerce.number().int().min(0).default(0),
+  WALLET_AUDIT_INTERVAL_MS: z.coerce.number().int().positive().default(300000),
 });
 
 const parsed = schema.safeParse(process.env);

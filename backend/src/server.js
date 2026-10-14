@@ -19,6 +19,7 @@ const { createCommandSender } = require('./modules/ocpp/commands');
 const { startRemoteStopTimeoutJob } = require('./modules/sessions/remote-stop-job');
 const { startAbnormalSessionJob } = require('./modules/sessions/abnormal-job');
 const { startBillingFinalizationJob } = require('./modules/billing/finalization-job');
+const { startWalletAuditJob } = require('./modules/wallet/wallet-audit-job');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
@@ -101,11 +102,13 @@ let stopChargePointOfflineJob = () => {};
 let stopRemoteStopJob = () => {};
 let stopAbnormalSessionJob = () => {};
 let stopBillingFinalizationJob = () => {};
+let stopWalletAuditJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();
 	stopRemoteStopJob();
 	stopAbnormalSessionJob();
 	stopBillingFinalizationJob();
+	stopWalletAuditJob();
 	if (purgeTimer) clearInterval(purgeTimer);
 	shutdown(signal);
 });
@@ -129,6 +132,10 @@ async function start() {
 		db: pool,
 		intervalMs: env.BILLING_JOB_INTERVAL_MS,
 		idleMaxWaitMinutes: env.IDLE_MAX_WAIT_MIN,
+	}).stop;
+	stopWalletAuditJob = startWalletAuditJob({
+		db: pool,
+		intervalMs: env.WALLET_AUDIT_INTERVAL_MS,
 	}).stop;
 	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
 }
