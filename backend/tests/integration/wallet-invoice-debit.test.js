@@ -9,7 +9,7 @@ const path = require('node:path');
 const { withTransaction } = require('../../src/db/tx');
 const { postEntry } = require('../../src/modules/wallet/ledger.service');
 const { finalizeSession, registerAfterInvoice } = require('../../src/modules/billing/finalize-session');
-const { createApp } = require('../../src/app');
+const { createApp, postSessionInvoiceDebit } = require('../../src/app');
 const { query, resetSchema, run } = require('../helpers/db');
 const handCases = JSON.parse(fs.readFileSync(
   path.join(__dirname, '../fixtures/billing/hand-cases.json'),
@@ -244,4 +244,23 @@ describe('S-37 wallet debit after invoice finalization', () => {
     assert.equal((await query('SELECT 1 FROM wallet_ledger WHERE session_id = $1', [sessionId])).rowCount, 0);
     assert.equal((await query('SELECT balance_dong FROM wallets WHERE driver_id = $1', [driverId])).rows[0].balance_dong, '30000');
   });
+
+  it('S-37 3.3: hóa đơn không có tài xế thì không trừ ví', async () => {
+    let result;
+    await withTransaction(async (client) => {
+      result = await postSessionInvoiceDebit(client, {
+        driverId: null,
+        totalDong: '40000',
+        sessionId: 999999,
+        periodDate: '2026-10-14',
+      });
+    });
+    assert.equal(result, undefined);
+    const debit = await query(
+      `SELECT id FROM wallet_ledger WHERE session_id = 999999 AND entry_type = 'SESSION_DEBIT'`
+    );
+    assert.equal(debit.rowCount, 0);
+  });
 });
+
+

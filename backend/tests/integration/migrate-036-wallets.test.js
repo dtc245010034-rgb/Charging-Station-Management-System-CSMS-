@@ -132,6 +132,10 @@ describe('S-41 wallet ledger migration', () => {
   });
 
   it('AC S-41: rollback migration 036 gỡ ví và ledger rồi có thể áp dụng lại', async () => {
+    const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+    assert.equal(latest.rows[0].version, '037_audit_logs_driver_id_index.sql');
+    const downLatest = run('src/db/migrate.js', ['down']);
+    assert.strictEqual(downLatest.status, 0, downLatest.stderr);
     const down = run('src/db/migrate.js', ['down']);
     assert.strictEqual(down.status, 0, down.stderr);
     assert.strictEqual(

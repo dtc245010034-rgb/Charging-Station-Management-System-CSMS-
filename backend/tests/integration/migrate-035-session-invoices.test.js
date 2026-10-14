@@ -12,8 +12,16 @@ describe('migration 035: session_invoices, invoice_lines and billing_status [GYM
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
 
-    const rollback = run('src/db/migrate.js', ['down']);
-    assert.strictEqual(rollback.status, 0, rollback.stderr);
+    for (const version of [
+      '037_audit_logs_driver_id_index.sql',
+      '036_wallets.sql',
+      '035_session_invoices.sql',
+    ]) {
+      const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+      assert.equal(latest.rows[0].version, version);
+      const rollback = run('src/db/migrate.js', ['down']);
+      assert.strictEqual(rollback.status, 0, rollback.stderr);
+    }
 
     const ownerRes = await query("INSERT INTO users (name, email, password_hash) VALUES ('Legacy Owner', 'owner-legacy-m035@test.invalid', 'hash') RETURNING id");
     const stationRes = await query(

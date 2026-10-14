@@ -20,15 +20,18 @@ const walletRoutes = require('./modules/wallet/wallet.routes');
 const { registerAfterInvoice } = require('./modules/billing/finalize-session');
 const { postEntry } = require('./modules/wallet/ledger.service');
 
-const postSessionInvoiceDebit = async (client, invoice) => postEntry(client, {
-  driverId: invoice.driverId,
-  entryType: 'SESSION_DEBIT',
-  amountDong: (-BigInt(invoice.totalDong)).toString(),
-  sessionId: invoice.sessionId,
-  reason: 'SESSION_FINALIZED',
-  periodDate: invoice.periodDate,
-  allowLocked: true,
-});
+const postSessionInvoiceDebit = async (client, invoice) => {
+  if (!invoice.driverId) return;
+  return postEntry(client, {
+    driverId: invoice.driverId,
+    entryType: 'SESSION_DEBIT',
+    amountDong: (-BigInt(invoice.totalDong)).toString(),
+    sessionId: invoice.sessionId,
+    reason: 'SESSION_FINALIZED',
+    periodDate: invoice.periodDate,
+    allowLocked: true,
+  });
+};
 
 function createApp({ commandSender } = {}) {
   registerAfterInvoice('wallet-session-debit', postSessionInvoiceDebit);
@@ -49,3 +52,5 @@ function createApp({ commandSender } = {}) {
 
 module.exports = createApp();
 module.exports.createApp = createApp;
+module.exports.postSessionInvoiceDebit = postSessionInvoiceDebit;
+
