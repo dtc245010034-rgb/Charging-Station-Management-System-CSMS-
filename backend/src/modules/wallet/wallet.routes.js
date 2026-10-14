@@ -4,6 +4,8 @@ const {
   walletDriverIdParam,
   walletTransactionsQuery,
   manualTopupBody,
+  walletAdjustmentBody,
+  walletUnlockBody,
 } = require('../../lib/schemas');
 const walletReadService = require('./wallet-read.service');
 const walletAdminService = require('./wallet-admin.service');
@@ -26,6 +28,18 @@ router.post('/admin/wallets/:driverId/manual-topups', { access: access('wallets:
   const { driverId } = walletDriverIdParam.parse(req.params);
   const data = manualTopupBody.parse(req.body);
   res.status(201).json(await walletAdminService.manualTopup(req.user, Number(driverId), data, req.ip));
+});
+
+router.post('/admin/wallets/:driverId/adjustments', { access: access('wallets:manage') }, async (req, res) => {
+  const { driverId } = walletDriverIdParam.parse(req.params);
+  const data = walletAdjustmentBody.parse(req.body);
+  res.status(201).json(await walletAdminService.adjustWallet(req.user, Number(driverId), data, req.ip));
+});
+
+router.post('/admin/wallets/:driverId/unlock', { access: access('wallets:manage') }, async (req, res) => {
+  const { driverId } = walletDriverIdParam.parse(req.params);
+  const data = walletUnlockBody.parse(req.body);
+  res.json(await walletAdminService.unlockWallet(req.user, Number(driverId), data, req.ip));
 });
 
 module.exports = router;

@@ -42,4 +42,48 @@ async function manualTopup(actor, driverId, { amountDong, receiptCode, note }, i
   }, db);
 }
 
-module.exports = { manualTopup };
+async function adjustWallet(actor, driverId, { amountDong, reason }, ip = null, db = pool) {
+  return withTransaction(async (client) => {
+    await requireDriver(client, driverId);
+    const entry = await postEntry(client, {
+      driverId,
+      entryType: 'ADJUSTMENT',
+      amountDong,
+      reason,
+      createdBy: actor.id,
+    });
+    await audit.record(actor.id, 'WALLET_ADJUST', 'wallet', driverId, {
+      driver_id: driverId,
+      amount_dong: amountDong.toString(),
+      reason,
+    }, ip, client, 'SUCCESS');
+    return { balanceDong: String(entry.wallet.balance_dong) };
+  }, db);
+}
+
+async function unlockWallet(actor, driverId, { reason }, ip = null, db = pool) {
+  return withTransaction(async (client) => {
+    await requireDriver(client, driverId);
+    const result = await client.query(
+      'SELECT locked FROM wallets WHERE driver_id = $1 FOR UPDATE',
+      [driverId]
+    );
+    if (!result.rows[0]?.locked) {
+      throw new AppError(409, 'WALLET_NOT_LOCKED', 'Ví tài xế hiện không bị khóa');
+    }
+
+    await client.query(
+      `UPDATE wallets
+       SET locked = FALSE, locked_reason = NULL, locked_at = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE driver_id = $1`,
+      [driverId]
+    );
+    await audit.record(actor.id, 'WALLET_UNLOCK', 'wallet', driverId, {
+      driver_id: driverId,
+      reason,
+    }, ip, client, 'SUCCESS');
+    return { unlocked: true };
+  }, db);
+}
+
+module.exports = { manualTopup, adjustWallet, unlockWallet };

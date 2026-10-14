@@ -25,6 +25,18 @@ const manualTopupBody = z.object({
     .regex(/^[A-Za-z0-9._-]+$/, 'Mã phiếu thu chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang'),
   note: z.string().max(500, 'Ghi chú quá dài').optional().transform((value) => value?.trim() || null),
 });
+const walletReason = z.string()
+  .trim()
+  .min(10, 'Lý do phải có ít nhất 10 ký tự')
+  .max(500, 'Lý do quá dài');
+const walletAdjustmentBody = z.object({
+  amountDong: z.union([
+    z.number().int().safe().transform((value) => BigInt(value)),
+    z.string().regex(/^-?\d{1,19}$/, 'Số tiền phải là số nguyên có dấu').transform((value) => BigInt(value)),
+  ]).refine((value) => value !== 0n && value >= -9223372036854775808n && value <= 9223372036854775807n, 'Số tiền điều chỉnh không hợp lệ'),
+  reason: walletReason,
+});
+const walletUnlockBody = z.object({ reason: walletReason });
 
 module.exports = {
   idParam,
@@ -32,4 +44,6 @@ module.exports = {
   walletDriverIdParam,
   walletTransactionsQuery,
   manualTopupBody,
+  walletAdjustmentBody,
+  walletUnlockBody,
 };
