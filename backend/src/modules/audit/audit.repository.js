@@ -20,7 +20,7 @@ const record = (userId, action, entity, entityId, metadata = {}, ip = null, db =
   ghi_nhat_ky(userId, action, entity, entityId, metadata, result, ip, db)
 );
 
-async function list({ chargePoint = null, user = null, from = null, to = null, page = 1 }) {
+async function list({ chargePoint = null, user = null, driverId = null, from = null, to = null, page = 1 }) {
   const filters = [];
   const values = [];
   const addFilter = (sql, value) => {
@@ -63,6 +63,10 @@ async function list({ chargePoint = null, user = null, from = null, to = null, p
       )`);
     filters.push(`(${userFilters.join(' OR ')})`);
   }
+  if (driverId !== null) addFilter(
+    (parameter) => `al.metadata ->> 'driver_id' = ${parameter}`,
+    String(driverId)
+  );
   if (from) addFilter(
     (parameter) => `al.created_at >= (${parameter}::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')`,
     from

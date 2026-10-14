@@ -37,6 +37,12 @@ function queryDate(value, label) {
 router.get('/audit-logs', { access: access('audit-logs:read') }, async (req, res) => {
   const chargePoint = queryText(req.query.charge_point, 'Mã trụ', 100);
   const user = queryText(req.query.user, 'Người thực hiện', 200);
+  const driverIdValue = queryText(req.query.driver_id, 'Mã tài xế', 16);
+  const driverId = driverIdValue === null ? null : driverIdValue;
+  if (driverId !== null
+    && (!/^[1-9]\d*$/.test(driverId) || !Number.isSafeInteger(Number(driverId)))) {
+    throw new BadRequestError('Mã tài xế phải là số nguyên dương hợp lệ');
+  }
   const from = queryDate(req.query.from, 'Ngày bắt đầu');
   const to = queryDate(req.query.to, 'Ngày kết thúc');
   const pageValue = queryText(req.query.page, 'Trang', 10);
@@ -48,7 +54,7 @@ router.get('/audit-logs', { access: access('audit-logs:read') }, async (req, res
     throw new BadRequestError('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc');
   }
 
-  res.json(await audit.list({ chargePoint, user, from, to, page }));
+  res.json(await audit.list({ chargePoint, user, driverId, from, to, page }));
 });
 
 for (const method of ['put', 'patch', 'delete']) {

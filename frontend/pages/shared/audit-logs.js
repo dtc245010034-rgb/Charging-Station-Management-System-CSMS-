@@ -18,6 +18,10 @@ const ACTION_LABELS = {
   TARIFF_CREATED: 'Khai báo biểu giá',
   UNLOCK: 'Mở khoá trạm',
   UPDATE: 'Cập nhật',
+  WALLET_ADJUST: 'Điều chỉnh ví',
+  WALLET_MISMATCH: 'Phát hiện lệch sổ cái ví',
+  WALLET_TOPUP_MANUAL: 'Nạp tiền vào ví',
+  WALLET_UNLOCK: 'Mở khóa ví',
 };
 const RESULT_PRESENTATION = {
   ACCEPTED: { label: 'Đã chấp nhận', tone: 'ready' },
