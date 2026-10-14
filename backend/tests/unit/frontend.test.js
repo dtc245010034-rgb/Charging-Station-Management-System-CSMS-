@@ -141,6 +141,18 @@ describe('S-02 frontend: router', () => {
     assert.ok(driverPages.includes('history'));
   });
 
+  it('S-40: trang ví chỉ hiện và tải cho tài xế', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { visibleNav, WORKSPACES } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    const driverPages = visibleNav('driver', WORKSPACES.driver.role, can).flatMap((group) => group.items.map((item) => item.page));
+
+    assert.strictEqual(typeof pageLoader('wallet', 'driver'), 'function');
+    assert.strictEqual(pageLoader('wallet', 'admin'), null);
+    assert.strictEqual(PAGE_NEEDS.wallet, 'wallets:read-own');
+    assert.ok(driverPages.includes('wallet'));
+  });
+
   it('S-27: nhật ký điều khiển chỉ hiện và chỉ tải cho Admin', async () => {
     const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
     const { visibleNav, WORKSPACES } = await load('app/workspace.js');
