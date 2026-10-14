@@ -60,9 +60,9 @@ describe('S-38 dynamic wallet minimum balance', () => {
     const stationOne = await createStation(`MIN-A-${Date.now()}`);
     const stationTwo = await createStation(`MIN-B-${Date.now()}`);
     await createTariff(stationOne, 1, '2026-10-13', [900000]);
-    await createTariff(stationOne, 2, '2026-10-14', [40000, 80000]);
+    await createTariff(stationOne, 2, '2026-10-14', [2000, 4000]);
     await createTariff(stationOne, 3, '2026-10-15', [999999]);
-    await createTariff(stationTwo, 1, '2026-10-14', [75000]);
+    await createTariff(stationTwo, 1, '2026-10-14', [3500]);
 
     const threshold = await getMinBalanceDong(
       { query },
@@ -70,15 +70,39 @@ describe('S-38 dynamic wallet minimum balance', () => {
       '2026-10-14T12:00:00+07:00'
     );
 
-    assert.equal(threshold, 400000n);
+    assert.equal(threshold, 20000n);
   });
 
-  it('dynamic threshold reports unavailable when no current tariff exists', async () => {
-    await assert.rejects(
-      getMinBalanceDong({
-        query: async () => ({ rows: [{ max_price_per_kwh_dong: null }] }),
-      }, null, '2026-10-14T12:00:00+07:00'),
-      (error) => error.code === 'WALLET_MINIMUM_UNAVAILABLE'
-    );
+  it('caches the calculated threshold for 60 seconds', async () => {
+    let calls = 0;
+    const db = {
+      query: async () => {
+        calls += 1;
+        return { rows: [{ max_price_per_kwh_dong: '4000' }] };
+      },
+    };
+    const originalNow = Date.now;
+    let now = 1_000_000;
+    Date.now = () => now;
+    try {
+      const first = await getMinBalanceDong(db, null, '2026-10-14T12:00:00+07:00');
+      now += 59999;
+      const second = await getMinBalanceDong(db, null, '2026-10-14T12:00:00+07:00');
+      now += 1;
+      const third = await getMinBalanceDong(db, null, '2026-10-14T12:00:00+07:00');
+
+      assert.deepEqual([first, second, third], [20000n, 20000n, 20000n]);
+      assert.equal(calls, 2);
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+
+  it('uses a zero threshold when no current tariff exists', async () => {
+    const threshold = await getMinBalanceDong({
+      query: async () => ({ rows: [{ max_price_per_kwh_dong: null }] }),
+    }, null, '2026-10-14T12:00:00+07:00');
+
+    assert.equal(threshold, 0n);
   });
 });

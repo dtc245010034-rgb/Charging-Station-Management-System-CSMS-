@@ -1,6 +1,8 @@
-const { AppError, BadRequestError } = require('../../lib/errors');
+const { BadRequestError } = require('../../lib/errors');
 
 const MINIMUM_BALANCE_KWH = 5n;
+const CACHE_TTL_MS = 60_000;
+const dynamicThresholdCache = new WeakMap();
 
 async function getMinBalanceDong(db, configuredBalance = require('../../config/env').WALLET_MIN_BALANCE_DONG, now = new Date()) {
   if (configuredBalance !== undefined && configuredBalance !== null) {
@@ -8,6 +10,11 @@ async function getMinBalanceDong(db, configuredBalance = require('../../config/e
       throw new BadRequestError('WALLET_MIN_BALANCE_DONG phải là số nguyên không âm');
     }
     return BigInt(configuredBalance);
+  }
+
+  const cached = dynamicThresholdCache.get(db);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
   }
 
   const tariffResult = await db.query(
@@ -26,11 +33,12 @@ async function getMinBalanceDong(db, configuredBalance = require('../../config/e
     [now]
   );
   const highestPrice = tariffResult.rows[0]?.max_price_per_kwh_dong;
-  if (highestPrice == null) {
-    throw new AppError(503, 'WALLET_MINIMUM_UNAVAILABLE', 'Không có biểu giá hiệu lực để tính ngưỡng số dư ví');
-  }
+  const value = highestPrice == null
+    ? 0n
+    : BigInt(highestPrice) * MINIMUM_BALANCE_KWH;
 
-  return BigInt(highestPrice) * MINIMUM_BALANCE_KWH;
+  dynamicThresholdCache.set(db, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  return value;
 }
 
 module.exports = { getMinBalanceDong };
