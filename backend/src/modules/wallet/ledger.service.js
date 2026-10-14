@@ -28,11 +28,17 @@ class InsufficientBalanceError extends AppError {
 function validateEntry({ driverId, entryType, amountDong }) {
   if (!driverId) throw new BadRequestError('Thiếu mã tài xế');
   if (!ENTRY_TYPES.has(entryType)) throw new BadRequestError('Loại giao dịch ví không hợp lệ');
-  if (!Number.isSafeInteger(amountDong)
-    || (amountDong === 0 && entryType !== 'SESSION_DEBIT')) {
+  const validAmount = typeof amountDong === 'bigint'
+    || (typeof amountDong === 'number' && Number.isSafeInteger(amountDong))
+    || (typeof amountDong === 'string' && /^-?\d+$/.test(amountDong));
+  if (!validAmount || (BigInt(amountDong) === 0n && entryType !== 'SESSION_DEBIT')) {
     throw new BadRequestError('Số tiền giao dịch ví phải là số nguyên hợp lệ');
   }
-  return BigInt(amountDong);
+  const amount = BigInt(amountDong);
+  if (amount < BIGINT_MIN || amount > BIGINT_MAX) {
+    throw new BadRequestError('Số tiền giao dịch ví vượt giới hạn lưu trữ');
+  }
+  return amount;
 }
 
 async function findDuplicate(client, entryType, { sessionId, topupId, reservationId, receiptCode }) {
