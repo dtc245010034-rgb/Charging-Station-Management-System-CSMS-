@@ -29,6 +29,7 @@ const permissions = {
   'invoices:read': ['ADMIN', 'OPERATOR', 'ACCOUNTANT', 'STATION_OWNER'],
   'wallets:read-own': ['DRIVER'],
   'wallets:read': ['ADMIN', 'ACCOUNTANT'],
+  'wallets:manage': ADMIN,
   'audit-logs:read': ADMIN,
   'tariffs:read': ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT'],
   'tariffs:write': WRITE_OPERATIONS,

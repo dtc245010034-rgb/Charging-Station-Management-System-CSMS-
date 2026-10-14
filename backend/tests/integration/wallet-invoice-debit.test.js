@@ -195,7 +195,7 @@ describe('S-37 wallet debit after invoice finalization', () => {
     assert.deepStrictEqual(debit.rows, [{ amount_dong: '0', balance_after_dong: '500000' }]);
   });
 
-  it('S-37 AC3: chốt hóa đơn cho phép số dư âm khi ví không đủ', async () => {
+  it('V03 / S-37 AC3: nạp bù 25.000 đồng xóa nợ sau hóa đơn 40.000 đồng', async () => {
     const driverId = await createDriver();
     await seedWallet(driverId, 30000, `PT-DEBT-${Date.now()}`);
     const sessionId = await createCompletedSession(fixture('C01').input, driverId);
@@ -212,6 +212,17 @@ describe('S-37 wallet debit after invoice finalization', () => {
     assert.equal(String(result.invoice.totalDong), '40000');
     assert.equal(wallet.rows[0].balance_dong, '-10000');
     assert.deepStrictEqual(debit.rows, [{ amount_dong: '-40000', balance_after_dong: '-10000' }]);
+    assert.equal(BigInt(wallet.rows[0].balance_dong) < 0n, true);
+
+    await withTransaction((client) => postEntry(client, {
+      driverId,
+      entryType: 'TOPUP_MANUAL',
+      amountDong: 25000,
+      receiptCode: 'PT-0001',
+    }));
+    const toppedUpWallet = await query('SELECT balance_dong FROM wallets WHERE driver_id = $1', [driverId]);
+    assert.equal(toppedUpWallet.rows[0].balance_dong, '15000');
+    assert.equal(BigInt(toppedUpWallet.rows[0].balance_dong) < 0n, false);
   });
 
   it('S-37 AC3: hook lỗi hoàn tác hóa đơn và bút toán debit', async () => {
