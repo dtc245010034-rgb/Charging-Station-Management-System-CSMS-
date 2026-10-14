@@ -1,3 +1,9 @@
+process.env.CSMS_SKIP_DOTENV = '1';
+process.env.DATABASE_URL ||= 'postgresql://csms:csms_test_only@localhost:5433/csms_test';
+process.env.JWT_SECRET ||= 'z'.repeat(40);
+process.env.APP_ORIGIN ||= 'http://localhost:3000';
+process.env.WALLET_MIN_BALANCE_DONG ||= '1000';
+
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
@@ -61,6 +67,8 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
       tagRecord = { id: 10, tag: 'TAG-VALID', status: 'ACTIVE', expires_at: null, user_id: 99 },
       stationStatus = 'ACTIVE',
       stationLocked = false,
+      walletBalance = '5000',
+      walletLocked = false,
       existingActiveSession = null,
       existingNaturalSession = null,
     } = {}) {
@@ -141,6 +149,17 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
             if (!tagRecord) return { rows: [] };
             return { rows: [tagRecord] };
           }
+          if (sql.includes('FROM wallets')) {
+            assert.match(sql, /WHERE driver_id = \$1/);
+            return {
+              rows: [{
+                driver_id: Number(params[0]),
+                balance_dong: walletBalance,
+                locked: walletLocked,
+                locked_at: walletLocked ? new Date() : null,
+              }],
+            };
+          }
           if (sql.includes('INSERT INTO orphan_messages')) {
             dbCalls.orphanMessages.push({ sql, params });
             return { rows: [{ id: 1 }] };
@@ -184,6 +203,50 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
       assert.strictEqual(session.meter_start, 500);
       assert.strictEqual(session.id_tag_masked, maskIdTag('TAG-VALID'));
       assert.strictEqual(session.driver_id, 99);
+    });
+
+    it('AC wallet: số dư dưới ngưỡng -> Blocked và phiên được đánh dấu needs_review', async () => {
+      const { mockPool, dbCalls } = createMockEnvironment({ walletBalance: '999' });
+      const handler = createStartTransactionHandler({
+        pool: mockPool,
+        now: () => new Date('2026-10-07T10:00:00.000Z'),
+        logInfo: () => {},
+        logWarning: () => {},
+        logError: () => {},
+      });
+
+      const result = await handler({
+        connectorId: 1,
+        idTag: 'TAG-VALID',
+        meterStart: 501,
+        timestamp: '2026-10-07T10:00:00.000Z',
+      }, { connection: { chargePoint: { id: 1, code: 'CP-01' } } });
+
+      assert.equal(result.idTagInfo.status, 'Blocked');
+      assert.equal(dbCalls.insertedSessions[0].needs_review, true);
+      assert.match(dbCalls.insertedSessions[0].review_reason, /Tag status: Blocked/);
+    });
+
+    it('AC wallet: ví bị khóa -> Blocked và phiên được đánh dấu needs_review', async () => {
+      const { mockPool, dbCalls } = createMockEnvironment({ walletLocked: true });
+      const handler = createStartTransactionHandler({
+        pool: mockPool,
+        now: () => new Date('2026-10-07T10:00:00.000Z'),
+        logInfo: () => {},
+        logWarning: () => {},
+        logError: () => {},
+      });
+
+      const result = await handler({
+        connectorId: 1,
+        idTag: 'TAG-VALID',
+        meterStart: 502,
+        timestamp: '2026-10-07T10:00:00.000Z',
+      }, { connection: { chargePoint: { id: 1, code: 'CP-01' } } });
+
+      assert.equal(result.idTagInfo.status, 'Blocked');
+      assert.equal(dbCalls.insertedSessions[0].needs_review, true);
+      assert.match(dbCalls.insertedSessions[0].review_reason, /Tag status: Blocked/);
     });
 
     it('AC2: Thẻ bị khoá (Blocked) -> vẫn cấp transactionId, idTagInfo: Blocked, needs_review = true', async () => {
@@ -420,4 +483,3 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
     });
   });
 });
-

@@ -1,3 +1,9 @@
+process.env.CSMS_SKIP_DOTENV = '1';
+process.env.DATABASE_URL ||= 'postgresql://postgres:postgres@localhost:5433/csms_test';
+process.env.JWT_SECRET ||= 'z'.repeat(40);
+process.env.APP_ORIGIN ||= 'http://localhost:3000';
+process.env.WALLET_MIN_BALANCE_DONG ||= '1000';
+
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { createAuthorizeHandler, evaluateIdTag, maskIdTag } = require('../../src/modules/ocpp/handlers/authorize');
@@ -10,13 +16,23 @@ describe('S-15 Authorize unit tests', () => {
     query: async (sql, params) => {
       if (sql.includes('FROM id_tags')) {
         const tag = params[0];
-        if (tag === 'ACTIVE-TAG') return { rows: [{ id: 1, tag, status: 'ACTIVE', expires_at: null }] };
-        if (tag === 'BLOCKED-TAG') return { rows: [{ id: 2, tag, status: 'BLOCKED', expires_at: null }] };
-        if (tag === 'EXPIRED-TAG') return { rows: [{ id: 3, tag, status: 'ACTIVE', expires_at: '2020-01-01T00:00:00Z' }] };
+        if (tag === 'ACTIVE-TAG') return { rows: [{ id: 1, tag, status: 'ACTIVE', expires_at: null, user_id: 100 }] };
+        if (tag === 'BLOCKED-TAG') return { rows: [{ id: 2, tag, status: 'BLOCKED', expires_at: null, user_id: 101 }] };
+        if (tag === 'EXPIRED-TAG') return { rows: [{ id: 3, tag, status: 'ACTIVE', expires_at: '2020-01-01T00:00:00Z', user_id: 102 }] };
+        if (tag === 'LOW-BALANCE-TAG') return { rows: [{ id: 4, tag, status: 'ACTIVE', expires_at: null, user_id: 200 }] };
+        if (tag === 'LOCKED-WALLET-TAG') return { rows: [{ id: 5, tag, status: 'ACTIVE', expires_at: null, user_id: 300 }] };
         return { rows: [] };
       }
       if (sql.includes('FROM stations')) {
         return { rows: [{ id: 10, status: 'ACTIVE', locked_at: null }] };
+      }
+      if (sql.includes('FROM wallets')) {
+        assert.match(sql, /WHERE driver_id = \$1/);
+        const driverId = Number(params[0]);
+        if (driverId === 100) return { rows: [{ driver_id: 100, balance_dong: '5000', locked: false, locked_at: null, locked_reason: null }] };
+        if (driverId === 200) return { rows: [{ driver_id: 200, balance_dong: '1', locked: false, locked_at: null, locked_reason: null }] };
+        if (driverId === 300) return { rows: [{ driver_id: 300, balance_dong: '5000', locked: true, locked_at: new Date(), locked_reason: 'LEDGER_MISMATCH' }] };
+        return { rows: [] };
       }
       return { rows: [] };
     },
@@ -40,6 +56,14 @@ describe('S-15 Authorize unit tests', () => {
     assert.deepEqual(await handler({ idTag: 'UNKNOWN-TAG' }), { idTagInfo: { status: 'Invalid' } });
     assert.deepEqual(await handler({ idTag: '' }), { idTagInfo: { status: 'Invalid' } });
     assert.deepEqual(await handler({}), { idTagInfo: { status: 'Invalid' } });
+  });
+
+  it('thẻ với ví dưới ngưỡng tối thiểu bị từ chối', async () => {
+    assert.deepEqual(await handler({ idTag: 'LOW-BALANCE-TAG' }), { idTagInfo: { status: 'Blocked' } });
+  });
+
+  it('thẻ với ví đang khóa bị từ chối dù số dư đủ', async () => {
+    assert.deepEqual(await handler({ idTag: 'LOCKED-WALLET-TAG' }), { idTagInfo: { status: 'Blocked' } });
   });
 
   it('thẻ dài hơn 20 ký tự ném OcppCallError FormationViolation', async () => {

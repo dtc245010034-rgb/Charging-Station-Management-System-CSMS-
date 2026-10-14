@@ -1,7 +1,7 @@
 const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
 const { withTransaction } = require('../../../db/tx');
-const { evaluateIdTag, maskIdTag, MAX_ID_TAG_LENGTH } = require('./authorize');
+const { evaluateIdTag, maskIdTag, MAX_ID_TAG_LENGTH, getWalletStatusForUser } = require('./authorize');
 const {
   findConnectorWithStation,
   findTagByTagValue,
@@ -134,7 +134,17 @@ function createStartTransactionHandler({
       status: connectorInfo.station_status,
       locked_at: connectorInfo.station_locked_at,
     };
-    const tagStatus = evaluateIdTag({ tagRecord, station, now: currentTime });
+    let tagStatus = evaluateIdTag({ tagRecord, station, now: currentTime });
+
+    if (tagStatus === 'Accepted' && tagRecord?.user_id) {
+      try {
+        const walletStatus = await getWalletStatusForUser(db, tagRecord.user_id, currentTime);
+        if (walletStatus.status !== 'Accepted') tagStatus = 'Blocked';
+      } catch (walletError) {
+        logError(`[OCPP] StartTransaction: Lỗi kiểm tra ví ${masked}:`, sanitizeErrorMessage(walletError?.message || walletError));
+        throw new OcppCallError('InternalError', 'Database error during wallet authorization');
+      }
+    }
 
     // AC2: Thẻ khoá/không tồn tại -> vẫn cấp transactionId nhưng idTagInfo là Blocked/Invalid/Expired, phiên needs_review
     if (tagStatus !== 'Accepted') {

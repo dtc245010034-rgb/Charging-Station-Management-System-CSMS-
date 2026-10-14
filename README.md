@@ -252,7 +252,7 @@ Trụ kết nối tại `ws://localhost:3000/ocpp/<mã trụ>` với subprotocol
 | `BootNotification` | Lưu vendor/model/serial/firmware; trạm không `ACTIVE` hoặc bị khoá → `Rejected`; trụ `ONLINE` khi được chấp nhận |
 | `Heartbeat` | Trả giờ máy chủ; cập nhật `last_seen_at` theo giờ DB (không tin đồng hồ trụ) |
 | `StatusNotification` | Cập nhật trạng thái đầu nối (`connectorId` ≥ 1), lưu lỗi vào `connector_errors` (có khử trùng); giới hạn độ dài trường |
-| `Authorize` | Tra bảng `id_tags` (không phân biệt hoa thường) và trạng thái trạm: `Accepted` / `Blocked` / `Expired` / `Invalid`; trạm không `ACTIVE` hoặc bị khoá → `Blocked`; thẻ dài hơn 20 ký tự → `FormationViolation`; log chỉ 4 ký tự cuối của thẻ (S-15) |
+| `Authorize` | Tra bảng `id_tags` (không phân biệt hoa thường), trạng thái trạm và ví tài xế: ví bị khóa hoặc dưới ngưỡng tối thiểu → `Blocked`; trạm không `ACTIVE` hoặc bị khoá → `Blocked`; thẻ dài hơn 20 ký tự → `FormationViolation`; log chỉ 4 ký tự cuối của thẻ (S-15) |
 | `Reset` (máy chủ → trụ) | Vận hành/Quản trị bấm "Khởi động lại" ở màn hình Trạng thái trụ hoặc gọi `POST /api/charge-points/:id/reset`; chờ trả lời tối đa `OCPP_COMMAND_TIMEOUT_SECONDS` (30 giây), không chặn tin khác trên kết nối (S-16) |
 | Action khác | Trả `NotImplemented`, không đóng kết nối |
 
