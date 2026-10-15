@@ -57,9 +57,9 @@ export function render(ctx) {
   const initialPage = Number(initialQuery.page);
   let pageNumber = Number.isSafeInteger(initialPage) && initialPage > 0 ? initialPage : 1;
   let total = 0;
-  const page = h('div', { class: 'page-stack', style: 'max-width:1200px;margin:0 auto' });
-  const results = h('div', { style: 'display:grid;gap:12px' }, loadingState(2));
-  const pagination = h('footer', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap' });
+  const page = h('div', { class: 'page-stack audit-log-page' });
+  const results = h('div', { class: 'audit-log-results' }, loadingState(2));
+  const pagination = h('footer', { class: 'audit-pagination' });
   const chargePointInput = h('input', {
     class: 'input', name: 'charge_point', type: 'search', maxlength: 100, autocomplete: 'off',
     placeholder: 'Ví dụ: VCP-01', 'aria-label': 'Lọc theo mã trụ',
@@ -140,8 +140,7 @@ export function render(ctx) {
   const pageStatus = h('span', { class: 'muted', 'aria-live': 'polite' });
 
   const filterForm = h('form', {
-    class: 'card',
-    style: 'padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end',
+    class: 'card audit-filter',
     onsubmit: (event) => {
       event.preventDefault();
       pageNumber = 1;
@@ -154,7 +153,7 @@ export function render(ctx) {
   h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Mã tài xế'), driverIdInput),
   h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Từ ngày'), fromInput),
   h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Đến ngày'), toInput),
-  h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
+  h('div', { class: 'audit-filter__actions' },
     h('button', { class: 'btn btn--primary', type: 'submit' }, 'Lọc nhật ký'),
     h('button', {
       class: 'btn', type: 'button', onclick: () => {
@@ -170,14 +169,14 @@ export function render(ctx) {
     }, 'Xoá lọc')));
 
   const refreshButton = h('button', {
-    class: 'btn', type: 'button', onclick: () => { void refresh(); },
+    class: 'btn page-refresh', type: 'button', onclick: () => { void refresh(); },
   }, icon('refresh'), 'Làm mới');
   page.append(
-    h('header', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap' },
+    h('header', { class: 'page-head' },
       h('div', {},
         h('p', { class: 'eyebrow' }, 'Vận hành'),
         h('h1', { class: 'page-head__title' }, 'Nhật ký điều khiển'),
-        h('p', { class: 'muted' }, 'Tra cứu thao tác theo trụ sạc, người thực hiện và khoảng thời gian.')
+        h('p', { class: 'page-head__sub' }, 'Tra cứu thao tác theo trụ sạc, người thực hiện và khoảng thời gian.')
       ),
       refreshButton
     ),
