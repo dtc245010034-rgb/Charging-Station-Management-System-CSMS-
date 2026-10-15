@@ -102,4 +102,71 @@ describe('S-35 — nạp ví tài xế qua cổng sandbox', () => {
       .send(body);
     assert.strictEqual(wrongSig.status, 401);
   });
+
+  // Webhook FAILED: cập nhật trạng thái đơn thành FAILED, không cộng ví
+  it('webhook FAILED cập nhật đơn thành FAILED và không cộng tiền vào ví', async () => {
+    const createRes = await request(app)
+      .post('/api/me/wallet/topups')
+      .set('Cookie', driver.cookie)
+      .set('Idempotency-Key', 'fail-test-key-001')
+      .send({ amountDong: 150000 });
+    assert.strictEqual(createRes.status, 201);
+    const { ref } = createRes.body.topup;
+
+    const body = JSON.stringify({
+      orderRef: ref,
+      gatewayTxnId: 'GW-FAIL-001',
+      status: 'FAILED',
+      amountDong: 150000,
+    });
+    const sig = sign(WEBHOOK_SECRET, body);
+
+    const webhookRes = await request(app)
+      .post('/api/webhooks/payment')
+      .set('Content-Type', 'application/json')
+      .set('X-Signature', sig)
+      .send(body);
+    assert.strictEqual(webhookRes.status, 200);
+
+    const statusRes = await request(app)
+      .get(`/api/me/wallet/topups/${ref}`)
+      .set('Cookie', driver.cookie);
+    assert.strictEqual(statusRes.status, 200);
+    assert.strictEqual(statusRes.body.topup.status, 'FAILED');
+
+    const walletRow = await query('SELECT balance_dong FROM wallets WHERE driver_id = $1', [driver.id]);
+    assert.strictEqual(walletRow.rowCount, 0, 'Ví không được tạo nếu giao dịch thất bại');
+  });
+
+  // Webhook CANCELLED: cập nhật trạng thái đơn thành CANCELLED
+  it('webhook CANCELLED cập nhật đơn thành CANCELLED', async () => {
+    const createRes = await request(app)
+      .post('/api/me/wallet/topups')
+      .set('Cookie', driver.cookie)
+      .set('Idempotency-Key', 'cancel-test-key-001')
+      .send({ amountDong: 100000 });
+    assert.strictEqual(createRes.status, 201);
+    const { ref } = createRes.body.topup;
+
+    const body = JSON.stringify({
+      orderRef: ref,
+      gatewayTxnId: 'GW-CANCEL-001',
+      status: 'CANCELLED',
+      amountDong: 100000,
+    });
+    const sig = sign(WEBHOOK_SECRET, body);
+
+    const webhookRes = await request(app)
+      .post('/api/webhooks/payment')
+      .set('Content-Type', 'application/json')
+      .set('X-Signature', sig)
+      .send(body);
+    assert.strictEqual(webhookRes.status, 200);
+
+    const statusRes = await request(app)
+      .get(`/api/me/wallet/topups/${ref}`)
+      .set('Cookie', driver.cookie);
+    assert.strictEqual(statusRes.status, 200);
+    assert.strictEqual(statusRes.body.topup.status, 'CANCELLED');
+  });
 });

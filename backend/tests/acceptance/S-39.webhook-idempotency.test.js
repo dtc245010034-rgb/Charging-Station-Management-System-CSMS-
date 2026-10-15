@@ -194,4 +194,37 @@ describe('S-39 — webhook idempotent: ma trận G01–G09', () => {
     });
     assert.strictEqual(late.status, 409);
   });
+
+  // Test đồng thời: 5 webhook song song cùng lúc → cộng đúng 1 lần, tất cả trả 200
+  it('Concurrency: 5 webhook gửi song song cùng lúc → chỉ cộng 1 lần, các request đều trả 200', async () => {
+    const topup = await createTopup(app, driver, 'concurrency-key-001');
+    const payload = {
+      orderRef: topup.ref,
+      gatewayTxnId: 'GW-CONCURRENT',
+      status: 'SUCCESS',
+      amountDong: 200000,
+    };
+
+    const results = await Promise.all([
+      sendWebhook(app, payload),
+      sendWebhook(app, payload),
+      sendWebhook(app, payload),
+      sendWebhook(app, payload),
+      sendWebhook(app, payload),
+    ]);
+
+    for (const res of results) {
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.ok, true);
+    }
+
+    const nonDupCount = results.filter((r) => !r.body.duplicate).length;
+    const dupCount = results.filter((r) => r.body.duplicate).length;
+    assert.strictEqual(nonDupCount, 1, 'Chỉ đúng 1 request ghi nhận thành công đầu tiên');
+    assert.strictEqual(dupCount, 4, '4 request còn lại là duplicate');
+
+    // Kiểm tra ví tài xế chỉ cộng đúng 1 lần
+    const row = await query('SELECT balance_dong FROM wallets WHERE driver_id=$1', [driver.id]);
+    assert.strictEqual(row.rows[0].balance_dong, '200000', 'Ví chỉ được cộng chính xác 1 lần');
+  });
 });
