@@ -41,6 +41,14 @@ const walletSearchQuery = z.object({
   query: z.string().trim().max(200, 'Từ khóa tìm kiếm quá dài').optional().transform((value) => value || ''),
 });
 
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày phải theo định dạng YYYY-MM-DD');
+
+const revenueQuery = z.object({
+  from: dateString,
+  to: dateString,
+  stationId: z.string().regex(/^[1-9]\d*$/, 'stationId phải là số nguyên dương').optional().transform((val) => val ? Number(val) : undefined),
+}).refine((data) => data.from <= data.to, { message: 'Khoảng ngày không hợp lệ (from phải <= to)' });
+
 module.exports = {
   idParam,
   stationIdParam,
@@ -50,4 +58,5 @@ module.exports = {
   walletAdjustmentBody,
   walletUnlockBody,
   walletSearchQuery,
+  revenueQuery,
 };
