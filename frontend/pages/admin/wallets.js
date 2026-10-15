@@ -29,8 +29,8 @@ function transactionCard(entry) {
   );
 }
 
-function field(label, input) {
-  return h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, label), input);
+function field(label, input, className = null) {
+  return h('label', { class: className, style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, label), input);
 }
 
 export function render(ctx) {
@@ -50,12 +50,12 @@ export function render(ctx) {
     'aria-label': 'Tìm theo email hoặc mã tài xế',
     value: ctx.params.query.query ?? '',
   });
-  const searchResults = h('div', { style: 'display:grid;gap:10px' }, emptyState({
+  const searchResults = h('div', { class: 'wallet-search-results' }, emptyState({
     iconName: 'users',
     title: 'Tìm tài xế',
     text: 'Nhập email hoặc mã tài xế để xem ví.',
   }));
-  const walletDetails = h('div', {});
+  const walletDetails = h('div', { class: 'wallet-details' });
   const status = h('p', { role: 'status', 'aria-live': 'polite', class: 'muted' });
   const previousButton = h('button', {
     class: 'btn',
@@ -153,18 +153,17 @@ export function render(ctx) {
   field('Lý do (ít nhất 10 ký tự)', unlockReason),
   h('button', { class: 'btn', type: 'submit' }, 'Mở khóa ví'));
 
-  const root = h('div', { class: 'page-stack', style: 'max-width:1100px;margin:0 auto' });
+  const root = h('div', { class: 'page-stack wallet-page' });
   root.append(
-    h('header', {}, h('p', { class: 'eyebrow' }, 'Quản trị'), h('h1', { class: 'page-head__title' }, 'Quản lý ví tài xế')),
+    h('header', { class: 'page-head' }, h('div', {}, h('p', { class: 'eyebrow' }, 'Quản trị'), h('h1', { class: 'page-head__title' }, 'Quản lý ví tài xế'))),
     h('form', {
-      class: 'card',
-      style: 'padding:16px;display:flex;gap:10px;align-items:end;flex-wrap:wrap',
+      class: 'card wallet-search',
       onsubmit: (event) => {
         event.preventDefault();
         void searchDrivers();
       },
     },
-    field('Email hoặc mã tài xế', searchInput),
+    field('Email hoặc mã tài xế', searchInput, 'wallet-search__field'),
     h('button', { class: 'btn btn--primary', type: 'submit' }, 'Tìm tài xế')),
     searchResults,
     status,

@@ -19,15 +19,15 @@ export function render(ctx) {
   let previousStates = new Map();
   const inFlight = new Set();
   const requestedSessions = new Set();
-  const page = h('div', { class: 'page-stack', style: 'max-width:1120px;margin:0 auto' });
+  const page = h('div', { class: 'page-stack session-page' });
   const notice = h('div', { class: 'card', role: 'status', 'aria-live': 'polite', style: 'display:none;padding:12px 16px' });
-  const list = h('div', { style: 'display:grid;gap:12px' }, loadingState(2));
+  const list = h('div', { class: 'session-list' }, loadingState(2));
   const refreshButton = h('button', {
-    class: 'btn', type: 'button', title: 'Làm mới danh sách', 'aria-label': 'Làm mới danh sách',
+    class: 'btn page-refresh', type: 'button', title: 'Làm mới danh sách', 'aria-label': 'Làm mới danh sách',
     onclick: () => { void refresh(); },
   }, icon('refresh'));
   page.append(
-    h('header', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap' },
+    h('header', { class: 'page-head' },
       h('div', {}, h('p', { class: 'eyebrow' }, 'Vận hành'), h('h1', { class: 'page-head__title' }, 'Phiên sạc')),
       refreshButton
     ),
