@@ -61,7 +61,10 @@ const schema = z.object({
   WALLET_AUDIT_INTERVAL_MS: z.coerce.number().int().positive().default(300000),
   SANDBOX_GATEWAY: z.coerce.number().int().min(0).max(1).default(0),
   PAYMENT_WEBHOOK_SECRET: z.string().min(32).optional(),
-  INTERNAL_BASE_URL: z.string().default('http://127.0.0.1:3000'),
+  INTERNAL_BASE_URL: z.preprocess(
+    (value) => value === '' ? undefined : value,
+    z.string().url().optional()
+  ),
   EMAIL_TRANSPORT: z.enum(['log', 'smtp']).default('log'),
 }).superRefine((data, ctx) => {
   if (data.SANDBOX_GATEWAY === 1 && (!data.PAYMENT_WEBHOOK_SECRET || data.PAYMENT_WEBHOOK_SECRET.length < 32)) {
