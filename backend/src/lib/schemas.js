@@ -49,6 +49,14 @@ const revenueQuery = z.object({
   stationId: z.string().regex(/^[1-9]\d*$/, 'stationId phải là số nguyên dương').optional().transform((val) => val ? Number(val) : undefined),
 }).refine((data) => data.from <= data.to, { message: 'Khoảng ngày không hợp lệ (from phải <= to)' });
 
+const periodMonthParam = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/, 'Tháng phải có định dạng YYYY-MM'),
+});
+
+const reopenPeriodBody = z.object({
+  reason: z.string().trim().min(10, 'Lý do mở lại phải có ít nhất 10 ký tự').max(500, 'Lý do quá dài'),
+});
+
 module.exports = {
   idParam,
   stationIdParam,
@@ -59,4 +67,6 @@ module.exports = {
   walletUnlockBody,
   walletSearchQuery,
   revenueQuery,
+  periodMonthParam,
+  reopenPeriodBody,
 };

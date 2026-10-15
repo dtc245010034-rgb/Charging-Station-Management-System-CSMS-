@@ -18,6 +18,7 @@ const tariffsRoutes = require('./modules/billing/tariffs.routes');
 const invoicesRoutes = require('./modules/billing/invoices.routes');
 const walletRoutes = require('./modules/wallet/wallet.routes');
 const reportsRoutes = require('./modules/reports/reports.routes');
+const periodsRoutes = require('./modules/accounting/periods.routes');
 const { registerAfterInvoice } = require('./modules/billing/finalize-session');
 const { postEntry } = require('./modules/wallet/ledger.service');
 
@@ -45,7 +46,7 @@ function createApp({ commandSender } = {}) {
   app.use(cookieParser());
   app.use(express.static(path.resolve(__dirname, '../../frontend')));
 
-  app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, createChargePointsRouter({ commandSender }), remoteStartRoutes, fleetStatusRoutes, sessionsRoutes, auditRoutes, tariffsRoutes, invoicesRoutes, walletRoutes, reportsRoutes);
+  app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, createChargePointsRouter({ commandSender }), remoteStartRoutes, fleetStatusRoutes, sessionsRoutes, auditRoutes, tariffsRoutes, invoicesRoutes, walletRoutes, reportsRoutes, periodsRoutes);
   app.use(errorHandler);
 
   return app;

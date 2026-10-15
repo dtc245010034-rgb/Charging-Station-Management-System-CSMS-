@@ -9,8 +9,10 @@ import { statusBadge } from '../../components/badge.js';
 const PAGE_SIZE = 50;
 const ACTION_LABELS = {
   ACCESS_DENIED: 'Truy cập bị từ chối',
-  CREATE: 'Tạo mới',
+  DATA_ERASURE_COMPLETED: 'Ẩn danh hoá dữ liệu cá nhân',
   LOCK: 'Khoá trạm',
+  PERIOD_CLOSED: 'Chốt kỳ đối soát',
+  PERIOD_REOPENED: 'Mở lại kỳ đối soát',
   REMOTE_START: 'Bắt đầu sạc từ xa',
   REMOTE_STOP: 'Dừng sạc từ xa',
   RESET: 'Khởi động lại trụ',

@@ -47,6 +47,8 @@ describe('S-03 ma trận quyền Sprint 1 (PO đã xác nhận) trên API thật
     { name: 'POST /api/admin/wallets/:driverId/manual-topups', allowed: ['ADMIN'], ok: 201, call: (r) => r.post(`/api/admin/wallets/${users.DRIVER.id}/manual-topups`).send({ amountDong: 100, receiptCode: `RBAC-${++seq}` }) },
     { name: 'POST /api/stations/:id/tariffs', allowed: WRITE, ok: 201, call: (r, t) => r.post(`/api/stations/${t.stationId}/tariffs`).send({ effectiveFrom: `2099-01-${String(++seq).padStart(2, '0')}`, periods: [{ from: '00:00', to: '24:00', pricePerKwh: 4000 }] }) },
     { name: 'GET /api/reports/revenue', allowed: ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'], ok: 200, call: (r, t) => r.get(`/api/reports/revenue?from=2026-10-01&to=2026-10-31&stationId=${t.stationId}`) },
+    { name: 'GET /api/accounting/periods', allowed: ['ADMIN', 'ACCOUNTANT'], ok: 200, call: (r) => r.get('/api/accounting/periods') },
+    { name: 'POST /api/accounting/periods/:month/reopen', allowed: ['ADMIN'], ok: 404, call: (r) => r.post('/api/accounting/periods/2026-01/reopen').send({ reason: 'Lý do hợp lệ trên 10 ký tự' }) },
   ];
 
   for (const c of cases) {
