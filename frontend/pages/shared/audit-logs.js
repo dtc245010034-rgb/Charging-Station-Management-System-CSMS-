@@ -18,6 +18,10 @@ const ACTION_LABELS = {
   TARIFF_CREATED: 'Khai báo biểu giá',
   UNLOCK: 'Mở khoá trạm',
   UPDATE: 'Cập nhật',
+  WALLET_ADJUST: 'Điều chỉnh ví',
+  WALLET_MISMATCH: 'Phát hiện lệch sổ cái ví',
+  WALLET_TOPUP_MANUAL: 'Nạp tiền vào ví',
+  WALLET_UNLOCK: 'Mở khóa ví',
 };
 const RESULT_PRESENTATION = {
   ACCEPTED: { label: 'Đã chấp nhận', tone: 'ready' },
@@ -63,6 +67,11 @@ export function render(ctx) {
     placeholder: 'Tên, email hoặc mã người dùng', 'aria-label': 'Lọc theo người thực hiện',
     value: initialQuery.user ?? '',
   });
+  const driverIdInput = h('input', {
+    class: 'input', name: 'driver_id', type: 'search', maxlength: 16, inputmode: 'numeric', autocomplete: 'off',
+    placeholder: 'Mã tài xế', 'aria-label': 'Lọc theo mã tài xế',
+    value: initialQuery.driver_id ?? '',
+  });
   const fromInput = h('input', { class: 'input', name: 'from', type: 'date', 'aria-label': 'Từ ngày', value: initialQuery.from ?? '' });
   const toInput = h('input', { class: 'input', name: 'to', type: 'date', 'aria-label': 'Đến ngày', value: initialQuery.to ?? '' });
   const table = dataTable({
@@ -96,11 +105,18 @@ export function render(ctx) {
       {
         key: 'metadata',
         label: 'Dữ liệu kèm',
-        render: (row) => h('details', {},
-          h('summary', { style: 'cursor:pointer' }, 'Xem JSON'),
-          h('pre', { style: 'max-width:360px;max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0' },
-            JSON.stringify(row.metadata ?? {}, null, 2))
-        ),
+        render: (row) => {
+          const metadata = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+            ? row.metadata
+            : {};
+          return Object.keys(metadata).length
+            ? h('details', {},
+              h('summary', { style: 'cursor:pointer' }, 'Xem JSON'),
+              h('pre', { style: 'max-width:360px;max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0' },
+                JSON.stringify(metadata, null, 2))
+            )
+            : h('span', { class: 'muted' }, '—');
+        },
       },
     ],
   });
@@ -132,6 +148,7 @@ export function render(ctx) {
   },
   h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Trụ sạc'), chargePointInput),
   h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Người thực hiện'), userInput),
+  h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Mã tài xế'), driverIdInput),
   h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Từ ngày'), fromInput),
   h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Đến ngày'), toInput),
   h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
@@ -140,6 +157,7 @@ export function render(ctx) {
       class: 'btn', type: 'button', onclick: () => {
         chargePointInput.value = '';
         userInput.value = '';
+        driverIdInput.value = '';
         fromInput.value = '';
         toInput.value = '';
         pageNumber = 1;
@@ -170,6 +188,7 @@ export function render(ctx) {
     const params = new URLSearchParams({ page: String(pageNumber) });
     if (chargePointInput.value.trim()) params.set('charge_point', chargePointInput.value.trim());
     if (userInput.value.trim()) params.set('user', userInput.value.trim());
+    if (driverIdInput.value.trim()) params.set('driver_id', driverIdInput.value.trim());
     if (fromInput.value) params.set('from', fromInput.value);
     if (toInput.value) params.set('to', toInput.value);
     const hash = `#/${ctx.workspace}/control-log?${params}`;
@@ -192,6 +211,7 @@ export function render(ctx) {
     const params = new URLSearchParams({ page: String(pageNumber) });
     if (chargePointInput.value.trim()) params.set('charge_point', chargePointInput.value.trim());
     if (userInput.value.trim()) params.set('user', userInput.value.trim());
+    if (driverIdInput.value.trim()) params.set('driver_id', driverIdInput.value.trim());
     if (fromInput.value) params.set('from', fromInput.value);
     if (toInput.value) params.set('to', toInput.value);
     try {

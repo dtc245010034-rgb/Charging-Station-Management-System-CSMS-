@@ -42,6 +42,26 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(homePathFor(null), '/index.html');
   });
 
+  describe('S-38 wallet errors on driver start page', () => {
+    it('explains when the wallet is below minimum or locked', async () => {
+      const { startErrorAction, startErrorMessage } = await load('pages/driver/start-model.js');
+      assert.equal(
+        startErrorMessage({ code: 'WALLET_BELOW_MIN', message: 'server message' }),
+        'Số dư ví chưa đủ để bắt đầu sạc. Vui lòng nạp thêm tiền.'
+      );
+      assert.equal(
+        startErrorMessage({ code: 'WALLET_LOCKED', message: 'server message' }),
+        'Ví đang bị khóa để kiểm tra. Vui lòng liên hệ hỗ trợ.'
+      );
+      assert.equal(startErrorMessage({ message: 'Lỗi khác' }), 'Lỗi khác');
+      assert.deepEqual(startErrorAction({ code: 'WALLET_BELOW_MIN' }), {
+        label: 'Nạp tiền',
+        href: '#/driver/wallet',
+      });
+      assert.equal(startErrorAction({ code: 'WALLET_LOCKED' }), null);
+    });
+  });
+
   it('parseHash: tách workspace, trang, id và query; thiếu trang thì là overview', async () => {
     const { parseHash } = await load('app/router.js');
     assert.deepStrictEqual(parseHash('#/operator/charge-points/12?status=fault'), { workspace: 'operator', page: 'charge-points', id: '12', query: { status: 'fault' } });
@@ -119,6 +139,30 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(pageLoader('history', 'operator'), null);
     assert.strictEqual(PAGE_NEEDS.history, 'sessions:read-own');
     assert.ok(driverPages.includes('history'));
+  });
+
+  it('S-40: trang ví chỉ hiện và tải cho tài xế', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { visibleNav, WORKSPACES } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    const driverPages = visibleNav('driver', WORKSPACES.driver.role, can).flatMap((group) => group.items.map((item) => item.page));
+
+    assert.strictEqual(typeof pageLoader('wallet', 'driver'), 'function');
+    assert.strictEqual(pageLoader('wallet', 'admin'), null);
+    assert.strictEqual(PAGE_NEEDS.wallet, 'wallets:read-own');
+    assert.ok(driverPages.includes('wallet'));
+  });
+
+  it('S-56: trang quản lý ví chỉ hiện và tải cho ADMIN', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { visibleNav, WORKSPACES } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    const adminPages = visibleNav('admin', WORKSPACES.admin.role, can).flatMap((group) => group.items.map((item) => item.page));
+
+    assert.strictEqual(typeof pageLoader('wallets', 'admin'), 'function');
+    assert.strictEqual(pageLoader('wallets', 'accountant'), null);
+    assert.strictEqual(PAGE_NEEDS.wallets, 'wallets:manage');
+    assert.ok(adminPages.includes('wallets'));
   });
 
   it('S-27: nhật ký điều khiển chỉ hiện và chỉ tải cho Admin', async () => {
@@ -203,6 +247,17 @@ describe('S-02 frontend: router', () => {
             result: 'ACCEPTED',
             ip: '203.0.113.42',
             metadata: { note: '<img src=x onerror=alert(1)>' },
+          }, {
+            id: '2',
+            created_at: '2026-10-11T17:01:00.000Z',
+            user_id: '7',
+            user_name: 'Admin',
+            action: 'WALLET_UNLOCK',
+            entity: 'wallet',
+            entity_id: '8',
+            result: 'SUCCESS',
+            ip: null,
+            metadata: {},
           }],
         }),
       };
@@ -215,13 +270,14 @@ describe('S-02 frontend: router', () => {
       dispose = render({
         root,
         workspace: 'admin',
-        params: { query: { page: '2', charge_point: 'CP & 2', user: 'Admin', from: '2026-10-11', to: '2026-10-12' } },
+        params: { query: { page: '2', charge_point: 'CP & 2', user: 'Admin', driver_id: '7', from: '2026-10-11', to: '2026-10-12' } },
         can: () => true,
       });
       await new Promise((resolve) => setImmediate(resolve));
       assert.match(calls[0], /page=2/);
       assert.match(calls[0], /charge_point=CP\+%26\+2/);
       assert.match(calls[0], /from=2026-10-11/);
+      assert.match(calls[0], /driver_id=7/);
 
       const find = (node, predicate) => [
         ...(predicate(node) ? [node] : []),
@@ -229,6 +285,7 @@ describe('S-02 frontend: router', () => {
       ];
       const pre = find(root, (node) => node.tag === 'pre')[0];
       assert.ok(pre);
+      assert.equal(find(root, (node) => node.tag === 'details').length, 1);
       assert.match(pre.textContent, /<img src=x onerror=alert\(1\)>/);
       assert.equal(find(root, (node) => node.tag === 'img').length, 0);
       assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Bắt đầu sạc từ xa'));
@@ -236,6 +293,10 @@ describe('S-02 frontend: router', () => {
       assert.ok(find(root, (node) => node.tag === 'td').some((node) => node.textContent === '203.0.113.42'));
       assert.ok(find(root, (node) => node.tag === 'span' && node.attributes.class === 'badge badge--ready').length > 0);
       assert.equal(auditActionLabel('UNKNOWN_ACTION'), 'UNKNOWN_ACTION');
+      assert.equal(auditActionLabel('WALLET_TOPUP_MANUAL'), 'Nạp tiền vào ví');
+      assert.equal(auditActionLabel('WALLET_ADJUST'), 'Điều chỉnh ví');
+      assert.equal(auditActionLabel('WALLET_UNLOCK'), 'Mở khóa ví');
+      assert.equal(auditActionLabel('WALLET_MISMATCH'), 'Phát hiện lệch sổ cái ví');
       assert.equal(auditResultLabel('TIMED_OUT'), 'Hết thời gian');
       assert.equal(auditResultLabel('Accepted'), 'Đã chấp nhận');
 
@@ -244,14 +305,17 @@ describe('S-02 frontend: router', () => {
       await new Promise((resolve) => setImmediate(resolve));
       assert.match(location.hash, /page=3/);
       assert.match(location.hash, /user=Admin/);
+      assert.match(location.hash, /driver_id=7/);
 
       const inputs = find(root, (node) => node.tag === 'input');
       inputs.find((node) => node.attributes.name === 'charge_point').value = 'CP-3';
+      inputs.find((node) => node.attributes.name === 'driver_id').value = '8';
       const form = find(root, (node) => node.tag === 'form')[0];
       form.listeners.submit({ preventDefault() {} });
       await new Promise((resolve) => setImmediate(resolve));
       assert.match(location.hash, /page=1/);
       assert.match(location.hash, /charge_point=CP-3/);
+      assert.match(location.hash, /driver_id=8/);
 
       failNext = true;
       const refresh = find(root, (node) => node.tag === 'button' && node.textContent.includes('Làm mới'))[0];

@@ -2,6 +2,8 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { closePool } = require('../helpers/app');
 const { query, run, resetSchema, truncateAll } = require('../helpers/db');
+const { withTransaction } = require('../../src/db/tx');
+const { postEntry } = require('../../src/modules/wallet/ledger.service');
 const { createUser } = require('../helpers/auth');
 const { postStation, stationBody } = require('../helpers/station');
 const { startServerProcess, stopServerProcess, stopAllServerProcesses, bootChargePoint, sendCall } = require('../helpers/server-process');
@@ -60,6 +62,17 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     otherDriver = await createUser('s24-other@test.invalid', 'DRIVER');
     const station = await postStation(admin, stationBody({ name: 'S-24 test station' }));
     await query("UPDATE stations SET status = 'ACTIVE' WHERE id = $1", [station.body.id]);
+    const tariff = await query(
+      `INSERT INTO tariffs (station_id, version, effective_from, idle_grace_min, idle_per_min_dong)
+       SELECT id, 1, (CURRENT_TIMESTAMP AT TIME ZONE timezone)::date, 0, 0
+       FROM stations WHERE id = $1 RETURNING id`,
+      [station.body.id]
+    );
+    await query(
+      `INSERT INTO tariff_periods (tariff_id, start_minute, end_minute, price_per_kwh_dong)
+       VALUES ($1, 0, 1440, 1000)`,
+      [tariff.rows[0].id]
+    );
     const point = await query(
       "INSERT INTO charge_points (station_id, code, status) VALUES ($1, $2, 'UNKNOWN') RETURNING id",
       [station.body.id, CODE]
@@ -86,6 +99,18 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     assert.equal(registered.status, 201);
     driverId = (await registered.json()).user.id;
     driverCookie = registered.headers.get('set-cookie').split(';')[0];
+    await withTransaction((client) => postEntry(client, {
+      driverId,
+      entryType: 'TOPUP_MANUAL',
+      amountDong: 100000,
+      receiptCode: `S24-DRIVER-TOPUP-${Date.now()}`,
+    }));
+    await withTransaction((client) => postEntry(client, {
+      driverId: otherDriver.id,
+      entryType: 'TOPUP_MANUAL',
+      amountDong: 4999,
+      receiptCode: `S24-OTHER-TOPUP-${Date.now()}`,
+    }));
     const virtualTags = await query(
       'SELECT tag, is_virtual, status FROM id_tags WHERE user_id = $1',
       [driverId]
@@ -389,5 +414,49 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
 
     await query("UPDATE remote_start_requests SET deadline = CURRENT_TIMESTAMP - interval '1 second' WHERE id = $1", [reqId]);
     await getRequest(driverCookie, reqId);
+  });
+
+  it('ví dưới ngưỡng bị từ chối trước khi tạo yêu cầu hoặc gửi RemoteStart', async () => {
+    await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id = $1", [connectorIds[1]]);
+    const beforeCalls = remoteCalls.length;
+    const response = await postStart(otherDriver.cookie, connectorIds[1]);
+
+    assert.equal(response.status, 409);
+    const error = (await response.json()).error;
+    assert.equal(error.code, 'WALLET_BELOW_MIN');
+    assert.deepEqual(error.details, { balanceDong: '4999', minBalanceDong: '5000' });
+    assert.equal(remoteCalls.length, beforeCalls);
+    assert.equal((await query(
+      'SELECT COUNT(*)::int AS count FROM remote_start_requests WHERE driver_id = $1',
+      [otherDriver.id]
+    )).rows[0].count, 0);
+    await query("UPDATE connectors SET status = 'RESERVED', ocpp_status = 'Reserved' WHERE id = $1", [connectorIds[1]]);
+  });
+
+  it('ví đang khóa bị từ chối trước khi tạo yêu cầu hoặc gửi RemoteStart', async () => {
+    await query(
+      `UPDATE wallets
+       SET locked = TRUE, locked_reason = 'LEDGER_MISMATCH', locked_at = CURRENT_TIMESTAMP
+       WHERE driver_id = $1`,
+      [otherDriver.id]
+    );
+    await query("UPDATE connectors SET status = 'AVAILABLE', ocpp_status = 'Available' WHERE id = $1", [connectorIds[1]]);
+    const beforeCalls = remoteCalls.length;
+    try {
+      const response = await postStart(otherDriver.cookie, connectorIds[1]);
+      assert.equal(response.status, 409);
+      assert.equal((await response.json()).error.code, 'WALLET_LOCKED');
+      assert.equal(remoteCalls.length, beforeCalls);
+      assert.equal((await query(
+        'SELECT COUNT(*)::int AS count FROM remote_start_requests WHERE driver_id = $1',
+        [otherDriver.id]
+      )).rows[0].count, 0);
+    } finally {
+      await query(
+        'UPDATE wallets SET locked = FALSE, locked_reason = NULL, locked_at = NULL WHERE driver_id = $1',
+        [otherDriver.id]
+      );
+      await query("UPDATE connectors SET status = 'RESERVED', ocpp_status = 'Reserved' WHERE id = $1", [connectorIds[1]]);
+    }
   });
 });

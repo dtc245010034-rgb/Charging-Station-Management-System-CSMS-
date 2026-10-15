@@ -91,6 +91,13 @@ describe('migrations 017-035: charging sessions, billing, and append-only audit 
   });
 
   it('down: rollback lần lượt 035 tới 017 và up lại sạch sẽ', async () => {
+    for (const version of ['037_audit_logs_driver_id_index.sql', '036_wallets.sql']) {
+      const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+      assert.equal(latest.rows[0].version, version);
+      const down = run('src/db/migrate.js', ['down']);
+      assert.strictEqual(down.status, 0, down.stderr);
+    }
+
     const rollbackChecks = [
       { version: '035_session_invoices', check: async () => {
         assert.equal((await query("SELECT to_regclass('public.session_invoices') AS t")).rows[0].t, null);

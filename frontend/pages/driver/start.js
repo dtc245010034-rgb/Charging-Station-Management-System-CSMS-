@@ -3,7 +3,7 @@ import * as csms from '../../services/csms.js';
 import { icon } from '../../components/icons.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
 import { toast } from '../../components/toast.js';
-import { startBlockReason } from './start-model.js';
+import { startBlockReason, startErrorAction, startErrorMessage } from './start-model.js';
 
 const POLL_INTERVAL_MS = 1500;
 const LIST_REFRESH_MS = 10000;
@@ -56,12 +56,19 @@ export function render(ctx) {
     return h('span', { class: `badge ${statusClass}` }, connectorLabel(connector));
   }
 
-  function showMessage(message, { error = false } = {}) {
+  function showMessage(message, { error = false, action = null } = {}) {
     const messageBox = content.querySelector('[data-start-message]');
     if (!messageBox) return;
     messageBox.hidden = !message;
     messageBox.setAttribute('role', error ? 'alert' : 'status');
-    messageBox.textContent = message;
+    messageBox.replaceChildren(document.createTextNode(message));
+    if (action) {
+      const link = document.createElement('a');
+      link.className = 'btn btn--primary';
+      link.href = action.href;
+      link.textContent = action.label;
+      messageBox.append(document.createTextNode(' '), link);
+    }
     messageBox.dataset.kind = error ? 'error' : 'info';
   }
 
@@ -308,8 +315,8 @@ export function render(ctx) {
       const isRejected = error.status === 422 || error.code === 'CHARGE_POINT_REJECTED';
       const messageText = isRejected
           ? 'Trụ từ chối yêu cầu bắt đầu. Hãy kiểm tra súng đã cắm chắc chưa.'
-          : error.message;
-      showMessage(messageText, { error: true });
+          : startErrorMessage(error);
+      showMessage(messageText, { error: true, action: startErrorAction(error) });
       toast(messageText, { kind: 'error' });
       updateStartButton(content.querySelector('[data-start-button]'));
     }

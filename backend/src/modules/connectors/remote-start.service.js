@@ -2,6 +2,7 @@ const { withTransaction } = require('../../db/tx');
 const { pool } = require('../../db/pool');
 const connections = require('../charge-points/connection-registry');
 const { sendRemoteCommand } = require('../ocpp/commands');
+const { getMinBalanceDong } = require('../wallet/min-balance.service');
 const {
   AppError,
   NotFoundError,
@@ -15,6 +16,28 @@ const STARTABLE_OCPP_STATUSES = new Set(['Available', 'Preparing']);
 
 function isConnectorInternallyStartable(status, ocppStatus) {
   return status === 'AVAILABLE' || (status === 'OCCUPIED' && ocppStatus === 'Preparing');
+}
+
+async function ensureWalletCanStart(client, driverId, thresholdDb = client) {
+  const walletResult = await client.query(
+    'SELECT balance_dong, locked, locked_at FROM wallets WHERE driver_id = $1 FOR UPDATE',
+    [driverId]
+  );
+  const wallet = walletResult.rows[0] || null;
+  if (wallet?.locked || wallet?.locked_at) {
+    throw new AppError(409, 'WALLET_LOCKED', 'Ví đang bị khóa để kiểm tra. Vui lòng liên hệ hỗ trợ.');
+  }
+
+  const balance = BigInt(wallet?.balance_dong || '0');
+  const minimumBalance = await getMinBalanceDong(thresholdDb);
+  if (balance < minimumBalance) {
+    const error = new AppError(409, 'WALLET_BELOW_MIN', 'Số dư ví chưa đủ để bắt đầu sạc. Vui lòng nạp thêm tiền.');
+    error.details = {
+      balanceDong: balance.toString(),
+      minBalanceDong: minimumBalance.toString(),
+    };
+    throw error;
+  }
 }
 
 async function listDriverChargePoints(db = pool) {
@@ -151,6 +174,8 @@ async function claimRemoteStart(driver, connectorId, db) {
     if (driverActiveSession.rowCount) {
       throw new AppError(409, 'DRIVER_HAS_ACTIVE_SESSION', 'Bạn đang có một phiên sạc. Hãy kết thúc phiên đó trước khi bắt đầu phiên mới.');
     }
+
+    await ensureWalletCanStart(client, driver.id, db);
 
     let tagResult = await client.query(
       `SELECT id, tag FROM id_tags

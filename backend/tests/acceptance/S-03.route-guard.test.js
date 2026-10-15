@@ -94,6 +94,9 @@ describe('S-03 route guard: mặc định từ chối', () => {
     assert.deepStrictEqual(p['roles:read'], ['ADMIN']);
     assert.deepStrictEqual(p['tariffs:read'], ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT']);
     assert.deepStrictEqual(p['tariffs:write'], ['ADMIN', 'STATION_OWNER']);
+    assert.deepStrictEqual(p['wallets:read-own'], ['DRIVER']);
+    assert.deepStrictEqual(p['wallets:read'], ['ADMIN', 'ACCOUNTANT']);
+    assert.deepStrictEqual(p['wallets:manage'], ['ADMIN']);
     assert.strictEqual(p['auth:public'], 'public');
     assert.throws(() => permissions.access('khong:ton-tai'));
   });

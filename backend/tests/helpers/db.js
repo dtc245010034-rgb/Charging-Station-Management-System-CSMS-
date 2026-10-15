@@ -45,7 +45,10 @@ async function truncateAll() {
     ALTER TABLE tariff_periods DISABLE TRIGGER tariff_periods_no_truncate;
     ALTER TABLE session_invoices DISABLE TRIGGER session_invoices_no_truncate;
     ALTER TABLE invoice_lines DISABLE TRIGGER invoice_lines_no_truncate;
-    TRUNCATE audit_logs, login_throttle, connectors, charge_points, stations, user_roles, users, tariffs, tariff_periods RESTART IDENTITY CASCADE;
+    ALTER TABLE wallet_ledger DISABLE TRIGGER wallet_ledger_no_truncate;
+    TRUNCATE audit_logs, login_throttle, connectors, charge_points, stations, user_roles, users,
+      tariffs, tariff_periods, wallets, wallet_ledger RESTART IDENTITY CASCADE;
+    ALTER TABLE wallet_ledger ENABLE TRIGGER wallet_ledger_no_truncate;
     ALTER TABLE invoice_lines ENABLE TRIGGER invoice_lines_no_truncate;
     ALTER TABLE session_invoices ENABLE TRIGGER session_invoices_no_truncate;
     ALTER TABLE tariff_periods ENABLE TRIGGER tariff_periods_no_truncate;

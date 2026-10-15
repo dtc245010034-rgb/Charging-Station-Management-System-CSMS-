@@ -8,3 +8,20 @@ export function startBlockReason(connector) {
   if (connector.has_pending_start) return 'Đầu nối đang có một yêu cầu bắt đầu sạc. Vui lòng chờ.';
   return 'Đầu nối chưa sẵn sàng. Hãy cắm súng sạc rồi làm mới trạng thái.';
 }
+
+export function startErrorMessage(error) {
+  if (error?.code === 'WALLET_BELOW_MIN') {
+    return 'Số dư ví chưa đủ để bắt đầu sạc. Vui lòng nạp thêm tiền.';
+  }
+  if (error?.code === 'WALLET_LOCKED') {
+    return 'Ví đang bị khóa để kiểm tra. Vui lòng liên hệ hỗ trợ.';
+  }
+  return error?.message || 'Không thể bắt đầu sạc. Vui lòng thử lại.';
+}
+
+export function startErrorAction(error) {
+  if (error?.code === 'WALLET_BELOW_MIN') {
+    return { label: 'Nạp tiền', href: '#/driver/wallet' };
+  }
+  return null;
+}

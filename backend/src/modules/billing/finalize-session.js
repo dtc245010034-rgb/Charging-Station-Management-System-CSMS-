@@ -6,12 +6,21 @@ const { priceSession } = require('./price-session');
 const { findEffectiveTariff } = require('./tariffs.repository');
 const { toLocalParts } = require('./tz');
 
-const afterInvoiceHooks = new Set();
+const afterInvoiceHooks = new Map();
 
-function registerAfterInvoice(fn) {
+function registerAfterInvoice(name, fn) {
+  if (typeof name === 'function') {
+    fn = name;
+    name = Symbol('after-invoice');
+  }
+  if (typeof name !== 'string' && typeof name !== 'symbol') {
+    throw new TypeError('after-invoice hook name must be a string or symbol');
+  }
   if (typeof fn !== 'function') throw new TypeError('after-invoice hook must be a function');
-  afterInvoiceHooks.add(fn);
-  return () => afterInvoiceHooks.delete(fn);
+  afterInvoiceHooks.set(name, fn);
+  return () => {
+    if (afterInvoiceHooks.get(name) === fn) afterInvoiceHooks.delete(name);
+  };
 }
 
 function idleMaxWaitMinutes(override) {
@@ -264,7 +273,8 @@ async function finalizeInTransaction(client, sessionId, now, maxWaitMinutes) {
     per_min_dong: line.perMinDong ?? null,
     amount_dong: line.amountDong,
   })));
-  for (const hook of afterInvoiceHooks) {
+
+  for (const hook of afterInvoiceHooks.values()) {
     await hook(client, invoice);
   }
   return { status: 'FINAL', invoice };

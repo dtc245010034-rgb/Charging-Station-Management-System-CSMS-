@@ -1,0 +1,1 @@
+DROP INDEX audit_logs_driver_metadata_driver_id_idx;

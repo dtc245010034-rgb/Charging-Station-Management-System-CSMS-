@@ -1,0 +1,51 @@
+const { secureRouter } = require('../../security/routeGuard');
+const { access } = require('../../security/permissions');
+const {
+  walletDriverIdParam,
+  walletTransactionsQuery,
+  manualTopupBody,
+  walletAdjustmentBody,
+  walletUnlockBody,
+  walletSearchQuery,
+} = require('../../lib/schemas');
+const walletReadService = require('./wallet-read.service');
+const walletAdminService = require('./wallet-admin.service');
+
+const router = secureRouter();
+const readAccess = [...access('wallets:read-own'), ...access('wallets:read')];
+
+router.get('/drivers/:driverId/wallet', { access: readAccess }, async (req, res) => {
+  const { driverId } = walletDriverIdParam.parse(req.params);
+  res.json(await walletReadService.getWallet(req.user, Number(driverId)));
+});
+
+router.get('/drivers/:driverId/wallet/transactions', { access: readAccess }, async (req, res) => {
+  const { driverId } = walletDriverIdParam.parse(req.params);
+  const { page } = walletTransactionsQuery.parse(req.query);
+  res.json(await walletReadService.listTransactions(req.user, Number(driverId), page));
+});
+
+router.post('/admin/wallets/:driverId/manual-topups', { access: access('wallets:manage') }, async (req, res) => {
+  const { driverId } = walletDriverIdParam.parse(req.params);
+  const data = manualTopupBody.parse(req.body);
+  res.status(201).json(await walletAdminService.manualTopup(req.user, Number(driverId), data, req.ip));
+});
+
+router.post('/admin/wallets/:driverId/adjustments', { access: access('wallets:manage') }, async (req, res) => {
+  const { driverId } = walletDriverIdParam.parse(req.params);
+  const data = walletAdjustmentBody.parse(req.body);
+  res.status(201).json(await walletAdminService.adjustWallet(req.user, Number(driverId), data, req.ip));
+});
+
+router.post('/admin/wallets/:driverId/unlock', { access: access('wallets:manage') }, async (req, res) => {
+  const { driverId } = walletDriverIdParam.parse(req.params);
+  const data = walletUnlockBody.parse(req.body);
+  res.json(await walletAdminService.unlockWallet(req.user, Number(driverId), data, req.ip));
+});
+
+router.get('/admin/wallets', { access: access('wallets:manage') }, async (req, res) => {
+  const { query } = walletSearchQuery.parse(req.query);
+  res.json(await walletAdminService.searchDrivers(query));
+});
+
+module.exports = router;

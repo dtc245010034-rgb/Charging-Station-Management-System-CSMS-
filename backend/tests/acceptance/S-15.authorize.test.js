@@ -1,7 +1,8 @@
 const { describe, it, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { Pool } = require('pg');
-const { BASE, run, query, resetSchema, truncateAll } = require('../helpers/db');
+const { BASE, env, run, query, resetSchema, truncateAll } = require('../helpers/db');
+Object.assign(process.env, env({ DATABASE_URL: BASE }));
 const { createOcppMessageHandler } = require('../../src/modules/ocpp/message-handler');
 const { createAuthorizeHandler, evaluateIdTag } = require('../../src/modules/ocpp/handlers/authorize');
 

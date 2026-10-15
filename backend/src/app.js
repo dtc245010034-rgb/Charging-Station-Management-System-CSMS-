@@ -16,8 +16,25 @@ const sessionsRoutes = require('./modules/sessions/sessions.routes');
 const auditRoutes = require('./modules/audit/audit.routes');
 const tariffsRoutes = require('./modules/billing/tariffs.routes');
 const invoicesRoutes = require('./modules/billing/invoices.routes');
+const walletRoutes = require('./modules/wallet/wallet.routes');
+const { registerAfterInvoice } = require('./modules/billing/finalize-session');
+const { postEntry } = require('./modules/wallet/ledger.service');
+
+const postSessionInvoiceDebit = async (client, invoice) => {
+  if (!invoice.driverId) return;
+  return postEntry(client, {
+    driverId: invoice.driverId,
+    entryType: 'SESSION_DEBIT',
+    amountDong: (-BigInt(invoice.totalDong)).toString(),
+    sessionId: invoice.sessionId,
+    reason: 'SESSION_FINALIZED',
+    periodDate: invoice.periodDate,
+    allowLocked: true,
+  });
+};
 
 function createApp({ commandSender } = {}) {
+  registerAfterInvoice('wallet-session-debit', postSessionInvoiceDebit);
   const app = express();
   app.locals.commandSender = commandSender;
   if (env.TRUST_PROXY > 0) app.set('trust proxy', env.TRUST_PROXY);
@@ -27,7 +44,7 @@ function createApp({ commandSender } = {}) {
   app.use(cookieParser());
   app.use(express.static(path.resolve(__dirname, '../../frontend')));
 
-  app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, createChargePointsRouter({ commandSender }), remoteStartRoutes, fleetStatusRoutes, sessionsRoutes, auditRoutes, tariffsRoutes, invoicesRoutes);
+  app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, createChargePointsRouter({ commandSender }), remoteStartRoutes, fleetStatusRoutes, sessionsRoutes, auditRoutes, tariffsRoutes, invoicesRoutes, walletRoutes);
   app.use(errorHandler);
 
   return app;
@@ -35,3 +52,5 @@ function createApp({ commandSender } = {}) {
 
 module.exports = createApp();
 module.exports.createApp = createApp;
+module.exports.postSessionInvoiceDebit = postSessionInvoiceDebit;
+

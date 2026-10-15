@@ -2,6 +2,8 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { closePool } = require('../helpers/app');
 const { query, resetSchema, truncateAll, run: runScript } = require('../helpers/db');
+const { withTransaction } = require('../../src/db/tx');
+const { postEntry } = require('../../src/modules/wallet/ledger.service');
 const { createUser } = require('../helpers/auth');
 const { stationBody, postStation } = require('../helpers/station');
 const {
@@ -34,9 +36,26 @@ describe('S-17 StartTransaction trên WebSocket server thật (GYM-43)', () => {
     owner = await createUser('owner-st-tx@test.invalid', 'STATION_OWNER');
     const userRes = await query("INSERT INTO users (name, email, password_hash) VALUES ('Driver ST', 'driver-st@test.local', 'hash') RETURNING id");
     driverUserId = userRes.rows[0].id;
+    await withTransaction((client) => postEntry(client, {
+      driverId: driverUserId,
+      entryType: 'TOPUP_MANUAL',
+      amountDong: 5000,
+      receiptCode: `S17-TOPUP-${Date.now()}`,
+    }));
 
     const stationId = (await postStation(owner, stationBody({ name: 'Station ST-TX' }))).body.id;
     await query("UPDATE stations SET status = 'ACTIVE' WHERE id = $1", [stationId]);
+    const tariff = await query(
+      `INSERT INTO tariffs (station_id, version, effective_from, idle_grace_min, idle_per_min_dong)
+       SELECT id, 1, (CURRENT_TIMESTAMP AT TIME ZONE timezone)::date, 0, 0
+       FROM stations WHERE id = $1 RETURNING id`,
+      [stationId]
+    );
+    await query(
+      `INSERT INTO tariff_periods (tariff_id, start_minute, end_minute, price_per_kwh_dong)
+       VALUES ($1, 0, 1440, 1000)`,
+      [tariff.rows[0].id]
+    );
 
     const cpRes = await query(
       "INSERT INTO charge_points (station_id, code, status) VALUES ($1, $2, 'UNKNOWN') RETURNING id",

@@ -1,7 +1,28 @@
 const { safeLog, sanitizeErrorMessage } = require('../../../lib/constants');
 const { OcppCallError } = require('../frames');
+const { getMinBalanceDong } = require('../../wallet/min-balance.service');
 
 const MAX_ID_TAG_LENGTH = 20;
+
+async function getWalletStatusForUser(db, userId, now = new Date()) {
+  if (!userId) return { status: 'Invalid', wallet: null };
+
+  const walletResult = await db.query(
+    'SELECT driver_id, balance_dong, locked, locked_at, locked_reason FROM wallets WHERE driver_id = $1 LIMIT 1',
+    [userId]
+  );
+  const wallet = walletResult.rows[0] || null;
+  if (wallet?.locked || wallet?.locked_at) {
+    return { status: 'Blocked', wallet };
+  }
+
+  const minBalance = await getMinBalanceDong(db, undefined, now);
+  if (BigInt(wallet?.balance_dong || '0') < minBalance) {
+    return { status: 'Blocked', wallet };
+  }
+
+  return { status: 'Accepted', wallet };
+}
 
 function maskIdTag(tag) {
   if (typeof tag !== 'string') return '****';
@@ -104,7 +125,18 @@ function createAuthorizeHandler({
       station.locked_at = station.locked_at || new Date();
     }
 
-    const status = evaluateIdTag({ tagRecord, station, now: now() });
+    const currentTime = now();
+    let status = evaluateIdTag({ tagRecord, station, now: currentTime });
+
+    if (status === 'Accepted' && tagRecord?.user_id) {
+      try {
+        const walletStatus = await getWalletStatusForUser(db, tagRecord.user_id, currentTime);
+        if (walletStatus.status !== 'Accepted') status = 'Blocked';
+      } catch (error) {
+        logError(`[OCPP] Authorize wallet check failed | code: ${safeLog(code)} | idTag: ${masked}:`, sanitizeErrorMessage(error?.message || error));
+        throw new OcppCallError('InternalError', 'Database error during wallet authorization');
+      }
+    }
 
     if (status === 'Invalid') {
       logWarning(`[OCPP] Authorize: Thẻ không tồn tại hoặc không hợp lệ | code: ${safeLog(code)} | idTag: ${masked} -> Invalid`);
@@ -116,4 +148,4 @@ function createAuthorizeHandler({
   };
 }
 
-module.exports = { createAuthorizeHandler, evaluateIdTag, maskIdTag, MAX_ID_TAG_LENGTH };
+module.exports = { createAuthorizeHandler, evaluateIdTag, maskIdTag, MAX_ID_TAG_LENGTH, getWalletStatusForUser };
