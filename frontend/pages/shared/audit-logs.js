@@ -20,8 +20,11 @@ const ACTION_LABELS = {
   UPDATE: 'Cập nhật',
   WALLET_ADJUST: 'Điều chỉnh ví',
   WALLET_MISMATCH: 'Phát hiện lệch sổ cái ví',
+  WALLET_TOPUP_GATEWAY: 'Nạp ví qua cổng thanh toán',
   WALLET_TOPUP_MANUAL: 'Nạp tiền vào ví',
   WALLET_UNLOCK: 'Mở khóa ví',
+  WEBHOOK_AMOUNT_MISMATCH: 'Lệch số tiền webhook',
+  WEBHOOK_BAD_SIGNATURE: 'Chữ ký webhook không hợp lệ',
 };
 const RESULT_PRESENTATION = {
   ACCEPTED: { label: 'Đã chấp nhận', tone: 'ready' },

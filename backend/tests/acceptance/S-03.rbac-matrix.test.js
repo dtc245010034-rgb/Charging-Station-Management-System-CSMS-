@@ -46,6 +46,8 @@ describe('S-03 ma trận quyền Sprint 1 (PO đã xác nhận) trên API thật
     { name: 'GET /api/drivers/:driverId/wallet/transactions', allowed: ['ADMIN', 'ACCOUNTANT', 'DRIVER'], ok: 200, call: (r) => r.get(`/api/drivers/${users.DRIVER.id}/wallet/transactions`) },
     { name: 'POST /api/admin/wallets/:driverId/manual-topups', allowed: ['ADMIN'], ok: 201, call: (r) => r.post(`/api/admin/wallets/${users.DRIVER.id}/manual-topups`).send({ amountDong: 100, receiptCode: `RBAC-${++seq}` }) },
     { name: 'POST /api/stations/:id/tariffs', allowed: WRITE, ok: 201, call: (r, t) => r.post(`/api/stations/${t.stationId}/tariffs`).send({ effectiveFrom: `2099-01-${String(++seq).padStart(2, '0')}`, periods: [{ from: '00:00', to: '24:00', pricePerKwh: 4000 }] }) },
+    { name: 'POST /api/me/wallet/topups', allowed: ['DRIVER'], ok: 201, call: (r) => r.post('/api/me/wallet/topups').set('Idempotency-Key', idempotencyKey()).send({ amountDong: 200000 }) },
+    { name: 'GET /api/me/notifications', allowed: ['DRIVER'], ok: 200, call: (r) => r.get('/api/me/notifications') },
   ];
 
   for (const c of cases) {

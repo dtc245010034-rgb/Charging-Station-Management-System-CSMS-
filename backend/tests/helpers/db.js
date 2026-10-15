@@ -10,7 +10,7 @@ if (!new URL(BASE).pathname.slice(1).endsWith('_test')) {
 }
 
 function env(extra = {}) {
-  return { ...process.env, PATH: process.env.PATH, CSMS_SKIP_DOTENV: '1', DATABASE_URL: BASE, JWT_SECRET: 'z'.repeat(40), APP_ORIGIN: 'http://localhost:3000', ...extra };
+  return { ...process.env, PATH: process.env.PATH, CSMS_SKIP_DOTENV: '1', DATABASE_URL: BASE, JWT_SECRET: 'z'.repeat(40), APP_ORIGIN: 'http://localhost:3000', SANDBOX_GATEWAY: '1', PAYMENT_WEBHOOK_SECRET: 'test-secret-0123456789abcdef0123456789abcd', ...extra };
 }
 
 function run(script, args = [], extra = {}) {
@@ -47,7 +47,7 @@ async function truncateAll() {
     ALTER TABLE invoice_lines DISABLE TRIGGER invoice_lines_no_truncate;
     ALTER TABLE wallet_ledger DISABLE TRIGGER wallet_ledger_no_truncate;
     TRUNCATE audit_logs, login_throttle, connectors, charge_points, stations, user_roles, users,
-      tariffs, tariff_periods, wallets, wallet_ledger RESTART IDENTITY CASCADE;
+      tariffs, tariff_periods, wallets, wallet_ledger, wallet_topups, notifications, email_outbox RESTART IDENTITY CASCADE;
     ALTER TABLE wallet_ledger ENABLE TRIGGER wallet_ledger_no_truncate;
     ALTER TABLE invoice_lines ENABLE TRIGGER invoice_lines_no_truncate;
     ALTER TABLE session_invoices ENABLE TRIGGER session_invoices_no_truncate;

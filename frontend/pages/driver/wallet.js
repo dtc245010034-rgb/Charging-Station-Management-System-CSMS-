@@ -55,7 +55,143 @@ export function render(ctx) {
   const requestedPage = Number(ctx.params.query.page || 1);
   let currentPage = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const entryToFocus = ctx.params.query.entry;
+  const topupRef = ctx.params.query.topup;
   const content = h('div', { style: 'display:grid;gap:12px' }, loadingState(3));
+  const topupTracker = h('div', { style: 'display:grid;gap:8px' });
+  const formFeedback = h('div', { style: 'display:grid;gap:8px' });
+  let pollTimer = null;
+  let pollCount = 0;
+  const MAX_POLLS = 100; // 100 * 3s = 300s = 5 phút
+
+  function onFeedback(message, tone = 'fault') {
+    mount(formFeedback, h('p', { class: `badge badge--${tone}`, role: tone === 'fault' ? 'alert' : 'status' }, message));
+  }
+
+  function topupSection() {
+    const amountInput = h('input', {
+      class: 'input',
+      type: 'number',
+      min: 10000,
+      max: 5000000,
+      step: 10000,
+      placeholder: 'Số tiền (10.000 - 5.000.000 đ)',
+      value: 100000,
+      style: 'max-width:260px',
+    });
+    const submitButton = h('button', {
+      class: 'btn btn--primary',
+      type: 'submit',
+    }, 'Nạp tiền vào ví');
+
+    const presetAmounts = [50000, 100000, 200000, 500000];
+    const presetButtons = presetAmounts.map((amt) => h('button', {
+      class: 'btn btn--ghost',
+      type: 'button',
+      onclick: () => { amountInput.value = amt; },
+    }, formatDong(amt)));
+
+    return h('form', {
+      class: 'card',
+      style: 'padding:16px;display:grid;gap:12px',
+      onsubmit: async (e) => {
+        e.preventDefault();
+        const amount = Number(amountInput.value);
+        if (!Number.isInteger(amount) || amount < 10000 || amount > 5000000) {
+          onFeedback('Số tiền nạp phải là số nguyên từ 10.000 đ đến 5.000.000 đ', 'fault');
+          return;
+        }
+        submitButton.disabled = true;
+        submitButton.textContent = 'Đang chuyển tới cổng...';
+        mount(formFeedback);
+        try {
+          const idempotencyKey = `topup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          const res = await api('/api/me/wallet/topups', {
+            method: 'POST',
+            headers: { 'Idempotency-Key': idempotencyKey },
+            body: { amountDong: amount },
+          });
+          if (res.redirectUrl) {
+            window.location.href = res.redirectUrl;
+          } else {
+            onFeedback('Đã tạo đơn nạp tiền thành công', 'ready');
+            submitButton.disabled = false;
+            submitButton.textContent = 'Nạp tiền vào ví';
+          }
+        } catch (err) {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Nạp tiền vào ví';
+          onFeedback(err.message || 'Lỗi khi tạo yêu cầu nạp tiền', 'fault');
+        }
+      },
+    },
+    h('h3', { style: 'margin:0;font-size:16px' }, 'Nạp tiền qua cổng thanh toán'),
+    h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' },
+      h('span', { class: 'muted' }, 'Chọn nhanh:'),
+      ...presetButtons
+    ),
+    h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' },
+      amountInput,
+      submitButton
+    ),
+    formFeedback);
+  }
+
+  async function checkTopupStatus() {
+    if (disposed) return;
+    try {
+      const res = await api(`/api/me/wallet/topups/${encodeURIComponent(topupRef)}`);
+      if (disposed) return;
+      const { status, failureReason, amountDong } = res.topup;
+
+      if (status === 'PENDING') {
+        mount(topupTracker, h('div', { class: 'badge badge--warning', style: 'padding:12px;font-size:14px;display:flex;align-items:center;gap:8px' },
+          `Đang chờ thanh toán đơn ${topupRef} (${formatDong(amountDong)})... Hệ thống tự động kiểm tra mỗi 3 giây.`
+        ));
+      } else if (status === 'SUCCESS') {
+        if (pollTimer) clearInterval(pollTimer);
+        mount(topupTracker, h('div', { class: 'badge badge--ready', style: 'padding:12px;font-size:14px' },
+          `Nạp tiền thành công ${formatDong(amountDong)}! Số dư đã được cập nhật.`
+        ));
+        void loadPage();
+      } else if (status === 'FAILED') {
+        if (pollTimer) clearInterval(pollTimer);
+        mount(topupTracker, h('div', { class: 'badge badge--fault', style: 'padding:12px;font-size:14px' },
+          `Giao dịch nạp tiền thất bại: ${failureReason || 'Lỗi thanh toán từ cổng'}`
+        ));
+      } else if (status === 'CANCELLED') {
+        if (pollTimer) clearInterval(pollTimer);
+        mount(topupTracker, h('div', { class: 'badge badge--warning', style: 'padding:12px;font-size:14px' },
+          'Giao dịch nạp tiền đã bị hủy.'
+        ));
+      } else if (status === 'EXPIRED') {
+        if (pollTimer) clearInterval(pollTimer);
+        mount(topupTracker, h('div', { class: 'badge badge--fault', style: 'padding:12px;font-size:14px' },
+          'Giao dịch nạp tiền đã hết hạn (quá 30 phút).'
+        ));
+      }
+    } catch (err) {
+      if (pollTimer) clearInterval(pollTimer);
+      mount(topupTracker, h('div', { class: 'badge badge--fault', style: 'padding:12px;font-size:14px' },
+        `Không thể kiểm tra trạng thái đơn nạp: ${err.message}`
+      ));
+    }
+  }
+
+  if (topupRef) {
+    void checkTopupStatus();
+    pollTimer = setInterval(() => {
+      pollCount += 1;
+      if (pollCount >= MAX_POLLS) {
+        if (pollTimer) clearInterval(pollTimer);
+        mount(topupTracker, h('div', { class: 'badge badge--warning', style: 'padding:12px;font-size:14px' },
+          'Hết thời gian chờ phản hồi tự động (5 phút). Bạn có thể kiểm tra lại sau.'
+        ));
+        return;
+      }
+      void checkTopupStatus();
+    }, 3000);
+  }
+
   const prevButton = h('button', {
     class: 'btn',
     type: 'button',
@@ -83,6 +219,8 @@ export function render(ctx) {
 
   ctx.root.replaceChildren(
     h('header', {}, h('p', { class: 'eyebrow' }, 'Tài xế'), h('h1', { class: 'page-head__title' }, 'Ví của tôi')),
+    topupTracker,
+    topupSection(),
     content,
     pagination
   );
@@ -144,5 +282,8 @@ export function render(ctx) {
   }
 
   void loadPage();
-  return () => { disposed = true; };
+  return () => {
+    disposed = true;
+    if (pollTimer) clearInterval(pollTimer);
+  };
 }

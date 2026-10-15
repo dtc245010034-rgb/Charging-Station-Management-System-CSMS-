@@ -97,6 +97,9 @@ describe('S-03 route guard: mặc định từ chối', () => {
     assert.deepStrictEqual(p['wallets:read-own'], ['DRIVER']);
     assert.deepStrictEqual(p['wallets:read'], ['ADMIN', 'ACCOUNTANT']);
     assert.deepStrictEqual(p['wallets:manage'], ['ADMIN']);
+    assert.deepStrictEqual(p['wallets:topup'], ['DRIVER']);
+    assert.strictEqual(p['payments:webhook'], 'public');
+    assert.deepStrictEqual(p['notifications:read-own'], ['DRIVER']);
     assert.strictEqual(p['auth:public'], 'public');
     assert.throws(() => permissions.access('khong:ton-tai'));
   });

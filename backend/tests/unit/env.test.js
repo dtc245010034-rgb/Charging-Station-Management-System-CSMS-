@@ -93,4 +93,32 @@ describe('S-01 env: cấu hình bắt buộc', () => {
     assert.strictEqual(r.status, 0, r.stderr);
     assert.strictEqual(JSON.parse(r.stdout).WALLET_MIN_BALANCE_DONG, 250000);
   });
+
+  it('SANDBOX_GATEWAY=1 yêu cầu PAYMENT_WEBHOOK_SECRET tối thiểu 32 ký tự', () => {
+    const missingSecret = load({ ...valid, SANDBOX_GATEWAY: '1' });
+    assert.strictEqual(missingSecret.status, 1);
+    assert.match(missingSecret.stderr, /PAYMENT_WEBHOOK_SECRET/);
+
+    const shortSecret = load({ ...valid, SANDBOX_GATEWAY: '1', PAYMENT_WEBHOOK_SECRET: 'short' });
+    assert.strictEqual(shortSecret.status, 1);
+    assert.match(shortSecret.stderr, /PAYMENT_WEBHOOK_SECRET/);
+
+    const validSecret = load({ ...valid, SANDBOX_GATEWAY: '1', PAYMENT_WEBHOOK_SECRET: 's'.repeat(32) });
+    assert.strictEqual(validSecret.status, 0, validSecret.stderr);
+    assert.strictEqual(JSON.parse(validSecret.stdout).SANDBOX_GATEWAY, 1);
+    assert.strictEqual(JSON.parse(validSecret.stdout).PAYMENT_WEBHOOK_SECRET, 's'.repeat(32));
+  });
+
+  it('INTERNAL_BASE_URL là optional để sandbox-gateway có thể fallback theo PORT', () => {
+    for (const value of [undefined, '']) {
+      const config = value === undefined ? valid : { ...valid, INTERNAL_BASE_URL: value };
+      const r = load(config);
+      assert.strictEqual(r.status, 0, r.stderr);
+      assert.strictEqual(JSON.parse(r.stdout).INTERNAL_BASE_URL, undefined);
+    }
+
+    const custom = load({ ...valid, INTERNAL_BASE_URL: 'http://127.0.0.1:4000' });
+    assert.strictEqual(custom.status, 0, custom.stderr);
+    assert.strictEqual(JSON.parse(custom.stdout).INTERNAL_BASE_URL, 'http://127.0.0.1:4000');
+  });
 });

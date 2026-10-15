@@ -195,6 +195,21 @@ function createStopTransactionHandler({
               sanitizeErrorMessage(error?.message || error)
             );
           });
+        setImmediate(() => {
+          Promise.resolve()
+            .then(() => require('../../notifications/notify').notifySessionEvent({
+              sessionId: payload.transactionId,
+              kind: stopReason === 'Remote' ? 'SESSION_REMOTE_STOPPED' : 'SESSION_ENDED',
+              db,
+              logError,
+            }))
+            .catch((error) => {
+              logError(
+                `[OCPP] StopTransaction: Không thể gửi thông báo cho phiên ${payload.transactionId}:`,
+                sanitizeErrorMessage(error?.message || error)
+              );
+            });
+        });
         return {};
       }
 
