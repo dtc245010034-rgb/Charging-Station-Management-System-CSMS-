@@ -17,6 +17,7 @@ const auditRoutes = require('./modules/audit/audit.routes');
 const tariffsRoutes = require('./modules/billing/tariffs.routes');
 const invoicesRoutes = require('./modules/billing/invoices.routes');
 const walletRoutes = require('./modules/wallet/wallet.routes');
+const sandboxGatewayRoutes = require('./modules/payments/sandbox-gateway.routes');
 const { registerAfterInvoice } = require('./modules/billing/finalize-session');
 const { postEntry } = require('./modules/wallet/ledger.service');
 
@@ -39,6 +40,8 @@ function createApp({ commandSender } = {}) {
   app.locals.commandSender = commandSender;
   if (env.TRUST_PROXY > 0) app.set('trust proxy', env.TRUST_PROXY);
   app.use(cors({ origin: env.APP_ORIGIN.split(','), credentials: true }));
+  app.use(express.urlencoded({ extended: false }));
+  app.use('/sandbox-gateway', sandboxGatewayRoutes);
   app.use('/api', requireJson);
   app.use(express.json());
   app.use(cookieParser());
