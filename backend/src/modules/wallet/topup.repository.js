@@ -49,9 +49,33 @@ async function findByRef(orderRef, db = pool) {
   return result.rows[0] || null;
 }
 
+// Cập nhật trạng thái đơn nạp từ webhook; trả về row sau khi UPDATE (hoặc null nếu không khớp).
+async function updateTopupStatus({
+  orderRef,
+  newStatus,
+  gatewayTxnId = null,
+  failureReason = null,
+  allowedCurrentStatuses = ['PENDING', 'EXPIRED'],
+}, db = pool) {
+  const placeholders = allowedCurrentStatuses.map((_, i) => `$${i + 3}`).join(', ');
+  const result = await db.query(
+    `UPDATE wallet_topups
+     SET status = $1,
+         gateway_txn_id = COALESCE($2, gateway_txn_id),
+         failure_reason = COALESCE($${allowedCurrentStatuses.length + 3}, failure_reason),
+         completed_at = CASE WHEN $1 IN ('SUCCESS','FAILED','CANCELLED') THEN CURRENT_TIMESTAMP ELSE completed_at END
+     WHERE order_ref = $${allowedCurrentStatuses.length + 4}
+       AND status IN (${placeholders})
+     RETURNING *`,
+    [newStatus, gatewayTxnId, ...allowedCurrentStatuses, failureReason, orderRef]
+  );
+  return result.rows[0] || null;
+}
+
 module.exports = {
   createTopup,
   findByDriverAndIdempotencyKey,
   countPendingByDriver,
   findByRef,
+  updateTopupStatus,
 };

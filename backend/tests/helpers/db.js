@@ -10,7 +10,7 @@ if (!new URL(BASE).pathname.slice(1).endsWith('_test')) {
 }
 
 function env(extra = {}) {
-  return { ...process.env, PATH: process.env.PATH, CSMS_SKIP_DOTENV: '1', DATABASE_URL: BASE, JWT_SECRET: 'z'.repeat(40), APP_ORIGIN: 'http://localhost:3000', ...extra };
+  return { ...process.env, PATH: process.env.PATH, CSMS_SKIP_DOTENV: '1', DATABASE_URL: BASE, JWT_SECRET: 'z'.repeat(40), APP_ORIGIN: 'http://localhost:3000', SANDBOX_GATEWAY: '1', PAYMENT_WEBHOOK_SECRET: 'test-secret-0123456789abcdef0123456789abcd', ...extra };
 }
 
 function run(script, args = [], extra = {}) {
