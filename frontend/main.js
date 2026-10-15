@@ -10,6 +10,7 @@ import { createTopbar } from './components/topbar.js';
 import { openPalette } from './components/palette.js';
 import { emptyState, errorState, loadingState } from './components/empty-state.js';
 import { icon } from './components/icons.js';
+import { createNotificationBell } from './components/notification-bell.js';
 import { getTheme, toggleTheme, onThemeChange } from './app/theme.js';
 
 const root = document.getElementById('root');
@@ -62,6 +63,7 @@ function buildMobileShell(workspaceId, user) {
     return link;
   });
   const themeBtn = h('button', { class: 'btn btn--ghost btn--icon', type: 'button', onclick: toggleTheme });
+  const notificationBell = createNotificationBell();
   const paintTheme = () => {
     const light = getTheme() === 'light';
     themeBtn.replaceChildren(icon(light ? 'moon' : 'sun'));
@@ -73,7 +75,7 @@ function buildMobileShell(workspaceId, user) {
   root.replaceChildren(h('div', { class: 'driver-app' },
     h('header', { class: 'driver-app__bar' },
       h('div', { class: 'brand', style: 'padding:0' }, h('span', { class: 'brand__mark' }, icon('bolt', { size: 20 })), 'CSMS'),
-      h('div', { class: 'toolbar' }, themeBtn)),
+      h('div', { class: 'toolbar' }, notificationBell.el, themeBtn)),
     main,
     h('nav', { class: 'tabbar', 'aria-label': 'Điều hướng chính' }, tabs)));
   return {
@@ -83,7 +85,10 @@ function buildMobileShell(workspaceId, user) {
         if (name === page) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
       }
     },
-    destroy: offTheme,
+    destroy() {
+      offTheme();
+      notificationBell.destroy();
+    },
     user,
   };
 }
