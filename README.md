@@ -176,6 +176,14 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `IDLE_MAX_WAIT_MIN` | Thời gian tối đa chờ đầu nối rời `Finishing`/`SuspendedEV` trước khi chốt hóa đơn phí chiếm chỗ | Phút | `60` |
 | `BILLING_JOB_INTERVAL_MS` | Chu kỳ job nền tìm phiên cần lập hóa đơn và thử lại phiên lỗi | Mili giây | `30000` |
 | `WALLET_AUDIT_INTERVAL_MS` | Chu kỳ job nền đối chiếu số dư ví với sổ cái và khóa ví lệch | Mili giây | `300000` |
+| `SANDBOX_GATEWAY` | Bật giao diện cổng thanh toán giả lập; chỉ dùng dev/staging | `0` hoặc `1` | `0` |
+| `PAYMENT_WEBHOOK_SECRET` | Khoá HMAC-SHA256 của webhook; bắt buộc khi bật sandbox, tối thiểu 32 ký tự | Bí mật | **bắt buộc khi bật sandbox** |
+| `INTERNAL_BASE_URL` | URL nội bộ mà cổng giả lập dùng để gọi webhook | URL | `http://127.0.0.1:3000` |
+| `EMAIL_TRANSPORT` | Kênh email thông báo; hiện chỉ hỗ trợ ghi hộp thư ra log | `log` | `log` |
+| `BACKUP_PASSPHRASE` | Passphrase OpenSSL để mã hoá/giải mã bản sao lưu; cấp từ kho bí mật, không ghi vào repo | Bí mật | **bắt buộc cho backup mã hoá** |
+| `BACKUP_DIR` | Thư mục lưu bản sao lưu đã mã hoá, nằm ngoài repo | Đường dẫn | `~/csms-backups` |
+| `KEEP` | Số bản sao lưu mới nhất cần giữ | Số nguyên dương | `7` |
+| `BACKUP_ALLOW_PLAINTEXT` | Cho phép SQL rõ chỉ trên máy dev; không bật trên staging/production | `0` hoặc `1` | `0` |
 | `WALLET_MIN_BALANCE_DONG` | Ngưỡng tối thiểu để bắt đầu phiên; để trống thì tự tính 5 kWh theo giá kWh cao nhất trong các biểu giá đang hiệu lực | Đồng | `5 kWh × giá cao nhất` |
 | `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | Số lần gọi `GET /api/charge-points/check-code` mỗi tài khoản (quá mức trả 429 + `Retry-After`) | Lần/phút | `30` |
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
@@ -198,7 +206,7 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | Kế toán | `ACCOUNTANT` | `#/accountant` | Khung trống (chờ sprint tính tiền) |
 | Tài xế | `DRIVER` | `#/driver` | Tự đăng ký/đăng nhập, giao diện điện thoại; chưa có chức năng sạc |
 
-Menu của chức năng chưa có backend bị **ẩn** (`frontend/app/workspace.js`, mỗi mục ghi story sẽ bật nó): phiên sạc, cảnh báo, điều khiển từ xa, hiệu suất, doanh thu, đối soát, ví, tìm trạm…
+Menu của chức năng chưa có backend bị **ẩn** (`frontend/app/workspace.js`, mỗi mục ghi story sẽ bật nó): cảnh báo, điều khiển từ xa, hiệu suất, doanh thu, đối soát, tìm trạm… Tài xế hiện có phiên sạc, ví và thông báo trong workspace riêng.
 
 ### Tạo tài khoản
 

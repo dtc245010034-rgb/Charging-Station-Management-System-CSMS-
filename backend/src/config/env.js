@@ -59,6 +59,21 @@ const schema = z.object({
     z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional()
   ),
   WALLET_AUDIT_INTERVAL_MS: z.coerce.number().int().positive().default(300000),
+  SANDBOX_GATEWAY: z.coerce.number().int().min(0).max(1).default(0),
+  PAYMENT_WEBHOOK_SECRET: z.string().min(32).optional(),
+  INTERNAL_BASE_URL: z.preprocess(
+    (value) => value === '' ? undefined : value,
+    z.string().url().optional()
+  ),
+  EMAIL_TRANSPORT: z.enum(['log', 'smtp']).default('log'),
+}).superRefine((data, ctx) => {
+  if (data.SANDBOX_GATEWAY === 1 && (!data.PAYMENT_WEBHOOK_SECRET || data.PAYMENT_WEBHOOK_SECRET.length < 32)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'PAYMENT_WEBHOOK_SECRET bắt buộc và phải có ít nhất 32 ký tự khi SANDBOX_GATEWAY=1',
+      path: ['PAYMENT_WEBHOOK_SECRET'],
+    });
+  }
 });
 
 const parsed = schema.safeParse(process.env);

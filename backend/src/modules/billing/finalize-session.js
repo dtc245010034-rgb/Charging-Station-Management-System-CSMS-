@@ -287,10 +287,19 @@ async function finalizeSession(sessionId, {
   logError = console.error,
 } = {}) {
   try {
-    return await withTransaction(
+    const outcome = await withTransaction(
       (client) => finalizeInTransaction(client, sessionId, now(), maxWaitMinutes),
       poolInstance
     );
+    if (outcome.status === 'FINAL' && outcome.invoice?.lines?.some((line) => line.kind === 'IDLE')) {
+      await require('../notifications/notify').notifySessionEvent({
+        sessionId,
+        kind: 'IDLE_FEE_STARTED',
+        db: poolInstance || require('../../db/pool').pool,
+        logError,
+      });
+    }
+    return outcome;
   } catch (error) {
     await markError(sessionId, poolInstance, error, logError);
     return { status: 'ERROR', reason: 'FINALIZATION_FAILED' };

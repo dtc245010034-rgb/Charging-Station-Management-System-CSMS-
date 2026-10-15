@@ -141,6 +141,17 @@ describe('S-02 frontend: router', () => {
     assert.ok(driverPages.includes('history'));
   });
 
+  it('S-59: trang thông báo và mục điều hướng chỉ dành cho tài xế', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { visibleNav } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    const driverPages = visibleNav('driver', 'DRIVER', can).flatMap((group) => group.items.map((item) => item.page));
+    assert.strictEqual(typeof pageLoader('notifications', 'driver'), 'function');
+    assert.strictEqual(pageLoader('notifications', 'admin'), null);
+    assert.strictEqual(PAGE_NEEDS.notifications, 'notifications:read-own');
+    assert.ok(driverPages.includes('notifications'));
+  });
+
   it('S-40: trang ví chỉ hiện và tải cho tài xế', async () => {
     const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
     const { visibleNav, WORKSPACES } = await load('app/workspace.js');

@@ -100,6 +100,7 @@ export const WORKSPACES = {
           { page: 'sessions', label: 'Phiên sạc', icon: 'bolt', enabled: true, needs: 'sessions:read-own' },
           { page: 'history', label: 'Lịch sử', icon: 'history', enabled: true, needs: 'sessions:read-own' },
           { page: 'wallet', label: 'Ví', icon: 'wallet', enabled: true, needs: 'wallets:read-own' },
+          { page: 'notifications', label: 'Thông báo', icon: 'bell', enabled: true, needs: 'notifications:read-own' },
           { page: 'account', label: 'Tài khoản', icon: 'user', enabled: true },
         ],
       },
