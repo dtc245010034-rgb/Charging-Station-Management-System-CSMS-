@@ -6,9 +6,22 @@ const { computeSignature } = require('./hmac');
 const router = secureRouter();
 const PUBLIC = { access: 'public' };
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 async function dispatchWebhook({ payload, signatureOverride }) {
   const rawBody = JSON.stringify(payload);
-  const secret = env.PAYMENT_WEBHOOK_SECRET || 'test-secret-0123456789abcdef0123456789abcd';
+  const secret = env.PAYMENT_WEBHOOK_SECRET;
+  if (!secret) {
+    throw new Error('PAYMENT_WEBHOOK_SECRET chưa được cấu hình');
+  }
   const signature = signatureOverride || computeSignature(secret, rawBody);
   const baseUrl = env.INTERNAL_BASE_URL || `http://127.0.0.1:${env.PORT || 3000}`;
 
@@ -75,8 +88,8 @@ router.get('/pay', PUBLIC, async (req, res) => {
   <div class="card">
     <h1>Cổng Thanh Toán Giả Lập <span class="badge">SANDBOX</span></h1>
     <div class="info">
-      <div class="info-row"><span>Mã giao dịch:</span><strong>${topup.order_ref}</strong></div>
-      <div class="info-row"><span>Trạng thái:</span><span>${topup.status}</span></div>
+      <div class="info-row"><span>Mã giao dịch:</span><strong>${escapeHtml(topup.order_ref)}</strong></div>
+      <div class="info-row"><span>Trạng thái:</span><span>${escapeHtml(topup.status)}</span></div>
       <div class="info-row" style="margin-top: 12px; align-items: baseline;">
         <span>Số tiền:</span>
         <span class="amount">${amountFormatted} đ</span>
@@ -84,7 +97,7 @@ router.get('/pay', PUBLIC, async (req, res) => {
     </div>
 
     <form method="POST" action="/sandbox-gateway/action">
-      <input type="hidden" name="orderRef" value="${topup.order_ref}">
+      <input type="hidden" name="orderRef" value="${escapeHtml(topup.order_ref)}">
 
       <div class="section-title">Kịch bản cơ bản</div>
       <div class="btn-group">

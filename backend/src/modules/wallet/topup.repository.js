@@ -62,7 +62,7 @@ async function updateTopupStatus({
     `UPDATE wallet_topups
      SET status = $1,
          gateway_txn_id = COALESCE($2, gateway_txn_id),
-         failure_reason = COALESCE($${allowedCurrentStatuses.length + 3}, failure_reason),
+         failure_reason = CASE WHEN $1 = 'SUCCESS' THEN NULL ELSE COALESCE($${allowedCurrentStatuses.length + 3}, failure_reason) END,
          completed_at = CASE WHEN $1 IN ('SUCCESS','FAILED','CANCELLED') THEN CURRENT_TIMESTAMP ELSE completed_at END
      WHERE order_ref = $${allowedCurrentStatuses.length + 4}
        AND status IN (${placeholders})

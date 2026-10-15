@@ -12,30 +12,15 @@ const env = require('../../config/env');
 
 const router = secureRouter();
 
-// Rate-limiter đơn giản theo IP dùng bộ nhớ trong (1 tiến trình).
+const { createRateLimiter } = require('../../lib/rate-limit');
+
+// Rate-limiter theo IP dùng chuẩn createRateLimiter (có trần maxKeys 10.000 chống OOM DoS).
 // Giới hạn: tối đa 30 webhook/phút từ cùng một IP.
-const RATE_LIMIT_MAX = 30;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const ipCounters = new Map(); // ip → { count, resetAt }
-
-function checkRateLimit(ip) {
-  const now = Date.now();
-  let entry = ipCounters.get(ip);
-  if (!entry || now >= entry.resetAt) {
-    entry = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
-    ipCounters.set(ip, entry);
-  }
-  entry.count += 1;
-  return entry.count <= RATE_LIMIT_MAX;
-}
-
-// Dọn bộ nhớ mỗi 5 phút để tránh rò rỉ.
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of ipCounters) {
-    if (now >= entry.resetAt) ipCounters.delete(ip);
-  }
-}, 300_000).unref();
+const webhookLimiter = createRateLimiter({
+  limit: 30,
+  windowMs: 60_000,
+  maxKeys: 10000,
+});
 
 // Middleware lấy raw body — phải đặt TRƯỚC express.json() trong app.js.
 const rawJsonBody = express.raw({ type: 'application/json', limit: '16kb' });
@@ -44,7 +29,8 @@ router.post('/payment', { access: 'public' }, rawJsonBody, async (req, res, next
   const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 
   // --- Rate limit theo IP ---
-  if (!checkRateLimit(ip)) {
+  const verdict = webhookLimiter.take(ip);
+  if (!verdict.allowed) {
     return res.status(429).json({ error: { code: 'RATE_LIMITED', message: 'Quá nhiều webhook từ IP này' } });
   }
 
