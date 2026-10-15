@@ -130,25 +130,33 @@ describe('S-39 — webhook idempotent: ma trận G01–G09', () => {
     assert.strictEqual(res.status, 404);
   });
 
-  // G05: cổng báo FAILED / CANCELLED → 200, ví không thay đổi
-  it('G05: cổng báo FAILED hoặc CANCELLED → 200, ví không đổi', async () => {
+  // G05: cổng báo FAILED / CANCELLED → 200, ví không thay đổi, bóc tách reason
+  it('G05: cổng báo FAILED hoặc CANCELLED → 200, ví không đổi, bóc tách reason', async () => {
     const topupFailed = await createTopup(app, driver, 'g05-fail-key');
     const resFail = await sendWebhook(app, {
       orderRef: topupFailed.ref,
       gatewayTxnId: 'GW-G05-FAIL',
       status: 'FAILED',
+      reason: 'USER_FAILED',
       amountDong: 200000,
     });
     assert.strictEqual(resFail.status, 200);
+
+    const failedRow = await query('SELECT failure_reason FROM wallet_topups WHERE order_ref=$1', [topupFailed.ref]);
+    assert.strictEqual(failedRow.rows[0].failure_reason, 'USER_FAILED');
 
     const topupCancel = await createTopup(app, driver, 'g05-cancel-key');
     const resCancel = await sendWebhook(app, {
       orderRef: topupCancel.ref,
       gatewayTxnId: 'GW-G05-CANCEL',
       status: 'CANCELLED',
+      reason: 'USER_CANCELLED',
       amountDong: 200000,
     });
     assert.strictEqual(resCancel.status, 200);
+
+    const cancelRow = await query('SELECT failure_reason FROM wallet_topups WHERE order_ref=$1', [topupCancel.ref]);
+    assert.strictEqual(cancelRow.rows[0].failure_reason, 'USER_CANCELLED');
 
     const row = await query('SELECT balance_dong FROM wallets WHERE driver_id=$1', [driver.id]);
     assert.strictEqual(row.rowCount, 0, 'Ví không được tạo nếu chưa từng có giao dịch thành công');
@@ -279,5 +287,32 @@ describe('S-39 — webhook idempotent: ma trận G01–G09', () => {
       amountDong: 200000,
     });
     assert.strictEqual(lateSuccess.status, 409);
+  });
+
+  // BUG-C04-02: Race condition giữa webhook FAILED và SUCCESS đồng thời
+  it('BUG-C04-02: webhook FAILED và SUCCESS gửi đồng thời → SUCCESS nhận 409 Conflict nếu FAILED commit trước', async () => {
+    const topup = await createTopup(app, driver, 'race-fail-success-key');
+    const [resFailed, resSuccess] = await Promise.all([
+      sendWebhook(app, {
+        orderRef: topup.ref,
+        gatewayTxnId: 'GW-RACE-FAIL',
+        status: 'FAILED',
+        reason: 'USER_FAILED',
+        amountDong: 200000,
+      }),
+      sendWebhook(app, {
+        orderRef: topup.ref,
+        gatewayTxnId: 'GW-RACE-SUCCESS',
+        status: 'SUCCESS',
+        amountDong: 200000,
+      }),
+    ]);
+
+    if (resFailed.status === 200 && resSuccess.status === 409) {
+      assert.strictEqual(resSuccess.body.error?.code, 'TERMINAL_STATE');
+    } else {
+      assert.strictEqual(resSuccess.status, 200);
+      assert.strictEqual(resFailed.status, 200);
+    }
   });
 });

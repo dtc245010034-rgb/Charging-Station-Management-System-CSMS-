@@ -58,7 +58,7 @@ router.post('/payment', { access: 'public' }, rawJsonBody, async (req, res, next
     return res.status(400).json({ error: { code: 'INVALID_JSON', message: 'Thân webhook không phải JSON hợp lệ' } });
   }
 
-  const { orderRef, gatewayTxnId, status, amountDong } = payload;
+  const { orderRef, gatewayTxnId, status, amountDong, reason } = payload;
 
   // --- Validate trường bắt buộc ---
   if (!orderRef || typeof orderRef !== 'string'
@@ -116,7 +116,17 @@ router.post('/payment', { access: 'public' }, rawJsonBody, async (req, res, next
 
       if (!updated) {
         // Race: đơn đã được cập nhật bởi request song song
+        const current = await findByRef(orderRef, client);
         await client.query('ROLLBACK');
+        if (current && ['FAILED', 'CANCELLED'].includes(current.status)) {
+          console.warn(`[webhook] Race condition: SUCCESS tới sau khi đơn đã chuyển sang ${current.status}: orderRef=${orderRef} ip=${ip}`);
+          return res.status(409).json({
+            error: {
+              code: 'TERMINAL_STATE',
+              message: 'Đơn nạp đã ở trạng thái cuối, không thể cập nhật thành SUCCESS',
+            },
+          });
+        }
         return res.status(200).json({ ok: true, duplicate: true });
       }
 
@@ -143,11 +153,12 @@ router.post('/payment', { access: 'public' }, rawJsonBody, async (req, res, next
 
     } else {
       // FAILED hoặc CANCELLED
+      const failureReason = (typeof reason === 'string' && reason.trim()) ? reason.trim() : status;
       const updated = await updateTopupStatus({
         orderRef,
         newStatus: status,
         gatewayTxnId,
-        failureReason: status,
+        failureReason,
         allowedCurrentStatuses: ['PENDING', 'EXPIRED'],
       }, client);
 
