@@ -44,8 +44,8 @@
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
   --focus-ring: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--brand-primary);
 
-  --sidebar-w: 208px;
-  --topbar-h: 52px;
+  --sidebar-w: 232px;
+  --topbar-h: 60px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
