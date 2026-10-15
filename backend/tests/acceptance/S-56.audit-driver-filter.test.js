@@ -65,7 +65,8 @@ describe('S-56 audit log driver filter', { concurrency: false }, () => {
   });
 
   it('migration 037 có thể chạy tiến, lùi rồi tiến lại', async () => {
-    assert.equal(await rollbackLastMigration(), true);
+    const migration = '037_audit_logs_driver_id_index.sql';
+    assert.equal(await rollbackLastMigration(migration), true);
     assert.equal((await query(
       `SELECT 1 FROM pg_indexes
        WHERE schemaname = current_schema()

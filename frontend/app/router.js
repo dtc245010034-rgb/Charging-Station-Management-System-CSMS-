@@ -22,6 +22,7 @@ export const PAGE_NEEDS = {
   start: 'remote-start:create',
   tariffs: 'tariffs:read',
   revenue: 'reports:revenue',
+  periods: 'periods:manage',
 };
 
 const fleetOverview = () => import('../pages/shared/fleet-overview.js');
@@ -71,6 +72,7 @@ const PAGES = {
   account: () => import('../pages/shared/account.js'),
   tariffs: () => import('../pages/shared/tariffs.js'),
   revenue: () => import('../pages/shared/revenue.js'),
+  periods: () => import('../pages/shared/periods.js'),
 };
 
 export function pageLoader(page, workspace) {

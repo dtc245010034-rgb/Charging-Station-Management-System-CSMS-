@@ -83,7 +83,7 @@ export const WORKSPACES = {
         items: [
           { page: 'unexpected-sessions', label: 'Phiên bất thường', icon: 'alert', enabled: true, needs: 'sessions:unexpected:read' },
           { page: 'reconciliation', label: 'Đối soát', icon: 'activity', enabled: false, since: 'S-53' },
-          { page: 'periods', label: 'Kỳ đối soát', icon: 'calendar', enabled: false, since: 'S-55' },
+          { page: 'periods', label: 'Kỳ đối soát', icon: 'calendar', enabled: true, needs: 'periods:manage' },
         ],
       },
     ],

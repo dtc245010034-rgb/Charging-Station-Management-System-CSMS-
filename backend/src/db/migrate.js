@@ -27,19 +27,24 @@ async function migrate() {
   }
 }
 
-async function rollbackLastMigration() {
+async function rollbackLastMigration(version = null) {
   const client = await pool.connect();
   try {
-    const applied = await client.query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+    const applied = await client.query(
+      version
+        ? 'SELECT version FROM schema_migrations WHERE version = $1 ORDER BY id DESC LIMIT 1'
+        : 'SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1',
+      version ? [version] : []
+    );
     if (!applied.rowCount) return false;
-    const version = applied.rows[0].version;
-    const downFile = path.resolve(__dirname, '../../migrations', version.replace(/\.sql$/, '.down.sql'));
+    const target = applied.rows[0].version;
+    const downFile = path.resolve(__dirname, '../../migrations', target.replace(/\.sql$/, '.down.sql'));
     await client.query('BEGIN');
     try {
       await client.query(await fs.readFile(downFile, 'utf8'));
-      await client.query('DELETE FROM schema_migrations WHERE version = $1', [version]);
+      await client.query('DELETE FROM schema_migrations WHERE version = $1', [target]);
       await client.query('COMMIT');
-      console.log(`Rolled back migration ${version}`);
+      console.log(`Rolled back migration ${target}`);
       return true;
     } catch (error) {
       await client.query('ROLLBACK');

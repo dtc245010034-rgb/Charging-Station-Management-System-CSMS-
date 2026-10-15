@@ -53,3 +53,10 @@ export const reports = {
   },
 };
 
+export const periods = {
+  list: () => api('/api/accounting/periods'),
+  close: (month) => api(`/api/accounting/periods/${encodeURIComponent(month)}/close`, { method: 'POST', body: {} }),
+  reopen: (month, reason) => api(`/api/accounting/periods/${encodeURIComponent(month)}/reopen`, { method: 'POST', body: { reason } }),
+};
+
+
