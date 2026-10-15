@@ -20,6 +20,7 @@ const { startRemoteStopTimeoutJob } = require('./modules/sessions/remote-stop-jo
 const { startAbnormalSessionJob } = require('./modules/sessions/abnormal-job');
 const { startBillingFinalizationJob } = require('./modules/billing/finalization-job');
 const { startWalletAuditJob } = require('./modules/wallet/wallet-audit-job');
+const { startTopupExpiryJob } = require('./modules/payments/topup-expiry-job');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
@@ -103,12 +104,14 @@ let stopRemoteStopJob = () => {};
 let stopAbnormalSessionJob = () => {};
 let stopBillingFinalizationJob = () => {};
 let stopWalletAuditJob = () => {};
+let stopTopupExpiryJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();
 	stopRemoteStopJob();
 	stopAbnormalSessionJob();
 	stopBillingFinalizationJob();
 	stopWalletAuditJob();
+	stopTopupExpiryJob();
 	if (purgeTimer) clearInterval(purgeTimer);
 	shutdown(signal);
 });
@@ -136,6 +139,9 @@ async function start() {
 	stopWalletAuditJob = startWalletAuditJob({
 		db: pool,
 		intervalMs: env.WALLET_AUDIT_INTERVAL_MS,
+	}).stop;
+	stopTopupExpiryJob = startTopupExpiryJob({
+		db: pool,
 	}).stop;
 	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
 }
