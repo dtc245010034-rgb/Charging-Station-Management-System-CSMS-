@@ -25,6 +25,8 @@ export const PERMISSIONS = {
   'wallets:read-own': ['DRIVER'],
   'wallets:read': ['ADMIN', 'ACCOUNTANT'],
   'wallets:manage': ADMIN,
+  'wallets:topup': ['DRIVER'],
+  'notifications:read-own': ['DRIVER'],
   'audit-logs:read': ['ADMIN'],
   'tariffs:read': ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT'],
   'tariffs:write': WRITE,

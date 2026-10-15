@@ -10,6 +10,7 @@ const {
 } = require('../../lib/schemas');
 const walletReadService = require('./wallet-read.service');
 const walletAdminService = require('./wallet-admin.service');
+const topupService = require('./topup.service');
 
 const router = secureRouter();
 const readAccess = [...access('wallets:read-own'), ...access('wallets:read')];
@@ -46,6 +47,15 @@ router.post('/admin/wallets/:driverId/unlock', { access: access('wallets:manage'
 router.get('/admin/wallets', { access: access('wallets:manage') }, async (req, res) => {
   const { query } = walletSearchQuery.parse(req.query);
   res.json(await walletAdminService.searchDrivers(query));
+});
+
+router.post('/me/wallet/topups', { access: access('wallets:topup') }, async (req, res) => {
+  const idempotencyKey = req.get('Idempotency-Key');
+  res.status(201).json(await topupService.createTopup(req.user, req.body || {}, idempotencyKey));
+});
+
+router.get('/me/wallet/topups/:ref', { access: access('wallets:topup') }, async (req, res) => {
+  res.json(await topupService.getTopup(req.user, req.params.ref));
 });
 
 module.exports = router;
