@@ -97,8 +97,10 @@ describe('migration 038: wallet_topups table [GYM-61]', () => {
   });
 
   it('AC GYM-61: rollback migration 038 gỡ wallet_topups sạch và có thể migrate up lại', async () => {
-    const down = run('src/db/migrate.js', ['down']);
-    assert.strictEqual(down.status, 0, down.stderr);
+    while ((await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1')).rows[0]?.version !== '037_audit_logs_driver_id_index.sql') {
+      const down = run('src/db/migrate.js', ['down']);
+      assert.strictEqual(down.status, 0, down.stderr);
+    }
 
     const tableAfterDown = await query(
       "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'wallet_topups'"
