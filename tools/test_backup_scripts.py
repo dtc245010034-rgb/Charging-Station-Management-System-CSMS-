@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BACKUP_SCRIPT = ROOT / "tools" / "backup-db.sh"
+RESTORE_SCRIPT = ROOT / "tools" / "restore-db.sh"
 SQL_DUMP = "CREATE TABLE private_data(value text);\nINSERT INTO private_data VALUES ('backup-fixture');\n"
 
 
@@ -42,6 +43,11 @@ class BackupScripts(unittest.TestCase):
             "  case \"$*\" in\n"
             "    *'compose version'*) return 0 ;;\n"
             f"    *pg_dump*) printf '%s' '{dump}' | base64 -d ;;\n"
+            "    *'SELECT 1 FROM pg_database'*) [ \"${MOCK_DB_EXISTS:-1}\" = '1' ] && echo 1 || true ;;\n"
+            "    *'SELECT count(*)'*) echo \"${MOCK_TABLE_COUNT:-0}\" ;;\n"
+            "    *'CREATE DATABASE'*) return 0 ;;\n"
+            "    *'DROP DATABASE'*) return 0 ;;\n"
+            "    *'exec -T db psql'*) [ -n \"${MOCK_RESTORE_CAPTURE_FILE:-}\" ] && cat > \"$MOCK_RESTORE_CAPTURE_FILE\" || cat > /dev/null ;;\n"
             "    *) echo 'unexpected docker command' >&2; return 2 ;;\n"
             "  esac\n"
             "}\n"
@@ -147,6 +153,93 @@ class BackupScripts(unittest.TestCase):
         self.assertNotIn("csms-20260102-000000.sql.enc", archives)
         self.assertIn("csms-20260103-000000.sql.enc", archives)
 
+    def create_encrypted_archive(self, content=SQL_DUMP, passphrase="test-backup-passphrase-only", name="csms-fixture.sql.enc"):
+        archive = self.backups / name
+        proc = subprocess.run(
+            [
+                self.openssl, "enc", "-aes-256-cbc", "-pbkdf2", "-salt",
+                "-pass", "env:BACKUP_PASSPHRASE", "-out", str(archive),
+            ],
+            input=content.encode("utf-8"),
+            env={**os.environ, "BACKUP_PASSPHRASE": passphrase},
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr.decode(errors="replace"))
+        return archive
+
+    def run_restore(self, archive, target_db, **extra):
+        env = os.environ.copy()
+        shell_path = self.shell_path
+        path_entries = []
+        if self.git_root:
+            path_entries.extend([self.git_root / "usr" / "bin", self.git_root / "bin"])
+        path_entries.extend(Path(entry) for entry in env.get("PATH", "").split(os.pathsep) if entry)
+        env.update({
+            "PATH": ":".join(shell_path(entry) for entry in path_entries),
+            "HOME": shell_path(self.root),
+            "BASH_ENV": self.bash_env,
+        })
+        env.update(extra)
+        return subprocess.run(
+            [self.bash, self.shell_path(RESTORE_SCRIPT), self.shell_path(archive), target_db],
+            cwd=ROOT,
+            env=env,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            check=False,
+        )
+
+    def test_restore_refuses_when_target_database_has_tables(self):
+        archive = self.create_encrypted_archive()
+        result = self.run_restore(
+            archive,
+            "csms_target_occupied",
+            BACKUP_PASSPHRASE="test-backup-passphrase-only",
+            MOCK_DB_EXISTS="1",
+            MOCK_TABLE_COUNT="5",
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("Cơ sở dữ liệu đích phải trống; từ chối ghi đè", result.stderr)
+
+    def test_restore_requires_passphrase_for_encrypted_archive(self):
+        archive = self.create_encrypted_archive()
+        result = self.run_restore(archive, "csms_target_clean")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("BACKUP_PASSPHRASE", result.stderr)
+
+    def test_restore_rejects_unsupported_archive_extension(self):
+        bad_archive = self.backups / "invalid.tar.gz"
+        bad_archive.write_bytes(b"bad content")
+        result = self.run_restore(bad_archive, "csms_target_clean", BACKUP_PASSPHRASE="any")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("Định dạng sao lưu phải là .sql.enc", result.stderr)
+
+        sql_archive = self.backups / "plain.sql"
+        sql_archive.write_bytes(b"SELECT 1;")
+        res_plain = self.run_restore(sql_archive, "csms_target_clean", BACKUP_ALLOW_PLAINTEXT="0")
+        self.assertEqual(res_plain.returncode, 2)
+        self.assertIn("Chỉ khôi phục SQL rõ khi BACKUP_ALLOW_PLAINTEXT=1", res_plain.stderr)
+
+    def test_restore_encrypted_archive_into_clean_db_success(self):
+        passphrase = "test-restore-secret"
+        archive = self.create_encrypted_archive(passphrase=passphrase)
+        capture = self.root / "restored.sql"
+        result = self.run_restore(
+            archive,
+            "csms_target_clean",
+            BACKUP_PASSPHRASE=passphrase,
+            MOCK_DB_EXISTS="0",
+            MOCK_RESTORE_CAPTURE_FILE=self.shell_path(capture),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Đã khôi phục vào cơ sở dữ liệu csms_target_clean", result.stdout)
+        self.assertTrue(capture.exists())
+        self.assertEqual(capture.read_text(encoding="utf-8"), SQL_DUMP)
+
 
 if __name__ == "__main__":
     unittest.main()
+
