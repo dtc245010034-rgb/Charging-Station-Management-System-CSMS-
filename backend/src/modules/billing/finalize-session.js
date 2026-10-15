@@ -74,19 +74,33 @@ async function findInvoice(client, sessionId) {
 
 async function markError(sessionId, poolInstance, error, logError) {
   const database = poolInstance || require('../../db/pool').pool;
+  const isPeriodClosed = String(error?.message || '').toLowerCase().includes('accounting period is closed');
+  const billingReason = isPeriodClosed ? 'PERIOD_CLOSED' : 'FINALIZATION_FAILED';
   try {
     await database.query(
       `UPDATE charging_sessions
        SET billing_status = 'ERROR',
-           billing_reason = 'FINALIZATION_FAILED',
+           billing_reason = $2,
            billing_attempts = billing_attempts + 1,
-           billing_next_at = CURRENT_TIMESTAMP
-             + make_interval(secs => LEAST(600, 30 * (1 << LEAST(billing_attempts + 1, 5)))),
+           billing_next_at = CASE WHEN $2 = 'PERIOD_CLOSED' THEN NULL
+             ELSE CURRENT_TIMESTAMP + make_interval(secs => LEAST(600, 30 * (1 << LEAST(billing_attempts + 1, 5)))) END,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 AND status = 'COMPLETED'
          AND NOT EXISTS (SELECT 1 FROM session_invoices WHERE session_id = $1)`,
-      [sessionId]
+      [sessionId, billingReason]
     );
+
+    if (isPeriodClosed) {
+      try {
+        const audit = require('../audit/audit.repository');
+        await audit.record(null, 'BILLING_ERROR', 'charging_sessions', sessionId, {
+          reason: 'PERIOD_CLOSED',
+          message: sanitizeErrorMessage(error?.message || error),
+        }, null, database, 'ERROR');
+      } catch {
+        // Ghi phụ không làm hỏng thao tác
+      }
+    }
   } catch (updateError) {
     logError(
       `[Billing] Không thể ghi trạng thái ERROR cho phiên ${sessionId}:`,
@@ -293,7 +307,8 @@ async function finalizeSession(sessionId, {
     );
   } catch (error) {
     await markError(sessionId, poolInstance, error, logError);
-    return { status: 'ERROR', reason: 'FINALIZATION_FAILED' };
+    const isPeriodClosed = String(error?.message || '').toLowerCase().includes('accounting period is closed');
+    return { status: 'ERROR', reason: isPeriodClosed ? 'PERIOD_CLOSED' : 'FINALIZATION_FAILED' };
   }
 }
 
