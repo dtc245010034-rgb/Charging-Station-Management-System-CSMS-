@@ -48,7 +48,7 @@ export const WORKSPACES = {
           { page: 'charge-points', label: 'Trụ sạc', icon: 'charger', enabled: true, needs: 'charge-points:read' },
           { page: 'tariffs', label: 'Biểu giá', icon: 'sliders', enabled: true, needs: 'tariffs:read' },
           { page: 'map', label: 'Bản đồ', icon: 'map', enabled: true, needs: 'stations:read' },
-          { page: 'revenue', label: 'Doanh thu', icon: 'activity', enabled: false, since: 'S-52' },
+          { page: 'revenue', label: 'Doanh thu', icon: 'activity', enabled: true, needs: 'reports:revenue' },
         ],
       },
     ],

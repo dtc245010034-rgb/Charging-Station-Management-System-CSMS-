@@ -44,3 +44,12 @@ export const tariffs = {
   list: (stationId) => api(`/api/stations/${encodeURIComponent(stationId)}/tariffs`),
   create: (stationId, body) => api(`/api/stations/${encodeURIComponent(stationId)}/tariffs`, { method: 'POST', body }),
 };
+
+export const reports = {
+  revenue: ({ from, to, stationId } = {}) => {
+    const params = new URLSearchParams({ from, to });
+    if (stationId) params.set('stationId', stationId);
+    return api(`/api/reports/revenue?${params.toString()}`);
+  },
+};
+
