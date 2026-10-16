@@ -49,6 +49,7 @@ describe('rebalanceStation', () => {
     const sent = [];
     const rebalancer = createPowerRebalancer({
       pool,
+      onProfileRejected: async () => {},
       commandSender: {
         async send(code, action, payload) {
           sent.push({ code, action, payload });
@@ -119,6 +120,7 @@ describe('rebalanceStation', () => {
     let maxInFlight = 0;
     const rebalancer = createPowerRebalancer({
       pool,
+      onProfileRejected: async () => {},
       commandSender: {
         async send() {
           inFlight += 1;
@@ -151,6 +153,7 @@ describe('rebalanceStation', () => {
       const { pool, logs } = createPool({ sessions: threeSessions.slice(0, 1) });
       const rebalancer = createPowerRebalancer({
         pool,
+        onProfileRejected: async () => {},
         commandSender: {
           async send() {
             if (outcome.error) throw outcome.error;
@@ -164,5 +167,24 @@ describe('rebalanceStation', () => {
       assert.strictEqual(result.sessions[0].status, outcome.expected);
       assert.strictEqual(logs[0].status, outcome.expected);
     }
+  });
+
+  it('handles rejected and unsupported profiles for remote stop and alerting', async () => {
+    const handled = [];
+    for (const response of [{ status: 'Rejected' }, { status: 'NotSupported' }]) {
+      const { pool } = createPool({ sessions: threeSessions.slice(0, 1) });
+      const rebalancer = createPowerRebalancer({
+        pool,
+        commandSender: { async send() { return response; } },
+        onProfileRejected: async (...args) => handled.push(args),
+      });
+
+      await rebalancer.rebalanceStation(7);
+    }
+
+    assert.deepStrictEqual(handled.map(([session, status]) => [session.session_id, status]), [
+      ['1', 'REJECTED'],
+      ['1', 'NOT_SUPPORTED'],
+    ]);
   });
 });

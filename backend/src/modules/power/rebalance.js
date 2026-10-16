@@ -2,33 +2,19 @@
 
 const { withTransaction } = require('../../db/tx');
 const { allocate } = require('./allocate');
-const { OcppCommandError } = require('../ocpp/commands');
-const { OcppRemoteCallError } = require('../ocpp/message-handler');
+const { buildChargingProfilePayload, commandFailure } = require('./profile-commands');
+const { createPowerProfileOutcomeHandler } = require('./profile-outcomes');
 
 function getDefaultPool() {
   return require('../../db/pool').pool;
 }
 
-function commandFailure(error) {
-  if (error instanceof OcppCommandError && error.code === 'OFFLINE') {
-    return { status: 'OFFLINE', reason: error.message };
-  }
-  if (/^(OCPP connection closed|Failed to send OCPP call:)/.test(error?.message || '')) {
-    return { status: 'OFFLINE', reason: error.message };
-  }
-  if (error instanceof OcppRemoteCallError || error?.name === 'OcppRemoteCallError') {
-    const status = error.code === 'NotSupported' ? 'NOT_SUPPORTED' : 'REJECTED';
-    return { status, reason: `${error.code}: ${error.message}` };
-  }
-  if (/^OCPP call timed out:/.test(error?.message || '')) {
-    return { status: 'TIMEOUT', reason: error.message };
-  }
-  throw error;
-}
-
-function createPowerRebalancer({ pool = null, commandSender } = {}) {
+function createPowerRebalancer({ pool = null, commandSender, onProfileRejected = null } = {}) {
   const db = pool || getDefaultPool();
   const stationQueues = new Map();
+  const profileOutcomes = onProfileRejected
+    ? { onProfileRejected }
+    : createPowerProfileOutcomeHandler({ db, commandSender });
 
   async function execute(stationId, reason) {
     const plan = await withTransaction(async (client) => {
@@ -89,20 +75,11 @@ function createPowerRebalancer({ pool = null, commandSender } = {}) {
          RETURNING id`,
         [stationId, session.charge_point_id, session.connector_id, session.session_id, transactionId, limitW, reason || 'UNKNOWN']
       );
-      const payload = {
-        connectorId: session.connector_no,
-        csChargingProfiles: {
-          chargingProfileId: session.connector_no,
-          transactionId,
-          stackLevel: 1,
-          chargingProfilePurpose: 'TxProfile',
-          chargingProfileKind: 'Absolute',
-          chargingSchedule: {
-            chargingRateUnit: 'W',
-            chargingSchedulePeriod: [{ startPeriod: 0, limit: limitW }],
-          },
-        },
-      };
+      const payload = buildChargingProfilePayload({
+        connector_no: session.connector_no,
+        transaction_id: transactionId,
+        limit_w: limitW,
+      });
 
       let status;
       let failureReason = null;
@@ -124,6 +101,13 @@ function createPowerRebalancer({ pool = null, commandSender } = {}) {
          WHERE id = $3`,
         [status, failureReason, log.rows[0].id]
       );
+      if (status === 'REJECTED' || status === 'NOT_SUPPORTED') {
+        await profileOutcomes.onProfileRejected(
+          { ...session, station_id: stationId, limit_w: limitW },
+          status,
+          failureReason
+        );
+      }
       results.push({ sessionId: session.session_id, limitW, status, reason: failureReason });
     }
 
