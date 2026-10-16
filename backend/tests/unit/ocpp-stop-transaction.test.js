@@ -119,7 +119,12 @@ describe('S-18 StopTransaction handler', () => {
       'REMOTE_STOP',
       'charging_session',
       17,
-      { reason: 'Remote', meter_stop: 1250, stopped_at: new Date(NOW).toISOString() },
+      {
+        charge_point_code: 'STOP-UNIT-CP',
+        reason: 'Remote',
+        meter_stop: 1250,
+        stopped_at: new Date(NOW).toISOString(),
+      },
       'STOPPED',
       null,
       pool,
