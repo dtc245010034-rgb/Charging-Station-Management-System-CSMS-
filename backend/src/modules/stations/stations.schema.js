@@ -1,9 +1,19 @@
 const { z } = require('zod');
+const { kilowattsToWatts } = require('../power/units');
 
 const REQUIRED = 'name và address là bắt buộc';
 const NO_STATUS = 'Trạm mới luôn ở trạng thái chưa hoạt động, không được chỉ định status';
+const POWER_KW_ERROR = 'Công suất phải từ 0,1 đến 100.000 kW và tối đa 1 chữ số thập phân';
 const status = z.enum(['ACTIVE', 'INACTIVE', 'MAINTENANCE'], { message: 'status không hợp lệ' });
 const text = (message) => z.string({ message }).trim().min(1, message);
+const powerKilowatts = z.union([z.string(), z.number()]).transform((value, context) => {
+  const watts = kilowattsToWatts(value);
+  if (watts === null) {
+    context.addIssue({ code: 'custom', message: POWER_KW_ERROR });
+    return z.NEVER;
+  }
+  return watts;
+});
 const coordinate = (label, min, max) => z.union([
   z.number().finite(),
   z.string().trim().regex(/^-?\d+(?:\.\d{1,8})?$/, `${label} phải có tối đa 8 chữ số thập phân`),
@@ -24,8 +34,15 @@ const createBody = z.object({
   latitude: coordinate('Vĩ độ', -90, 90),
   longitude: coordinate('Kinh độ', -180, 180),
   timezone: timezoneSchema.optional(),
+  power_limit_kw: powerKilowatts.nullable().optional(),
   status: z.undefined({ message: NO_STATUS }).optional(),
-}, { message: REQUIRED });
+}, { message: REQUIRED }).transform((data) => {
+  if (data.power_limit_kw !== undefined) {
+    data.power_limit_w = data.power_limit_kw;
+    delete data.power_limit_kw;
+  }
+  return data;
+});
 
 const updateBody = z.object({
   name: z.string().trim().min(1).optional(),
@@ -33,15 +50,26 @@ const updateBody = z.object({
   latitude: coordinate('Vĩ độ', -90, 90).optional(),
   longitude: coordinate('Kinh độ', -180, 180).optional(),
   timezone: timezoneSchema.optional(),
+  power_limit_kw: powerKilowatts.nullable().optional(),
   status: status.optional(),
 }).superRefine((data, context) => {
   if ((data.latitude !== undefined) !== (data.longitude !== undefined)) {
     context.addIssue({ code: 'custom', message: 'Vĩ độ và kinh độ phải được cập nhật cùng nhau', path: ['latitude'] });
   }
+}).transform((data) => {
+  if (data.power_limit_kw !== undefined) {
+    data.power_limit_w = data.power_limit_kw;
+    delete data.power_limit_kw;
+  }
+  return data;
 });
 
 const lockBody = z.object({
   locked: z.boolean({ message: 'locked phải là boolean' }),
 }, { message: 'Dữ liệu không hợp lệ' });
 
-module.exports = { createBody, updateBody, lockBody };
+const connectorPowerBody = z.object({
+  rated_power_kw: powerKilowatts.nullable(),
+}).transform(({ rated_power_kw }) => ({ rated_power_w: rated_power_kw }));
+
+module.exports = { createBody, updateBody, lockBody, connectorPowerBody };
