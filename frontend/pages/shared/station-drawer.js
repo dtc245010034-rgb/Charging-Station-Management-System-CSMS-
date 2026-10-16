@@ -101,6 +101,36 @@ function lockSection(station, reload) {
     button, error);
 }
 
+function operatingStatusSection(station, canWrite, reload) {
+  if (!canWrite) return null;
+  const active = station.status === 'ACTIVE';
+  const nextStatus = active ? 'MAINTENANCE' : 'ACTIVE';
+  const actionLabel = active ? 'Tạm ngừng' : 'Đưa vào hoạt động';
+  const error = h('p', { class: 'form-alert', role: 'alert', hidden: true });
+  const button = h('button', {
+    class: active ? 'btn btn--danger' : 'btn btn--primary',
+    type: 'button',
+    onclick: async () => {
+      button.disabled = true;
+      error.hidden = true;
+      try {
+        await csms.stations.update(station.id, { status: nextStatus });
+        toast(active ? 'Trạm đã tạm ngừng.' : 'Trạm đã được đưa vào hoạt động.');
+        await reload();
+      } catch (e) {
+        error.textContent = e.message;
+        error.hidden = false;
+        button.disabled = false;
+      }
+    },
+  }, icon(active ? 'alert' : 'station'), actionLabel);
+  return h('section', { class: 'stack' },
+    h('div', { class: 'section-title' }, 'Trạng thái trạm'),
+    h('div', {}, stationBadge(station.status)),
+    button,
+    error);
+}
+
 function render(station, { canWrite, canLock, onEdit, reload, onOpenChargePoint }) {
   const points = station.charge_points ?? [];
   return [
@@ -111,6 +141,7 @@ function render(station, { canWrite, canLock, onEdit, reload, onOpenChargePoint 
       h('dt', {}, 'Tổng công suất danh định'), h('dd', {}, formatKw(station.power?.ratedTotalKw ?? 0)),
       h('dt', {}, 'Vĩ độ'), h('dd', {}, coordinate(station.latitude)),
       h('dt', {}, 'Kinh độ'), h('dd', {}, coordinate(station.longitude))),
+    operatingStatusSection(station, canWrite, reload),
     h('section', {},
       h('div', { class: 'section-title' }, `Trụ sạc (${points.length})`),
       points.length

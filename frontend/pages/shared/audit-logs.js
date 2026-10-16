@@ -18,6 +18,7 @@ const ACTION_LABELS = {
   REMOTE_STOP: 'Dừng sạc từ xa',
   RESET: 'Khởi động lại trụ',
   SESSION_MANUALLY_CLOSED: 'Đóng phiên bất thường',
+  STATION_STATUS_CHANGED: 'Thay đổi trạng thái trạm',
   TARIFF_CREATED: 'Khai báo biểu giá',
   UNLOCK: 'Mở khoá trạm',
   UPDATE: 'Cập nhật',

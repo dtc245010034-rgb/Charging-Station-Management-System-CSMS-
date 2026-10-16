@@ -385,6 +385,7 @@ describe('S-02 frontend: router', () => {
       assert.ok(find(root, (node) => node.tag === 'td').some((node) => node.textContent === '203.0.113.42'));
       assert.ok(find(root, (node) => node.tag === 'span' && node.attributes.class === 'badge badge--ready').length > 0);
       assert.equal(auditActionLabel('UNKNOWN_ACTION'), 'UNKNOWN_ACTION');
+      assert.equal(auditActionLabel('STATION_STATUS_CHANGED'), 'Thay đổi trạng thái trạm');
       assert.equal(auditActionLabel('WALLET_TOPUP_MANUAL'), 'Nạp tiền vào ví');
       assert.equal(auditActionLabel('WALLET_ADJUST'), 'Điều chỉnh ví');
       assert.equal(auditActionLabel('WALLET_UNLOCK'), 'Mở khóa ví');

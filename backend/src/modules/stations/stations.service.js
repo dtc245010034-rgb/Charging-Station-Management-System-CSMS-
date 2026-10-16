@@ -155,8 +155,19 @@ async function update(actor, id, data) {
   if (station.status === 'ACTIVE' && changingCoordinates) {
     throw new BadRequestError('Hãy chuyển trạm sang INACTIVE trước khi sửa tọa độ');
   }
+  const changedFields = repo.UPDATABLE.filter((key) => data[key] !== undefined);
+  const statusChanged = data.status !== undefined && data.status !== station.status;
   await repo.update(id, data);
-  await audit.record(actor.id, 'UPDATE', 'station', id, { fields: repo.UPDATABLE.filter((key) => data[key] !== undefined) });
+  if (statusChanged) {
+    await audit.record(actor.id, 'STATION_STATUS_CHANGED', 'station', id, {
+      from: station.status,
+      to: data.status,
+    });
+    const otherFields = changedFields.filter((key) => key !== 'status');
+    if (otherFields.length) await audit.record(actor.id, 'UPDATE', 'station', id, { fields: otherFields });
+  } else {
+    await audit.record(actor.id, 'UPDATE', 'station', id, { fields: changedFields });
+  }
   return stationWithPower(await repo.findById(actor, id));
 }
 
