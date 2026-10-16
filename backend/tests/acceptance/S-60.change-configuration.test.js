@@ -126,13 +126,29 @@ describe('S-60 ChangeConfiguration', () => {
     });
   });
 
+  it('Accepted cho phép đổi MeterValueSampleInterval và đọc lại đúng giá trị', async () => {
+    const response = await sendConfiguration(operator.cookie, 'MeterValueSampleInterval', '30');
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: 'Accepted' });
+
+    const current = await readConfiguration(operator.cookie, 'MeterValueSampleInterval');
+    assert.equal(current.status, 200);
+    assert.deepEqual(await current.json(), {
+      key: 'MeterValueSampleInterval',
+      value: '30',
+      readonly: false,
+    });
+  });
+
   it('giữ nguyên trạng thái Accepted, Rejected, RebootRequired và NotSupported', async () => {
+    const resetCallsBefore = calls.filter((call) => call.action === 'Reset').length;
     for (const status of ['RebootRequired', 'Rejected', 'NotSupported']) {
       changeStatus = status;
       const response = await sendConfiguration(admin.cookie, 'MeterValueSampleInterval', '30');
       assert.equal(response.status, 200);
       assert.deepEqual(await response.json(), { status });
     }
+    assert.equal(calls.filter((call) => call.action === 'Reset').length, resetCallsBefore);
     changeStatus = 'Accepted';
   });
 
@@ -142,6 +158,7 @@ describe('S-60 ChangeConfiguration', () => {
       ['UnsupportedKey', '1'],
       ['HeartbeatInterval', '9'],
       ['HeartbeatInterval', '86401'],
+      ['HeartbeatInterval', '45.5'],
       ['MeterValueSampleInterval', '-1'],
       ['MeterValueSampleInterval', '3601'],
     ]) {
