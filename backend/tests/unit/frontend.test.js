@@ -83,6 +83,86 @@ describe('S-02 frontend: router', () => {
     assert.ok(pages('driver').includes('sessions'));
   });
 
+  it('S-47: Tìm trạm có menu và route chỉ cho tài xế với quyền stations:search', async () => {
+    const { visibleNav, WORKSPACES } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const driverPages = visibleNav('driver', WORKSPACES.driver.role, can).flatMap((group) => group.items.map((item) => item.page));
+
+    assert.ok(driverPages.includes('find'));
+    assert.strictEqual(typeof pageLoader('find', 'driver'), 'function');
+    assert.strictEqual(pageLoader('find', 'operator'), null);
+    assert.strictEqual(PAGE_NEEDS.find, 'stations:search');
+  });
+
+  it('S-47: chỉ xin vị trí sau khi bấm; từ chối vị trí vẫn tìm được theo q', async () => {
+    const saved = new Map();
+    const define = (name, value) => {
+      saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+      Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+    };
+    class Element {
+      constructor(tag) {
+        this.tag = tag;
+        this.attributes = {};
+        this.children = [];
+        this.listeners = {};
+        this.style = {};
+        this.disabled = false;
+        this.value = '';
+      }
+      setAttribute(name, value) { this.attributes[name] = String(value); }
+      addEventListener(name, handler) { this.listeners[name] = handler; }
+      append(...children) { this.children.push(...children); }
+      replaceChildren(...children) { this.children = children; }
+      get textContent() { return this.children.map((child) => child.textContent ?? '').join(''); }
+    }
+    let geoCalls = 0;
+    const requests = [];
+    define('Node', Element);
+    define('document', {
+      createElement: (tag) => new Element(tag),
+      createElementNS: (_namespace, tag) => new Element(tag),
+      createTextNode: (text) => ({ textContent: String(text) }),
+    });
+    define('navigator', { geolocation: {
+      getCurrentPosition: (_success, failure) => { geoCalls += 1; failure(new Error('denied')); },
+    } });
+    define('location', { pathname: '/app.html' });
+    define('fetch', async (url, options) => {
+      requests.push({ url, options });
+      return { ok: true, status: 200, json: async () => [] };
+    });
+
+    let dispose;
+    try {
+      const { render } = await load('pages/driver/find.js');
+      const root = new Element('root');
+      dispose = render({ root });
+      const find = (node, predicate) => [
+        ...(predicate(node) ? [node] : []),
+        ...node.children.flatMap((child) => child instanceof Element ? find(child, predicate) : []),
+      ];
+      assert.strictEqual(geoCalls, 0);
+      find(root, (node) => node.tag === 'button' && node.textContent === 'Vị trí hiện tại')[0].listeners.click();
+      assert.strictEqual(geoCalls, 1);
+      assert.ok(root.textContent.includes('Không có quyền vị trí'));
+
+      find(root, (node) => node.tag === 'input')[0].value = 'Bến Thành';
+      find(root, (node) => node.tag === 'form')[0].listeners.submit({ preventDefault() {} });
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.strictEqual(requests.length, 1);
+      assert.strictEqual(requests[0].url, '/api/stations/search');
+      assert.deepStrictEqual(JSON.parse(requests[0].options.body), { q: 'Bến Thành' });
+    } finally {
+      dispose?.();
+      for (const [name, descriptor] of saved) {
+        if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+        else delete globalThis[name];
+      }
+    }
+  });
+
   it('S-11 T-24: operator và owner có đường dẫn tới lưới trạng thái', async () => {
     const { visibleNav, WORKSPACES } = await load('app/workspace.js');
     const { can } = await load('app/permissions.js');

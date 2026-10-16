@@ -21,6 +21,7 @@ export const PAGE_NEEDS = {
   'unexpected-sessions': 'sessions:unexpected:read',
   'control-log': 'audit-logs:read',
   start: 'remote-start:create',
+  find: 'stations:search',
   tariffs: 'tariffs:read',
   revenue: 'reports:revenue',
   reconciliation: 'reports:reconcile',
@@ -41,6 +42,9 @@ const PAGES = {
   },
   start: {
     driver: () => import('../pages/driver/start.js'),
+  },
+  find: {
+    driver: () => import('../pages/driver/find.js'),
   },
   sessions: {
     driver: () => import('../pages/driver/session.js'),

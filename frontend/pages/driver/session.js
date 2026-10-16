@@ -96,7 +96,8 @@ export function render(ctx) {
           }, icon('bolt'), 'Bắt đầu sạc'),
         }))
       )
-    );
+      ),
+      h('a', { class: 'btn btn--block', href: '#/driver/find' }, icon('station'), 'Tìm trạm')
   }
 
   function setPower(session) {
