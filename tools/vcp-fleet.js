@@ -7,6 +7,7 @@
 
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
+const { profileResult, resolveSetChargingProfile, profileLimitW, meterReading } = require('./lib/charging-profile');
 
 // Nạp .env nếu có (dành cho chạy trực tiếp ngoài Docker)
 try {
@@ -45,6 +46,7 @@ function parseOptions(argv = process.argv.slice(2), env = process.env) {
     count: Math.max(1, parseInt(env.VCP_COUNT, 10) || 20),
     prefix: (env.VCP_PREFIX || 'VCP-').toUpperCase(),
     heartbeatInterval: Math.max(5, parseInt(env.VCP_HEARTBEAT_INTERVAL, 10) || 60),
+    profileResult: profileResult(env.VCP_PROFILE_RESULT || 'Accepted'),
     email: env.ADMIN_EMAIL || '',
     password: env.ADMIN_PASSWORD || '',
   };
@@ -56,6 +58,7 @@ function parseOptions(argv = process.argv.slice(2), env = process.env) {
     else if (arg === '--count' && val) { options.count = Math.max(1, parseInt(val, 10) || 20); i += 1; }
     else if (arg === '--prefix' && val) { options.prefix = val.toUpperCase(); i += 1; }
     else if (arg === '--heartbeat' && val) { options.heartbeatInterval = Math.max(5, parseInt(val, 10) || 60); i += 1; }
+    else if (arg === '--profile-result' && val) { options.profileResult = profileResult(val); i += 1; }
     else if (arg === '--email' && val) { options.email = val; i += 1; }
     else if (arg === '--password' && val) { options.password = val; i += 1; }
   }
@@ -177,7 +180,7 @@ async function ensureFleetProvisioned(api, options) {
 }
 
 class ManagedChargePoint {
-  constructor(code, wsBaseUrl, heartbeatInterval = 60) {
+  constructor(code, wsBaseUrl, heartbeatInterval = 60, setChargingProfileResult = 'Accepted') {
     this.code = code;
     this.wsBaseUrl = wsBaseUrl;
     this.heartbeatInterval = heartbeatInterval;
@@ -192,9 +195,11 @@ class ManagedChargePoint {
     // Trạng thái phiên sạc nội tại của trụ
     this.currentTransactionId = null;
     this.currentConnectorId = null;
+    this.currentChargingProfile = null;
     // Khắc phục LỖI 2: Thanh ghi năng lượng tích lũy đơn điệu tăng (Monotonically Increasing Accumulator)
     this.currentMeterWh = 10000;
     this.currentIdTag = 'TAG-DEMO-01';
+    this.setChargingProfileResult = profileResult(setChargingProfileResult);
   }
 
   async connect() {
@@ -306,7 +311,9 @@ class ManagedChargePoint {
     clearInterval(this.meterValuesTimer);
     this.meterValuesTimer = setInterval(async () => {
       if (this.socket && this.socket.readyState === WebSocket.OPEN && this.currentTransactionId === transactionId) {
-        this.currentMeterWh += 100; // Tích lũy 100 Wh mỗi kỳ báo cáo
+        const limitW = profileLimitW(this.currentChargingProfile, connectorId, transactionId);
+        const reading = meterReading(this.currentMeterWh, limitW);
+        this.currentMeterWh = reading.meterWh;
         this.currentSoC = Math.min(100, (this.currentSoC || 20) + 1); // Tăng tiến mức pin %
         await this.call('MeterValues', {
           connectorId,
@@ -321,7 +328,7 @@ class ManagedChargePoint {
                 unit: 'Wh',
               },
               {
-                value: '7200',
+                value: String(reading.powerW),
                 context: 'Sample.Periodic',
                 measurand: 'Power.Active.Import',
                 unit: 'W',
@@ -386,7 +393,11 @@ class ManagedChargePoint {
     if (frame[0] === 2) {
       const [, messageId, action, payload = {}] = frame;
 
-      if (action === 'Reset') {
+      if (action === 'SetChargingProfile') {
+        const result = resolveSetChargingProfile(payload, this.setChargingProfileResult);
+        if (result.status === 'Accepted') this.currentChargingProfile = result.profile;
+        this.socket.send(JSON.stringify([3, messageId, { status: result.status }]));
+      } else if (action === 'Reset') {
         this.socket.send(JSON.stringify([3, messageId, { status: 'Accepted' }]));
         setTimeout(() => this.reconnect(), 1000);
       } else if (action === 'RemoteStartTransaction') {
@@ -450,6 +461,9 @@ class ManagedChargePoint {
               reason: 'Remote',
             });
             this.currentTransactionId = null;
+            if (this.currentChargingProfile?.csChargingProfiles.transactionId === txIdToStop) {
+              this.currentChargingProfile = null;
+            }
 
             await this.call('StatusNotification', {
               connectorId: connIdToStop,
@@ -535,7 +549,12 @@ async function runFleet() {
   console.log(`[VCP] Đã kiểm tra/tạo ${codes.length} trụ sạc thành công.`);
 
   const wsBaseUrl = options.url.replace(/^http/i, 'ws').replace(/\/+$/, '');
-  const fleet = codes.map((code) => new ManagedChargePoint(code, wsBaseUrl, options.heartbeatInterval));
+  const fleet = codes.map((code) => new ManagedChargePoint(
+    code,
+    wsBaseUrl,
+    options.heartbeatInterval,
+    options.profileResult
+  ));
 
   console.log(`[VCP] Đang thiết lập kết nối OCPP 1.6J cho ${fleet.length} trụ...`);
   // Pacing 150ms để không vi phạm rate-limit bắt tay
