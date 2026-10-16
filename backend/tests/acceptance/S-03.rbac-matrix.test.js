@@ -39,6 +39,7 @@ describe('S-03 ma trận quyền Sprint 1 (PO đã xác nhận) trên API thật
   after(async () => { await resetSchema(); await closePool(); });
 
   const cases = [
+    { name: 'POST /api/stations/search', allowed: ['DRIVER'], ok: 200, call: (r) => r.post('/api/stations/search').send({ lat: 10.78, lng: 106.7 }) },
     { name: 'GET /api/stations', allowed: READ, ok: 200, call: (r) => r.get('/api/stations') },
     { name: 'GET /api/stations/:id', allowed: READ, ok: 200, call: (r, t) => r.get(`/api/stations/${t.stationId}`) },
     { name: 'GET /api/charge-points', allowed: READ, ok: 200, call: (r) => r.get('/api/charge-points') },

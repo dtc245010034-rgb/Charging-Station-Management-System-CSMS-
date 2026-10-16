@@ -13,6 +13,7 @@ const permissions = {
   'roles:read': ADMIN,
   'users:create': ADMIN,
   'stations:read': READ_OPERATIONS,
+  'stations:search': ['DRIVER'],
   'stations:write': WRITE_OPERATIONS,
   'charge-points:read': READ_OPERATIONS,
   'charge-points:read-driver': ['DRIVER'],

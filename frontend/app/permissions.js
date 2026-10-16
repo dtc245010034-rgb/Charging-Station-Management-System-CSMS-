@@ -8,6 +8,7 @@ export const PERMISSIONS = {
   'roles:read': ADMIN,
   'users:create': ADMIN,
   'stations:read': READ,
+  'stations:search': ['DRIVER'],
   'stations:write': WRITE,
   'charge-points:read': READ,
   'charge-points:read-driver': ['DRIVER'],

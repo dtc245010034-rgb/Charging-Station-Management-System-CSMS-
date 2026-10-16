@@ -12,6 +12,11 @@ const list = (actor) => {
     ${ratedTotalW} AS rated_total_w
     FROM stations s WHERE ${scope.sql} ORDER BY s.id DESC`).all(...scope.params);
 };
+const searchCandidates = () => prepare(
+  `SELECT id, name, address, latitude, longitude
+   FROM stations
+   WHERE status = 'ACTIVE' AND locked_at IS NULL`
+).all();
 const findById = (actor, id) => {
   const scope = scopeByOwner(actor, 's');
   return prepare(`SELECT s.*, ${ratedTotalW} AS rated_total_w FROM stations s WHERE s.id = ? AND ${scope.sql}`).get(id, ...scope.params);
@@ -64,6 +69,6 @@ const updateConnectorPower = (id, watts) => prepare(
 ).run(watts, id);
 
 module.exports = {
-  list, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, setLock, UPDATABLE,
+  list, searchCandidates, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, setLock, UPDATABLE,
   connectorById, connectorExistsById, updateConnectorPower,
 };

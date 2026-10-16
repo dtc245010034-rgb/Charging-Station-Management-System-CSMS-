@@ -72,4 +72,9 @@ const connectorPowerBody = z.object({
   rated_power_kw: powerKilowatts.nullable(),
 }).transform(({ rated_power_kw }) => ({ rated_power_w: rated_power_kw }));
 
-module.exports = { createBody, updateBody, lockBody, connectorPowerBody };
+const stationSearchBody = z.object({
+  lat: coordinate('Vĩ độ', -90, 90),
+  lng: coordinate('Kinh độ', -180, 180),
+});
+
+module.exports = { createBody, updateBody, lockBody, connectorPowerBody, stationSearchBody };

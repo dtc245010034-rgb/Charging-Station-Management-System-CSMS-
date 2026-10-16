@@ -8,6 +8,16 @@ const { BadRequestError, ConflictError } = require('../../lib/errors');
 const { wattsToKilowatts } = require('../power/units');
 
 const NOT_FOUND = 'Không tìm thấy trạm';
+const EARTH_RADIUS_KM = 6371.0088;
+
+function haversineDistanceKm(lat1, lng1, lat2, lng2) {
+  const toRadians = (degrees) => (degrees * Math.PI) / 180;
+  const latitudeDelta = toRadians(lat2 - lat1);
+  const longitudeDelta = toRadians(lng2 - lng1);
+  const a = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(longitudeDelta / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(a)));
+}
 
 function stationWithPower(station) {
   const totalW = BigInt(station.rated_total_w || 0);
@@ -23,6 +33,33 @@ function stationWithPower(station) {
 }
 
 const list = async (actor) => (await repo.list(actor)).map(stationWithPower);
+
+async function searchNearby({ lat, lng }) {
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+  const candidates = await repo.searchCandidates();
+  return candidates.map((station) => {
+    const stationLatitude = station.latitude === null ? NaN : Number(station.latitude);
+    const stationLongitude = station.longitude === null ? NaN : Number(station.longitude);
+    const rawDistanceKm = Number.isFinite(stationLatitude) && Number.isFinite(stationLongitude)
+      ? haversineDistanceKm(latitude, longitude, stationLatitude, stationLongitude)
+      : null;
+    return {
+      stationId: Number(station.id),
+      name: station.name,
+      address: station.address,
+      distanceKm: rawDistanceKm === null ? null : Math.round(rawDistanceKm * 10) / 10,
+      rawDistanceKm,
+    };
+  })
+    .sort((left, right) => {
+      if (left.rawDistanceKm === null) return right.rawDistanceKm === null ? left.stationId - right.stationId : 1;
+      if (right.rawDistanceKm === null) return -1;
+      return left.rawDistanceKm - right.rawDistanceKm || left.stationId - right.stationId;
+    })
+    .slice(0, 50)
+    .map(({ stationId, name, address, distanceKm }) => ({ stationId, name, address, distanceKm }));
+}
 
 async function find(actor, id) {
   const station = await repo.findById(actor, id);
@@ -112,4 +149,4 @@ async function setLock(actor, id, locked) {
   return repo.findById(actor, id);
 }
 
-module.exports = { list, get, create, update, setLock, setConnectorPower };
+module.exports = { list, searchNearby, get, create, update, setLock, setConnectorPower };

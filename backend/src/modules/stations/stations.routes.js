@@ -3,11 +3,14 @@ const { access } = require('../../security/permissions');
 const { idParam } = require('../../lib/schemas');
 const { BadRequestError } = require('../../lib/errors');
 const service = require('./stations.service');
-const { createBody, updateBody, lockBody, connectorPowerBody } = require('./stations.schema');
+const { createBody, updateBody, lockBody, connectorPowerBody, stationSearchBody } = require('./stations.schema');
 
 const router = secureRouter();
 
 router.get('/stations', { access: access('stations:read') }, async (req, res) => res.json(await service.list(req.user)));
+router.post('/stations/search', { access: access('stations:search') }, async (req, res) => {
+  res.json(await service.searchNearby(stationSearchBody.parse(req.body ?? {})));
+});
 router.post('/stations', { access: access('stations:write') }, async (req, res) => {
   const key = req.get('Idempotency-Key');
   if (!key) throw new BadRequestError('Thiếu header Idempotency-Key');
