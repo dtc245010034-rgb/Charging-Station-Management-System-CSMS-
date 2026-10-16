@@ -50,5 +50,8 @@ const update = (id, fields) => {
   return prepare(`UPDATE charge_points SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
     .run(...keys.map((key) => fields[key]), id);
 };
+const updateHeartbeatInterval = (id, interval) => prepare(
+  'UPDATE charge_points SET heartbeat_interval = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+).run(interval, id);
 
-module.exports = { list, findDetailById, findById, connectorsOf, stationInScope, codeAvailable, existsById, stationExists, insert, insertConnector, update, UPDATABLE };
+module.exports = { list, findDetailById, findById, connectorsOf, stationInScope, codeAvailable, existsById, stationExists, insert, insertConnector, update, updateHeartbeatInterval, UPDATABLE };

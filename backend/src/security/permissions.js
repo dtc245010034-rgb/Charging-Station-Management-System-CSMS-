@@ -18,6 +18,7 @@ const permissions = {
   'charge-points:read-driver': ['DRIVER'],
   'charge-points:write': WRITE_OPERATIONS,
   'charge-points:reset': ['ADMIN', 'OPERATOR'],
+  'charge-points:configure': ['ADMIN', 'OPERATOR'],
   'remote-start:create': ['DRIVER'],
   'stations:lock': ADMIN,
   'sessions:read-own': ['DRIVER'],

@@ -13,6 +13,7 @@ export const PERMISSIONS = {
   'charge-points:read-driver': ['DRIVER'],
   'charge-points:write': WRITE,
   'charge-points:reset': ['ADMIN', 'OPERATOR'],
+  'charge-points:configure': ['ADMIN', 'OPERATOR'],
   'remote-start:create': ['DRIVER'],
   'stations:lock': ADMIN,
   'sessions:read-own': ['DRIVER'],

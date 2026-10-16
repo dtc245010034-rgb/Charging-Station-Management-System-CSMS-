@@ -5,12 +5,20 @@ const { denyOrNotFound } = require('../../lib/ownership');
 const {
   BadRequestError,
   ConflictError,
+  GatewayTimeoutError,
+  ServiceUnavailableError,
+  UnprocessableEntityError,
 } = require('../../lib/errors');
 const connections = require('./connection-registry');
-const { sendRemoteCommand } = require('../ocpp/commands');
+const { sendRemoteCommand, OcppCommandError } = require('../ocpp/commands');
+const { OcppRemoteCallError } = require('../ocpp/message-handler');
 const { wattsToKilowatts } = require('../power/units');
 
 const duplicateCode = (error) => (error.code === '23505' ? new ConflictError('Mã trụ đã tồn tại') : error);
+const CONFIGURATION_RANGES = {
+  HeartbeatInterval: { min: 10, max: 86400 },
+  MeterValueSampleInterval: { min: 0, max: 3600 },
+};
 
 const withPower = (point) => ({
   ...point,
@@ -89,4 +97,91 @@ async function reset(actor, id, type, commandSender, { ip = null } = {}) {
   return response;
 }
 
-module.exports = { list, get, create, update, isCodeAvailable, reset };
+function mapConfigurationCommandError(error) {
+  if (error instanceof OcppCommandError && error.code === 'OFFLINE') {
+    return new ConflictError('Trụ sạc không có kết nối OCPP');
+  }
+  if (error instanceof OcppRemoteCallError) {
+    return new UnprocessableEntityError(`Trụ sạc từ chối lệnh cấu hình: ${error.message}`);
+  }
+  if (/^OCPP call timed out:/.test(error?.message || '')) return new GatewayTimeoutError();
+  return error;
+}
+
+async function sendConfigurationCommand(point, commandSender, action, payload) {
+  if (!connections.isConnected(point.code)) throw new ConflictError('Trụ sạc không có kết nối OCPP');
+  if (!commandSender) throw new ServiceUnavailableError('Chức năng điều khiển từ xa chưa được khởi tạo');
+  try {
+    return await commandSender.send(point.code, action, payload);
+  } catch (error) {
+    throw mapConfigurationCommandError(error);
+  }
+}
+
+function valueFromConfiguration(result, key) {
+  if (!Array.isArray(result?.configurationKey)) {
+    throw new ServiceUnavailableError('Trụ sạc trả cấu hình không hợp lệ');
+  }
+  return result.configurationKey.find((item) => item.key === key) ?? null;
+}
+
+async function getConfigurationValue(point, key, commandSender) {
+  const result = await sendConfigurationCommand(point, commandSender, 'GetConfiguration', { key: [key] });
+  return valueFromConfiguration(result, key);
+}
+
+async function getConfiguration(actor, id, key, commandSender) {
+  const point = await repo.findById(actor, id)
+    || await denyOrNotFound(actor, 'charge_point', id, repo.existsById, 'Không tìm thấy trụ sạc');
+  const entry = await getConfigurationValue(point, key, commandSender);
+  if (!entry) throw new ServiceUnavailableError(`Trụ sạc không hỗ trợ khóa cấu hình ${key}`);
+  return { key, value: entry.value, readonly: entry.readonly === true };
+}
+
+async function changeConfiguration(actor, id, key, value, commandSender, { ip = null } = {}) {
+  const point = await repo.findById(actor, id)
+    || await denyOrNotFound(actor, 'charge_point', id, repo.existsById, 'Không tìm thấy trụ sạc');
+  const range = CONFIGURATION_RANGES[key];
+  const valueText = typeof value === 'number' ? String(value) : value;
+  const parsedValue = typeof valueText === 'string' && /^\d+$/.test(valueText) ? Number(valueText) : NaN;
+  if (!range || !Number.isInteger(parsedValue) || parsedValue < range.min || parsedValue > range.max) {
+    throw new BadRequestError(`Giá trị ${key} phải là số nguyên từ ${range?.min ?? 0} đến ${range?.max ?? 0}`);
+  }
+
+  const current = await getConfigurationValue(point, key, commandSender);
+  const oldValue = current?.value ?? null;
+  const result = await sendConfigurationCommand(point, commandSender, 'ChangeConfiguration', {
+    key,
+    value: valueText,
+  });
+  const status = result?.status;
+  if (!['Accepted', 'Rejected', 'RebootRequired', 'NotSupported'].includes(status)) {
+    throw new ServiceUnavailableError('Trụ sạc trả phản hồi ChangeConfiguration không hợp lệ');
+  }
+  if (status === 'Accepted' && key === 'HeartbeatInterval') {
+    await repo.updateHeartbeatInterval(id, parsedValue);
+  }
+
+  try {
+    await audit.ghi_nhat_ky(actor.id, 'CHANGE_CONFIGURATION', 'charge_point', id, {
+      charge_point_code: point.code,
+      key,
+      old_value: oldValue,
+      new_value: valueText,
+    }, status, ip);
+  } catch (error) {
+    console.error(`[ChangeConfiguration] Ghi audit thất bại cho trụ ${id}:`, error?.message || error);
+  }
+  return { status };
+}
+
+module.exports = {
+  list,
+  get,
+  create,
+  update,
+  isCodeAvailable,
+  reset,
+  getConfiguration,
+  changeConfiguration,
+};
