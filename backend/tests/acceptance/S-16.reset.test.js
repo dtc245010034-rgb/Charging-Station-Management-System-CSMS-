@@ -103,7 +103,7 @@ describe('S-16 Reset từ xa', () => {
     for (const row of audit.rows) {
       assert.equal(row.action, 'RESET');
       assert.equal(row.entity, 'charge_point');
-      assert.deepEqual(row.metadata, { type: 'Soft' });
+      assert.deepEqual(row.metadata, { type: 'Soft', charge_point_code: CODE });
       assert.equal(row.result, 'Accepted');
     }
   });
@@ -186,5 +186,16 @@ describe('S-16 Reset từ xa', () => {
     assert.equal((await response.json()).error.code, 'CONFLICT');
     assert.ok(Date.now() - startedAt < 300);
     assert.equal(resetCalls.length, sentCallsBefore);
+  });
+
+  it('nhật ký vẫn hiện mã trụ cũ sau khi mã trụ được đổi', async () => {
+    await query('UPDATE charge_points SET code = $1 WHERE id = $2', ['RESET-AC-CP-RENAMED', chargePointId]);
+    const response = await fetch(`http://127.0.0.1:${server.port}/api/audit-logs?charge_point=${CODE}`, {
+      headers: { Cookie: admin.cookie },
+    });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.ok(result.items.length >= 2);
+    assert.ok(result.items.every((item) => item.charge_point_code === CODE));
   });
 });

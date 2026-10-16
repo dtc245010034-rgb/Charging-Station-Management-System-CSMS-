@@ -175,7 +175,12 @@ function createStopTransactionHandler({
               'REMOTE_STOP',
               'charging_session',
               payload.transactionId,
-              { reason: stopReason, meter_stop: payload.meterStop, stopped_at: stoppedAt },
+              {
+                charge_point_code: code,
+                reason: stopReason,
+                meter_stop: payload.meterStop,
+                stopped_at: stoppedAt,
+              },
               'STOPPED',
               null,
               db

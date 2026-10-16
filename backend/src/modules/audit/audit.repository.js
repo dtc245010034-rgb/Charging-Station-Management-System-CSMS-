@@ -46,6 +46,7 @@ async function list({ chargePoint = null, user = null, driverId = null, from = n
         WHERE candidate.id::text = al.metadata ->> 'charge_point_id'
           AND candidate.code ILIKE ${parameter} ESCAPE E'\\\\'
       )
+      OR al.metadata ->> 'charge_point_code' ILIKE ${parameter} ESCAPE E'\\\\'
     )`, `%${escapeLike(chargePoint)}%`);
   }
   if (user) {
@@ -107,7 +108,8 @@ async function list({ chargePoint = null, user = null, driverId = null, from = n
   values.push(50, offset);
   const rows = await pool.query(
     `SELECT al.id, al.user_id, u.name AS user_name, al.action, al.entity, al.entity_id,
-            cp.code AS charge_point_code, al.metadata, al.result, al.ip, al.created_at
+            COALESCE(al.metadata ->> 'charge_point_code', cp.code) AS charge_point_code,
+            al.metadata, al.result, al.ip, al.created_at
      ${fromAndJoins}
      ${where}
      ORDER BY al.created_at DESC, al.id DESC

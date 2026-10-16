@@ -254,10 +254,10 @@ describe('S-02 frontend: router', () => {
             action: 'REMOTE_START',
             entity: 'connector',
             entity_id: '2',
-            charge_point_code: 'CP-2',
+            charge_point_code: null,
             result: 'ACCEPTED',
             ip: '203.0.113.42',
-            metadata: { note: '<img src=x onerror=alert(1)>' },
+            metadata: { charge_point_code: 'CP-2', note: '<img src=x onerror=alert(1)>' },
           }, {
             id: '2',
             created_at: '2026-10-11T17:01:00.000Z',
@@ -300,6 +300,7 @@ describe('S-02 frontend: router', () => {
       assert.match(pre.textContent, /<img src=x onerror=alert\(1\)>/);
       assert.equal(find(root, (node) => node.tag === 'img').length, 0);
       assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Bắt đầu sạc từ xa'));
+      assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'CP-2'));
       assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Đã chấp nhận'));
       assert.ok(find(root, (node) => node.tag === 'td').some((node) => node.textContent === '203.0.113.42'));
       assert.ok(find(root, (node) => node.tag === 'span' && node.attributes.class === 'badge badge--ready').length > 0);
