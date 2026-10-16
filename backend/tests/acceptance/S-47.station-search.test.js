@@ -124,4 +124,29 @@ describe('S-47 tìm trạm gần', () => {
       connections.disconnect('CP-H03');
     }
   });
+
+  it('S47-privacy: tọa độ tìm kiếm không xuất hiện trong response, log hoặc audit', async () => {
+    const lat = 10.78;
+    const lng = 106.7;
+    const output = [];
+    const methods = ['log', 'info', 'warn', 'error'];
+    const originals = Object.fromEntries(methods.map((method) => [method, console[method]]));
+    let response;
+    try {
+      for (const method of methods) console[method] = (...args) => output.push(args.map(String).join(' '));
+      response = await request(app).post('/api/stations/search')
+        .set('Cookie', driver.cookie).send({ lat, lng });
+    } finally {
+      for (const method of methods) console[method] = originals[method];
+    }
+    assert.strictEqual(response.status, 200);
+    const responseText = JSON.stringify(response.body);
+    const auditRows = await query('SELECT metadata::text FROM audit_logs');
+    const auditText = JSON.stringify(auditRows.rows);
+    for (const value of [String(lat), String(lng)]) {
+      assert.ok(!responseText.includes(value), `response contains ${value}`);
+      assert.ok(!output.join('\n').includes(value), `log contains ${value}`);
+      assert.ok(!auditText.includes(value), `audit contains ${value}`);
+    }
+  });
 });
