@@ -1,7 +1,7 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
 const request = require('supertest');
-const { run, resetSchema, truncateAll } = require('../helpers/db');
+const { run, query, resetSchema, truncateAll } = require('../helpers/db');
 const { app, closePool } = require('../helpers/app');
 const { createUser } = require('../helpers/auth');
 const { stationBody, idempotencyKey, postStation } = require('../helpers/station');
@@ -14,6 +14,7 @@ describe('S-03 ma trận quyền Sprint 1 (PO đã xác nhận) trên API thật
   const users = {};
   let shared;
   let own;
+  let alertId;
   let seq = 0;
 
   before(async () => {
@@ -28,6 +29,12 @@ describe('S-03 ma trận quyền Sprint 1 (PO đã xác nhận) trên API thật
     const ownSt = await postStation(users.STATION_OWNER, stationBody({ name: 'Trạm chủ' }));
     const ownCp = await request(app).post(`/api/stations/${ownSt.body.id}/charge-points`).set('Cookie', users.STATION_OWNER.cookie).send({ code: 'CP-OWN' });
     own = { stationId: ownSt.body.id, chargePointId: ownCp.body.id };
+    const alert = await query(
+      `INSERT INTO alerts (kind, severity, station_id, message, dedup_key)
+       VALUES ('POWER_UNCONFIRMED', 'CRITICAL', $1, 'Test alert', 'rbac-alert') RETURNING id`,
+      [shared.stationId]
+    );
+    alertId = alert.rows[0].id;
   });
   after(async () => { await resetSchema(); await closePool(); });
 
@@ -54,6 +61,8 @@ describe('S-03 ma trận quyền Sprint 1 (PO đã xác nhận) trên API thật
     { name: 'POST /api/accounting/periods/2000-01/close', allowed: ['ADMIN', 'ACCOUNTANT'], ok: 200, call: (r) => r.post('/api/accounting/periods/2000-01/close').send({}) },
     { name: 'POST /api/accounting/periods/2000-01/reopen', allowed: ['ADMIN'], ok: 200, call: (r) => r.post('/api/accounting/periods/2000-01/reopen').send({ reason: 'Mở lại để kiểm tra quyền' }) },
     { name: 'GET /api/admin/erasure-requests', allowed: ['ADMIN'], ok: 200, call: (r) => r.get('/api/admin/erasure-requests') },
+    { name: 'GET /api/alerts', allowed: READ, ok: 200, call: (r) => r.get('/api/alerts?state=open') },
+    { name: 'POST /api/alerts/:id/close', allowed: ['ADMIN', 'OPERATOR'], ok: 200, call: (r) => r.post(`/api/alerts/${alertId}/close`).send({}) },
   ];
 
   for (const c of cases) {

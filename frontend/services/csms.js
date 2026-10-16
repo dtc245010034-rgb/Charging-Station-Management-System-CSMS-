@@ -36,6 +36,11 @@ export const fleetStatus = {
   snapshot: () => api('/api/fleet-status'),
 };
 
+export const alerts = {
+  list: (state = 'open') => api(`/api/alerts?state=${encodeURIComponent(state)}`),
+  close: (id) => api(`/api/alerts/${encodeURIComponent(id)}/close`, { method: 'POST', body: {} }),
+};
+
 export const admin = {
   roles: () => api('/api/roles'),
   createUser: (body) => api('/api/admin/users', { method: 'POST', body }),

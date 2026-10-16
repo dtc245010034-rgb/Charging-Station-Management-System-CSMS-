@@ -3,6 +3,7 @@ import { routeFor } from '../../app/workspace.js';
 import { workspaceHero } from '../../components/hero.js';
 import { createFleet, kpiRow, mapCard, placeholderCard, statusCard } from '../shared/fleet.js';
 import { openStationDrawer } from '../shared/station-drawer.js';
+import { createAlertBand } from '../../components/alert-band.js';
 
 // Operator Operations Center (khung đã duyệt: docs/design). Mọi con số lấy từ API;
 // những khối chưa có nguồn dữ liệu (cảnh báo, hiệu suất, phiên sạc) hiện trạng thái rỗng, không dựng số giả.
@@ -14,6 +15,7 @@ export function render(ctx) {
     user: ctx.user, roleLabel: 'OPERATOR',
     subtitle: 'Theo dõi và xử lý các sự kiện trạm sạc theo thời gian thực.',
   });
+  const alerts = createAlertBand({ canRead: ctx.can('alerts:read'), canClose: ctx.can('alerts:close') });
   const kpis = kpiRow(fleet);
   const map = mapCard(fleet, {
     onSelectStation: (id) => {
@@ -27,12 +29,8 @@ export function render(ctx) {
   const status = statusCard(fleet, { onSelectGroup: (group) => { location.hash = `${routeFor(ctx.workspace, 'charge-points')}?status=${group}`; } });
 
   ctx.root.append(
-    hero.el, kpis.el,
-    h('div', { class: 'dash-main' }, map.el,
-      placeholderCard({
-        id: 'alerts-title', title: 'Cảnh báo & sự kiện', iconName: 'bell', headline: 'Chưa có sự kiện nào',
-        text: 'Lỗi kết nối, phiên treo và khôi phục kết nối sẽ hiện ở đây khi trụ sạc kết nối qua OCPP.',
-      })),
+    hero.el, alerts.el, kpis.el,
+    h('div', { class: 'dash-main' }, map.el),
     h('div', { class: 'dash-bottom' },
       placeholderCard({
         id: 'perf-title', title: 'Hiệu suất hoạt động', iconName: 'activity', headline: 'Chưa có phiên sạc',
@@ -44,5 +42,5 @@ export function render(ctx) {
         text: 'Mã phiên, trạm, kWh, chi phí và trạng thái sẽ hiện ở đây.',
       })));
   setTimeout(() => map.invalidate(), 50);
-  return () => { hero.destroy(); kpis.destroy(); status.destroy(); map.destroy(); fleet.stop(); drawer?.close(); };
+  return () => { hero.destroy(); alerts.stop(); kpis.destroy(); status.destroy(); map.destroy(); fleet.stop(); drawer?.close(); };
 }

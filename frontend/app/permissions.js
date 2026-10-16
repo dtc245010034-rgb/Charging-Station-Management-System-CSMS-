@@ -36,6 +36,8 @@ export const PERMISSIONS = {
   'reports:reconcile': ['ADMIN', 'ACCOUNTANT'],
   'erasure:request': ['DRIVER'],
   'erasure:manage': ADMIN,
+  'alerts:read': READ,
+  'alerts:close': ['ADMIN', 'OPERATOR'],
 };
 
 export const can = (role, key) => (PERMISSIONS[key] ?? []).includes(role);

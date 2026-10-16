@@ -42,6 +42,8 @@ const permissions = {
   'reports:reconcile': ['ADMIN', 'ACCOUNTANT'],
   'erasure:request': ['DRIVER'],
   'erasure:manage': ADMIN,
+  'alerts:read': READ_OPERATIONS,
+  'alerts:close': ['ADMIN', 'OPERATOR'],
 };
 
 function access(key) {
