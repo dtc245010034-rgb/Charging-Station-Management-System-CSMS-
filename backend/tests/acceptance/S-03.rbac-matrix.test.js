@@ -48,6 +48,12 @@ describe('S-03 ma trận quyền Sprint 1 (PO đã xác nhận) trên API thật
     { name: 'POST /api/stations/:id/tariffs', allowed: WRITE, ok: 201, call: (r, t) => r.post(`/api/stations/${t.stationId}/tariffs`).send({ effectiveFrom: `2099-01-${String(++seq).padStart(2, '0')}`, periods: [{ from: '00:00', to: '24:00', pricePerKwh: 4000 }] }) },
     { name: 'POST /api/me/wallet/topups', allowed: ['DRIVER'], ok: 201, call: (r) => r.post('/api/me/wallet/topups').set('Idempotency-Key', idempotencyKey()).send({ amountDong: 200000 }) },
     { name: 'GET /api/me/notifications', allowed: ['DRIVER'], ok: 200, call: (r) => r.get('/api/me/notifications') },
+    { name: 'GET /api/reports/revenue', allowed: ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'], ok: 200, call: (r) => r.get('/api/reports/revenue?from=2026-01-01&to=2026-01-31') },
+    { name: 'GET /api/reports/reconciliation', allowed: ['ADMIN', 'ACCOUNTANT'], ok: 200, call: (r) => r.get('/api/reports/reconciliation?from=2026-01-01&to=2026-01-31') },
+    { name: 'GET /api/accounting/periods', allowed: ['ADMIN', 'ACCOUNTANT'], ok: 200, call: (r) => r.get('/api/accounting/periods') },
+    { name: 'POST /api/accounting/periods/2000-01/close', allowed: ['ADMIN', 'ACCOUNTANT'], ok: 200, call: (r) => r.post('/api/accounting/periods/2000-01/close').send({}) },
+    { name: 'POST /api/accounting/periods/2000-01/reopen', allowed: ['ADMIN'], ok: 200, call: (r) => r.post('/api/accounting/periods/2000-01/reopen').send({ reason: 'Mở lại để kiểm tra quyền' }) },
+    { name: 'GET /api/admin/erasure-requests', allowed: ['ADMIN'], ok: 200, call: (r) => r.get('/api/admin/erasure-requests') },
   ];
 
   for (const c of cases) {
