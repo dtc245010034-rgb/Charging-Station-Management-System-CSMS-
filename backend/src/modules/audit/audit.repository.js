@@ -130,4 +130,4 @@ async function list({ chargePoint = null, user = null, driverId = null, from = n
   };
 }
 
-module.exports = { ghi_nhat_ky, record, list };
+module.exports = { ghi_nhat_ky, record, list, escapeLike };

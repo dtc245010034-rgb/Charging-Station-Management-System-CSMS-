@@ -73,8 +73,17 @@ const connectorPowerBody = z.object({
 }).transform(({ rated_power_kw }) => ({ rated_power_w: rated_power_kw }));
 
 const stationSearchBody = z.object({
-  lat: coordinate('Vĩ độ', -90, 90),
-  lng: coordinate('Kinh độ', -180, 180),
+  lat: coordinate('Vĩ độ', -90, 90).optional(),
+  lng: coordinate('Kinh độ', -180, 180).optional(),
+  q: z.string().trim().min(2, 'q phải có từ 2 đến 100 ký tự').max(100, 'q phải có từ 2 đến 100 ký tự').optional(),
+  connectorType: z.string().trim().min(1).max(40).optional(),
+}).superRefine((data, context) => {
+  if ((data.lat === undefined) !== (data.lng === undefined)) {
+    context.addIssue({ code: 'custom', message: 'lat và lng phải được gửi cùng nhau', path: ['lat'] });
+  }
+  if (data.lat === undefined && data.q === undefined) {
+    context.addIssue({ code: 'custom', message: 'Cần tọa độ hoặc q để tìm trạm', path: ['q'] });
+  }
 });
 
 module.exports = { createBody, updateBody, lockBody, connectorPowerBody, stationSearchBody };

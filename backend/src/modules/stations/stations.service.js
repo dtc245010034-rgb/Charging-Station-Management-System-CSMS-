@@ -1,7 +1,10 @@
 const { createHash } = require('node:crypto');
+const { pool } = require('../../db/pool');
 const repo = require('./stations.repository');
 const audit = require('../audit/audit.repository');
 const connectionRegistry = require('../charge-points/connection-registry');
+const { findEffectiveTariff } = require('../billing/tariffs.repository');
+const { toLocalParts } = require('../billing/tz');
 const { denyOrNotFound } = require('../../lib/ownership');
 const { withTransaction } = require('../../db/tx');
 const { BadRequestError, ConflictError } = require('../../lib/errors');
@@ -34,31 +37,69 @@ function stationWithPower(station) {
 
 const list = async (actor) => (await repo.list(actor)).map(stationWithPower);
 
-async function searchNearby({ lat, lng }) {
-  const latitude = Number(lat);
-  const longitude = Number(lng);
-  const candidates = await repo.searchCandidates();
-  return candidates.map((station) => {
+async function searchNearby({ lat, lng, q, connectorType }) {
+  const latitude = lat === undefined ? null : Number(lat);
+  const longitude = lng === undefined ? null : Number(lng);
+  const queryPattern = q === undefined ? null : `%${audit.escapeLike(q)}%`;
+  const candidates = await repo.searchCandidates({ queryPattern, connectorType });
+  const connectorRows = await repo.searchConnectors(candidates.map((station) => station.id));
+  const connectorsByStation = new Map();
+  for (const connector of connectorRows) {
+    const key = String(connector.station_id);
+    if (!connectorsByStation.has(key)) connectorsByStation.set(key, []);
+    connectorsByStation.get(key).push(connector);
+  }
+
+  const stations = candidates.map((station) => {
     const stationLatitude = station.latitude === null ? NaN : Number(station.latitude);
     const stationLongitude = station.longitude === null ? NaN : Number(station.longitude);
-    const rawDistanceKm = Number.isFinite(stationLatitude) && Number.isFinite(stationLongitude)
-      ? haversineDistanceKm(latitude, longitude, stationLatitude, stationLongitude)
-      : null;
+    const rawDistanceKm = latitude === null || !Number.isFinite(stationLatitude) || !Number.isFinite(stationLongitude)
+      ? null
+      : haversineDistanceKm(latitude, longitude, stationLatitude, stationLongitude);
+    const stationConnectors = connectorsByStation.get(String(station.id)) || [];
+    const types = [...new Set(stationConnectors.map((connector) => connector.type))].sort();
+    const free = stationConnectors.filter((connector) => (
+      connector.ocpp_status === 'Available' && connectionRegistry.isConnected(connector.charge_point_code)
+    )).length;
     return {
       stationId: Number(station.id),
       name: station.name,
       address: station.address,
       distanceKm: rawDistanceKm === null ? null : Math.round(rawDistanceKm * 10) / 10,
       rawDistanceKm,
+      connectors: { free, total: stationConnectors.length, types },
     };
-  })
-    .sort((left, right) => {
-      if (left.rawDistanceKm === null) return right.rawDistanceKm === null ? left.stationId - right.stationId : 1;
-      if (right.rawDistanceKm === null) return -1;
-      return left.rawDistanceKm - right.rawDistanceKm || left.stationId - right.stationId;
-    })
-    .slice(0, 50)
-    .map(({ stationId, name, address, distanceKm }) => ({ stationId, name, address, distanceKm }));
+  });
+  stations.sort((left, right) => {
+    if (left.rawDistanceKm === null) return right.rawDistanceKm === null ? left.stationId - right.stationId : 1;
+    if (right.rawDistanceKm === null) return -1;
+    return left.rawDistanceKm - right.rawDistanceKm || left.stationId - right.stationId;
+  });
+
+  const now = new Date();
+  const results = await Promise.all(stations.slice(0, 50).map(async (station) => {
+    const tariff = await findEffectiveTariff(pool, station.stationId, now);
+    let price = null;
+    let idleFee = null;
+    if (tariff) {
+      const minuteOfDay = toLocalParts(now, tariff.timezone || 'Asia/Ho_Chi_Minh').minuteOfDay;
+      const period = tariff.periods.find((candidate) => (
+        minuteOfDay >= candidate.startMin && minuteOfDay < candidate.endMin
+      ));
+      if (period) price = { pricePerKwh: period.pricePerKwh, periodLabel: period.label };
+      idleFee = { graceMin: tariff.idle.graceMin, perMinDong: tariff.idle.perMinDong };
+    }
+    return {
+      stationId: station.stationId,
+      name: station.name,
+      address: station.address,
+      distanceKm: station.distanceKm,
+      connectors: station.connectors,
+      price,
+      idleFee,
+    };
+  }));
+  return results;
 }
 
 async function find(actor, id) {
