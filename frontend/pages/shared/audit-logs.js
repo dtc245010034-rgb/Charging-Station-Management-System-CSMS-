@@ -10,6 +10,9 @@ const PAGE_SIZE = 50;
 const ACTION_LABELS = {
   ACCESS_DENIED: 'Truy cập bị từ chối',
   CREATE: 'Tạo mới',
+  DATA_ERASURE_COMPLETED: 'Ẩn danh hóa dữ liệu',
+  DATA_ERASURE_REJECTED: 'Từ chối yêu cầu xóa dữ liệu',
+  DATA_ERASURE_REQUESTED: 'Yêu cầu ẩn danh hóa dữ liệu',
   LOCK: 'Khoá trạm',
   REMOTE_START: 'Bắt đầu sạc từ xa',
   REMOTE_STOP: 'Dừng sạc từ xa',
@@ -23,6 +26,9 @@ const ACTION_LABELS = {
   WALLET_TOPUP_GATEWAY: 'Nạp ví qua cổng thanh toán',
   WALLET_TOPUP_MANUAL: 'Nạp tiền vào ví',
   WALLET_UNLOCK: 'Mở khóa ví',
+  PERIOD_CLOSED: 'Chốt kỳ kế toán',
+  PERIOD_REOPENED: 'Mở lại kỳ kế toán',
+  BILLING_PERIOD_CLOSED: 'Không lập hóa đơn do kỳ đã chốt',
   WEBHOOK_AMOUNT_MISMATCH: 'Lệch số tiền webhook',
   WEBHOOK_BAD_SIGNATURE: 'Chữ ký webhook không hợp lệ',
 };

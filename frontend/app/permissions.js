@@ -31,6 +31,11 @@ export const PERMISSIONS = {
   'tariffs:read': ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT'],
   'tariffs:write': WRITE,
   'reports:revenue': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
+  'periods:manage': ['ADMIN', 'ACCOUNTANT'],
+  'periods:reopen': ADMIN,
+  'reports:reconcile': ['ADMIN', 'ACCOUNTANT'],
+  'erasure:request': ['DRIVER'],
+  'erasure:manage': ADMIN,
 };
 
 export const can = (role, key) => (PERMISSIONS[key] ?? []).includes(role);

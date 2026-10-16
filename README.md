@@ -176,6 +176,7 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `IDLE_MAX_WAIT_MIN` | Thời gian tối đa chờ đầu nối rời `Finishing`/`SuspendedEV` trước khi chốt hóa đơn phí chiếm chỗ | Phút | `60` |
 | `BILLING_JOB_INTERVAL_MS` | Chu kỳ job nền tìm phiên cần lập hóa đơn và thử lại phiên lỗi | Mili giây | `30000` |
 | `WALLET_AUDIT_INTERVAL_MS` | Chu kỳ job nền đối chiếu số dư ví với sổ cái và khóa ví lệch | Mili giây | `300000` |
+| `RECON_TOLERANCE_DONG` | Chênh lệch tiền tối đa được bỏ qua trong báo cáo đối soát | Đồng | `0` |
 | `SANDBOX_GATEWAY` | Bật giao diện cổng thanh toán giả lập; chỉ dùng dev/staging | `0` hoặc `1` | `0` |
 | `PAYMENT_WEBHOOK_SECRET` | Khoá HMAC-SHA256 của webhook; bắt buộc khi bật sandbox, tối thiểu 32 ký tự | Bí mật | **bắt buộc khi bật sandbox** |
 | `INTERNAL_BASE_URL` | URL nội bộ mà cổng giả lập dùng để gọi webhook | URL | `http://127.0.0.1:3000` |

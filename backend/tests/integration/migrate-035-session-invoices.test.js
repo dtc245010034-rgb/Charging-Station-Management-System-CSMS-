@@ -13,6 +13,9 @@ describe('migration 035: session_invoices, invoice_lines and billing_status [GYM
     assert.strictEqual(run('src/db/migrate.js').status, 0);
 
     for (const version of [
+      '042_data_erasure_requests.sql',
+      '041_accounting_period_locks.sql',
+      '040_accounting_periods.sql',
       '039_notifications_and_email_outbox.sql',
       '038_wallet_topups.sql',
       '037_audit_logs_driver_id_index.sql',

@@ -59,6 +59,7 @@ const schema = z.object({
     z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional()
   ),
   WALLET_AUDIT_INTERVAL_MS: z.coerce.number().int().positive().default(300000),
+  RECON_TOLERANCE_DONG: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).default(0),
   SANDBOX_GATEWAY: z.coerce.number().int().min(0).max(1).default(0),
   PAYMENT_WEBHOOK_SECRET: z.string().min(32).optional(),
   INTERNAL_BASE_URL: z.preprocess(

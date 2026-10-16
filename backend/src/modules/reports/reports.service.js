@@ -1,14 +1,14 @@
-const audit = require('../audit/audit.repository');
-const { ForbiddenError, NotFoundError } = require('../../lib/errors');
+const { denyOrNotFound } = require('../../lib/ownership');
 const repository = require('./revenue.repository');
 
 async function revenue(actor, period) {
   if (period.stationId !== undefined && actor.roles.includes('STATION_OWNER')) {
     const station = await repository.stationById(period.stationId);
-    if (!station) throw new NotFoundError('Không tìm thấy trạm');
+    if (!station) {
+      await denyOrNotFound(actor, 'station', period.stationId, repository.stationExists, 'Không tìm thấy trạm');
+    }
     if (String(station.owner_id) !== String(actor.id)) {
-      await audit.record(actor.id, 'ACCESS_DENIED', 'station', period.stationId, {}, actor.ip);
-      throw new ForbiddenError();
+      await denyOrNotFound(actor, 'station', period.stationId, repository.stationExists, 'Không tìm thấy trạm');
     }
   }
 

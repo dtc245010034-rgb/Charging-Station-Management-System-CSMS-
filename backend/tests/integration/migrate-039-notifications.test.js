@@ -110,7 +110,14 @@ describe('migration 039: notifications and email_outbox [GYM-85]', () => {
   });
 
   it('AC GYM-85: rollback migration 039 gỡ sạch bảng notifications và email_outbox và up lại được', async () => {
-    while ((await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1')).rows[0]?.version === '039_notifications_and_email_outbox.sql') {
+    for (const version of [
+      '042_data_erasure_requests.sql',
+      '041_accounting_period_locks.sql',
+      '040_accounting_periods.sql',
+      '039_notifications_and_email_outbox.sql',
+    ]) {
+      const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+      assert.strictEqual(latest.rows[0].version, version);
       const down = run('src/db/migrate.js', ['down']);
       assert.strictEqual(down.status, 0, down.stderr);
     }

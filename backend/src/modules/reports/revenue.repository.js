@@ -1,7 +1,9 @@
 const { scopeByOwner } = require('../../db/scope');
 
 async function listRevenue(actor, { from, to, stationId }) {
-  const scope = scopeByOwner(actor, 's');
+  const scope = actor.roles.includes('ACCOUNTANT')
+    ? { sql: 'TRUE', params: [] }
+    : scopeByOwner(actor, 's');
   const values = [from, to];
   const conditions = ['si.period_date >= $1::date', 'si.period_date <= $2::date', "cs.billing_status = 'FINAL'"];
 
@@ -52,4 +54,9 @@ async function stationById(id) {
   return result.rows[0] || null;
 }
 
-module.exports = { listRevenue, stationById };
+async function stationExists(id) {
+  const result = await require('../../db/pool').pool.query('SELECT 1 FROM stations WHERE id = $1', [id]);
+  return result.rowCount > 0;
+}
+
+module.exports = { listRevenue, stationById, stationExists };

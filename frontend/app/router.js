@@ -22,6 +22,10 @@ export const PAGE_NEEDS = {
   'control-log': 'audit-logs:read',
   start: 'remote-start:create',
   tariffs: 'tariffs:read',
+  revenue: 'reports:revenue',
+  reconciliation: 'reports:reconcile',
+  periods: 'periods:manage',
+  'erasure-requests': 'erasure:manage',
 };
 
 const fleetOverview = () => import('../pages/shared/fleet-overview.js');
@@ -73,6 +77,22 @@ const PAGES = {
   users: () => import('../pages/admin/users.js'),
   account: () => import('../pages/shared/account.js'),
   tariffs: () => import('../pages/shared/tariffs.js'),
+  revenue: {
+    owner: () => import('../pages/shared/revenue.js'),
+    accountant: () => import('../pages/shared/revenue.js'),
+    admin: () => import('../pages/shared/revenue.js'),
+  },
+  reconciliation: {
+    accountant: () => import('../pages/shared/reconciliation.js'),
+    admin: () => import('../pages/shared/reconciliation.js'),
+  },
+  periods: {
+    accountant: () => import('../pages/shared/periods.js'),
+    admin: () => import('../pages/shared/periods.js'),
+  },
+  'erasure-requests': {
+    admin: () => import('../pages/admin/erasure-requests.js'),
+  },
 };
 
 export function pageLoader(page, workspace) {

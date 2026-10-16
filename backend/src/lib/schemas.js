@@ -61,13 +61,32 @@ const notificationIdParam = z.object({
 const topupRefParam = z.object({
   ref: z.string().min(1, 'Mã đơn nạp không hợp lệ'),
 });
+const validDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+  && !Number.isNaN(Date.parse(`${value}T00:00:00.000Z`))
+  && new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value;
+const reportDate = z.string().refine(validDate, 'Ngày phải có dạng ngày hợp lệ YYYY-MM-DD');
 const reportPeriodQuery = z.object({
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'from phải có dạng YYYY-MM-DD'),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'to phải có dạng YYYY-MM-DD'),
+  from: reportDate,
+  to: reportDate,
   stationId: positiveInt('stationId').optional(),
 }).refine((value) => value.from <= value.to, {
   message: 'from phải nhỏ hơn hoặc bằng to',
   path: ['from'],
+});
+const reconciliationPeriodQuery = z.object({
+  from: reportDate,
+  to: reportDate,
+}).refine((value) => value.from <= value.to, {
+  message: 'from phải nhỏ hơn hoặc bằng to',
+  path: ['from'],
+});
+const accountingPeriodMonth = z.string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Kỳ phải có dạng YYYY-MM');
+const reopenPeriodBody = z.object({
+  reason: walletReason,
+});
+const erasureRejectBody = z.object({
+  reason: walletReason,
 });
 
 module.exports = {
@@ -84,4 +103,8 @@ module.exports = {
   notificationIdParam,
   topupRefParam,
   reportPeriodQuery,
+  reconciliationPeriodQuery,
+  accountingPeriodMonth,
+  reopenPeriodBody,
+  erasureRejectBody,
 };
