@@ -61,8 +61,12 @@ describe('migration 043: station and connector power limits [GYM-68]', () => {
   });
 
   it('migration 043 rolls back and reapplies', async () => {
-    const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
-    assert.strictEqual(latest.rows[0].version, '043_station_power_limits.sql');
+    let latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+    while (latest.rows[0]?.version !== '043_station_power_limits.sql') {
+      const rollback = run('src/db/migrate.js', ['down']);
+      assert.strictEqual(rollback.status, 0, rollback.stderr);
+      latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+    }
     const down = run('src/db/migrate.js', ['down']);
     assert.strictEqual(down.status, 0, down.stderr);
     const absent = await query(
