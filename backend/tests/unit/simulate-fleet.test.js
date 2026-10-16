@@ -1,6 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { percentile, backoffDelay, parseArgs, SCENARIOS } = require('../../../tools/lib/fleet-stats');
+const { parseOptions, ManagedChargePoint } = require('../../../tools/vcp-fleet');
 
 describe('tools/simulate-fleet: phần thuần', () => {
   it('percentile theo nearest-rank', () => {
@@ -33,5 +34,84 @@ describe('tools/simulate-fleet: phần thuần', () => {
     assert.throws(() => parseArgs(['--scenario', 'nope']), /không có/);
     assert.throws(() => parseArgs(['--bogus', '1']), /không hợp lệ/);
     assert.throws(() => parseArgs(['--url']), /Thiếu giá trị/);
+  });
+});
+
+describe('tools/vcp-fleet: ChangeConfiguration và GetConfiguration', () => {
+  function sendRequest(chargePoint, action, payload) {
+    const sent = [];
+    chargePoint.socket = { send: (message) => sent.push(JSON.parse(message)) };
+    chargePoint.handleMessage(Buffer.from(JSON.stringify([2, 'request-1', action, payload])));
+    return sent[0];
+  }
+
+  it('đọc các khóa cấu hình và liệt kê khóa không biết', () => {
+    const chargePoint = new ManagedChargePoint('VCP-TEST', 'ws://localhost', 60);
+    const response = sendRequest(chargePoint, 'GetConfiguration', {
+      key: ['HeartbeatInterval', 'MeterValueSampleInterval', 'UnknownKey'],
+    });
+
+    assert.deepStrictEqual(response, [
+      3,
+      'request-1',
+      {
+        configurationKey: [
+          { key: 'HeartbeatInterval', value: '60', readonly: false },
+          { key: 'MeterValueSampleInterval', value: '10', readonly: false },
+        ],
+        unknownKey: ['UnknownKey'],
+      },
+    ]);
+  });
+
+  it('chấp nhận giá trị hợp lệ, từ chối giá trị ngoài phạm vi và không hỗ trợ khóa lạ', () => {
+    const chargePoint = new ManagedChargePoint('VCP-TEST', 'ws://localhost', 60);
+
+    assert.deepStrictEqual(sendRequest(chargePoint, 'ChangeConfiguration', {
+      key: 'HeartbeatInterval',
+      value: '45',
+    })[2], { status: 'Accepted' });
+    assert.equal(chargePoint.heartbeatInterval, 45);
+    assert.deepStrictEqual(sendRequest(chargePoint, 'ChangeConfiguration', {
+      key: 'HeartbeatInterval',
+      value: '9',
+    })[2], { status: 'Rejected' });
+    assert.deepStrictEqual(sendRequest(chargePoint, 'ChangeConfiguration', {
+      key: 'UnsupportedKey',
+      value: '1',
+    })[2], { status: 'NotSupported' });
+  });
+
+  it('có thể cấu hình một khóa trả RebootRequired', () => {
+    const chargePoint = new ManagedChargePoint('VCP-TEST', 'ws://localhost', 60, 'Accepted', {
+      rebootRequiredKey: 'MeterValueSampleInterval',
+    });
+
+    assert.deepStrictEqual(sendRequest(chargePoint, 'ChangeConfiguration', {
+      key: 'MeterValueSampleInterval',
+      value: '30',
+    })[2], { status: 'RebootRequired' });
+    const response = sendRequest(chargePoint, 'GetConfiguration', {
+      key: ['MeterValueSampleInterval'],
+    });
+    assert.deepStrictEqual(response[2].configurationKey, [
+      { key: 'MeterValueSampleInterval', value: '30', readonly: false },
+    ]);
+  });
+
+  it('cho phép chọn khóa RebootRequired qua tùy chọn dòng lệnh hoặc môi trường', () => {
+    const env = { ADMIN_EMAIL: 'user@example.invalid', ADMIN_PASSWORD: 'test-password' };
+    assert.equal(
+      parseOptions(['--reboot-required-key', 'HeartbeatInterval'], env).rebootRequiredKey,
+      'HeartbeatInterval'
+    );
+    assert.equal(
+      parseOptions([], { ...env, VCP_REBOOT_REQUIRED_KEY: 'MeterValueSampleInterval' }).rebootRequiredKey,
+      'MeterValueSampleInterval'
+    );
+    assert.throws(
+      () => parseOptions(['--reboot-required-key', 'UnsupportedKey'], env),
+      /khóa cấu hình/
+    );
   });
 });

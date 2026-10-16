@@ -4,18 +4,27 @@ const { scopeByOwner } = require('../../db/scope');
 const list = (actor) => {
   const scope = scopeByOwner(actor, 's');
   return prepare(`SELECT cp.*, s.name AS station_name,
-    ARRAY(SELECT c.status FROM connectors c WHERE c.charge_point_id = cp.id ORDER BY c.connector_no) AS connector_statuses
+    ARRAY(SELECT c.status FROM connectors c WHERE c.charge_point_id = cp.id ORDER BY c.connector_no) AS connector_statuses,
+    (SELECT COALESCE(SUM(COALESCE(c.rated_power_w, ROUND(cp.power_kw * 1000)::integer)), 0)::bigint
+       FROM connectors c WHERE c.charge_point_id = cp.id) AS rated_total_w
     FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE ${scope.sql} ORDER BY cp.id DESC`).all(...scope.params);
 };
 const findDetailById = (actor, id) => {
   const scope = scopeByOwner(actor, 's');
-  return prepare(`SELECT cp.*, s.name AS station_name FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.id = ? AND ${scope.sql}`).get(id, ...scope.params);
+  return prepare(`SELECT cp.*, s.name AS station_name,
+    (SELECT COALESCE(SUM(COALESCE(c.rated_power_w, ROUND(cp.power_kw * 1000)::integer)), 0)::bigint
+       FROM connectors c WHERE c.charge_point_id = cp.id) AS rated_total_w
+    FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.id = ? AND ${scope.sql}`).get(id, ...scope.params);
 };
 const findById = (actor, id) => {
   const scope = scopeByOwner(actor, 's');
   return prepare(`SELECT cp.* FROM charge_points cp JOIN stations s ON s.id = cp.station_id WHERE cp.id = ? AND ${scope.sql}`).get(id, ...scope.params);
 };
-const connectorsOf = (chargePointId) => prepare('SELECT * FROM connectors WHERE charge_point_id = ? ORDER BY connector_no').all(chargePointId);
+const connectorsOf = (chargePointId) => prepare(
+  `SELECT c.*, COALESCE(c.rated_power_w, ROUND(cp.power_kw * 1000)::integer) AS effective_power_w
+   FROM connectors c JOIN charge_points cp ON cp.id = c.charge_point_id
+   WHERE c.charge_point_id = ? ORDER BY c.connector_no`
+).all(chargePointId);
 const stationInScope = async (actor, stationId) => {
   const scope = scopeByOwner(actor, 's');
   return Boolean(await prepare(`SELECT 1 FROM stations s WHERE s.id = ? AND ${scope.sql}`).get(stationId, ...scope.params));
@@ -41,5 +50,8 @@ const update = (id, fields) => {
   return prepare(`UPDATE charge_points SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
     .run(...keys.map((key) => fields[key]), id);
 };
+const updateHeartbeatInterval = (id, interval) => prepare(
+  'UPDATE charge_points SET heartbeat_interval = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+).run(interval, id);
 
-module.exports = { list, findDetailById, findById, connectorsOf, stationInScope, codeAvailable, existsById, stationExists, insert, insertConnector, update, UPDATABLE };
+module.exports = { list, findDetailById, findById, connectorsOf, stationInScope, codeAvailable, existsById, stationExists, insert, insertConnector, update, updateHeartbeatInterval, UPDATABLE };

@@ -97,7 +97,7 @@ export function render(ctx) {
       {
         key: 'target',
         label: 'Đối tượng',
-        render: (row) => h('span', {}, row.charge_point_code || `${row.entity || 'Đối tượng'} #${row.entity_id ?? '—'}`),
+        render: (row) => h('span', {}, row.charge_point_code || row.metadata?.charge_point_code || `${row.entity || 'Đối tượng'} #${row.entity_id ?? '—'}`),
       },
       { key: 'ip', label: 'Địa chỉ IP', render: (row) => row.ip || '—' },
       {

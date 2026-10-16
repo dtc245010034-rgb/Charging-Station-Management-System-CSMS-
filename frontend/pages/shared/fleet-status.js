@@ -7,6 +7,7 @@ import { emptyState, errorState, loadingState } from '../../components/empty-sta
 import { icon } from '../../components/icons.js';
 import { openModal } from '../../components/modal.js';
 import { toast } from '../../components/toast.js';
+import { createAlertBand } from '../../components/alert-band.js';
 import { workspaceHero } from '../../components/hero.js';
 import * as csms from '../../services/csms.js';
 import { subscribe } from '../../services/realtime.js';
@@ -92,6 +93,7 @@ function stationSection(station, options) {
 
 export function render(ctx) {
   const canReset = ctx.can('charge-points:reset');
+  const alerts = createAlertBand({ canRead: ctx.can('alerts:read'), canClose: ctx.can('alerts:close') });
   const hero = workspaceHero({
     user: ctx.user,
     roleLabel: WORKSPACES[ctx.workspace].role,
@@ -133,6 +135,6 @@ export function render(ctx) {
     { eventsUrl: '/api/fleet-status/events', onError: (error) => { loadError = error.message; paint(); } },
   );
 
-  ctx.root.append(hero.el, toolbar, errorNotice, body);
-  return () => { realtime.stop(); hero.destroy(); };
+  ctx.root.append(hero.el, alerts.el, toolbar, errorNotice, body);
+  return () => { realtime.stop(); alerts.stop(); hero.destroy(); };
 }

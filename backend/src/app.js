@@ -22,6 +22,7 @@ const reportsRoutes = require('./modules/reports/reports.routes');
 const periodsRoutes = require('./modules/accounting/periods.routes');
 const reconciliationRoutes = require('./modules/reports/reconciliation.routes');
 const erasureRoutes = require('./modules/privacy/erasure.routes');
+const alertsRoutes = require('./modules/alerts/alerts.routes');
 const sandboxGatewayRoutes = require('./modules/payments/sandbox-gateway.routes');
 const webhookRoutes = require('./modules/payments/webhook.routes');
 const { registerAfterInvoice } = require('./modules/billing/finalize-session');
@@ -55,7 +56,7 @@ function createApp({ commandSender } = {}) {
   app.use(cookieParser());
   app.use(express.static(path.resolve(__dirname, '../../frontend')));
 
-  app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, createChargePointsRouter({ commandSender }), remoteStartRoutes, fleetStatusRoutes, sessionsRoutes, auditRoutes, tariffsRoutes, invoicesRoutes, walletRoutes, notificationsRoutes, reportsRoutes, periodsRoutes, reconciliationRoutes, erasureRoutes);
+  app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, createChargePointsRouter({ commandSender }), remoteStartRoutes, fleetStatusRoutes, sessionsRoutes, auditRoutes, tariffsRoutes, invoicesRoutes, walletRoutes, notificationsRoutes, reportsRoutes, periodsRoutes, reconciliationRoutes, erasureRoutes, alertsRoutes);
   app.use(errorHandler);
 
   return app;

@@ -28,6 +28,8 @@ const schema = z.object({
   OCPP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(50),
   // Thời gian chờ phản hồi CALL từ trụ (giây), mặc định 30
   OCPP_COMMAND_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(30),
+  // Cửa sổ gộp các sự kiện chia lại công suất tại cùng một trạm
+  POWER_REBALANCE_MIN_INTERVAL_MS: z.coerce.number().int().positive().default(2000),
   // Thời gian chờ StopTransaction sau RemoteStopTransaction Accepted, mặc định 2 phút
   REMOTE_STOP_WAIT_SECONDS: z.coerce.number().int().positive().default(120),
   // Thời gian trụ không gửi tin trước khi phiên sạc bị đánh dấu bất thường, mặc định 6 giờ

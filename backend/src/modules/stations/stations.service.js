@@ -5,10 +5,24 @@ const connectionRegistry = require('../charge-points/connection-registry');
 const { denyOrNotFound } = require('../../lib/ownership');
 const { withTransaction } = require('../../db/tx');
 const { BadRequestError, ConflictError } = require('../../lib/errors');
+const { wattsToKilowatts } = require('../power/units');
 
 const NOT_FOUND = 'Không tìm thấy trạm';
 
-const list = (actor) => repo.list(actor);
+function stationWithPower(station) {
+  const totalW = BigInt(station.rated_total_w || 0);
+  const limitW = station.power_limit_w === null ? null : BigInt(station.power_limit_w);
+  return {
+    ...station,
+    power: {
+      limitKw: wattsToKilowatts(limitW),
+      ratedTotalKw: wattsToKilowatts(totalW),
+      oversubscribed: limitW !== null && totalW > limitW,
+    },
+  };
+}
+
+const list = async (actor) => (await repo.list(actor)).map(stationWithPower);
 
 async function find(actor, id) {
   const station = await repo.findById(actor, id);
@@ -18,11 +32,19 @@ async function find(actor, id) {
 async function get(actor, id) {
   const station = await find(actor, id);
   const chargePoints = await repo.chargePointsOf(station.id);
-  station.charge_points = await Promise.all(chargePoints.map(async (point) => ({
-    ...point,
-    connectors: await repo.connectorsOf(point.id),
-  })));
-  return station;
+  station.charge_points = await Promise.all(chargePoints.map(async (point) => {
+    const connectors = await repo.connectorsOf(point.id);
+    const connectorTotalW = connectors.reduce((total, connector) => total + BigInt(connector.effective_power_w || 0), 0n);
+    return {
+      ...point,
+      power: { ratedTotalKw: wattsToKilowatts(connectorTotalW) },
+      connectors: connectors.map((connector) => ({
+        ...connector,
+        power: { ratedKw: wattsToKilowatts(BigInt(connector.effective_power_w || 0)) },
+      })),
+    };
+  }));
+  return stationWithPower(station);
 }
 
 async function create(actor, data, idempotencyKey) {
@@ -45,7 +67,7 @@ async function create(actor, data, idempotencyKey) {
     return { station, created: true };
   });
   if (result.created) await audit.record(actor.id, 'CREATE', 'station', result.station.id, { fields: Object.keys(data) });
-  return result.station;
+  return stationWithPower(await repo.findById(actor, result.station.id));
 }
 
 async function update(actor, id, data) {
@@ -57,7 +79,23 @@ async function update(actor, id, data) {
   }
   await repo.update(id, data);
   await audit.record(actor.id, 'UPDATE', 'station', id, { fields: repo.UPDATABLE.filter((key) => data[key] !== undefined) });
-  return repo.findById(actor, id);
+  return stationWithPower(await repo.findById(actor, id));
+}
+
+async function setConnectorPower(actor, id, ratedPowerW) {
+  const connector = await repo.connectorById(actor, id)
+    || await denyOrNotFound(actor, 'connector', id, repo.connectorExistsById, 'Không tìm thấy đầu nối');
+  await repo.updateConnectorPower(id, ratedPowerW);
+  await audit.record(actor.id, 'UPDATE', 'connector', id, {
+    rated_power_w: ratedPowerW,
+    charge_point_id: connector.charge_point_id,
+    charge_point_code: connector.charge_point_code,
+  });
+  const updated = await repo.connectorById(actor, id);
+  return {
+    ...updated,
+    power: { ratedKw: wattsToKilowatts(BigInt(updated.effective_power_w || 0)) },
+  };
 }
 
 async function setLock(actor, id, locked) {
@@ -74,4 +112,4 @@ async function setLock(actor, id, locked) {
   return repo.findById(actor, id);
 }
 
-module.exports = { list, get, create, update, setLock };
+module.exports = { list, get, create, update, setLock, setConnectorPower };

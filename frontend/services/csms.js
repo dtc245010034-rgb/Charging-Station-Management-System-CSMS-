@@ -20,7 +20,13 @@ export const chargePoints = {
   get: (id) => api(`/api/charge-points/${encodeURIComponent(id)}`),
   create: (stationId, body) => api(`/api/stations/${encodeURIComponent(stationId)}/charge-points`, { method: 'POST', body }),
   update: (id, body) => api(`/api/charge-points/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
+  setConnectorPower: (id, ratedPowerKw) => api(`/api/connectors/${encodeURIComponent(id)}/power`, { method: 'PATCH', body: { rated_power_kw: ratedPowerKw } }),
   reset: (id, type) => api(`/api/charge-points/${encodeURIComponent(id)}/reset`, { method: 'POST', body: { type } }),
+  changeConfiguration: (id, key, value) => api(`/api/charge-points/${encodeURIComponent(id)}/configuration`, {
+    method: 'POST',
+    body: { key, value },
+  }),
+  getConfiguration: (id, key) => api(`/api/charge-points/${encodeURIComponent(id)}/configuration?key=${encodeURIComponent(key)}`),
   checkCode: (code) => api(`/api/charge-points/check-code?code=${encodeURIComponent(code)}`),
 };
 
@@ -33,6 +39,11 @@ export const remoteStart = {
 
 export const fleetStatus = {
   snapshot: () => api('/api/fleet-status'),
+};
+
+export const alerts = {
+  list: (state = 'open') => api(`/api/alerts?state=${encodeURIComponent(state)}`),
+  close: (id) => api(`/api/alerts/${encodeURIComponent(id)}/close`, { method: 'POST', body: {} }),
 };
 
 export const admin = {

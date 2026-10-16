@@ -254,10 +254,10 @@ describe('S-02 frontend: router', () => {
             action: 'REMOTE_START',
             entity: 'connector',
             entity_id: '2',
-            charge_point_code: 'CP-2',
+            charge_point_code: null,
             result: 'ACCEPTED',
             ip: '203.0.113.42',
-            metadata: { note: '<img src=x onerror=alert(1)>' },
+            metadata: { charge_point_code: 'CP-2', note: '<img src=x onerror=alert(1)>' },
           }, {
             id: '2',
             created_at: '2026-10-11T17:01:00.000Z',
@@ -300,6 +300,7 @@ describe('S-02 frontend: router', () => {
       assert.match(pre.textContent, /<img src=x onerror=alert\(1\)>/);
       assert.equal(find(root, (node) => node.tag === 'img').length, 0);
       assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Bắt đầu sạc từ xa'));
+      assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'CP-2'));
       assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Đã chấp nhận'));
       assert.ok(find(root, (node) => node.tag === 'td').some((node) => node.textContent === '203.0.113.42'));
       assert.ok(find(root, (node) => node.tag === 'span' && node.attributes.class === 'badge badge--ready').length > 0);
@@ -435,10 +436,12 @@ describe('S-02 frontend: router', () => {
     assert.equal(typeof pageLoader(route.page, route.workspace), 'function');
   });
 
-  it('quyền nút trên giao diện: Reset cho Admin/Operator, khoá trạm chỉ Admin', async () => {
+  it('quyền nút trên giao diện: cấu hình và Reset cho Admin/Operator, khoá trạm chỉ Admin', async () => {
     const { can } = await load('app/permissions.js');
     assert.ok(can('ADMIN', 'charge-points:reset') && can('OPERATOR', 'charge-points:reset'));
     assert.ok(!can('STATION_OWNER', 'charge-points:reset') && !can('DRIVER', 'charge-points:reset'));
+    assert.ok(can('ADMIN', 'charge-points:configure') && can('OPERATOR', 'charge-points:configure'));
+    assert.ok(!can('STATION_OWNER', 'charge-points:configure') && !can('DRIVER', 'charge-points:configure'));
     assert.ok(can('ADMIN', 'stations:lock'));
     for (const role of ['OPERATOR', 'STATION_OWNER', 'ACCOUNTANT', 'DRIVER']) assert.ok(!can(role, 'stations:lock'), role);
   });
@@ -585,6 +588,28 @@ describe('S-02 frontend: api.js và auth.js', () => {
     env = stubBrowser({ respond: () => ({ status: 400, body: { error: { code: 'VALIDATION_ERROR', message: 'Email không hợp lệ', details } } }) });
     const { api } = await load('services/api.js');
     await assert.rejects(api('/api/auth/register', { method: 'POST', body: {} }), (e) => e.status === 400 && JSON.stringify(e.details) === JSON.stringify(details));
+  });
+});
+
+describe('S-60 frontend: API cấu hình trụ', () => {
+  let env;
+  afterEach(() => env?.restore());
+
+  it('đổi cấu hình và đọc lại theo khóa đã chọn', async () => {
+    env = stubBrowser({ respond: (url) => ({
+      body: url.includes('?key=') ? { key: 'HeartbeatInterval', value: '45', readonly: false } : { status: 'Accepted' },
+    }) });
+    const { chargePoints } = await load('services/csms.js');
+
+    const result = await chargePoints.changeConfiguration(7, 'HeartbeatInterval', '45');
+    const current = await chargePoints.getConfiguration(7, 'HeartbeatInterval');
+
+    assert.deepStrictEqual(result, { status: 'Accepted' });
+    assert.deepStrictEqual(current, { key: 'HeartbeatInterval', value: '45', readonly: false });
+    assert.deepStrictEqual(env.calls.fetch.map(({ url, options }) => [url, options.method, options.body]), [
+      ['/api/charge-points/7/configuration', 'POST', JSON.stringify({ key: 'HeartbeatInterval', value: '45' })],
+      ['/api/charge-points/7/configuration?key=HeartbeatInterval', 'GET', undefined],
+    ]);
   });
 });
 

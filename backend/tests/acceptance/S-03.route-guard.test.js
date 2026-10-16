@@ -90,6 +90,7 @@ describe('S-03 route guard: mặc định từ chối', () => {
     assert.deepStrictEqual(p['charge-points:read'], ['ADMIN', 'STATION_OWNER', 'OPERATOR']);
     assert.deepStrictEqual(p['stations:write'], ['ADMIN', 'STATION_OWNER']);
     assert.deepStrictEqual(p['charge-points:write'], ['ADMIN', 'STATION_OWNER']);
+    assert.deepStrictEqual(p['charge-points:configure'], ['ADMIN', 'OPERATOR']);
     assert.deepStrictEqual(p['users:create'], ['ADMIN']);
     assert.deepStrictEqual(p['roles:read'], ['ADMIN']);
     assert.deepStrictEqual(p['tariffs:read'], ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT']);
@@ -106,6 +107,8 @@ describe('S-03 route guard: mặc định từ chối', () => {
     assert.deepStrictEqual(p['periods:reopen'], ['ADMIN']);
     assert.deepStrictEqual(p['erasure:request'], ['DRIVER']);
     assert.deepStrictEqual(p['erasure:manage'], ['ADMIN']);
+    assert.deepStrictEqual(p['alerts:read'], ['ADMIN', 'STATION_OWNER', 'OPERATOR']);
+    assert.deepStrictEqual(p['alerts:close'], ['ADMIN', 'OPERATOR']);
     assert.strictEqual(p['auth:public'], 'public');
     assert.throws(() => permissions.access('khong:ton-tai'));
   });

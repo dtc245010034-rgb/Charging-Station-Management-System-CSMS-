@@ -54,6 +54,7 @@ describe('S-01 env: cấu hình bắt buộc', () => {
     assert.strictEqual(cfg.OCPP_PING_INTERVAL, 30);
     assert.strictEqual(cfg.OCPP_RATE_LIMIT_MAX, 50);
     assert.strictEqual(cfg.OCPP_COMMAND_TIMEOUT_SECONDS, 30);
+    assert.strictEqual(cfg.POWER_REBALANCE_MIN_INTERVAL_MS, 2000);
   });
 
   it('cấu hình OCPP_HEARTBEAT_INTERVAL tuỳ chỉnh được nạp đúng', () => {
@@ -75,6 +76,12 @@ describe('S-01 env: cấu hình bắt buộc', () => {
     const r = load({ ...valid, OCPP_COMMAND_TIMEOUT_SECONDS: '7' });
     assert.strictEqual(r.status, 0, r.stderr);
     assert.strictEqual(JSON.parse(r.stdout).OCPP_COMMAND_TIMEOUT_SECONDS, 7);
+  });
+
+  it('cấu hình cửa sổ gộp rebalance tuỳ chỉnh được nạp đúng', () => {
+    const r = load({ ...valid, POWER_REBALANCE_MIN_INTERVAL_MS: '500' });
+    assert.strictEqual(r.status, 0, r.stderr);
+    assert.strictEqual(JSON.parse(r.stdout).POWER_REBALANCE_MIN_INTERVAL_MS, 500);
   });
 
   it('WALLET_MIN_BALANCE_DONG bỏ trống để dùng ngưỡng động', () => {

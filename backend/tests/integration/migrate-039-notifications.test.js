@@ -111,6 +111,9 @@ describe('migration 039: notifications and email_outbox [GYM-85]', () => {
 
   it('AC GYM-85: rollback migration 039 gỡ sạch bảng notifications và email_outbox và up lại được', async () => {
     for (const version of [
+      '045_zero_watt_profile_limits.sql',
+      '044_alerts_power_profile_log.sql',
+      '043_station_power_limits.sql',
       '042_data_erasure_requests.sql',
       '041_accounting_period_locks.sql',
       '040_accounting_periods.sql',

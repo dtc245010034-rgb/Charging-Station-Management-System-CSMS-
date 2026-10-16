@@ -56,6 +56,9 @@
 .card__title { font-size: 14px; font-weight: 700; }
 .card__body { padding: 10px 14px 12px; flex: 1; min-height: 0; }
 .card__body--flush { padding: 0; }
+.alert-band__list { display: grid; gap: 10px; }
+.alert-band__item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.alert-band__message { flex: 1 1 240px; min-width: 0; }
 
 /* ---------- KPI ---------- */
 .kpi { display: flex; gap: 10px; align-items: center; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); min-width: 0; }

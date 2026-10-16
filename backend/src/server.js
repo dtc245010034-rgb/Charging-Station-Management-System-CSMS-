@@ -23,6 +23,8 @@ const { startWalletAuditJob } = require('./modules/wallet/wallet-audit-job');
 const { startTopupExpiryJob } = require('./modules/payments/topup-expiry-job');
 const { startEmailJob } = require('./modules/notifications/email-job');
 const { startIdleFeeNotificationJob } = require('./modules/notifications/idle-fee-notification-job');
+const { startPowerProfileRetryJob } = require('./modules/power/profile-retry-job');
+const { createPowerRebalancer } = require('./modules/power/rebalance');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
@@ -38,8 +40,14 @@ async function updateChargePointLastSeen(connection) {
 }
 
 const messageStore = createMessageStore(pool, { replayWindowSeconds: env.OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS });
+let powerRebalancer = null;
 const ocppMessages = createOcppMessageHandler({
-	handlers: createOcppHandlers({ ocppPool, env, now }),
+	handlers: createOcppHandlers({
+		ocppPool,
+		env,
+		now,
+		rebalanceStation: (...args) => powerRebalancer.rebalanceStation(...args),
+	}),
 	updateLastSeen: updateChargePointLastSeen,
 	messageStore,
 	callTimeoutMs: env.OCPP_COMMAND_TIMEOUT_SECONDS * 1000,
@@ -49,6 +57,11 @@ const commandSender = createCommandSender({
 	getConnection: connections.getConnection,
 	sendCall: (...args) => ocppMessages.sendCall(...args),
 	timeoutMs: env.OCPP_COMMAND_TIMEOUT_SECONDS * 1000,
+});
+powerRebalancer = createPowerRebalancer({
+	pool,
+	commandSender,
+	minIntervalMs: env.POWER_REBALANCE_MIN_INTERVAL_MS,
 });
 const server = http.createServer(createApp({ commandSender }));
 
@@ -109,6 +122,7 @@ let stopWalletAuditJob = () => {};
 let stopTopupExpiryJob = () => {};
 let stopEmailJob = () => {};
 let stopIdleFeeNotificationJob = () => {};
+let stopPowerProfileRetryJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();
 	stopRemoteStopJob();
@@ -118,6 +132,7 @@ for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopTopupExpiryJob();
 	stopEmailJob();
 	stopIdleFeeNotificationJob();
+	stopPowerProfileRetryJob();
 	if (purgeTimer) clearInterval(purgeTimer);
 	shutdown(signal);
 });
@@ -154,6 +169,11 @@ async function start() {
 		transport: env.EMAIL_TRANSPORT,
 	}).stop;
 	stopIdleFeeNotificationJob = startIdleFeeNotificationJob({ db: pool }).stop;
+	stopPowerProfileRetryJob = startPowerProfileRetryJob({
+		db: pool,
+		commandSender,
+		commandTimeoutSeconds: env.OCPP_COMMAND_TIMEOUT_SECONDS + 5,
+	}).stop;
 	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
 }
 start().catch((error) => { console.error('Database startup failed:', error); process.exitCode = 1; });

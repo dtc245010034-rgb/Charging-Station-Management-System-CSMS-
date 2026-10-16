@@ -1,5 +1,5 @@
 import { h } from '../../app/dom.js';
-import { coordinate } from '../../app/format.js';
+import { coordinate, formatKw } from '../../app/format.js';
 import * as csms from '../../services/csms.js';
 import { openDrawer, openModal } from '../../components/modal.js';
 import { pointStatusBadge, stationBadge } from '../../components/badge.js';
@@ -104,8 +104,11 @@ function lockSection(station, reload) {
 function render(station, { canWrite, canLock, onEdit, reload, onOpenChargePoint }) {
   const points = station.charge_points ?? [];
   return [
+    station.power?.oversubscribed && h('div', { class: 'badge badge--warning', role: 'status' }, 'Trạm đang quá đăng ký'),
     h('dl', { class: 'kv' },
       h('dt', {}, 'Địa chỉ'), h('dd', {}, station.address),
+      h('dt', {}, 'Hạn mức công suất'), h('dd', {}, station.power?.limitKw === null ? 'Không giới hạn' : formatKw(station.power?.limitKw)),
+      h('dt', {}, 'Tổng công suất danh định'), h('dd', {}, formatKw(station.power?.ratedTotalKw ?? 0)),
       h('dt', {}, 'Vĩ độ'), h('dd', {}, coordinate(station.latitude)),
       h('dt', {}, 'Kinh độ'), h('dd', {}, coordinate(station.longitude))),
     h('section', {},
