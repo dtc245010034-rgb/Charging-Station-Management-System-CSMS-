@@ -61,6 +61,14 @@ const notificationIdParam = z.object({
 const topupRefParam = z.object({
   ref: z.string().min(1, 'Mã đơn nạp không hợp lệ'),
 });
+const reportPeriodQuery = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'from phải có dạng YYYY-MM-DD'),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'to phải có dạng YYYY-MM-DD'),
+  stationId: positiveInt('stationId').optional(),
+}).refine((value) => value.from <= value.to, {
+  message: 'from phải nhỏ hơn hoặc bằng to',
+  path: ['from'],
+});
 
 module.exports = {
   idParam,
@@ -75,4 +83,5 @@ module.exports = {
   notificationsQuery,
   notificationIdParam,
   topupRefParam,
+  reportPeriodQuery,
 };

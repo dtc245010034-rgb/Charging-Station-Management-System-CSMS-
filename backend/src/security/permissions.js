@@ -36,6 +36,7 @@ const permissions = {
   'audit-logs:read': ADMIN,
   'tariffs:read': ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT'],
   'tariffs:write': WRITE_OPERATIONS,
+  'reports:revenue': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
 };
 
 function access(key) {
