@@ -24,6 +24,7 @@ const { startTopupExpiryJob } = require('./modules/payments/topup-expiry-job');
 const { startEmailJob } = require('./modules/notifications/email-job');
 const { startIdleFeeNotificationJob } = require('./modules/notifications/idle-fee-notification-job');
 const { startPowerProfileRetryJob } = require('./modules/power/profile-retry-job');
+const { createPowerRebalancer } = require('./modules/power/rebalance');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
@@ -39,8 +40,14 @@ async function updateChargePointLastSeen(connection) {
 }
 
 const messageStore = createMessageStore(pool, { replayWindowSeconds: env.OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS });
+let powerRebalancer = null;
 const ocppMessages = createOcppMessageHandler({
-	handlers: createOcppHandlers({ ocppPool, env, now }),
+	handlers: createOcppHandlers({
+		ocppPool,
+		env,
+		now,
+		rebalanceStation: (...args) => powerRebalancer.rebalanceStation(...args),
+	}),
 	updateLastSeen: updateChargePointLastSeen,
 	messageStore,
 	callTimeoutMs: env.OCPP_COMMAND_TIMEOUT_SECONDS * 1000,
@@ -51,6 +58,7 @@ const commandSender = createCommandSender({
 	sendCall: (...args) => ocppMessages.sendCall(...args),
 	timeoutMs: env.OCPP_COMMAND_TIMEOUT_SECONDS * 1000,
 });
+powerRebalancer = createPowerRebalancer({ pool, commandSender });
 const server = http.createServer(createApp({ commandSender }));
 
 const wss = new WebSocketServer({

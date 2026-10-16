@@ -4,6 +4,7 @@ const { maskIdTag } = require('./authorize');
 const { createMeterValuesHandler } = require('./meter-values');
 const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
 const { finalizeSession: finalizeSessionByDefault } = require('../../billing/finalize-session');
+const { triggerPowerRebalance } = require('../../power/rebalance-trigger');
 
 const MAX_TRANSACTION_ID = 2147483647;
 const MAX_ID_TAG_LENGTH = 20;
@@ -56,6 +57,7 @@ function createStopTransactionHandler({
   persistTransactionData = null,
   recordAudit = null,
   finalizeSession = finalizeSessionByDefault,
+  rebalanceStation = null,
 } = {}) {
   const handleMeterValues = createMeterValuesHandler({ pool, now, logWarning, logError });
   const saveTransactionData = persistTransactionData || handleMeterValues;
@@ -148,7 +150,8 @@ function createStopTransactionHandler({
          WHERE id = $1
            AND charge_point_id = $6
            AND status IN ('CHARGING', 'ABNORMAL')
-         RETURNING id, driver_id, remote_stop_requested_by, remote_stop_status`,
+         RETURNING id, driver_id, connector_id, remote_stop_requested_by, remote_stop_status,
+                   (SELECT station_id FROM charge_points WHERE id = charging_sessions.charge_point_id) AS station_id`,
         [
           payload.transactionId,
           payload.meterStop,
@@ -162,6 +165,7 @@ function createStopTransactionHandler({
       );
 
       if (updated.rowCount > 0) {
+        triggerPowerRebalance(rebalanceStation, updated.rows[0]?.station_id, 'STOP_TRANSACTION', logError);
         const requesterId = updated.rows[0]?.remote_stop_requested_by;
         if (requesterId !== null && requesterId !== undefined) {
           try {

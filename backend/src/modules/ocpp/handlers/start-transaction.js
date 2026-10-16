@@ -13,6 +13,7 @@ const {
   markRemoteStartRequestStarted,
 } = require('../../sessions/sessions.repository');
 const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
+const { triggerPowerRebalance } = require('../../power/rebalance-trigger');
 
 const MAX_CLOCK_SKEW_MS = 24 * 3600 * 1000;
 
@@ -54,6 +55,7 @@ function createStartTransactionHandler({
   logInfo = console.info,
   logWarning = console.warn,
   logError = console.error,
+  rebalanceStation = null,
 } = {}) {
   const getPool = () => pool || getDefaultPool();
 
@@ -155,7 +157,7 @@ function createStartTransactionHandler({
 
     // 5. Thực thi trong một giao dịch duy nhất trên ocppPool
     try {
-      const { session, closed } = await withTransaction(async (client) => {
+      const { session, closed, created } = await withTransaction(async (client) => {
         // 1. Khoá hàng connector để tuần tự hoá các yêu cầu đồng thời trên cùng một đầu nối
         await lockConnectorRow(client, connectorInfo.connector_id);
 
@@ -179,7 +181,7 @@ function createStartTransactionHandler({
           logInfo(
             `[OCPP] StartTransaction: Phát hiện tin gửi lại tự nhiên (D4) | transactionId: ${existingNaturalSession.id}`
           );
-          return { session: existingNaturalSession, closed: [] };
+          return { session: existingNaturalSession, closed: [], created: false };
         }
 
         // 3. AC3: Đầu nối còn phiên CHARGING khác -> đóng phiên cũ thành ABNORMAL (kWh để trống), cảnh báo
@@ -215,7 +217,7 @@ function createStartTransactionHandler({
             sessionId: newSession.id,
           });
         }
-        return { session: newSession, closed: closedOldSessions || [] };
+        return { session: newSession, closed: closedOldSessions || [], created: true };
       }, db);
 
       for (const old of closed) {
@@ -226,6 +228,9 @@ function createStartTransactionHandler({
           pool: db,
           driverId: tagRecord ? tagRecord.user_id : null,
         }).catch(() => {});
+      }
+      if (created && session?.id) {
+        triggerPowerRebalance(rebalanceStation, connectorInfo.station_id, 'START_TRANSACTION', logError);
       }
 
       logInfo(
