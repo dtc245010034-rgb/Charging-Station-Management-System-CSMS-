@@ -52,6 +52,7 @@ describe('rebalanceStation with persisted sessions and a simulated charge point'
 
     rebalancer = createPowerRebalancer({
       pool,
+      minIntervalMs: 0,
       commandSender: {
         async send(code, action, payload) {
           sentProfiles.push({ code, action, payload });
@@ -93,6 +94,24 @@ describe('rebalanceStation with persisted sessions and a simulated charge point'
       { session_id: String(sessionIds[1]), limit_w: 7300, status: 'ACCEPTED', trigger: 'START_TRANSACTION' },
       { session_id: String(sessionIds[2]), limit_w: 7400, status: 'ACCEPTED', trigger: 'START_TRANSACTION' },
     ]);
+  });
+
+  it('does not resend or add log rows when the accepted limits remain unchanged', async () => {
+    const sentBefore = sentProfiles.length;
+    const logsBefore = await query(
+      'SELECT COUNT(*)::integer AS count FROM charging_profile_log WHERE station_id = $1',
+      [stationId]
+    );
+
+    const result = await rebalancer.rebalanceStation(stationId, { reason: 'STATUS_NOTIFICATION' });
+
+    assert.deepStrictEqual(result.sessions.map(({ status }) => status), ['UNCHANGED', 'UNCHANGED', 'UNCHANGED']);
+    assert.equal(sentProfiles.length, sentBefore);
+    const logsAfter = await query(
+      'SELECT COUNT(*)::integer AS count FROM charging_profile_log WHERE station_id = $1',
+      [stationId]
+    );
+    assert.equal(logsAfter.rows[0].count, logsBefore.rows[0].count);
   });
 
   it('atomically retries due profiles once and creates one critical alert after the final retry', async () => {

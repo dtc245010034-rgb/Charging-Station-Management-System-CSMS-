@@ -166,6 +166,7 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `OCPP_PING_INTERVAL` | Chu kỳ WebSocket Ping giữ kết nối OCPP (B9) | Giây | `30` |
 | `SSE_MAX_CONNECTIONS_PER_USER` | Số luồng SSE (phiên sạc, fleet-status) đồng thời tối đa mỗi tài khoản; mở thêm thì luồng cũ nhất bị đóng. Đăng xuất đóng mọi luồng của tài khoản | Luồng | `5` |
 | `OCPP_RATE_LIMIT_MAX` | Giới hạn tần suất tin nhắn mỗi kết nối OCPP (B3) | Tin/giây | `50` |
+| `POWER_REBALANCE_MIN_INTERVAL_MS` | Cửa sổ gộp các sự kiện chia lại công suất tại cùng một trạm | Mili giây | `2000` |
 | `OCPP_ERROR_DEDUP_SECONDS` | Bỏ qua lỗi đầu nối y hệt (cùng đầu nối, `errorCode`, `vendorErrorCode`, trạng thái không đổi) đã ghi trong N giây gần nhất; `0` = tắt | Giây | `60` |
 | `OCPP_MESSAGE_RETENTION_DAYS` | Số ngày giữ câu trả lời đã gửi để nhận ra tin OCPP trùng `messageId` (S-14). Job dọn chạy khi khởi động và mỗi giờ | Ngày | `7` |
 | `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` | Cửa sổ phát lại tin trùng: chỉ phát lại câu cũ khi cùng `messageId`, hành động, nội dung và chưa quá N giây (F8) | Giây | `600` |

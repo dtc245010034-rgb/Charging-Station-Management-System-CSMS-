@@ -9,7 +9,15 @@ function getDefaultPool() {
   return require('../../db/pool').pool;
 }
 
-function createPowerRebalancer({ pool = null, commandSender, onProfileRejected = null } = {}) {
+function createPowerRebalancer({
+  pool = null,
+  commandSender,
+  onProfileRejected = null,
+  minIntervalMs = 2000,
+  now = Date.now,
+  setTimeoutFn = setTimeout,
+  clearTimeoutFn = clearTimeout,
+} = {}) {
   const db = pool || getDefaultPool();
   const stationQueues = new Map();
   const profileOutcomes = onProfileRejected
@@ -42,9 +50,18 @@ function createPowerRebalancer({ pool = null, commandSender, onProfileRejected =
          ORDER BY c.id`,
         [stationId]
       );
+      const accepted = await client.query(
+        `SELECT DISTINCT ON (session_id)
+                session_id::text AS session_id, limit_w
+         FROM charging_profile_log
+         WHERE station_id = $1 AND status = 'ACCEPTED'
+         ORDER BY session_id, id DESC`,
+        [stationId]
+      );
       return {
         limitW: station.rows[0].power_limit_w,
         sessions: active.rows,
+        acceptedLimits: new Map((accepted.rows || []).map((row) => [String(row.session_id), row.limit_w])),
       };
     }, db);
 
@@ -63,6 +80,12 @@ function createPowerRebalancer({ pool = null, commandSender, onProfileRejected =
 
     for (const session of plan.sessions) {
       const limitW = allocationById.get(String(session.session_id));
+      const acceptedLimitW = plan.acceptedLimits.get(String(session.session_id));
+      if ((acceptedLimitW !== undefined && Number(acceptedLimitW) === limitW)
+        || (acceptedLimitW === undefined && Number(session.rated_w) === limitW)) {
+        results.push({ sessionId: session.session_id, limitW, status: 'UNCHANGED', reason: null });
+        continue;
+      }
       const transactionId = Number(session.session_id);
       if (!Number.isSafeInteger(transactionId) || transactionId < 0 || transactionId > 2147483647) {
         throw new RangeError(`Session ${session.session_id} cannot be represented as an OCPP transactionId`);
@@ -114,18 +137,83 @@ function createPowerRebalancer({ pool = null, commandSender, onProfileRejected =
     return { stationId, sessions: results };
   }
 
+  function settleQueue(key, queue) {
+    if (queue.running || queue.timer !== null || queue.waiters.length > 0
+      || queue.cleanupTimer !== null || queue.lastRunAt === null) return;
+    const delay = Math.max(0, queue.lastRunAt + minIntervalMs - now());
+    if (delay === 0) {
+      if (stationQueues.get(key) === queue) stationQueues.delete(key);
+      return;
+    }
+    queue.cleanupTimer = setTimeoutFn(() => {
+      queue.cleanupTimer = null;
+      settleQueue(key, queue);
+    }, delay);
+    queue.cleanupTimer?.unref?.();
+  }
+
+  function runPending(key, queue) {
+    if (queue.running || queue.waiters.length === 0) return;
+    queue.running = true;
+    queue.rerunRequested = false;
+    queue.lastRunAt = now();
+    const reason = queue.reason;
+    const waiters = queue.waiters.splice(0);
+
+    execute(queue.stationId, reason).then(
+      (result) => waiters.forEach(({ resolve }) => resolve(result)),
+      (error) => waiters.forEach(({ reject }) => reject(error))
+    ).finally(() => {
+      queue.running = false;
+      if (queue.rerunRequested && queue.waiters.length > 0 && queue.timer === null) {
+        runPending(key, queue);
+      } else {
+        settleQueue(key, queue);
+      }
+    });
+  }
+
+  function scheduleTrailingRun(key, queue) {
+    if (queue.timer !== null) clearTimeoutFn(queue.timer);
+    queue.rerunRequested = false;
+    queue.timer = setTimeoutFn(() => {
+      queue.timer = null;
+      if (queue.running) {
+        queue.rerunRequested = true;
+        return;
+      }
+      runPending(key, queue);
+    }, minIntervalMs);
+  }
+
   function rebalanceStation(stationId, { reason = 'UNKNOWN' } = {}) {
     const key = String(stationId);
-    const next = (stationQueues.get(key) || Promise.resolve()).then(
-      () => execute(stationId, reason),
-      () => execute(stationId, reason)
-    );
-    stationQueues.set(key, next);
-    const release = () => {
-      if (stationQueues.get(key) === next) stationQueues.delete(key);
+    const queue = stationQueues.get(key) || {
+      stationId,
+      running: false,
+      timer: null,
+      cleanupTimer: null,
+      rerunRequested: false,
+      lastRunAt: null,
+      reason,
+      waiters: [],
     };
-    next.then(release, release);
-    return next;
+    stationQueues.set(key, queue);
+    if (queue.cleanupTimer !== null) {
+      clearTimeoutFn(queue.cleanupTimer);
+      queue.cleanupTimer = null;
+    }
+    queue.reason = reason;
+
+    const result = new Promise((resolve, reject) => queue.waiters.push({ resolve, reject }));
+    if (queue.running || queue.timer !== null) {
+      scheduleTrailingRun(key, queue);
+    } else if (queue.lastRunAt === null || now() - queue.lastRunAt >= minIntervalMs) {
+      runPending(key, queue);
+    } else {
+      scheduleTrailingRun(key, queue);
+    }
+    return result;
   }
 
   return { rebalanceStation };

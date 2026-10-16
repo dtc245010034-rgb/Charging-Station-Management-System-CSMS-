@@ -15,9 +15,23 @@ function createPool({ powerLimitW = 22000, sessions = [] } = {}) {
       if (sql.includes('SELECT power_limit_w FROM stations')) {
         return { rowCount: 1, rows: [{ power_limit_w: powerLimitW }] };
       }
-      if (sql.includes('FROM charging_sessions cs')) return { rowCount: sessions.length, rows: sessions };
+      if (sql.includes("status = 'ACCEPTED'") && sql.includes('charging_profile_log')) {
+        return {
+          rowCount: logs.filter((log) => log.status === 'ACCEPTED').length,
+          rows: logs.filter((log) => log.status === 'ACCEPTED').map((log) => ({
+            session_id: log.session_id,
+            limit_w: log.limit_w,
+          })),
+        };
+      }
+      if (sql.includes('FROM charging_sessions cs')) {
+        const activeSessions = sessions.filter((session) => ![
+          'SuspendedEV', 'Finishing', 'Unavailable', 'Faulted',
+        ].includes(session.ocpp_status));
+        return { rowCount: activeSessions.length, rows: activeSessions };
+      }
       if (sql.includes('INSERT INTO charging_profile_log')) {
-        const row = { id: nextLogId++, status: 'SENT', limit_w: params[5] };
+        const row = { id: nextLogId++, status: 'SENT', session_id: params[3], limit_w: params[5] };
         logs.push(row);
         return { rowCount: 1, rows: [row] };
       }
@@ -34,6 +48,32 @@ function createPool({ powerLimitW = 22000, sessions = [] } = {}) {
     logs,
     queries,
     pool: { connect: async () => client, query: (...args) => client.query(...args) },
+  };
+}
+
+function createFakeClock() {
+  let currentTime = 0;
+  let nextTimerId = 1;
+  const timers = new Map();
+  return {
+    now: () => currentTime,
+    setTimeout(callback, delayMs) {
+      const id = nextTimerId++;
+      timers.set(id, { callback, dueAt: currentTime + delayMs });
+      return id;
+    },
+    clearTimeout(id) { timers.delete(id); },
+    tick(milliseconds) {
+      currentTime += milliseconds;
+      while (true) {
+        const due = [...timers.entries()]
+          .filter(([, timer]) => timer.dueAt <= currentTime)
+          .sort((left, right) => left[1].dueAt - right[1].dueAt)[0];
+        if (!due) break;
+        timers.delete(due[0]);
+        due[1].callback();
+      }
+    },
   };
 }
 
@@ -115,11 +155,12 @@ describe('rebalanceStation', () => {
   });
 
   it('serializes concurrent work for the same station and records rejected responses', async () => {
-    const { pool, logs } = createPool({ sessions: threeSessions.slice(0, 1) });
+    const { pool, logs } = createPool({ powerLimitW: 6000, sessions: threeSessions.slice(0, 1) });
     let inFlight = 0;
     let maxInFlight = 0;
     const rebalancer = createPowerRebalancer({
       pool,
+      minIntervalMs: 0,
       onProfileRejected: async () => {},
       commandSender: {
         async send() {
@@ -150,7 +191,7 @@ describe('rebalanceStation', () => {
       { error: new Error('OCPP call timed out: SetChargingProfile'), expected: 'TIMEOUT' },
     ];
     for (const outcome of outcomes) {
-      const { pool, logs } = createPool({ sessions: threeSessions.slice(0, 1) });
+      const { pool, logs } = createPool({ powerLimitW: 6000, sessions: threeSessions.slice(0, 1) });
       const rebalancer = createPowerRebalancer({
         pool,
         onProfileRejected: async () => {},
@@ -172,7 +213,7 @@ describe('rebalanceStation', () => {
   it('handles rejected and unsupported profiles for remote stop and alerting', async () => {
     const handled = [];
     for (const response of [{ status: 'Rejected' }, { status: 'NotSupported' }]) {
-      const { pool } = createPool({ sessions: threeSessions.slice(0, 1) });
+      const { pool } = createPool({ powerLimitW: 6000, sessions: threeSessions.slice(0, 1) });
       const rebalancer = createPowerRebalancer({
         pool,
         commandSender: { async send() { return response; } },
@@ -186,5 +227,98 @@ describe('rebalanceStation', () => {
       ['1', 'REJECTED'],
       ['1', 'NOT_SUPPORTED'],
     ]);
+  });
+
+  it('timeline t0-t5 sends only changed accepted limits and skips the unconstrained first profile', async () => {
+    const sessions = [threeSessions[2]];
+    const { pool } = createPool({ sessions });
+    const clock = createFakeClock();
+    const sent = [];
+    const rebalancer = createPowerRebalancer({
+      pool,
+      commandSender: {
+        async send(_code, _action, payload) {
+          sent.push([
+            payload.csChargingProfiles.transactionId,
+            payload.csChargingProfiles.chargingSchedule.chargingSchedulePeriod[0].limit,
+          ]);
+          return { status: 'Accepted' };
+        },
+      },
+      minIntervalMs: 2000,
+      now: clock.now,
+      setTimeoutFn: clock.setTimeout,
+      clearTimeoutFn: clock.clearTimeout,
+    });
+    const rebalance = async () => rebalancer.rebalanceStation(7);
+
+    await rebalance();
+    assert.deepStrictEqual(sent, []);
+
+    sessions.push(threeSessions[1]);
+    clock.tick(2000);
+    await rebalance();
+    assert.deepStrictEqual(sent, [[3, 11000]]);
+
+    sessions.push(threeSessions[0]);
+    clock.tick(2000);
+    await rebalance();
+    assert.deepStrictEqual(sent.slice(1), [[3, 7400], [2, 7300], [1, 7300]]);
+
+    sessions.splice(sessions.indexOf(threeSessions[0]), 1);
+    clock.tick(2000);
+    await rebalance();
+    assert.deepStrictEqual(sent.slice(4), [[3, 11000], [2, 11000]]);
+
+    sessions.splice(sessions.indexOf(threeSessions[1]), 1);
+    clock.tick(2000);
+    await rebalance();
+    assert.deepStrictEqual(sent.slice(6), [[3, 22000]]);
+
+    sessions.push({ ...threeSessions[1], ocpp_status: 'Charging' });
+    clock.tick(2000);
+    await rebalance();
+    assert.deepStrictEqual(sent.slice(7), [[3, 11000]]);
+  });
+
+  it('coalesces bursts and schedules a trailing pass after the final event', async () => {
+    const clock = createFakeClock();
+    const { pool, queries } = createPool({ sessions: threeSessions.slice(1) });
+    let releaseSend;
+    let sendStarted;
+    const started = new Promise((resolve) => { sendStarted = resolve; });
+    const blockedSend = new Promise((resolve) => { releaseSend = resolve; });
+    let sends = 0;
+    const rebalancer = createPowerRebalancer({
+      pool,
+      commandSender: {
+        async send() {
+          sends += 1;
+          if (sends === 1) {
+            sendStarted();
+            await blockedSend;
+          }
+          return { status: 'Accepted' };
+        },
+      },
+      minIntervalMs: 2000,
+      now: clock.now,
+      setTimeoutFn: clock.setTimeout,
+      clearTimeoutFn: clock.clearTimeout,
+    });
+
+    const first = rebalancer.rebalanceStation(7, { reason: 'START_TRANSACTION' });
+    await started;
+    const second = rebalancer.rebalanceStation(7, { reason: 'STATUS_NOTIFICATION' });
+    clock.tick(1000);
+    const third = rebalancer.rebalanceStation(7, { reason: 'STOP_TRANSACTION' });
+    clock.tick(1999);
+    assert.equal(queries.filter(({ sql }) => sql.includes('pg_advisory_xact_lock')).length, 1);
+    clock.tick(1);
+    releaseSend();
+    await Promise.all([first, second, third]);
+
+    assert.equal(queries.filter(({ sql }) => sql.includes('pg_advisory_xact_lock')).length, 2);
+    assert.equal(sends, 1);
   });
 });

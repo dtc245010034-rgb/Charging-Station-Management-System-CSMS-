@@ -58,7 +58,11 @@ const commandSender = createCommandSender({
 	sendCall: (...args) => ocppMessages.sendCall(...args),
 	timeoutMs: env.OCPP_COMMAND_TIMEOUT_SECONDS * 1000,
 });
-powerRebalancer = createPowerRebalancer({ pool, commandSender });
+powerRebalancer = createPowerRebalancer({
+	pool,
+	commandSender,
+	minIntervalMs: env.POWER_REBALANCE_MIN_INTERVAL_MS,
+});
 const server = http.createServer(createApp({ commandSender }));
 
 const wss = new WebSocketServer({
