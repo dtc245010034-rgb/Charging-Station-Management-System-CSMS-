@@ -98,4 +98,9 @@ describe('power allocation', () => {
       { sessionId: '10', limitW: 1000 },
     ]);
   });
+
+  it('returns empty array when sessions list is empty', () => {
+    assert.deepStrictEqual(allocate({ limitW: 22000, sessions: [] }), []);
+  });
 });
+
