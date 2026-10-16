@@ -20,6 +20,7 @@ export const chargePoints = {
   get: (id) => api(`/api/charge-points/${encodeURIComponent(id)}`),
   create: (stationId, body) => api(`/api/stations/${encodeURIComponent(stationId)}/charge-points`, { method: 'POST', body }),
   update: (id, body) => api(`/api/charge-points/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
+  setConnectorPower: (id, ratedPowerKw) => api(`/api/connectors/${encodeURIComponent(id)}/power`, { method: 'PATCH', body: { rated_power_kw: ratedPowerKw } }),
   reset: (id, type) => api(`/api/charge-points/${encodeURIComponent(id)}/reset`, { method: 'POST', body: { type } }),
   checkCode: (code) => api(`/api/charge-points/check-code?code=${encodeURIComponent(code)}`),
 };

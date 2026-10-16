@@ -34,6 +34,9 @@ describe('S-42 AC: station and connector power declarations', () => {
     const initial = await request(app).get(`/api/stations/${station.id}`).set('Cookie', owner.cookie);
     assert.strictEqual(initial.status, 200);
     assert.deepStrictEqual(initial.body.power, { limitKw: 22, ratedTotalKw: 22.2, oversubscribed: true });
+    const point = await request(app).get(`/api/charge-points/${initial.body.charge_points[0].id}`).set('Cookie', owner.cookie);
+    assert.deepStrictEqual(point.body.power, { ratedTotalKw: 22.2 });
+    assert.strictEqual(point.body.connectors[0].power.ratedKw, 7.4);
 
     const changedConnector = await patch(`/api/connectors/${connectors[2].id}/power`, { rated_power_kw: '11.0' });
     assert.strictEqual(changedConnector.status, 200, JSON.stringify(changedConnector.body));

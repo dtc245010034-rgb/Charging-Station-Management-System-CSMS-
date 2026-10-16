@@ -1,4 +1,5 @@
 import { h } from '../../app/dom.js';
+import { kilowattsToWatts } from '../../app/power.js';
 import { formatKw, formatDateTime } from '../../app/format.js';
 import { routeFor } from '../../app/workspace.js';
 import { GROUPS, pointGroup } from '../../app/status.js';
@@ -13,6 +14,39 @@ import { createFleet, watch } from './fleet.js';
 
 const silentHash = (hash) => history.replaceState(null, '', `${location.pathname}${location.search}${hash}`);
 const GROUP_FILTERS = ['ready', 'charging', 'fault', 'offline'];
+
+function connectorPowerForm(connector, onSaved) {
+  const input = h('input', {
+    class: 'input', type: 'text', inputmode: 'decimal', value: String(connector.power.ratedKw),
+    'aria-label': `Công suất danh định đầu nối ${connector.connector_no} (kW)`,
+  });
+  const save = h('button', { class: 'btn', type: 'submit' }, 'Lưu công suất');
+  const error = h('p', { class: 'field__error', role: 'alert', hidden: true });
+  return h('form', { class: 'stack', onsubmit: async (event) => {
+    event.preventDefault();
+    const value = input.value.trim();
+    const watts = value === '' ? null : kilowattsToWatts(value);
+    if (value && watts === null) {
+      error.textContent = 'Công suất phải từ 0,1 đến 100.000 kW và tối đa 1 chữ số thập phân';
+      error.hidden = false;
+      return;
+    }
+    save.disabled = true;
+    error.hidden = true;
+    try {
+      await csms.chargePoints.setConnectorPower(connector.id, value ? value : null);
+      await onSaved();
+    } catch (cause) {
+      error.textContent = cause.message;
+      error.hidden = false;
+      save.disabled = false;
+    }
+  } },
+  h('label', { class: 'field' }, h('span', { class: 'field__label' }, `Công suất danh định (kW)`), input),
+  h('span', { class: 'field__hint' }, 'Để trống để dùng công suất mặc định của trụ.'),
+  save,
+  error);
+}
 
 function openEditForm(point, onSaved) {
   const input = (id, props) => h('input', { class: 'input', id, ...props });
@@ -70,7 +104,9 @@ function openChargePointDrawer({ id, canWrite, workspace, onChanged, onClose }) 
         h('section', {},
           h('div', { class: 'section-title' }, `Đầu nối (${point.connectors.length})`),
           h('div', { class: 'list-rows' }, point.connectors.map((c) => h('div', { class: 'list-row' },
-            h('div', {}, h('div', { class: 'cell-strong' }, `Đầu ${c.connector_no}`), h('div', { class: 'cell-sub' }, c.type)),
+            h('div', {}, h('div', { class: 'cell-strong' }, `Đầu ${c.connector_no}`), h('div', { class: 'cell-sub' }, c.type),
+              h('div', { class: 'cell-sub' }, `${formatKw(c.power.ratedKw)} · ${c.rated_power_w === null ? 'mặc định từ trụ' : 'đã khai báo'}`),
+              canWrite && connectorPowerForm(c, async () => { await load(); onChanged(); })),
             statusBadge(c.status, c.ocpp_status))))),
         canWrite && h('div', {}, h('button', { class: 'btn', type: 'button', onclick: () => openEditForm(point, async () => { await load(); onChanged(); }) }, icon('edit'), 'Sửa thông tin trụ')),
       );

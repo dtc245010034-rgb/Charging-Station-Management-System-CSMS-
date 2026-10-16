@@ -8,17 +8,26 @@ const {
 } = require('../../lib/errors');
 const connections = require('./connection-registry');
 const { sendRemoteCommand } = require('../ocpp/commands');
+const { wattsToKilowatts } = require('../power/units');
 
 const duplicateCode = (error) => (error.code === '23505' ? new ConflictError('Mã trụ đã tồn tại') : error);
 
-const list = (actor) => repo.list(actor);
+const withPower = (point) => ({
+  ...point,
+  power: { ratedTotalKw: wattsToKilowatts(BigInt(point.rated_total_w || 0)) },
+});
+
+const list = async (actor) => (await repo.list(actor)).map(withPower);
 const isCodeAvailable = (code) => repo.codeAvailable(code);
 
 async function get(actor, id) {
   const point = await repo.findDetailById(actor, id)
     || await denyOrNotFound(actor, 'charge_point', id, repo.existsById, 'Không tìm thấy trụ sạc');
-  point.connectors = await repo.connectorsOf(point.id);
-  return point;
+  point.connectors = (await repo.connectorsOf(point.id)).map((connector) => ({
+    ...connector,
+    power: { ratedKw: wattsToKilowatts(BigInt(connector.effective_power_w || 0)) },
+  }));
+  return withPower(point);
 }
 
 async function create(actor, stationId, data) {
