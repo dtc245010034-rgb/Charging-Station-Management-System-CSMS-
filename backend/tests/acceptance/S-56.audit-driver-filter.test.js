@@ -66,6 +66,9 @@ describe('S-56 audit log driver filter', { concurrency: false }, () => {
 
   it('migration 037 có thể chạy tiến, lùi rồi tiến lại', async () => {
     for (const version of [
+      '045_zero_watt_profile_limits.sql',
+      '044_alerts_power_profile_log.sql',
+      '043_station_power_limits.sql',
       '042_data_erasure_requests.sql',
       '041_accounting_period_locks.sql',
       '040_accounting_periods.sql',
