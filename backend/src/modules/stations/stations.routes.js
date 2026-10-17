@@ -3,11 +3,14 @@ const { access } = require('../../security/permissions');
 const { idParam } = require('../../lib/schemas');
 const { BadRequestError } = require('../../lib/errors');
 const service = require('./stations.service');
-const { createBody, updateBody, lockBody, connectorPowerBody } = require('./stations.schema');
+const { createBody, updateBody, lockBody, connectorPowerBody, stationSearchBody } = require('./stations.schema');
 
 const router = secureRouter();
 
 router.get('/stations', { access: access('stations:read') }, async (req, res) => res.json(await service.list(req.user)));
+router.post('/stations/search', { access: access('stations:search') }, async (req, res) => {
+  res.json(await service.searchNearby(stationSearchBody.parse(req.body ?? {})));
+});
 router.post('/stations', { access: access('stations:write') }, async (req, res) => {
   const key = req.get('Idempotency-Key');
   if (!key) throw new BadRequestError('Thiếu header Idempotency-Key');
@@ -19,12 +22,16 @@ router.get('/stations/:id', { access: access('stations:read') }, async (req, res
 });
 router.patch('/stations/:id', { access: access('stations:write') }, async (req, res) => {
   const { id } = idParam.parse(req.params);
-  res.json(await service.update(req.user, id, updateBody.parse(req.body ?? {})));
+  res.json(await service.update(req.user, id, updateBody.parse(req.body ?? {}), {
+    rebalanceStation: req.app?.locals?.rebalanceStation,
+  }));
 });
 router.patch('/connectors/:id/power', { access: access('stations:write') }, async (req, res) => {
   const { id } = idParam.parse(req.params);
   const { rated_power_w } = connectorPowerBody.parse(req.body ?? {});
-  res.json(await service.setConnectorPower(req.user, id, rated_power_w));
+  res.json(await service.setConnectorPower(req.user, id, rated_power_w, {
+    rebalanceStation: req.app?.locals?.rebalanceStation,
+  }));
 });
 router.patch('/admin/stations/:id/lock', { access: access('stations:lock') }, async (req, res) => {
   const { id } = idParam.parse(req.params);

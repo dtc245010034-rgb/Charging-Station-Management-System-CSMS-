@@ -12,6 +12,27 @@ const list = (actor) => {
     ${ratedTotalW} AS rated_total_w
     FROM stations s WHERE ${scope.sql} ORDER BY s.id DESC`).all(...scope.params);
 };
+const searchCandidates = ({ queryPattern = null, connectorType = null } = {}) => prepare(
+  `SELECT s.id, s.name, s.address, s.latitude, s.longitude
+   FROM stations s
+   WHERE s.status = 'ACTIVE' AND s.locked_at IS NULL
+    AND (?::text IS NULL OR s.name ILIKE ? ESCAPE E'\\\\' OR s.address ILIKE ? ESCAPE E'\\\\')
+     AND (?::text IS NULL OR EXISTS (
+       SELECT 1 FROM connectors c
+       JOIN charge_points cp ON cp.id = c.charge_point_id
+       WHERE cp.station_id = s.id AND UPPER(c.type) = UPPER(?)
+     ))`
+).all(queryPattern, queryPattern, queryPattern, connectorType, connectorType);
+const searchConnectors = async (stationIds) => {
+  if (!stationIds.length) return [];
+  const placeholders = stationIds.map(() => '?').join(', ');
+  return prepare(
+    `SELECT cp.station_id, cp.code AS charge_point_code, c.type, c.ocpp_status
+     FROM connectors c
+     JOIN charge_points cp ON cp.id = c.charge_point_id
+     WHERE cp.station_id IN (${placeholders})`
+  ).all(...stationIds);
+};
 const findById = (actor, id) => {
   const scope = scopeByOwner(actor, 's');
   return prepare(`SELECT s.*, ${ratedTotalW} AS rated_total_w FROM stations s WHERE s.id = ? AND ${scope.sql}`).get(id, ...scope.params);
@@ -51,7 +72,7 @@ const setLock = (id, locked, actorId) => {
 const connectorById = (actor, id) => {
   const scope = scopeByOwner(actor, 's');
   return prepare(
-    `SELECT c.*, s.owner_id, cp.code AS charge_point_code,
+    `SELECT c.*, s.owner_id, cp.station_id, cp.code AS charge_point_code,
             COALESCE(c.rated_power_w, ROUND(cp.power_kw * 1000)::integer) AS effective_power_w
      FROM connectors c JOIN charge_points cp ON cp.id = c.charge_point_id
      JOIN stations s ON s.id = cp.station_id
@@ -64,6 +85,6 @@ const updateConnectorPower = (id, watts) => prepare(
 ).run(watts, id);
 
 module.exports = {
-  list, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, setLock, UPDATABLE,
+  list, searchCandidates, searchConnectors, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, setLock, UPDATABLE,
   connectorById, connectorExistsById, updateConnectorPower,
 };

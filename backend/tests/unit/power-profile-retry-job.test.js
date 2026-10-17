@@ -99,7 +99,7 @@ describe('power profile retry job', () => {
           transactionId: 15,
           stackLevel: 1,
           chargingProfilePurpose: 'TxProfile',
-          chargingProfileKind: 'Absolute',
+          chargingProfileKind: 'Relative',
           chargingSchedule: {
             chargingRateUnit: 'W',
             chargingSchedulePeriod: [{ startPeriod: 0, limit: 6000 }],

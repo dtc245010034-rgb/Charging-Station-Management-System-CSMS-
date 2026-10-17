@@ -21,6 +21,7 @@ const { startAbnormalSessionJob } = require('./modules/sessions/abnormal-job');
 const { startBillingFinalizationJob } = require('./modules/billing/finalization-job');
 const { startWalletAuditJob } = require('./modules/wallet/wallet-audit-job');
 const { startTopupExpiryJob } = require('./modules/payments/topup-expiry-job');
+const { startReservationPendingCleanupJob } = require('./modules/reservations/pending-cleanup-job');
 const { startEmailJob } = require('./modules/notifications/email-job');
 const { startIdleFeeNotificationJob } = require('./modules/notifications/idle-fee-notification-job');
 const { startPowerProfileRetryJob } = require('./modules/power/profile-retry-job');
@@ -63,7 +64,7 @@ powerRebalancer = createPowerRebalancer({
 	commandSender,
 	minIntervalMs: env.POWER_REBALANCE_MIN_INTERVAL_MS,
 });
-const server = http.createServer(createApp({ commandSender }));
+const server = http.createServer(createApp({ commandSender, powerRebalancer }));
 
 const wss = new WebSocketServer({
 	noServer: true,
@@ -120,6 +121,7 @@ let stopAbnormalSessionJob = () => {};
 let stopBillingFinalizationJob = () => {};
 let stopWalletAuditJob = () => {};
 let stopTopupExpiryJob = () => {};
+let stopReservationPendingCleanupJob = () => {};
 let stopEmailJob = () => {};
 let stopIdleFeeNotificationJob = () => {};
 let stopPowerProfileRetryJob = () => {};
@@ -130,6 +132,7 @@ for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopBillingFinalizationJob();
 	stopWalletAuditJob();
 	stopTopupExpiryJob();
+	stopReservationPendingCleanupJob();
 	stopEmailJob();
 	stopIdleFeeNotificationJob();
 	stopPowerProfileRetryJob();
@@ -164,6 +167,7 @@ async function start() {
 	stopTopupExpiryJob = startTopupExpiryJob({
 		db: pool,
 	}).stop;
+	stopReservationPendingCleanupJob = startReservationPendingCleanupJob({ db: pool }).stop;
 	stopEmailJob = startEmailJob({
 		db: pool,
 		transport: env.EMAIL_TRANSPORT,

@@ -14,7 +14,7 @@ const profile = (limit = 3600) => ({
     transactionId: 42,
     stackLevel: 1,
     chargingProfilePurpose: 'TxProfile',
-    chargingProfileKind: 'Absolute',
+    chargingProfileKind: 'Relative',
     chargingSchedule: {
       chargingRateUnit: 'W',
       chargingSchedulePeriod: [{ startPeriod: 0, limit }],

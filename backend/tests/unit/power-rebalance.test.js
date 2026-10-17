@@ -1,12 +1,12 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { createPowerRebalancer } = require('../../src/modules/power/rebalance');
+const { createPowerRebalancer, getEffectiveLimitW } = require('../../src/modules/power/rebalance');
 const { OcppCommandError } = require('../../src/modules/ocpp/commands');
 
-function createPool({ powerLimitW = 22000, sessions = [] } = {}) {
-  const logs = [];
+function createPool({ powerLimitW = 22000, sessions = [], initialLogs = [] } = {}) {
+  const logs = [...initialLogs];
   const queries = [];
-  let nextLogId = 1;
+  let nextLogId = logs.length + 1;
   const client = {
     async query(sql, params = []) {
       queries.push({ sql, params });
@@ -112,7 +112,7 @@ describe('rebalanceStation', () => {
         transactionId: 1,
         stackLevel: 1,
         chargingProfilePurpose: 'TxProfile',
-        chargingProfileKind: 'Absolute',
+        chargingProfileKind: 'Relative',
         chargingSchedule: { chargingRateUnit: 'W', chargingSchedulePeriod: [{ startPeriod: 0, limit: 7300 }] },
       }],
       ['SetChargingProfile', 1, {
@@ -120,7 +120,7 @@ describe('rebalanceStation', () => {
         transactionId: 2,
         stackLevel: 1,
         chargingProfilePurpose: 'TxProfile',
-        chargingProfileKind: 'Absolute',
+        chargingProfileKind: 'Relative',
         chargingSchedule: { chargingRateUnit: 'W', chargingSchedulePeriod: [{ startPeriod: 0, limit: 7300 }] },
       }],
       ['SetChargingProfile', 1, {
@@ -128,7 +128,7 @@ describe('rebalanceStation', () => {
         transactionId: 3,
         stackLevel: 1,
         chargingProfilePurpose: 'TxProfile',
-        chargingProfileKind: 'Absolute',
+        chargingProfileKind: 'Relative',
         chargingSchedule: { chargingRateUnit: 'W', chargingSchedulePeriod: [{ startPeriod: 0, limit: 7400 }] },
       }],
     ]);
@@ -320,5 +320,45 @@ describe('rebalanceStation', () => {
 
     assert.equal(queries.filter(({ sql }) => sql.includes('pg_advisory_xact_lock')).length, 2);
     assert.equal(sends, 1);
+  });
+
+  it('restores rated power when the station power limit is cleared', async () => {
+    const { pool } = createPool({
+      powerLimitW: null,
+      sessions: [threeSessions[2]], // Session 3 rated 22000W
+      initialLogs: [{ id: 1, session_id: '3', limit_w: 7400, status: 'ACCEPTED' }],
+    });
+    const sent = [];
+    const rebalancer = createPowerRebalancer({
+      pool,
+      commandSender: {
+        async send(code, action, payload) {
+          sent.push({ code, action, payload });
+          return { status: 'Accepted' };
+        },
+      },
+    });
+
+    const result = await rebalancer.rebalanceStation(7, { reason: 'STATION_POWER_LIMIT_CLEARED' });
+
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].payload.csChargingProfiles.chargingSchedule.chargingSchedulePeriod[0].limit, 22000);
+    assert.deepStrictEqual(result.sessions.map(({ limitW, status }) => ({ limitW, status })), [
+      { limitW: 22000, status: 'ACCEPTED' },
+    ]);
+  });
+});
+
+describe('getEffectiveLimitW', () => {
+  it('returns station power limit when set', async () => {
+    const { pool } = createPool({ powerLimitW: 30000 });
+    const limit = await getEffectiveLimitW(pool, 7);
+    assert.equal(limit, 30000);
+  });
+
+  it('returns null when station has no power limit', async () => {
+    const { pool } = createPool({ powerLimitW: null });
+    const limit = await getEffectiveLimitW(pool, 7);
+    assert.equal(limit, null);
   });
 });

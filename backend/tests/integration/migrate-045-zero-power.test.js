@@ -27,6 +27,8 @@ describe('migration 045: permits zero-watt charging profiles [GYM-69]', () => {
        ) VALUES ($1, 1, 0, 'ACCEPTED', 1, 'TEST')`,
       [stationId]
     );
+    const reservationDown = run('src/db/migrate.js', ['down']);
+    assert.strictEqual(reservationDown.status, 0, reservationDown.stderr);
     const refusedRollback = run('src/db/migrate.js', ['down']);
     assert.notStrictEqual(refusedRollback.status, 0);
 
@@ -52,6 +54,6 @@ describe('migration 045: permits zero-watt charging profiles [GYM-69]', () => {
       [stationId]
     );
     const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
-    assert.strictEqual(latest.rows[0].version, '045_zero_watt_profile_limits.sql');
+    assert.strictEqual(latest.rows[0].version, '046_reservations.sql');
   });
 });

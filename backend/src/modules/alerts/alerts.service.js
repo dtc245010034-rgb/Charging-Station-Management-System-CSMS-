@@ -5,7 +5,7 @@ const { withTransaction } = require('../../db/tx');
 
 const list = (actor, state) => repo.list(actor, state);
 
-async function close(actor, id) {
+async function close(actor, id, { ip = null } = {}) {
   const existing = await repo.findById(actor, id)
     || await denyOrNotFound(actor, 'alert', id, repo.existsById, 'Không tìm thấy cảnh báo');
   if (existing.closed_at) return existing;
@@ -26,7 +26,7 @@ async function close(actor, id) {
     await audit.record(actor.id, 'ALERT_CLOSED', 'alert', id, {
       kind: alert.kind,
       station_id: alert.station_id,
-    }, actor.ip, client, 'CLOSED');
+    }, ip, client, 'CLOSED');
     return alert;
   });
 }

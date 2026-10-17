@@ -92,6 +92,7 @@ describe('migrations 017-035: charging sessions, billing, and append-only audit 
 
   it('down: rollback lần lượt 035 tới 017 và up lại sạch sẽ', async () => {
     for (const version of [
+      '046_reservations.sql',
       '045_zero_watt_profile_limits.sql',
       '044_alerts_power_profile_log.sql',
       '043_station_power_limits.sql',

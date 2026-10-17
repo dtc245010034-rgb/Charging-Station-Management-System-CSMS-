@@ -13,6 +13,14 @@ const CONFIGURATION_RANGES = Object.freeze({
   HeartbeatInterval: { min: 10, max: 86400 },
   MeterValueSampleInterval: { min: 0, max: 3600 },
 });
+const RESERVATION_RESULTS = Object.freeze(['Accepted', 'Faulted', 'Unavailable', 'Rejected']);
+
+function reservationResult(value = 'Accepted') {
+  if (!RESERVATION_RESULTS.includes(value)) {
+    throw new Error(`reservation result must be one of: ${RESERVATION_RESULTS.join(', ')}`);
+  }
+  return value;
+}
 
 // Nạp .env nếu có (dành cho chạy trực tiếp ngoài Docker)
 try {
@@ -52,6 +60,7 @@ function parseOptions(argv = process.argv.slice(2), env = process.env) {
     prefix: (env.VCP_PREFIX || 'VCP-').toUpperCase(),
     heartbeatInterval: Math.max(5, parseInt(env.VCP_HEARTBEAT_INTERVAL, 10) || 60),
     profileResult: profileResult(env.VCP_PROFILE_RESULT || 'Accepted'),
+    reservationResult: reservationResult(env.VCP_RESERVATION_RESULT || 'Accepted'),
     rebootRequiredKey: env.VCP_REBOOT_REQUIRED_KEY || null,
     email: env.ADMIN_EMAIL || '',
     password: env.ADMIN_PASSWORD || '',
@@ -65,6 +74,7 @@ function parseOptions(argv = process.argv.slice(2), env = process.env) {
     else if (arg === '--prefix' && val) { options.prefix = val.toUpperCase(); i += 1; }
     else if (arg === '--heartbeat' && val) { options.heartbeatInterval = Math.max(5, parseInt(val, 10) || 60); i += 1; }
     else if (arg === '--profile-result' && val) { options.profileResult = profileResult(val); i += 1; }
+    else if (arg === '--reservation-result' && val) { options.reservationResult = reservationResult(val); i += 1; }
     else if (arg === '--reboot-required-key' && val) { options.rebootRequiredKey = val; i += 1; }
     else if (arg === '--email' && val) { options.email = val; i += 1; }
     else if (arg === '--password' && val) { options.password = val; i += 1; }
@@ -190,7 +200,10 @@ async function ensureFleetProvisioned(api, options) {
 }
 
 class ManagedChargePoint {
-  constructor(code, wsBaseUrl, heartbeatInterval = 60, setChargingProfileResult = 'Accepted', { rebootRequiredKey = null } = {}) {
+  constructor(code, wsBaseUrl, heartbeatInterval = 60, setChargingProfileResult = 'Accepted', {
+    rebootRequiredKey = null,
+    reservationResult: configuredReservationResult = 'Accepted',
+  } = {}) {
     this.code = code;
     this.wsBaseUrl = wsBaseUrl;
     this.heartbeatInterval = heartbeatInterval;
@@ -210,11 +223,13 @@ class ManagedChargePoint {
     // Trạng thái phiên sạc nội tại của trụ
     this.currentTransactionId = null;
     this.currentConnectorId = null;
+    this.currentReservation = null;
     this.currentChargingProfile = null;
     // Khắc phục LỖI 2: Thanh ghi năng lượng tích lũy đơn điệu tăng (Monotonically Increasing Accumulator)
     this.currentMeterWh = 10000;
     this.currentIdTag = 'TAG-DEMO-01';
     this.setChargingProfileResult = profileResult(setChargingProfileResult);
+    this.reservationResult = reservationResult(configuredReservationResult);
   }
 
   async connect() {
@@ -450,6 +465,45 @@ class ManagedChargePoint {
       } else if (action === 'Reset') {
         this.socket.send(JSON.stringify([3, messageId, { status: 'Accepted' }]));
         setTimeout(() => this.reconnect(), 1000);
+      } else if (action === 'ReserveNow') {
+        const { connectorId, expiryDate, idTag, reservationId } = payload;
+        const expired = this.currentReservation && Date.parse(this.currentReservation.expiryDate) <= Date.now();
+        if (expired) this.currentReservation = null;
+        let status = this.reservationResult;
+        if (this.currentTransactionId && this.currentConnectorId === connectorId) status = 'Occupied';
+        else if (status === 'Accepted' && (
+          connectorId !== 1
+          || !Number.isSafeInteger(reservationId)
+          || typeof idTag !== 'string'
+          || !Number.isFinite(Date.parse(expiryDate))
+          || this.currentReservation
+        )) status = 'Rejected';
+
+        if (status === 'Accepted') {
+          this.currentReservation = { connectorId, expiryDate, idTag, reservationId };
+        }
+        this.socket.send(JSON.stringify([3, messageId, { status }]));
+        if (status === 'Accepted') {
+          void this.call('StatusNotification', {
+            connectorId,
+            status: 'Reserved',
+            errorCode: 'NoError',
+            timestamp: new Date().toISOString(),
+          }).catch(() => {});
+        }
+      } else if (action === 'CancelReservation') {
+        const reservation = this.currentReservation;
+        const status = reservation && reservation.reservationId === payload.reservationId ? 'Accepted' : 'Rejected';
+        if (status === 'Accepted') this.currentReservation = null;
+        this.socket.send(JSON.stringify([3, messageId, { status }]));
+        if (status === 'Accepted') {
+          void this.call('StatusNotification', {
+            connectorId: reservation.connectorId,
+            status: 'Available',
+            errorCode: 'NoError',
+            timestamp: new Date().toISOString(),
+          }).catch(() => {});
+        }
       } else if (action === 'RemoteStartTransaction') {
         const { idTag, connectorId = 1 } = payload;
         this.currentConnectorId = connectorId;
@@ -467,14 +521,21 @@ class ManagedChargePoint {
             });
             // Khắc phục LỖI 2: Dùng chỉ số tích lũy hiện tại (không reset về 10.000 Wh)
             const meterStart = this.currentMeterWh;
+            const reservation = this.currentReservation;
+            const reservationId = reservation?.connectorId === this.currentConnectorId
+              && reservation.idTag === this.currentIdTag
+              ? reservation.reservationId
+              : payload.reservationId;
             const startRes = await this.call('StartTransaction', {
               connectorId: this.currentConnectorId,
               idTag: this.currentIdTag,
               meterStart,
               timestamp: new Date().toISOString(),
+              ...(reservationId === undefined ? {} : { reservationId }),
             });
             if (startRes && Number.isSafeInteger(startRes.transactionId)) {
               this.currentTransactionId = startRes.transactionId;
+              if (reservationId !== undefined && reservation?.reservationId === reservationId) this.currentReservation = null;
               await this.call('StatusNotification', {
                 connectorId: this.currentConnectorId,
                 status: 'Charging',
@@ -604,7 +665,7 @@ async function runFleet() {
     wsBaseUrl,
     options.heartbeatInterval,
     options.profileResult,
-    { rebootRequiredKey: options.rebootRequiredKey }
+    { rebootRequiredKey: options.rebootRequiredKey, reservationResult: options.reservationResult }
   ));
 
   console.log(`[VCP] Đang thiết lập kết nối OCPP 1.6J cho ${fleet.length} trụ...`);

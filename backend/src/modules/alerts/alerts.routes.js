@@ -13,7 +13,7 @@ router.get('/alerts', { access: access('alerts:read') }, async (req, res) => {
 
 router.post('/alerts/:id/close', { access: access('alerts:close') }, async (req, res) => {
   const { id } = idParam.parse(req.params);
-  res.json(await service.close(req.user, id));
+  res.json(await service.close(req.user, id, { ip: req.ip }));
 });
 
 module.exports = router;

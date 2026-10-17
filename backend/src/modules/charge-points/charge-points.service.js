@@ -154,31 +154,46 @@ async function changeConfiguration(actor, id, key, value, commandSender, { ip = 
     throw new BadRequestError(`Giá trị ${key} phải là số nguyên từ ${range?.min ?? 0} đến ${range?.max ?? 0}`);
   }
 
-  const current = await getConfigurationValue(point, key, commandSender);
-  const oldValue = current?.value ?? null;
-  const result = await sendConfigurationCommand(point, commandSender, 'ChangeConfiguration', {
-    key,
-    value: valueText,
-  });
-  const status = result?.status;
-  if (!['Accepted', 'Rejected', 'RebootRequired', 'NotSupported'].includes(status)) {
-    throw new ServiceUnavailableError('Trụ sạc trả phản hồi ChangeConfiguration không hợp lệ');
-  }
-  if (status === 'Accepted' && key === 'HeartbeatInterval') {
-    await repo.updateHeartbeatInterval(id, parsedValue);
+  let oldValue = null;
+  try {
+    const current = await getConfigurationValue(point, key, commandSender);
+    oldValue = current?.value ?? null;
+  } catch (error) {
+    console.warn(`[ChangeConfiguration] Không đọc được giá trị cũ cho khóa ${key} trên trụ ${point.code}:`, error?.message || error);
   }
 
+  let status = null;
   try {
-    await audit.ghi_nhat_ky(actor.id, 'CHANGE_CONFIGURATION', 'charge_point', id, {
-      charge_point_code: point.code,
+    const result = await sendConfigurationCommand(point, commandSender, 'ChangeConfiguration', {
       key,
-      old_value: oldValue,
-      new_value: valueText,
-    }, status, ip);
+      value: valueText,
+    });
+    status = result?.status;
+    if (!['Accepted', 'Rejected', 'RebootRequired', 'NotSupported'].includes(status)) {
+      status = 'INVALID_RESPONSE';
+      throw new ServiceUnavailableError('Trụ sạc trả phản hồi ChangeConfiguration không hợp lệ');
+    }
+    if (status === 'Accepted' && key === 'HeartbeatInterval') {
+      await repo.updateHeartbeatInterval(id, parsedValue);
+    }
+    return { status };
   } catch (error) {
-    console.error(`[ChangeConfiguration] Ghi audit thất bại cho trụ ${id}:`, error?.message || error);
+    if (!status) {
+      status = error instanceof ConflictError ? 'OFFLINE' : error instanceof GatewayTimeoutError ? 'TIMEOUT' : 'FAILED';
+    }
+    throw error;
+  } finally {
+    try {
+      await audit.ghi_nhat_ky(actor.id, 'CHANGE_CONFIGURATION', 'charge_point', id, {
+        charge_point_code: point.code,
+        key,
+        old_value: oldValue,
+        new_value: valueText,
+      }, status, ip);
+    } catch (auditError) {
+      console.error(`[ChangeConfiguration] Ghi audit thất bại cho trụ ${id}:`, auditError?.message || auditError);
+    }
   }
-  return { status };
 }
 
 module.exports = {

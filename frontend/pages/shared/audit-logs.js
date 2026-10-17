@@ -9,6 +9,8 @@ import { statusBadge } from '../../components/badge.js';
 const PAGE_SIZE = 50;
 const ACTION_LABELS = {
   ACCESS_DENIED: 'Truy cập bị từ chối',
+  ALERT_CLOSED: 'Đóng cảnh báo',
+  CHANGE_CONFIGURATION: 'Đổi cấu hình trụ',
   CREATE: 'Tạo mới',
   DATA_ERASURE_COMPLETED: 'Ẩn danh hóa dữ liệu',
   DATA_ERASURE_REJECTED: 'Từ chối yêu cầu xóa dữ liệu',
@@ -18,6 +20,7 @@ const ACTION_LABELS = {
   REMOTE_STOP: 'Dừng sạc từ xa',
   RESET: 'Khởi động lại trụ',
   SESSION_MANUALLY_CLOSED: 'Đóng phiên bất thường',
+  STATION_STATUS_CHANGED: 'Thay đổi trạng thái trạm',
   TARIFF_CREATED: 'Khai báo biểu giá',
   UNLOCK: 'Mở khoá trạm',
   UPDATE: 'Cập nhật',
