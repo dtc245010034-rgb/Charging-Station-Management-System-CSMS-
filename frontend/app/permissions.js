@@ -42,6 +42,8 @@ export const PERMISSIONS = {
   'erasure:manage': ADMIN,
   'alerts:read': READ,
   'alerts:close': ['ADMIN', 'OPERATOR'],
+  'partner-rates:manage': ['ADMIN', 'ACCOUNTANT'],
+  'partner-rates:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
 };
 
 export const can = (role, key) => (PERMISSIONS[key] ?? []).includes(role);
