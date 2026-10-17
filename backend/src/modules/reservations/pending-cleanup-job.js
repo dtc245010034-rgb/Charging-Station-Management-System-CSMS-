@@ -15,6 +15,17 @@ async function failStalePendingReservations(db = pool) {
   );
 }
 
+async function expireStaleAcceptedReservations(db = pool) {
+  return db.query(
+    `UPDATE reservations
+     SET status = 'EXPIRED',
+         updated_at = CURRENT_TIMESTAMP
+     WHERE status = 'ACCEPTED'
+       AND expires_at <= CURRENT_TIMESTAMP
+     RETURNING id, driver_id, connector_id`,
+  );
+}
+
 function startReservationPendingCleanupJob({
   db = pool,
   intervalMs = RESERVATION_PENDING_SCAN_INTERVAL_MS,
@@ -27,13 +38,17 @@ function startReservationPendingCleanupJob({
     if (running) return running;
     running = (async () => {
       try {
-        const result = await failStalePendingReservations(db);
-        if (result.rowCount > 0) {
-          logInfo(`[Reservation cleanup] Đã chuyển ${result.rowCount} đặt chỗ PENDING quá hạn sang FAILED`);
+        const pendingResult = await failStalePendingReservations(db);
+        if (pendingResult.rowCount > 0) {
+          logInfo(`[Reservation cleanup] Đã chuyển ${pendingResult.rowCount} đặt chỗ PENDING quá hạn sang FAILED`);
         }
-        return result;
+        const expiredResult = await expireStaleAcceptedReservations(db);
+        if (expiredResult.rowCount > 0) {
+          logInfo(`[Reservation cleanup] Đã chuyển ${expiredResult.rowCount} đặt chỗ ACCEPTED quá hạn sang EXPIRED`);
+        }
+        return { pending: pendingResult, expired: expiredResult };
       } catch (error) {
-        logError(`[Reservation cleanup] Lỗi quét đặt chỗ PENDING: ${sanitizeErrorMessage(error?.message || error)}`);
+        logError(`[Reservation cleanup] Lỗi quét đặt chỗ: ${sanitizeErrorMessage(error?.message || error)}`);
         return null;
       }
     })().finally(() => { running = null; });
@@ -49,5 +64,6 @@ function startReservationPendingCleanupJob({
 module.exports = {
   RESERVATION_PENDING_SCAN_INTERVAL_MS,
   failStalePendingReservations,
+  expireStaleAcceptedReservations,
   startReservationPendingCleanupJob,
 };

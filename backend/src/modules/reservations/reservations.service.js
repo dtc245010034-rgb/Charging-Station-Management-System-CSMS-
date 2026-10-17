@@ -131,7 +131,7 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
       if (connector.ocpp_status !== 'Available' || connector.connector_status !== 'AVAILABLE') {
         throw new AppError(409, 'CONNECTOR_UNAVAILABLE', 'Đầu nối không ở trạng thái sẵn sàng để đặt chỗ.');
       }
-      if (await repo.findActiveForDriver(client, driver.id)) {
+      if (await repo.findActiveForDriver(client, driver.id, now)) {
         throw new AppError(409, 'RESERVATION_ALREADY_ACTIVE', 'Bạn đang có một chỗ đặt còn hiệu lực.');
       }
 

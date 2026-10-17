@@ -98,7 +98,19 @@ async function findWalletForUpdate(client, driverId) {
   return result.rows[0] || null;
 }
 
-async function findActiveForDriver(client, driverId) {
+async function expireStaleForDriver(client, driverId, now = new Date()) {
+  await client.query(
+    `UPDATE reservations
+     SET status = 'EXPIRED', updated_at = CURRENT_TIMESTAMP
+     WHERE driver_id = $1
+       AND status = 'ACCEPTED'
+       AND expires_at <= $2::timestamptz`,
+    [driverId, now]
+  );
+}
+
+async function findActiveForDriver(client, driverId, now = new Date()) {
+  await expireStaleForDriver(client, driverId, now);
   const result = await client.query(
     `SELECT id FROM reservations
      WHERE driver_id = $1 AND status IN ('PENDING', 'ACCEPTED')
@@ -130,14 +142,15 @@ async function findAvailableSuggestions(db, stationId, excludedConnectorId, star
   return result.rows;
 }
 
-async function fulfillAcceptedReservation(db, { reservationId, connectorId, driverId, idTagId }) {
+async function fulfillAcceptedReservation(db, { reservationId, connectorId, driverId, idTagId = null }) {
   const result = await db.query(
     `UPDATE reservations
-     SET status = 'FULFILLED', updated_at = CURRENT_TIMESTAMP
+     SET status = 'FULFILLED',
+         id_tag_id = COALESCE($4, id_tag_id),
+         updated_at = CURRENT_TIMESTAMP
      WHERE ocpp_reservation_id = $1
        AND connector_id = $2
        AND driver_id = $3
-       AND id_tag_id = $4
        AND status = 'ACCEPTED'
      RETURNING id`,
     [reservationId, connectorId, driverId, idTagId]
@@ -156,6 +169,7 @@ module.exports = {
   updateStatus,
   insertIdempotencyKey,
   findWalletForUpdate,
+  expireStaleForDriver,
   findActiveForDriver,
   findAvailableSuggestions,
   fulfillAcceptedReservation,
