@@ -17,4 +17,8 @@ router.post('/reservations', { access: access('reservations:create') }, async (r
   res.status(reservation.status === 'PENDING' ? 202 : 201).json(reservation);
 });
 
+router.get('/me/reservations', { access: access('reservations:read-own') }, async (req, res) => {
+  res.json(await service.listMine(req.user.id));
+});
+
 module.exports = router;

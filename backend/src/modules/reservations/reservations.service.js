@@ -35,6 +35,18 @@ function toResponse(row) {
   };
 }
 
+async function listMine(driverId, db = repo.pool) {
+  const rows = await repo.listForDriver(db, driverId);
+  return rows.map((row) => ({
+    ...toResponse(row),
+    stationName: row.station_name,
+    stationAddress: row.station_address,
+    chargePointCode: row.charge_point_code,
+    connectorNo: row.connector_no,
+    connectorType: row.connector_type,
+  }));
+}
+
 async function recordAudit(userId, action, row, metadata, ip, result) {
   try {
     await audit.record(userId, action, 'reservation', row.id, {
@@ -217,4 +229,4 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
   throw new ServiceUnavailableError('Trụ sạc trả phản hồi ReserveNow không hợp lệ');
 }
 
-module.exports = { RESERVATION_CALL_TIMEOUT_MS, create, toResponse };
+module.exports = { RESERVATION_CALL_TIMEOUT_MS, create, listMine, toResponse };

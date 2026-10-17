@@ -18,6 +18,22 @@ async function findById(client, id) {
   return result.rows[0] || null;
 }
 
+async function listForDriver(db, driverId) {
+  const result = await db.query(
+    `SELECT r.id, r.ocpp_reservation_id, r.connector_id, r.status, r.starts_at, r.expires_at, r.reject_reason,
+            s.name AS station_name, s.address AS station_address,
+            cp.code AS charge_point_code, c.connector_no, c.type AS connector_type
+     FROM reservations r
+     JOIN connectors c ON c.id = r.connector_id
+     JOIN charge_points cp ON cp.id = c.charge_point_id
+     JOIN stations s ON s.id = cp.station_id
+     WHERE r.driver_id = $1
+     ORDER BY r.created_at DESC, r.id DESC`,
+    [driverId]
+  );
+  return result.rows;
+}
+
 async function findConnector(client, connectorId, { forUpdate = false } = {}) {
   const result = await client.query(
     `SELECT c.id AS connector_id, c.connector_no, c.status AS connector_status, c.ocpp_status,
@@ -133,6 +149,7 @@ module.exports = {
   pool,
   findIdempotencyKey,
   findById,
+  listForDriver,
   findConnector,
   findActiveTag,
   insertPending,

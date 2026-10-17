@@ -90,9 +90,13 @@ describe('S-02 frontend: router', () => {
     const driverPages = visibleNav('driver', WORKSPACES.driver.role, can).flatMap((group) => group.items.map((item) => item.page));
 
     assert.ok(driverPages.includes('find'));
+    assert.ok(driverPages.includes('reservations'));
     assert.strictEqual(typeof pageLoader('find', 'driver'), 'function');
     assert.strictEqual(pageLoader('find', 'operator'), null);
     assert.strictEqual(PAGE_NEEDS.find, 'stations:search');
+    assert.strictEqual(typeof pageLoader('reservations', 'driver'), 'function');
+    assert.strictEqual(pageLoader('reservations', 'operator'), null);
+    assert.strictEqual(PAGE_NEEDS.reservations, 'reservations:read-own');
   });
 
   it('S-47: chỉ xin vị trí sau khi bấm; từ chối vị trí vẫn tìm được theo q', async () => {
@@ -151,9 +155,121 @@ describe('S-02 frontend: router', () => {
       find(root, (node) => node.tag === 'input')[0].value = 'Bến Thành';
       find(root, (node) => node.tag === 'form')[0].listeners.submit({ preventDefault() {} });
       await new Promise((resolve) => setImmediate(resolve));
-      assert.strictEqual(requests.length, 1);
-      assert.strictEqual(requests[0].url, '/api/stations/search');
-      assert.deepStrictEqual(JSON.parse(requests[0].options.body), { q: 'Bến Thành' });
+      assert.strictEqual(requests.length, 2);
+      const searchRequest = requests.find((request) => request.url === '/api/stations/search');
+      assert.ok(searchRequest);
+      assert.deepStrictEqual(JSON.parse(searchRequest.options.body), { q: 'Bến Thành' });
+    } finally {
+      dispose?.();
+      for (const [name, descriptor] of saved) {
+        if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+        else delete globalThis[name];
+      }
+    }
+  });
+
+  it('S-48: yêu cầu xác nhận trước POST và trang Đặt chỗ của tôi render text an toàn', async () => {
+    const saved = new Map();
+    const define = (name, value) => {
+      saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+      Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+    };
+    class Element {
+      constructor(tag) {
+        this.tag = tag;
+        this.attributes = {};
+        this.children = [];
+        this.listeners = {};
+        this.style = {};
+        this.dataset = {};
+        this.disabled = false;
+        this.value = '';
+      }
+      setAttribute(name, value) { this.attributes[name] = String(value); }
+      addEventListener(name, handler) { this.listeners[name] = handler; }
+      append(...children) { this.children.push(...children); }
+      replaceChildren(...children) { this.children = children; }
+      get textContent() { return this.children.map((child) => child.textContent ?? '').join(''); }
+    }
+    const requests = [];
+    define('Node', Element);
+    define('document', {
+      body: new Element('body'),
+      createElement: (tag) => new Element(tag),
+      createElementNS: (_namespace, tag) => new Element(tag),
+      createTextNode: (text) => ({ textContent: String(text) }),
+    });
+    define('location', { pathname: '/app.html', hash: '#/driver/find' });
+    define('fetch', async (url, options = {}) => {
+      requests.push({ url: String(url), options });
+      if (String(url) === '/api/stations/search') {
+        return { ok: true, status: 200, json: async () => [{
+          stationId: 8,
+          name: 'Trạm S-48',
+          address: 'Đường A',
+          distanceKm: 0.4,
+          connectors: { free: 1, total: 1, types: ['TYPE_2'] },
+          price: { pricePerKwh: '4000', periodLabel: 'Cả ngày' },
+          idleFee: { graceMin: 15, perMinDong: '1000' },
+        }] };
+      }
+      if (String(url) === '/api/driver/charge-points') {
+        return { ok: true, status: 200, json: async () => [{
+          station_id: 8,
+          connectors: [{ connector_id: 71, connector_no: 1, connector_type: 'TYPE_2', available: true }],
+        }] };
+      }
+      if (String(url) === '/api/reservations') {
+        return { ok: true, status: 201, json: async () => ({ id: 9, status: 'ACCEPTED', expiresAt: new Date(Date.now() + 45 * 60000).toISOString() }) };
+      }
+      if (String(url) === '/api/me/reservations') {
+        return { ok: true, status: 200, json: async () => [{
+          id: 9,
+          status: 'ACCEPTED',
+          expiresAt: new Date(Date.now() + 45 * 60000).toISOString(),
+          stationName: '<img src=x onerror=alert(1)>',
+          stationAddress: 'Đường A',
+          chargePointCode: 'CP-1',
+          connectorNo: 1,
+          connectorType: 'TYPE_2',
+        }] };
+      }
+      throw new Error(`Unexpected request ${url}`);
+    });
+
+    let dispose;
+    try {
+      const { render } = await load('pages/driver/find.js');
+      const root = new Element('root');
+      const find = (node, predicate) => [
+        ...(predicate(node) ? [node] : []),
+        ...node.children.flatMap((child) => child instanceof Element ? find(child, predicate) : []),
+      ];
+      dispose = render({ root, params: { page: 'find' } });
+      find(root, (node) => node.tag === 'input')[0].value = 'Trạm';
+      find(root, (node) => node.tag === 'form')[0].listeners.submit({ preventDefault() {} });
+      await new Promise((resolve) => setImmediate(resolve));
+
+      const selects = find(root, (node) => node.tag === 'select');
+      assert.equal(selects.length, 2);
+      selects[1].value = '60';
+      find(root, (node) => node.tag === 'button' && node.textContent === 'Đặt chỗ')[0].listeners.click();
+      assert.ok(root.textContent.includes('Xác nhận đặt chỗ'));
+      assert.equal(requests.some((request) => request.url === '/api/reservations'), false);
+      find(root, (node) => node.tag === 'button' && node.textContent === 'Xác nhận đặt chỗ')[0].listeners.click();
+      await new Promise((resolve) => setImmediate(resolve));
+      const createRequest = requests.find((request) => request.url === '/api/reservations');
+      assert.deepStrictEqual(JSON.parse(createRequest.options.body), { connectorId: '71', arriveInMinutes: 60 });
+      assert.ok(createRequest.options.headers['Idempotency-Key']);
+
+      dispose?.();
+      root.replaceChildren();
+      dispose = render({ root, params: { page: 'reservations' } });
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.ok(requests.some((request) => request.url === '/api/me/reservations'));
+      assert.ok(root.textContent.includes('<img src=x onerror=alert(1)>'));
+      assert.equal(find(root, (node) => node.tag === 'img').length, 0);
+      assert.ok(root.textContent.includes('45'));
     } finally {
       dispose?.();
       for (const [name, descriptor] of saved) {

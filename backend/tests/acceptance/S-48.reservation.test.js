@@ -164,6 +164,16 @@ describe('S-48: tạo reservation và gửi ReserveNow', { concurrency: false },
     assert.equal(replay.status, 201);
     assert.equal((await replay.json()).id, body.id);
     assert.equal(reservationCalls.length, 1);
+
+    const ownReservations = await fetch(`http://127.0.0.1:${server.port}/api/me/reservations`, {
+      headers: { Cookie: driver.cookie },
+    });
+    assert.equal(ownReservations.status, 200);
+    assert.deepStrictEqual((await ownReservations.json()).map((item) => item.id), [body.id]);
+    const otherReservations = await fetch(`http://127.0.0.1:${server.port}/api/me/reservations`, {
+      headers: { Cookie: secondDriver.cookie },
+    });
+    assert.deepStrictEqual(await otherReservations.json(), []);
   });
 
   it('StartTransaction mang reservationId đúng thẻ chuyển reservation thành FULFILLED sau commit', async () => {

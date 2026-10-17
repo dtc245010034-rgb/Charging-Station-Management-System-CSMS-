@@ -102,6 +102,7 @@ export const WORKSPACES = {
           { page: 'overview', label: 'Trang chủ', icon: 'home', enabled: true },
           { page: 'start', label: 'Bắt đầu sạc', icon: 'bolt', enabled: true, needs: 'remote-start:create' },
           { page: 'find', label: 'Tìm trạm', icon: 'station', enabled: true, needs: 'stations:search' },
+          { page: 'reservations', label: 'Đặt chỗ của tôi', icon: 'calendar', enabled: true, needs: 'reservations:read-own' },
           { page: 'sessions', label: 'Phiên sạc', icon: 'bolt', enabled: true, needs: 'sessions:read-own' },
           { page: 'history', label: 'Lịch sử', icon: 'history', enabled: true, needs: 'sessions:read-own' },
           { page: 'wallet', label: 'Ví', icon: 'wallet', enabled: true, needs: 'wallets:read-own' },
