@@ -21,6 +21,8 @@ const permissions = {
   'charge-points:reset': ['ADMIN', 'OPERATOR'],
   'charge-points:configure': ['ADMIN', 'OPERATOR'],
   'remote-start:create': ['DRIVER'],
+  'reservations:create': ['DRIVER'],
+  'reservations:read-own': ['DRIVER'],
   'stations:lock': ADMIN,
   'sessions:read-own': ['DRIVER'],
   'sessions:read': ['ADMIN', 'OPERATOR', 'ACCOUNTANT', 'STATION_OWNER'],

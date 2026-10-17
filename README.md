@@ -173,6 +173,7 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `OCPP_LOCK_TIMEOUT_SECONDS` | `lock_timeout` cho truy vấn của handler OCPP; API, migration và job không bị ảnh hưởng (F10) | Giây | `5` |
 | `DB_QUERY_TIMEOUT_SECONDS` | Thời gian tối đa chờ một truy vấn PostgreSQL trả kết quả (cả hai pool); quá hạn thì truy vấn báo lỗi. `0` = không giới hạn | Giây | `30` |
 | `REMOTE_STOP_WAIT_SECONDS` | Thời gian chờ `StopTransaction` thực tế sau khi trụ `Accepted` lệnh dừng; hết hạn chỉ đánh dấu phiên cần xem xét, không tự đóng phiên | Giây | `120` |
+| `RESERVATION_HOLD_MIN` | Thời gian giữ thêm sau `arriveInMinutes` khi đặt chỗ connector | Phút | `15` |
 | `SESSION_ABNORMAL_AFTER_SECONDS` | Thời gian không nhận tin từ trụ trước khi job đánh dấu phiên đang sạc `ABNORMAL` (job cũng đánh dấu bất thường khi quá 120 giây chờ `StopTransaction`) | Giây | `21600` |
 | `IDLE_MAX_WAIT_MIN` | Thời gian tối đa chờ đầu nối rời `Finishing`/`SuspendedEV` trước khi chốt hóa đơn phí chiếm chỗ | Phút | `60` |
 | `BILLING_JOB_INTERVAL_MS` | Chu kỳ job nền tìm phiên cần lập hóa đơn và thử lại phiên lỗi | Mili giây | `30000` |

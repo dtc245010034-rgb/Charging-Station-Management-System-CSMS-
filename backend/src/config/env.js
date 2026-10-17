@@ -32,6 +32,8 @@ const schema = z.object({
   POWER_REBALANCE_MIN_INTERVAL_MS: z.coerce.number().int().positive().default(2000),
   // Thời gian chờ StopTransaction sau RemoteStopTransaction Accepted, mặc định 2 phút
   REMOTE_STOP_WAIT_SECONDS: z.coerce.number().int().positive().default(120),
+  // Thời gian giữ thêm sau giờ tài xế dự kiến đến khi đặt reservation
+  RESERVATION_HOLD_MIN: z.coerce.number().int().positive().default(15),
   // Thời gian trụ không gửi tin trước khi phiên sạc bị đánh dấu bất thường, mặc định 6 giờ
   SESSION_ABNORMAL_AFTER_SECONDS: z.coerce.number().int().positive().default(21600),
   // Trần chờ trụ rời Finishing/SuspendedEV trước khi chốt phí chiếm chỗ

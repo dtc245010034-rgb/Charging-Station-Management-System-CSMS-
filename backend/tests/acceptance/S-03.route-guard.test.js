@@ -88,6 +88,10 @@ describe('S-03 route guard: mặc định từ chối', () => {
     const { permissions: p } = permissions;
     assert.deepStrictEqual(p['stations:read'], ['ADMIN', 'STATION_OWNER', 'OPERATOR']);
     assert.deepStrictEqual(p['stations:search'], ['DRIVER']);
+    assert.deepStrictEqual(p['reservations:create'], ['DRIVER']);
+    assert.deepStrictEqual(p['reservations:read-own'], ['DRIVER']);
+    assert.deepStrictEqual(p['reservations:create'], ['DRIVER']);
+    assert.deepStrictEqual(p['reservations:read-own'], ['DRIVER']);
     assert.deepStrictEqual(p['charge-points:read'], ['ADMIN', 'STATION_OWNER', 'OPERATOR']);
     assert.deepStrictEqual(p['stations:write'], ['ADMIN', 'STATION_OWNER']);
     assert.deepStrictEqual(p['charge-points:write'], ['ADMIN', 'STATION_OWNER']);
