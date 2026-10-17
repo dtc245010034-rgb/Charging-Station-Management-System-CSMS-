@@ -114,6 +114,21 @@ async function findAvailableSuggestions(db, stationId, excludedConnectorId, star
   return result.rows;
 }
 
+async function fulfillAcceptedReservation(db, { reservationId, connectorId, driverId, idTagId }) {
+  const result = await db.query(
+    `UPDATE reservations
+     SET status = 'FULFILLED', updated_at = CURRENT_TIMESTAMP
+     WHERE ocpp_reservation_id = $1
+       AND connector_id = $2
+       AND driver_id = $3
+       AND id_tag_id = $4
+       AND status = 'ACCEPTED'
+     RETURNING id`,
+    [reservationId, connectorId, driverId, idTagId]
+  );
+  return result.rows[0] || null;
+}
+
 module.exports = {
   pool,
   findIdempotencyKey,
@@ -126,4 +141,5 @@ module.exports = {
   findWalletForUpdate,
   findActiveForDriver,
   findAvailableSuggestions,
+  fulfillAcceptedReservation,
 };

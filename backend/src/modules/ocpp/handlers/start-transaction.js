@@ -14,6 +14,7 @@ const {
 } = require('../../sessions/sessions.repository');
 const { publishSessionUpdateFromDb } = require('../../sessions/sessions.events');
 const { triggerPowerRebalance } = require('../../power/rebalance-trigger');
+const reservationsRepository = require('../../reservations/reservations.repository');
 
 const MAX_CLOCK_SKEW_MS = 24 * 3600 * 1000;
 
@@ -46,6 +47,10 @@ function validateStartTransactionPayload(payload) {
 
   if (typeof timestamp !== 'string' || Number.isNaN(Date.parse(timestamp))) {
     throw new OcppCallError('PropertyConstraintViolation', 'timestamp must be a valid ISO 8601 string');
+  }
+
+  if (payload.reservationId !== undefined && (!Number.isSafeInteger(payload.reservationId) || payload.reservationId < 0)) {
+    throw new OcppCallError('PropertyConstraintViolation', 'reservationId must be a non-negative safe integer');
   }
 }
 
@@ -219,6 +224,22 @@ function createStartTransactionHandler({
         }
         return { session: newSession, closed: closedOldSessions || [], created: true };
       }, db);
+
+      if (payload.reservationId !== undefined && tagRecord?.user_id && session?.id) {
+        try {
+          await reservationsRepository.fulfillAcceptedReservation(db, {
+            reservationId: payload.reservationId,
+            connectorId: connectorInfo.connector_id,
+            driverId: tagRecord.user_id,
+            idTagId: tagRecord.id,
+          });
+        } catch (reservationError) {
+          logError(
+            `[OCPP] StartTransaction: Không thể hoàn tất đặt chỗ ${payload.reservationId}:`,
+            sanitizeErrorMessage(reservationError?.message || reservationError)
+          );
+        }
+      }
 
       for (const old of closed) {
         publishSessionUpdateFromDb(old.id, { pool: db, driverId: old.driver_id }).catch(() => {});

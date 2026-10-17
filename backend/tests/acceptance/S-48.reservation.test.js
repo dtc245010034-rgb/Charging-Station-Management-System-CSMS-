@@ -7,7 +7,7 @@ const { postEntry } = require('../../src/modules/wallet/ledger.service');
 const { failStalePendingReservations } = require('../../src/modules/reservations/pending-cleanup-job');
 const { createUser } = require('../helpers/auth');
 const { postStation, stationBody } = require('../helpers/station');
-const { startServerProcess, stopServerProcess, stopAllServerProcesses, bootChargePoint } = require('../helpers/server-process');
+const { startServerProcess, stopServerProcess, stopAllServerProcesses, bootChargePoint, sendCall } = require('../helpers/server-process');
 
 const CHARGE_POINT_CODE = 'S48-RESERVATION-CP';
 const ID_TAG = 'S48-TAG-01';
@@ -164,6 +164,32 @@ describe('S-48: tạo reservation và gửi ReserveNow', { concurrency: false },
     assert.equal(replay.status, 201);
     assert.equal((await replay.json()).id, body.id);
     assert.equal(reservationCalls.length, 1);
+  });
+
+  it('StartTransaction mang reservationId đúng thẻ chuyển reservation thành FULFILLED sau commit', async () => {
+    const reservation = await query(
+      "SELECT id, ocpp_reservation_id FROM reservations WHERE driver_id = $1 AND status = 'ACCEPTED'",
+      [driver.id]
+    );
+    const started = await sendCall(chargePoint, 's48-start-fulfilled', 'StartTransaction', {
+      connectorId: 1,
+      idTag: ID_TAG,
+      meterStart: 10000,
+      timestamp: new Date().toISOString(),
+      reservationId: reservation.rows[0].ocpp_reservation_id,
+    });
+    assert.equal(started[0], 3);
+    assert.equal(started[2].idTagInfo.status, 'Accepted');
+    const fulfilled = await query('SELECT status FROM reservations WHERE id = $1', [reservation.rows[0].id]);
+    assert.equal(fulfilled.rows[0].status, 'FULFILLED');
+
+    const stopped = await sendCall(chargePoint, 's48-stop-fulfilled', 'StopTransaction', {
+      transactionId: started[2].transactionId,
+      meterStop: 12000,
+      timestamp: new Date().toISOString(),
+      reason: 'Local',
+    });
+    assert.equal(stopped[0], 3);
   });
 
   it('H07: Occupied trả 409 ngay, giải phóng hold để tài xế đặt lại được', async () => {
