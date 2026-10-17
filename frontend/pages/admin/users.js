@@ -8,15 +8,80 @@ const ROLE_LABELS = {
   ADMIN: 'Quản trị', STATION_OWNER: 'Chủ trạm', OPERATOR: 'Vận hành viên', ACCOUNTANT: 'Kế toán', DRIVER: 'Tài xế',
 };
 
-// Quản trị tạo tài khoản mọi vai trò (POST /api/admin/users). Danh sách/khoá tài khoản là S-61 — chưa có API.
 export async function render(ctx) {
   let roles;
+  let users;
   try {
-    roles = await csms.admin.roles();
+    const [roleList, userResult] = await Promise.all([csms.admin.roles(), csms.admin.listUsers()]);
+    roles = roleList;
+    users = userResult.users;
   } catch (error) {
-    ctx.root.append(emptyState({ iconName: 'alert', title: 'Không tải được danh sách vai trò', text: error.message }));
+    ctx.root.append(emptyState({ iconName: 'alert', title: 'Không tải được tài khoản quản trị', text: error.message }));
     return;
   }
+
+  const search = h('input', { class: 'input', type: 'search', placeholder: 'Tìm theo tên hoặc email', 'aria-label': 'Tìm người dùng' });
+  const userRows = h('tbody');
+  const renderUsers = () => {
+    const query = search.value.trim().toLocaleLowerCase();
+    const filtered = users.filter((user) => `${user.name} ${user.email}`.toLocaleLowerCase().includes(query));
+    if (!filtered.length) {
+      userRows.replaceChildren(h('tr', {}, h('td', { colspan: '5' }, query ? 'Không tìm thấy người dùng' : 'Chưa có tài khoản')));
+      return;
+    }
+    userRows.replaceChildren(...filtered.map((user) => {
+      const rowError = h('span', { class: 'field__error', role: 'alert' });
+      const assignedRole = user.role || user.roles?.[0] || '';
+      const selectedRole = h('select', { class: 'select', 'aria-label': `Vai trò của ${user.email}` },
+        roles.map((item) => h('option', { value: item.code, selected: item.code === assignedRole }, ROLE_LABELS[item.code] ?? item.name ?? item.code))
+      );
+      const saveRole = h('button', { class: 'btn btn--secondary', type: 'button', onclick: async () => {
+        rowError.textContent = '';
+        saveRole.disabled = true;
+        try {
+          const result = await csms.admin.setUserRole(user.id, selectedRole.value);
+          users = users.map((item) => String(item.id) === String(user.id) ? result.user : item);
+          toast('Đã cập nhật vai trò.');
+          renderUsers();
+        } catch (error) {
+          rowError.textContent = error.message;
+        } finally {
+          saveRole.disabled = false;
+        }
+      } }, 'Lưu vai trò');
+      const action = user.disabled_at
+        ? h('button', { class: 'btn btn--secondary', type: 'button', onclick: async () => {
+          rowError.textContent = '';
+          try {
+            const result = await csms.admin.enableUser(user.id);
+            users = users.map((item) => String(item.id) === String(user.id) ? result.user : item);
+            toast('Đã mở khóa tài khoản.');
+            renderUsers();
+          } catch (error) {
+            rowError.textContent = error.message;
+          }
+        } }, 'Mở khóa')
+        : h('button', { class: 'btn btn--danger', type: 'button', onclick: async () => {
+          rowError.textContent = '';
+          try {
+            const result = await csms.admin.disableUser(user.id);
+            users = users.map((item) => String(item.id) === String(user.id) ? result.user : item);
+            toast('Đã khóa tài khoản.');
+            renderUsers();
+          } catch (error) {
+            rowError.textContent = error.message;
+          }
+        } }, 'Khóa');
+      return h('tr', {},
+        h('td', {}, user.name),
+        h('td', {}, user.email),
+        h('td', {}, user.disabled_at ? 'Đã khóa' : 'Đang hoạt động'),
+        h('td', {}, selectedRole, saveRole, rowError),
+        h('td', {}, action)
+      );
+    }));
+  };
+  search.addEventListener('input', renderUsers);
 
   const name = h('input', { class: 'input', id: 'u-name', autocomplete: 'off', required: true });
   const email = h('input', { class: 'input', id: 'u-email', type: 'email', autocomplete: 'off', required: true });
@@ -38,6 +103,8 @@ export async function render(ctx) {
     try {
       const { user } = await csms.admin.createUser({ name: values.name.trim(), email: values.email.trim(), password: values.password, role: role.value });
       toast(`Đã tạo tài khoản ${user.email} (${ROLE_LABELS[user.role] ?? user.role}).`);
+      users = [...users, user];
+      renderUsers();
       form.reset();
     } catch (error) {
       const fieldErrors = {};
@@ -54,6 +121,24 @@ export async function render(ctx) {
   alert, h('div', {}, submit));
 
   ctx.root.append(
-    h('div', { class: 'page-head' }, h('div', {}, h('h1', { class: 'page-head__title' }, 'Tạo tài khoản'), h('p', { class: 'page-head__sub' }, 'Tạo tài khoản cho bất kỳ vai trò nào. Người dùng nên đổi mật khẩu sau lần đăng nhập đầu.'))),
-    h('section', { class: 'card', style: 'max-width:520px' }, h('div', { class: 'card__body' }, form)));
+    h('div', { class: 'page-head' }, h('div', {}, h('h1', { class: 'page-head__title' }, 'Quản lý tài khoản'), h('p', { class: 'page-head__sub' }, 'Tạo tài khoản, tìm kiếm người dùng, đổi vai trò và khóa hoặc mở khóa tài khoản.'))),
+    h('section', { class: 'card', style: 'max-width:520px' },
+      h('div', { class: 'card__body' },
+        h('h2', { class: 'section-title' }, 'Tạo tài khoản'),
+        form
+      )
+    ),
+    h('section', { class: 'card', 'aria-label': 'Danh sách người dùng' },
+      h('div', { class: 'card__body' },
+        h('div', { class: 'toolbar' }, search),
+        h('div', { class: 'table-wrap' },
+          h('table', { class: 'table' },
+            h('thead', {}, h('tr', {}, ['Họ và tên', 'Email', 'Trạng thái', 'Vai trò', 'Thao tác'].map((label) => h('th', { scope: 'col' }, label)))),
+            userRows
+          )
+        )
+      )
+    )
+  );
+  renderUsers();
 }

@@ -15,7 +15,7 @@ router.get('/health', { access: access('health:read') }, async (req, res) => {
   res.json({ ok: true, service: 'csms-backend', database: 'postgresql', time: new Date().toISOString() });
 });
 
-router.get('/health/overview', { access: access('health:overview') }, async (req, res) => {
+router.get('/health/overview', { access: access('health:dashboard') }, async (req, res) => {
   res.json({ points: await service.overview({ db: pool }) });
 });
 
