@@ -1,6 +1,6 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { run, query, resetSchema } = require('../helpers/db');
+const { run, query, resetSchema, rollbackToMigration } = require('../helpers/db');
 
 describe('migration 045: permits zero-watt charging profiles [GYM-69]', () => {
   let stationId;
@@ -21,6 +21,7 @@ describe('migration 045: permits zero-watt charging profiles [GYM-69]', () => {
   after(resetSchema);
 
   it('accepts zero, rolls back only when no zero-watt rows remain, and reapplies', async () => {
+    await rollbackToMigration('046_reservations.sql');
     await query(
       `INSERT INTO charging_profile_log (
          station_id, transaction_id, limit_w, status, attempt, trigger
@@ -54,6 +55,6 @@ describe('migration 045: permits zero-watt charging profiles [GYM-69]', () => {
       [stationId]
     );
     const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
-    assert.strictEqual(latest.rows[0].version, '046_reservations.sql');
+    assert.strictEqual(latest.rows[0].version, '056_users_disabled_at.sql');
   });
 });

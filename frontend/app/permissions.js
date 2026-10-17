@@ -5,8 +5,10 @@ const READ = ['ADMIN', 'STATION_OWNER', 'OPERATOR'];
 const WRITE = ['ADMIN', 'STATION_OWNER'];
 
 export const PERMISSIONS = {
+  'health:dashboard': ['ADMIN', 'OPERATOR'],
   'roles:read': ADMIN,
   'users:create': ADMIN,
+  'users:manage': ADMIN,
   'stations:read': READ,
   'stations:search': ['DRIVER'],
   'stations:write': WRITE,
@@ -42,6 +44,10 @@ export const PERMISSIONS = {
   'erasure:manage': ADMIN,
   'alerts:read': READ,
   'alerts:close': ['ADMIN', 'OPERATOR'],
+  'partner-rates:manage': ['ADMIN', 'ACCOUNTANT'],
+  'partner-rates:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
+  'settlements:manage': ['ADMIN', 'ACCOUNTANT'],
+  'settlements:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
 };
 
 export const can = (role, key) => (PERMISSIONS[key] ?? []).includes(role);

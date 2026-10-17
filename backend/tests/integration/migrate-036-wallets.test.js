@@ -1,6 +1,6 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { run, query, resetSchema } = require('../helpers/db');
+const { run, query, resetSchema, rollbackToMigration } = require('../helpers/db');
 
 process.env.DATABASE_URL ||= process.env.TEST_DATABASE_URL || 'postgresql://csms:csms_test_only@localhost:5433/csms_test';
 process.env.JWT_SECRET ||= 'z'.repeat(40);
@@ -132,6 +132,7 @@ describe('S-41 wallet ledger migration', () => {
   });
 
   it('AC S-41: rollback migration 036 gỡ ví và ledger rồi có thể áp dụng lại', async () => {
+    await rollbackToMigration('046_reservations.sql');
     for (const version of [
       '046_reservations.sql',
       '045_zero_watt_profile_limits.sql',

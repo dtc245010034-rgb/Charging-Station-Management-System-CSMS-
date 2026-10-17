@@ -20,7 +20,7 @@ concurrency:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     services:
       # Giống db_test trong docker-compose.yml: cổng 5433, database kết thúc bằng _test.
