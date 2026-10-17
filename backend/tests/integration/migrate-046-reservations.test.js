@@ -48,7 +48,7 @@ describe('migration 046: reservation holds and PostgreSQL overlap constraint', (
 
   after(resetSchema);
 
-  it('creates extension, sequence and reservations with half-open EXCLUDE and one active hold per driver', async () => {
+  it('H08: half-open EXCLUDE allows next reservation at exact expiry and blocks overlap', async () => {
     const extension = await query("SELECT 1 FROM pg_extension WHERE extname = 'btree_gist'");
     assert.equal(extension.rowCount, 1);
     const sequence = await query("SELECT to_regclass('reservations_ocpp_reservation_id_seq') AS name");

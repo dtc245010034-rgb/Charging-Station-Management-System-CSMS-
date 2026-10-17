@@ -16,6 +16,7 @@ describe('S-48: tạo reservation và gửi ReserveNow', { concurrency: false },
   let driver;
   let secondDriver;
   let cleanupDriver;
+  let lowBalanceDriver;
   let connectorId;
   let secondConnectorId;
   let thirdConnectorId;
@@ -51,6 +52,7 @@ describe('S-48: tạo reservation và gửi ReserveNow', { concurrency: false },
     driver = await createUser('s48-driver@test.invalid', 'DRIVER');
     secondDriver = await createUser('s48-driver-two@test.invalid', 'DRIVER');
     cleanupDriver = await createUser('s48-driver-cleanup@test.invalid', 'DRIVER');
+    lowBalanceDriver = await createUser('s48-driver-low-balance@test.invalid', 'DRIVER');
     const station = await postStation(owner, stationBody({ name: 'S-48 reservation station' }));
     await query("UPDATE stations SET status = 'ACTIVE' WHERE id = $1", [station.body.id]);
     const tariff = await query(
@@ -79,6 +81,7 @@ describe('S-48: tạo reservation và gửi ReserveNow', { concurrency: false },
     await query("INSERT INTO id_tags (tag, user_id, status) VALUES ($1, $2, 'ACTIVE')", [ID_TAG, driver.id]);
     await query("INSERT INTO id_tags (tag, user_id, status) VALUES ('S48-TAG-02', $1, 'ACTIVE')", [secondDriver.id]);
     await query("INSERT INTO id_tags (tag, user_id, status) VALUES ('S48-TAG-CLEANUP', $1, 'ACTIVE')", [cleanupDriver.id]);
+    await query("INSERT INTO id_tags (tag, user_id, status) VALUES ('S48-TAG-LOW', $1, 'ACTIVE')", [lowBalanceDriver.id]);
     await withTransaction((client) => postEntry(client, {
       driverId: driver.id,
       entryType: 'TOPUP_MANUAL',
@@ -96,6 +99,12 @@ describe('S-48: tạo reservation và gửi ReserveNow', { concurrency: false },
       entryType: 'TOPUP_MANUAL',
       amountDong: 100000,
       receiptCode: `S48-TOPUP-CLEANUP-${Date.now()}`,
+    }));
+    await withTransaction((client) => postEntry(client, {
+      driverId: lowBalanceDriver.id,
+      entryType: 'TOPUP_MANUAL',
+      amountDong: 19999,
+      receiptCode: `S48-TOPUP-LOW-${Date.now()}`,
     }));
 
     server = await startServerProcess();
@@ -276,5 +285,18 @@ describe('S-48: tạo reservation và gửi ReserveNow', { concurrency: false },
     const state = await query('SELECT status, reject_reason FROM reservations WHERE id = $1', [pending.rows[0].id]);
     assert.deepStrictEqual(state.rows[0], { status: 'FAILED', reject_reason: 'PENDING_TIMEOUT' });
     assert.equal((await failStalePendingReservations({ query })).rowCount, 0);
+  });
+
+  it('H09: ví dưới ngưỡng trả WALLET_BELOW_MIN và không tạo reservation hoặc gửi ReserveNow', async () => {
+    const countBefore = await query('SELECT count(*)::int AS count FROM reservations');
+    const callsBefore = reservationCalls.length;
+    const response = await createReservation(`s48-wallet-low-${Date.now()}`, {
+      connectorId: String(thirdConnectorId),
+      arriveInMinutes: 30,
+    }, lowBalanceDriver);
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).error.code, 'WALLET_BELOW_MIN');
+    assert.equal((await query('SELECT count(*)::int AS count FROM reservations')).rows[0].count, countBefore.rows[0].count);
+    assert.equal(reservationCalls.length, callsBefore);
   });
 });
