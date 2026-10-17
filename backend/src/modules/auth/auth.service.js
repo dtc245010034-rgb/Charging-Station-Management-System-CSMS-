@@ -40,7 +40,7 @@ async function login(rawEmail, password, ip) {
 
   const user = await users.findByEmail(email);
   const passwordOk = await verifyPassword({ password_hash: user ? user.password_hash : await getDummyHash() }, password);
-  if (!user || !passwordOk) {
+  if (!user || !passwordOk || user.is_active === false) {
     // Đếm cả email không tồn tại để hành vi giống hệt email có thật.
     await Promise.all([throttle.recordFailure(emailKey, EMAIL_MAX_FAILURES), throttle.recordFailure(ipKey, env.LOGIN_IP_MAX_FAILURES)]);
     throw new UnauthorizedError('Email hoặc mật khẩu không đúng');

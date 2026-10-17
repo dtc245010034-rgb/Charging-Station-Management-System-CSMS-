@@ -13,6 +13,9 @@ describe('migration 035: session_invoices, invoice_lines and billing_status [GYM
     assert.strictEqual(run('src/db/migrate.js').status, 0);
 
     for (const version of [
+      '049_user_account_management.sql',
+      '048_settlement_statements.sql',
+      '047_partner_share_rates.sql',
       '046_reservations.sql',
       '045_zero_watt_profile_limits.sql',
       '044_alerts_power_profile_log.sql',

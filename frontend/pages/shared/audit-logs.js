@@ -31,6 +31,7 @@ const ACTION_LABELS = {
   WALLET_UNLOCK: 'Mở khóa ví',
   PERIOD_CLOSED: 'Chốt kỳ kế toán',
   PERIOD_REOPENED: 'Mở lại kỳ kế toán',
+  PARTNER_RATE_CREATED: 'Khai báo tỉ lệ chia',
   BILLING_PERIOD_CLOSED: 'Không lập hóa đơn do kỳ đã chốt',
   WEBHOOK_AMOUNT_MISMATCH: 'Lệch số tiền webhook',
   WEBHOOK_BAD_SIGNATURE: 'Chữ ký webhook không hợp lệ',

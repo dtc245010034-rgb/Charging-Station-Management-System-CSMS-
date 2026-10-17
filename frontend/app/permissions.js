@@ -5,8 +5,10 @@ const READ = ['ADMIN', 'STATION_OWNER', 'OPERATOR'];
 const WRITE = ['ADMIN', 'STATION_OWNER'];
 
 export const PERMISSIONS = {
+  'health:dashboard': ['ADMIN', 'OPERATOR'],
   'roles:read': ADMIN,
   'users:create': ADMIN,
+  'users:manage': ADMIN,
   'stations:read': READ,
   'stations:search': ['DRIVER'],
   'stations:write': WRITE,
@@ -35,6 +37,10 @@ export const PERMISSIONS = {
   'tariffs:read': ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT'],
   'tariffs:write': WRITE,
   'reports:revenue': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
+  'partner-rates:manage': ['ADMIN', 'ACCOUNTANT'],
+  'partner-rates:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
+  'settlements:manage': ['ADMIN', 'ACCOUNTANT'],
+  'settlements:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
   'periods:manage': ['ADMIN', 'ACCOUNTANT'],
   'periods:reopen': ADMIN,
   'reports:reconcile': ['ADMIN', 'ACCOUNTANT'],

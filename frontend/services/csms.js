@@ -49,6 +49,17 @@ export const alerts = {
 export const admin = {
   roles: () => api('/api/roles'),
   createUser: (body) => api('/api/admin/users', { method: 'POST', body }),
+  users: (search, page = 1) => api(`/api/admin/users?${new URLSearchParams({ search, page: String(page) })}`),
+  changeUserRole: (id, role) => api(`/api/admin/users/${encodeURIComponent(id)}/role`, { method: 'PATCH', body: { role } }),
+  setUserActive: (id, isActive) => api(`/api/admin/users/${encodeURIComponent(id)}/status`, { method: 'PATCH', body: { isActive } }),
+};
+
+export const settlements = {
+  partners: () => api('/api/partners'),
+  rates: (ownerId) => api(`/api/partners/${encodeURIComponent(ownerId)}/share-rates`),
+  createRate: (ownerId, body) => api(`/api/partners/${encodeURIComponent(ownerId)}/share-rates`, { method: 'POST', body }),
+  get: (month) => api(`/api/accounting/settlements/${encodeURIComponent(month)}`),
+  generate: (month) => api(`/api/accounting/settlements/${encodeURIComponent(month)}/generate`, { method: 'POST', body: {} }),
 };
 
 export const tariffs = {

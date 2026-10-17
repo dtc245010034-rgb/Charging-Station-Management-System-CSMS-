@@ -93,6 +93,10 @@ describe('migration 046: reservation holds and PostgreSQL overlap constraint', (
   });
 
   it('migration 046 rolls back and reapplies', async () => {
+    while ((await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1')).rows[0]?.version !== '046_reservations.sql') {
+      const laterDown = run('src/db/migrate.js', ['down']);
+      assert.strictEqual(laterDown.status, 0, laterDown.stderr);
+    }
     const down = run('src/db/migrate.js', ['down']);
     assert.strictEqual(down.status, 0, down.stderr);
     const absent = await query("SELECT to_regclass('public.reservations') AS table_name");
