@@ -48,6 +48,8 @@ const permissions = {
   'erasure:manage': ADMIN,
   'alerts:read': READ_OPERATIONS,
   'alerts:close': ['ADMIN', 'OPERATOR'],
+  'partner-rates:manage': ['ADMIN', 'ACCOUNTANT'],
+  'partner-rates:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
 };
 
 function access(key) {
