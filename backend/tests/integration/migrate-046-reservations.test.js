@@ -1,6 +1,6 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { run, query, resetSchema } = require('../helpers/db');
+const { run, query, resetSchema, rollbackToMigration } = require('../helpers/db');
 
 describe('migration 046: reservation holds and PostgreSQL overlap constraint', () => {
   let driverId;
@@ -93,6 +93,7 @@ describe('migration 046: reservation holds and PostgreSQL overlap constraint', (
   });
 
   it('migration 046 rolls back and reapplies', async () => {
+    await rollbackToMigration('046_reservations.sql');
     const down = run('src/db/migrate.js', ['down']);
     assert.strictEqual(down.status, 0, down.stderr);
     const absent = await query("SELECT to_regclass('public.reservations') AS table_name");

@@ -1,6 +1,6 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { run, query, resetSchema } = require('../helpers/db');
+const { run, query, resetSchema, rollbackToMigration } = require('../helpers/db');
 
 describe('migration 039: notifications and email_outbox [GYM-85]', () => {
   before(async () => {
@@ -110,6 +110,7 @@ describe('migration 039: notifications and email_outbox [GYM-85]', () => {
   });
 
   it('AC GYM-85: rollback migration 039 gỡ sạch bảng notifications và email_outbox và up lại được', async () => {
+    await rollbackToMigration('046_reservations.sql');
     for (const version of [
       '046_reservations.sql',
       '045_zero_watt_profile_limits.sql',

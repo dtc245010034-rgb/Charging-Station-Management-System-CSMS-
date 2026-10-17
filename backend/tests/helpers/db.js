@@ -46,11 +46,15 @@ async function truncateAll() {
     ALTER TABLE tariff_periods DISABLE TRIGGER tariff_periods_no_truncate;
     ALTER TABLE session_invoices DISABLE TRIGGER session_invoices_no_truncate;
     ALTER TABLE invoice_lines DISABLE TRIGGER invoice_lines_no_truncate;
+    ALTER TABLE settlement_statements DISABLE TRIGGER settlement_statements_no_truncate;
+    ALTER TABLE settlement_lines DISABLE TRIGGER settlement_lines_no_truncate;
     ALTER TABLE wallet_ledger DISABLE TRIGGER wallet_ledger_no_truncate;
     TRUNCATE audit_logs, login_throttle, connectors, charge_points, stations, user_roles, users,
       tariffs, tariff_periods, wallets, wallet_ledger, wallet_topups, notifications, email_outbox,
-      partner_share_rates RESTART IDENTITY CASCADE;
+      partner_share_rates, settlement_statements, settlement_lines RESTART IDENTITY CASCADE;
     ALTER TABLE wallet_ledger ENABLE TRIGGER wallet_ledger_no_truncate;
+    ALTER TABLE settlement_lines ENABLE TRIGGER settlement_lines_no_truncate;
+    ALTER TABLE settlement_statements ENABLE TRIGGER settlement_statements_no_truncate;
     ALTER TABLE invoice_lines ENABLE TRIGGER invoice_lines_no_truncate;
     ALTER TABLE session_invoices ENABLE TRIGGER session_invoices_no_truncate;
     ALTER TABLE tariff_periods ENABLE TRIGGER tariff_periods_no_truncate;
@@ -61,4 +65,16 @@ async function truncateAll() {
   `);
 }
 
-module.exports = { BASE, env, run, query, resetSchema, truncateAll, truncateAuditLogs };
+async function rollbackToMigration(version) {
+  let latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+  while (latest.rows[0]?.version !== version) {
+    if (!latest.rows[0]) throw new Error(`Migration ${version} không nằm trong schema_migrations`);
+    const previous = latest.rows[0].version;
+    const result = run('src/db/migrate.js', ['down']);
+    if (result.status !== 0) throw new Error(result.stderr || `Rollback migration ${previous} thất bại`);
+    latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+    if (latest.rows[0]?.version === previous) throw new Error(`Không rollback được migration ${previous}`);
+  }
+}
+
+module.exports = { BASE, env, run, query, resetSchema, truncateAll, truncateAuditLogs, rollbackToMigration };
