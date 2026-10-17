@@ -10,8 +10,10 @@ const WRITE_OPERATIONS = ['ADMIN', 'STATION_OWNER'];
 const permissions = {
   'auth:public': PUBLIC,
   'health:read': PUBLIC,
+  'health:overview': ['ADMIN', 'OPERATOR'],
   'roles:read': ADMIN,
   'users:create': ADMIN,
+  'users:manage': ADMIN,
   'stations:read': READ_OPERATIONS,
   'stations:search': ['DRIVER'],
   'stations:write': WRITE_OPERATIONS,
@@ -50,6 +52,8 @@ const permissions = {
   'alerts:close': ['ADMIN', 'OPERATOR'],
   'partner-rates:manage': ['ADMIN', 'ACCOUNTANT'],
   'partner-rates:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
+  'settlements:manage': ['ADMIN', 'ACCOUNTANT'],
+  'settlements:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
 };
 
 function access(key) {
