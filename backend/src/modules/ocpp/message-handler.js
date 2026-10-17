@@ -21,6 +21,7 @@ function createOcppMessageHandler({
 	logError = console.error,
 	callTimeoutMs = 30000,
 	updateLastSeen = async () => {},
+	recordOcppCall = () => {},
 	messageStore = null,
 	// BootNotification ghi ONLINE và đánh dấu kết nối; phát lại câu cũ trên kết nối mới sẽ bỏ qua hai việc đó, mà xử lý lại thì vô hại.
 	// Heartbeat vốn idempotent; lưu mỗi nhịp sẽ thêm hàng triệu dòng ocpp_messages mỗi ngày khi có hàng nghìn trụ.
@@ -156,41 +157,55 @@ function createOcppMessageHandler({
 
 		logInfo(`[OCPP] Received CALL | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 
-		if (connection?.isStationLocked) {
-			logWarning(`[OCPP] SecurityError: Station is locked | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
-			await sendCallError(connection, request.messageId, 'SecurityError', 'Station is locked');
-			return;
-		}
-
-		if (requireBoot && !connection?.isBootAccepted && request.action !== 'BootNotification') {
-			logWarning(`[OCPP] SecurityError: Action before BootNotification | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
-			await sendCallError(connection, request.messageId, 'SecurityError', 'Charge point is not accepted yet');
-			return;
-		}
-
-		const handler = Object.hasOwn(handlers, request.action) ? handlers[request.action] : undefined;
-		if (typeof handler !== 'function') {
-			logWarning(`[OCPP] Unsupported action | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
-			await sendCallError(connection, request.messageId, 'NotImplemented', 'Action is not supported');
-			return;
-		}
-
+		const startedAt = Date.now();
+		let failed = false;
 		try {
-			await updateLastSeen(connection);
-			logInfo(`[OCPP] Calling handler | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
-			const payload = await runOnce(connection, request, handler);
-			const response = encodeCallResult(request.messageId, payload);
-			logInfo(`[OCPP] Created CALLRESULT | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
-			await sendFrame(connection, response);
-		} catch (error) {
-			const isOcppCallError = error instanceof OcppCallError || error?.name === 'OcppCallError';
-			const errorCode = isOcppCallError && typeof error.code === 'string' && error.code ? error.code : 'InternalError';
-			const errorDescription = isOcppCallError && typeof error.message === 'string' && error.message ? error.message : 'Internal error';
-			const errorDetails = isOcppCallError && error.details && typeof error.details === 'object' && !Array.isArray(error.details)
-				? error.details
-				: {};
-			logError(`[OCPP] Handler failed | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}: ${sanitizeErrorMessage(error?.message || error)}`);
-			await sendCallError(connection, request.messageId, errorCode, errorDescription, errorDetails);
+			if (connection?.isStationLocked) {
+				failed = true;
+				logWarning(`[OCPP] SecurityError: Station is locked | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
+				await sendCallError(connection, request.messageId, 'SecurityError', 'Station is locked');
+				return;
+			}
+
+			if (requireBoot && !connection?.isBootAccepted && request.action !== 'BootNotification') {
+				failed = true;
+				logWarning(`[OCPP] SecurityError: Action before BootNotification | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
+				await sendCallError(connection, request.messageId, 'SecurityError', 'Charge point is not accepted yet');
+				return;
+			}
+
+			const handler = Object.hasOwn(handlers, request.action) ? handlers[request.action] : undefined;
+			if (typeof handler !== 'function') {
+				failed = true;
+				logWarning(`[OCPP] Unsupported action | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
+				await sendCallError(connection, request.messageId, 'NotImplemented', 'Action is not supported');
+				return;
+			}
+
+			try {
+				await updateLastSeen(connection);
+				logInfo(`[OCPP] Calling handler | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
+				const payload = await runOnce(connection, request, handler);
+				const response = encodeCallResult(request.messageId, payload);
+				logInfo(`[OCPP] Created CALLRESULT | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
+				await sendFrame(connection, response);
+			} catch (error) {
+				failed = true;
+				const isOcppCallError = error instanceof OcppCallError || error?.name === 'OcppCallError';
+				const errorCode = isOcppCallError && typeof error.code === 'string' && error.code ? error.code : 'InternalError';
+				const errorDescription = isOcppCallError && typeof error.message === 'string' && error.message ? error.message : 'Internal error';
+				const errorDetails = isOcppCallError && error.details && typeof error.details === 'object' && !Array.isArray(error.details)
+					? error.details
+					: {};
+				logError(`[OCPP] Handler failed | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}: ${sanitizeErrorMessage(error?.message || error)}`);
+				await sendCallError(connection, request.messageId, errorCode, errorDescription, errorDetails);
+			}
+		} finally {
+			try {
+				recordOcppCall({ durationMs: Date.now() - startedAt, failed });
+			} catch (error) {
+				logError(`[OCPP] Failed to record health metric: ${sanitizeErrorMessage(error?.message || error)}`);
+			}
 		}
 	}
 

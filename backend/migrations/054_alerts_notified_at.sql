@@ -1,0 +1,2 @@
+ALTER TABLE alerts
+  ADD COLUMN notified_at TIMESTAMPTZ;
