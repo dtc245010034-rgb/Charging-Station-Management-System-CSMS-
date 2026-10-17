@@ -1,5 +1,10 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
+
+process.env.DATABASE_URL ||= 'postgresql://csms:csms_test_only@localhost:5433/csms_test';
+process.env.JWT_SECRET ||= 'z'.repeat(40);
+process.env.APP_ORIGIN ||= 'http://localhost:3000';
+
 const { csvCell, toCsv } = require('../../src/modules/reports/csv');
 const { createHealthMetrics } = require('../../src/modules/health/health-metrics');
 const { createOcppMessageHandler } = require('../../src/modules/ocpp/message-handler');

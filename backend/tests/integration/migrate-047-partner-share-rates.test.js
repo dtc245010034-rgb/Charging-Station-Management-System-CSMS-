@@ -1,6 +1,6 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { run, query, resetSchema } = require('../helpers/db');
+const { run, query, resetSchema, rollbackToMigration } = require('../helpers/db');
 
 describe('migration 047: partner_share_rates append-only table', () => {
   let ownerId;
@@ -81,12 +81,13 @@ describe('migration 047: partner_share_rates append-only table', () => {
     );
 
     await assert.rejects(
-      query("TRUNCATE TABLE partner_share_rates"),
+      query("TRUNCATE TABLE partner_share_rates, settlement_lines, settlement_statements"),
       (error) => error.code === '55000' && error.message.includes('append-only')
     );
   });
 
   it('migration 047 rollback và migrate lại thành công', async () => {
+    await rollbackToMigration('047_partner_share_rates.sql');
     const down = run('src/db/migrate.js', ['down']);
     assert.strictEqual(down.status, 0, down.stderr);
     const absent = await query("SELECT to_regclass('public.partner_share_rates') AS table_name");
