@@ -42,10 +42,11 @@ const postSessionInvoiceDebit = async (client, invoice) => {
   });
 };
 
-function createApp({ commandSender } = {}) {
+function createApp({ commandSender, powerRebalancer, rebalanceStation } = {}) {
   registerAfterInvoice('wallet-session-debit', postSessionInvoiceDebit);
   const app = express();
   app.locals.commandSender = commandSender;
+  app.locals.rebalanceStation = rebalanceStation || powerRebalancer?.rebalanceStation;
   if (env.TRUST_PROXY > 0) app.set('trust proxy', env.TRUST_PROXY);
   app.use(cors({ origin: env.APP_ORIGIN.split(','), credentials: true }));
   app.use(express.urlencoded({ extended: false }));

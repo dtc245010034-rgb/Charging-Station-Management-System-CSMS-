@@ -22,12 +22,16 @@ router.get('/stations/:id', { access: access('stations:read') }, async (req, res
 });
 router.patch('/stations/:id', { access: access('stations:write') }, async (req, res) => {
   const { id } = idParam.parse(req.params);
-  res.json(await service.update(req.user, id, updateBody.parse(req.body ?? {})));
+  res.json(await service.update(req.user, id, updateBody.parse(req.body ?? {}), {
+    rebalanceStation: req.app?.locals?.rebalanceStation,
+  }));
 });
 router.patch('/connectors/:id/power', { access: access('stations:write') }, async (req, res) => {
   const { id } = idParam.parse(req.params);
   const { rated_power_w } = connectorPowerBody.parse(req.body ?? {});
-  res.json(await service.setConnectorPower(req.user, id, rated_power_w));
+  res.json(await service.setConnectorPower(req.user, id, rated_power_w, {
+    rebalanceStation: req.app?.locals?.rebalanceStation,
+  }));
 });
 router.patch('/admin/stations/:id/lock', { access: access('stations:lock') }, async (req, res) => {
   const { id } = idParam.parse(req.params);

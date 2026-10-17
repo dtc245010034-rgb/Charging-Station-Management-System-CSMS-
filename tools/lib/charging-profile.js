@@ -26,7 +26,7 @@ function isSupportedProfile(payload) {
     && payload.connectorId > 0
     && Number.isSafeInteger(profile?.transactionId)
     && profile.chargingProfilePurpose === 'TxProfile'
-    && profile.chargingProfileKind === 'Absolute'
+    && (profile.chargingProfileKind === 'Relative' || profile.chargingProfileKind === 'Absolute')
     && profile.chargingSchedule?.chargingRateUnit === 'W'
     && Array.isArray(periods)
     && periods.some((period) => period?.startPeriod === 0

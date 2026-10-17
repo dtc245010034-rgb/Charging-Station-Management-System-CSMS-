@@ -72,7 +72,7 @@ const setLock = (id, locked, actorId) => {
 const connectorById = (actor, id) => {
   const scope = scopeByOwner(actor, 's');
   return prepare(
-    `SELECT c.*, s.owner_id, cp.code AS charge_point_code,
+    `SELECT c.*, s.owner_id, cp.station_id, cp.code AS charge_point_code,
             COALESCE(c.rated_power_w, ROUND(cp.power_kw * 1000)::integer) AS effective_power_w
      FROM connectors c JOIN charge_points cp ON cp.id = c.charge_point_id
      JOIN stations s ON s.id = cp.station_id

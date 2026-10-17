@@ -32,7 +32,6 @@ function createPowerRebalancer({
       );
       const station = await client.query('SELECT power_limit_w FROM stations WHERE id = $1', [stationId]);
       if (!station.rowCount) throw new Error(`Station ${stationId} does not exist`);
-      if (station.rows[0].power_limit_w === null) return { skipped: 'NO_POWER_LIMIT' };
 
       const active = await client.query(
         `SELECT cs.id::text AS session_id,
@@ -58,32 +57,48 @@ function createPowerRebalancer({
          ORDER BY session_id, id DESC`,
         [stationId]
       );
+      const acceptedLimits = new Map((accepted.rows || []).map((row) => [String(row.session_id), row.limit_w]));
+
+      if (station.rows[0].power_limit_w === null) {
+        const needsUncap = active.rows.some((session) => {
+          const acceptedLimitW = acceptedLimits.get(String(session.session_id));
+          return acceptedLimitW !== undefined && Number(acceptedLimitW) < Number(session.rated_w);
+        });
+        if (!needsUncap) {
+          return { skipped: 'NO_POWER_LIMIT' };
+        }
+      }
+
       return {
         limitW: station.rows[0].power_limit_w,
         sessions: active.rows,
-        acceptedLimits: new Map((accepted.rows || []).map((row) => [String(row.session_id), row.limit_w])),
+        acceptedLimits,
       };
     }, db);
 
     if (plan.skipped) return { stationId, skipped: plan.skipped, sessions: [] };
     if (!plan.sessions.length) return { stationId, sessions: [] };
 
-    const allocations = allocate({
-      limitW: plan.limitW,
-      sessions: plan.sessions.map((session) => ({
-        sessionId: session.session_id,
-        ratedW: session.rated_w,
-      })),
-    });
+    const allocations = plan.limitW === null
+      ? plan.sessions.map((session) => ({
+          sessionId: session.session_id,
+          limitW: session.rated_w,
+        }))
+      : allocate({
+          limitW: plan.limitW,
+          sessions: plan.sessions.map((session) => ({
+            sessionId: session.session_id,
+            ratedW: session.rated_w,
+          })),
+        });
     const allocationById = new Map(allocations.map((allocation) => [String(allocation.sessionId), allocation.limitW]));
-    const results = [];
-
+    const targets = [];
     for (const session of plan.sessions) {
       const limitW = allocationById.get(String(session.session_id));
       const acceptedLimitW = plan.acceptedLimits.get(String(session.session_id));
       if ((acceptedLimitW !== undefined && Number(acceptedLimitW) === limitW)
         || (acceptedLimitW === undefined && Number(session.rated_w) === limitW)) {
-        results.push({ sessionId: session.session_id, limitW, status: 'UNCHANGED', reason: null });
+        targets.push({ session, limitW, unchanged: true });
         continue;
       }
       const transactionId = Number(session.session_id);
@@ -103,7 +118,14 @@ function createPowerRebalancer({
         transaction_id: transactionId,
         limit_w: limitW,
       });
+      targets.push({ session, limitW, logId: log.rows[0].id, payload, unchanged: false });
+    }
 
+    const results = await Promise.all(targets.map(async (target) => {
+      if (target.unchanged) {
+        return { sessionId: target.session.session_id, limitW: target.limitW, status: 'UNCHANGED', reason: null };
+      }
+      const { session, limitW, logId, payload } = target;
       let status;
       let failureReason = null;
       try {
@@ -122,7 +144,7 @@ function createPowerRebalancer({
         `UPDATE charging_profile_log
          SET status = $1, responded_at = CURRENT_TIMESTAMP, reason = $2
          WHERE id = $3`,
-        [status, failureReason, log.rows[0].id]
+        [status, failureReason, logId]
       );
       if (status === 'REJECTED' || status === 'NOT_SUPPORTED') {
         await profileOutcomes.onProfileRejected(
@@ -131,8 +153,8 @@ function createPowerRebalancer({
           failureReason
         );
       }
-      results.push({ sessionId: session.session_id, limitW, status, reason: failureReason });
-    }
+      return { sessionId: session.session_id, limitW, status, reason: failureReason };
+    }));
 
     return { stationId, sessions: results };
   }
@@ -219,4 +241,11 @@ function createPowerRebalancer({
   return { rebalanceStation };
 }
 
-module.exports = { createPowerRebalancer };
+async function getEffectiveLimitW(db, stationId, _now = new Date()) {
+  void _now;
+  const result = await db.query('SELECT power_limit_w FROM stations WHERE id = $1', [stationId]);
+  if (!result.rowCount) return null;
+  return result.rows[0].power_limit_w ?? null;
+}
+
+module.exports = { createPowerRebalancer, getEffectiveLimitW };

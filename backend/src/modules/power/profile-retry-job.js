@@ -145,6 +145,11 @@ function createPowerProfileRetryJob({
            SELECT 1 FROM charging_profile_log newer
            WHERE newer.session_id = l.session_id AND newer.id > l.id
          )
+         AND NOT EXISTS (
+           SELECT 1 FROM alerts a
+           WHERE a.kind = 'POWER_UNCONFIRMED'
+             AND a.dedup_key = 'session:' || l.session_id::text
+         )
        ORDER BY l.session_id, l.id DESC
        LIMIT $2`,
       [PROFILE_RETRY_LIMIT, batchSize]

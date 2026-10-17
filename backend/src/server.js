@@ -64,7 +64,7 @@ powerRebalancer = createPowerRebalancer({
 	commandSender,
 	minIntervalMs: env.POWER_REBALANCE_MIN_INTERVAL_MS,
 });
-const server = http.createServer(createApp({ commandSender }));
+const server = http.createServer(createApp({ commandSender, powerRebalancer }));
 
 const wss = new WebSocketServer({
 	noServer: true,

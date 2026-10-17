@@ -30,9 +30,7 @@ function allocate({ limitW, sessions }) {
   return ordered.map(({ sessionId, ratedW }, index) => {
     const rated = BigInt(ratedW);
     const remainingSessions = BigInt(ordered.length - index);
-    const shareW = index === ordered.length - 1
-      ? remainingW
-      : (remainingW / remainingSessions / 100n) * 100n;
+    const shareW = (remainingW / remainingSessions / 100n) * 100n;
     const assignedW = rated < shareW ? rated : shareW;
     remainingW -= assignedW;
     return { sessionId, limitW: Number(assignedW) };

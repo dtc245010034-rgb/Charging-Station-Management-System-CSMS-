@@ -9,6 +9,7 @@ const { denyOrNotFound } = require('../../lib/ownership');
 const { withTransaction } = require('../../db/tx');
 const { BadRequestError, ConflictError } = require('../../lib/errors');
 const { wattsToKilowatts } = require('../power/units');
+const { triggerPowerRebalance } = require('../power/rebalance-trigger');
 
 const NOT_FOUND = 'Không tìm thấy trạm';
 const EARTH_RADIUS_KM = 6371.0088;
@@ -148,7 +149,7 @@ async function create(actor, data, idempotencyKey) {
   return stationWithPower(await repo.findById(actor, result.station.id));
 }
 
-async function update(actor, id, data) {
+async function update(actor, id, data, { rebalanceStation = null } = {}) {
   if (!repo.UPDATABLE.some((key) => data[key] !== undefined)) throw new BadRequestError('Không có trường cần cập nhật');
   const station = await find(actor, id);
   const changingCoordinates = data.latitude !== undefined || data.longitude !== undefined;
@@ -168,10 +169,13 @@ async function update(actor, id, data) {
   } else {
     await audit.record(actor.id, 'UPDATE', 'station', id, { fields: changedFields });
   }
+  if (data.power_limit_kw !== undefined || data.power_limit_w !== undefined) {
+    triggerPowerRebalance(rebalanceStation, id, 'UPDATE_STATION_LIMIT');
+  }
   return stationWithPower(await repo.findById(actor, id));
 }
 
-async function setConnectorPower(actor, id, ratedPowerW) {
+async function setConnectorPower(actor, id, ratedPowerW, { rebalanceStation = null } = {}) {
   const connector = await repo.connectorById(actor, id)
     || await denyOrNotFound(actor, 'connector', id, repo.connectorExistsById, 'Không tìm thấy đầu nối');
   await repo.updateConnectorPower(id, ratedPowerW);
@@ -180,6 +184,9 @@ async function setConnectorPower(actor, id, ratedPowerW) {
     charge_point_id: connector.charge_point_id,
     charge_point_code: connector.charge_point_code,
   });
+  if (connector.station_id) {
+    triggerPowerRebalance(rebalanceStation, connector.station_id, 'UPDATE_CONNECTOR_POWER');
+  }
   const updated = await repo.connectorById(actor, id);
   return {
     ...updated,

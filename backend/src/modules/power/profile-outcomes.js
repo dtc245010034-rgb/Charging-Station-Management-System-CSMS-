@@ -50,21 +50,25 @@ function createPowerProfileOutcomeHandler({
         logError(`[Power] Remote stop after profile rejection failed for session ${profile.session_id}: ${sanitizeErrorMessage(error?.message || error)}`);
       }
     }
+    const cpLabel = profile.charge_point_code || profile.charge_point_id || '';
+    const connectorLabel = profile.connector_no ? `, đầu nối ${profile.connector_no}` : '';
     await openAlert(
       profile,
       'POWER_PROFILE_REJECTED',
       'WARNING',
-      'Charging profile was rejected; a remote stop was requested.',
+      `Hồ sơ sạc bị từ chối trên trụ ${cpLabel}${connectorLabel}; đã yêu cầu dừng từ xa.`,
       { status, limit_w: profile.limit_w, reason }
     );
   }
 
   async function onProfileUnconfirmed(profile, status, reason = null) {
+    const cpLabel = profile.charge_point_code || profile.charge_point_id || '';
+    const connectorLabel = profile.connector_no ? `, đầu nối ${profile.connector_no}` : '';
     await openAlert(
       profile,
       'POWER_UNCONFIRMED',
       'CRITICAL',
-      'Charging power limit could not be confirmed after retries.',
+      `Không thể xác nhận hạn mức công suất sau các lần thử lại trên trụ ${cpLabel}${connectorLabel}.`,
       { status, attempt: profile.attempt, limit_w: profile.limit_w, reason }
     );
   }

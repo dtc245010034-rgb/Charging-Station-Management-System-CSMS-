@@ -102,5 +102,21 @@ describe('power allocation', () => {
   it('returns empty array when sessions list is empty', () => {
     assert.deepStrictEqual(allocate({ limitW: 22000, sessions: [] }), []);
   });
+
+  it('allocates strictly in 100-watt multiples even when limitW has arbitrary unaligned watts', () => {
+    const result = allocate({
+      limitW: 11075,
+      sessions: [
+        { sessionId: 1, ratedW: 7200 },
+        { sessionId: 2, ratedW: 7200 },
+      ],
+    });
+    for (const item of result) {
+      assert.strictEqual(item.limitW % 100, 0);
+    }
+    const total = result.reduce((sum, item) => sum + item.limitW, 0);
+    assert.ok(total <= 11075);
+    assert.strictEqual(total % 100, 0);
+  });
 });
 

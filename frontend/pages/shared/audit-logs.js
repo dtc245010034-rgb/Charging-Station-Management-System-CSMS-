@@ -9,6 +9,8 @@ import { statusBadge } from '../../components/badge.js';
 const PAGE_SIZE = 50;
 const ACTION_LABELS = {
   ACCESS_DENIED: 'Truy cập bị từ chối',
+  ALERT_CLOSED: 'Đóng cảnh báo',
+  CHANGE_CONFIGURATION: 'Đổi cấu hình trụ',
   CREATE: 'Tạo mới',
   DATA_ERASURE_COMPLETED: 'Ẩn danh hóa dữ liệu',
   DATA_ERASURE_REJECTED: 'Từ chối yêu cầu xóa dữ liệu',

@@ -11,7 +11,7 @@ function buildChargingProfilePayload(profile) {
       transactionId: Number(profile.transaction_id),
       stackLevel: 1,
       chargingProfilePurpose: 'TxProfile',
-      chargingProfileKind: 'Absolute',
+      chargingProfileKind: 'Relative',
       chargingSchedule: {
         chargingRateUnit: 'W',
         chargingSchedulePeriod: [{ startPeriod: 0, limit: profile.limit_w }],
