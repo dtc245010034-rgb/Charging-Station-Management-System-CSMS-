@@ -10,7 +10,7 @@ const WRITE_OPERATIONS = ['ADMIN', 'STATION_OWNER'];
 const permissions = {
   'auth:public': PUBLIC,
   'health:read': PUBLIC,
-  'health:overview': ['ADMIN', 'OPERATOR'],
+  'health:dashboard': ['ADMIN', 'OPERATOR'],
   'roles:read': ADMIN,
   'users:create': ADMIN,
   'users:manage': ADMIN,

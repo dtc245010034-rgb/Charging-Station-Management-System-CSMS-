@@ -28,6 +28,8 @@ export const PAGE_NEEDS = {
   reconciliation: 'reports:reconcile',
   periods: 'periods:manage',
   'erasure-requests': 'erasure:manage',
+  settlements: 'settlements:read',
+  health: 'health:dashboard',
 };
 
 const fleetOverview = () => import('../pages/shared/fleet-overview.js');
@@ -100,6 +102,15 @@ const PAGES = {
   },
   'erasure-requests': {
     admin: () => import('../pages/admin/erasure-requests.js'),
+  },
+  settlements: {
+    owner: () => import('../pages/shared/settlements.js'),
+    accountant: () => import('../pages/shared/settlements.js'),
+    admin: () => import('../pages/shared/settlements.js'),
+  },
+  health: {
+    operator: () => import('../pages/shared/health.js'),
+    admin: () => import('../pages/shared/health.js'),
   },
 };
 

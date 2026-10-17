@@ -5,7 +5,7 @@ const READ = ['ADMIN', 'STATION_OWNER', 'OPERATOR'];
 const WRITE = ['ADMIN', 'STATION_OWNER'];
 
 export const PERMISSIONS = {
-  'health:overview': ['ADMIN', 'OPERATOR'],
+  'health:dashboard': ['ADMIN', 'OPERATOR'],
   'roles:read': ADMIN,
   'users:create': ADMIN,
   'users:manage': ADMIN,
