@@ -73,6 +73,7 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
   const requestHash = createHash('sha256').update(JSON.stringify(data)).digest('hex');
 
   let created;
+  let conflictContext = null;
   try {
     created = await withTransaction(async (client) => {
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`reservation:${driver.id}:${idempotencyKey}`]);
@@ -102,6 +103,10 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
 
       const connector = await repo.findConnector(client, data.connectorId, { forUpdate: true });
       if (!connector) throw new NotFoundError('Không tìm thấy đầu nối');
+      conflictContext = {
+        stationId: connector.station_id,
+        connectorId: connector.connector_id,
+      };
       if (connector.station_status !== 'ACTIVE') {
         throw new AppError(409, 'STATION_NOT_ACTIVE', 'Trạm sạc hiện không hoạt động.');
       }
@@ -131,7 +136,28 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
   } catch (error) {
     if (error.code === '23P01') {
       const conflict = new AppError(409, 'CONNECTOR_RESERVED', 'Đầu nối đã được đặt chỗ. Hãy chọn đầu nối khác.');
-      conflict.details = { suggestions: [] };
+      let suggestions = [];
+      try {
+        const candidates = await repo.findAvailableSuggestions(
+          repo.pool,
+          conflictContext.stationId,
+          conflictContext.connectorId,
+          startsAt,
+          expiresAt
+        );
+        suggestions = candidates
+          .filter((candidate) => connections.isConnected(candidate.charge_point_code))
+          .slice(0, 5)
+          .map((candidate) => ({
+            connectorId: String(candidate.connector_id),
+            connectorNo: candidate.connector_no,
+            chargePointCode: candidate.charge_point_code,
+            connectorType: candidate.connector_type,
+          }));
+      } catch (suggestionError) {
+        console.warn('[Reservation] Không lấy được gợi ý đầu nối:', sanitizeErrorMessage(suggestionError?.message || suggestionError));
+      }
+      conflict.details = { suggestions };
       throw conflict;
     }
     if (error.code === '23505' && error.constraint === 'reservations_one_active_per_driver') {

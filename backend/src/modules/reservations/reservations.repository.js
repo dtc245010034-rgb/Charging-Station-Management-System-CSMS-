@@ -92,6 +92,28 @@ async function findActiveForDriver(client, driverId) {
   return result.rows[0] || null;
 }
 
+async function findAvailableSuggestions(db, stationId, excludedConnectorId, startsAt, expiresAt) {
+  const result = await db.query(
+    `SELECT c.id AS connector_id, c.connector_no, c.type AS connector_type,
+            cp.code AS charge_point_code
+     FROM connectors c
+     JOIN charge_points cp ON cp.id = c.charge_point_id
+     JOIN stations s ON s.id = cp.station_id
+     WHERE s.id = $1 AND s.status = 'ACTIVE' AND s.locked_at IS NULL
+       AND c.id <> $2
+       AND c.status = 'AVAILABLE' AND c.ocpp_status = 'Available'
+       AND NOT EXISTS (
+         SELECT 1 FROM reservations r
+         WHERE r.connector_id = c.id AND r.status IN ('PENDING', 'ACCEPTED')
+           AND tstzrange(r.starts_at, r.expires_at, '[)')
+             && tstzrange($3::timestamptz, $4::timestamptz, '[)')
+       )
+     ORDER BY cp.code, c.connector_no`,
+    [stationId, excludedConnectorId, startsAt, expiresAt]
+  );
+  return result.rows;
+}
+
 module.exports = {
   pool,
   findIdempotencyKey,
@@ -103,4 +125,5 @@ module.exports = {
   insertIdempotencyKey,
   findWalletForUpdate,
   findActiveForDriver,
+  findAvailableSuggestions,
 };
