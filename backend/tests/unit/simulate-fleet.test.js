@@ -1,5 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
 const { percentile, backoffDelay, parseArgs, SCENARIOS } = require('../../../tools/lib/fleet-stats');
 const { parseOptions, ManagedChargePoint } = require('../../../tools/vcp-fleet');
 
@@ -113,5 +114,98 @@ describe('tools/vcp-fleet: ChangeConfiguration và GetConfiguration', () => {
       () => parseOptions(['--reboot-required-key', 'UnsupportedKey'], env),
       /khóa cấu hình/
     );
+    assert.equal(parseOptions(['--reservation-result', 'Faulted'], env).reservationResult, 'Faulted');
+    assert.equal(parseOptions([], { ...env, VCP_RESERVATION_RESULT: 'Unavailable' }).reservationResult, 'Unavailable');
+    assert.throws(() => parseOptions(['--reservation-result', 'Unknown'], env), /reservation result/);
+  });
+});
+
+describe('tools/vcp-fleet: ReserveNow và CancelReservation', () => {
+  function createSocket(chargePoint) {
+    const socket = new EventEmitter();
+    socket.sent = [];
+    socket.readyState = 1;
+    socket.send = (message) => {
+      const frame = JSON.parse(message);
+      socket.sent.push(frame);
+      if (frame[0] === 2) {
+        const result = frame[2] === 'StartTransaction'
+          ? { transactionId: 301, idTagInfo: { status: 'Accepted' } }
+          : { status: 'Accepted' };
+        setImmediate(() => socket.emit('message', Buffer.from(JSON.stringify([3, frame[1], result]))));
+      }
+    };
+    chargePoint.socket = socket;
+    return socket;
+  }
+
+  it('accepts a free connector, reports Reserved, returns Occupied while charging, then cancels', async () => {
+    const chargePoint = new ManagedChargePoint('VCP-RESERVE', 'ws://localhost', 60);
+    const socket = createSocket(chargePoint);
+    chargePoint.handleMessage(Buffer.from(JSON.stringify([2, 'reserve-1', 'ReserveNow', {
+      connectorId: 1,
+      expiryDate: new Date(Date.now() + 3600000).toISOString(),
+      idTag: 'TAG-RESERVE',
+      reservationId: 41,
+    }])));
+    assert.deepStrictEqual(socket.sent[0], [3, 'reserve-1', { status: 'Accepted' }]);
+    await new Promise((resolve) => setImmediate(resolve));
+    const statusCall = socket.sent.find((frame) => frame[0] === 2 && frame[2] === 'StatusNotification');
+    assert.equal(statusCall[3].connectorId, 1);
+    assert.equal(statusCall[3].status, 'Reserved');
+    assert.equal(chargePoint.currentReservation.reservationId, 41);
+
+    chargePoint.currentTransactionId = 300;
+    chargePoint.currentConnectorId = 1;
+    chargePoint.handleMessage(Buffer.from(JSON.stringify([2, 'reserve-occupied', 'ReserveNow', {
+      connectorId: 1,
+      expiryDate: new Date(Date.now() + 3600000).toISOString(),
+      idTag: 'TAG-OTHER',
+      reservationId: 42,
+    }])));
+    assert.deepStrictEqual(socket.sent.at(-1), [3, 'reserve-occupied', { status: 'Occupied' }]);
+
+    chargePoint.currentTransactionId = null;
+    chargePoint.handleMessage(Buffer.from(JSON.stringify([2, 'cancel-1', 'CancelReservation', { reservationId: 41 }])));
+    assert.deepStrictEqual(socket.sent.find((frame) => frame[0] === 3 && frame[1] === 'cancel-1'), [3, 'cancel-1', { status: 'Accepted' }]);
+    assert.equal(chargePoint.currentReservation, null);
+  });
+
+  it('can force Faulted, Unavailable and Rejected responses for ReserveNow', () => {
+    for (const status of ['Faulted', 'Unavailable', 'Rejected']) {
+      const chargePoint = new ManagedChargePoint('VCP-RESERVE', 'ws://localhost', 60, 'Accepted', {
+        reservationResult: status,
+      });
+      const socket = createSocket(chargePoint);
+      chargePoint.handleMessage(Buffer.from(JSON.stringify([2, `reserve-${status}`, 'ReserveNow', {
+        connectorId: 1,
+        expiryDate: new Date(Date.now() + 3600000).toISOString(),
+        idTag: 'TAG-RESERVE',
+        reservationId: 41,
+      }])));
+      assert.deepStrictEqual(socket.sent[0], [3, `reserve-${status}`, { status }]);
+      assert.equal(chargePoint.currentReservation, null);
+      assert.equal(socket.sent.some((frame) => frame[0] === 2 && frame[2] === 'StatusNotification'), false);
+    }
+  });
+
+  it('sends a matching reservationId in StartTransaction and releases simulator hold', async () => {
+    const chargePoint = new ManagedChargePoint('VCP-RESERVE', 'ws://localhost', 60);
+    const socket = createSocket(chargePoint);
+    chargePoint.currentReservation = {
+      connectorId: 1,
+      expiryDate: new Date(Date.now() + 3600000).toISOString(),
+      idTag: 'TAG-RESERVE',
+      reservationId: 41,
+    };
+    chargePoint.handleMessage(Buffer.from(JSON.stringify([2, 'remote-start-reserved', 'RemoteStartTransaction', {
+      connectorId: 1,
+      idTag: 'TAG-RESERVE',
+    }])));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const start = socket.sent.find((frame) => frame[0] === 2 && frame[2] === 'StartTransaction');
+    assert.equal(start[3].reservationId, 41);
+    assert.equal(chargePoint.currentReservation, null);
+    await chargePoint.shutdown();
   });
 });
