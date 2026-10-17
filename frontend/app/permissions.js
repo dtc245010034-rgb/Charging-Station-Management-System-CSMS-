@@ -35,6 +35,8 @@ export const PERMISSIONS = {
   'tariffs:read': ['ADMIN', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT'],
   'tariffs:write': WRITE,
   'reports:revenue': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
+  'partner-rates:manage': ['ADMIN', 'ACCOUNTANT'],
+  'partner-rates:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
   'periods:manage': ['ADMIN', 'ACCOUNTANT'],
   'periods:reopen': ADMIN,
   'reports:reconcile': ['ADMIN', 'ACCOUNTANT'],
