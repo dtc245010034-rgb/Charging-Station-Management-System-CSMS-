@@ -13,11 +13,17 @@ describe('Chặng 8 pure logic', () => {
   it('CSV adds BOM, doubles embedded quotes, and neutralizes formula-leading text', () => {
     assert.equal(csvCell('=1+1'), "'=1+1");
     assert.equal(csvCell('+cmd'), "'+cmd");
-    assert.equal(csvCell('-1'), "'-1");
+    assert.equal(csvCell('-cmd'), "'-cmd");
+    assert.equal(csvCell(-1), '-1');
     assert.equal(csvCell('@name'), "'@name");
-    assert.equal(csvCell('a,b'), '"a,b"');
+    assert.equal(csvCell('a;b', ';'), '"a;b"');
     assert.equal(csvCell('a"b'), '"a""b"');
     assert.equal(toCsv(['name'], [{ name: 'safe' }]), '\uFEFFname\r\nsafe\r\n');
+    assert.equal(toCsv(['name', 'amount'], [{ name: 'safe;name', amount: -1 }]), '\uFEFFname;amount\r\n"safe;name";-1\r\n');
+    assert.equal(
+      toCsv(['name', 'amount'], [{ name: '=1+1', amount: '-1' }], { textColumns: ['name'] }),
+      "\uFEFFname;amount\r\n'=1+1;-1\r\n"
+    );
   });
 
   it('health metrics aggregate each OCPP call and retain the aggregate until a successful flush', async () => {
