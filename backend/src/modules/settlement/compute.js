@@ -139,4 +139,4 @@ function computeSettlement({ month, invoices, rates }) {
   };
 }
 
-module.exports = { computeSettlement };
+module.exports = { computeSettlement, monthRange };

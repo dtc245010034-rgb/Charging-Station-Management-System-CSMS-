@@ -25,3 +25,30 @@ export async function api(path, { method = 'GET', body, headers = {}, redirectOn
   }
   return data;
 }
+
+export async function downloadCsv(path) {
+  const response = await fetch(path, { credentials: 'include' });
+  if (response.status === 401 && location.pathname !== '/index.html') {
+    location.replace('/index.html');
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(
+      response.status,
+      data?.error?.code,
+      data?.error?.message || 'Không thể tải tệp CSV',
+      data?.error?.details
+    );
+  }
+
+  const filename = response.headers.get('Content-Disposition')
+    ?.match(/filename="([A-Za-z0-9_.-]+\.csv)"/)?.[1] || 'report.csv';
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

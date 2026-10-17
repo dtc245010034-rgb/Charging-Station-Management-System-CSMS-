@@ -69,10 +69,14 @@ describe('migration 047: partner share rates are append-only', () => {
       query('DELETE FROM partner_share_rates WHERE id = $1', [rate.rows[0].id]),
       /append-only/
     );
-    await assert.rejects(query('TRUNCATE partner_share_rates'), /append-only/);
+    await assert.rejects(query('TRUNCATE partner_share_rates CASCADE'), /append-only/);
   });
 
   it('rolls migration 047 back and reapplies it', async () => {
+    while ((await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1')).rows[0]?.version !== '047_partner_share_rates.sql') {
+      const laterDown = run('src/db/migrate.js', ['down']);
+      assert.strictEqual(laterDown.status, 0, laterDown.stderr);
+    }
     const down = run('src/db/migrate.js', ['down']);
     assert.strictEqual(down.status, 0, down.stderr);
     const absent = await query("SELECT to_regclass('public.partner_share_rates') AS table_name");

@@ -1,7 +1,8 @@
 import { h, mount } from '../../app/dom.js';
 import { formatNumber } from '../../app/format.js';
-import { api } from '../../services/api.js';
+import { api, downloadCsv } from '../../services/api.js';
 import { emptyState, errorState, loadingState } from '../../components/empty-state.js';
+import { toast } from '../../components/toast.js';
 
 const money = new Intl.NumberFormat('vi-VN');
 
@@ -26,6 +27,20 @@ export function render(ctx) {
   const from = h('input', { class: 'input', type: 'date', name: 'from', required: true, value: period.from });
   const to = h('input', { class: 'input', type: 'date', name: 'to', required: true, value: period.to });
   const submit = h('button', { class: 'btn btn--primary', type: 'submit' }, 'Xem doanh thu');
+  const exportButton = h('button', { class: 'btn btn--secondary', type: 'button', onclick: async () => {
+    if (!from.value || !to.value || from.value > to.value) {
+      from.setCustomValidity('Khoảng ngày không hợp lệ.');
+      from.reportValidity();
+      return;
+    }
+    from.setCustomValidity('');
+    try {
+      const query = new URLSearchParams({ from: from.value, to: to.value });
+      await downloadCsv(`/api/reports/revenue.csv?${query}`);
+    } catch (error) {
+      toast(error.message, { kind: 'error' });
+    }
+  } }, 'Tải CSV');
   const body = h('div', { class: 'card__body' }, loadingState(4));
   const form = h('form', { class: 'toolbar', onsubmit: async (event) => {
     event.preventDefault();
@@ -33,7 +48,7 @@ export function render(ctx) {
   } },
   h('label', { class: 'field' }, h('span', {}, 'Từ ngày'), from),
   h('label', { class: 'field' }, h('span', {}, 'Đến ngày'), to),
-  submit);
+  submit, exportButton);
 
   ctx.root.replaceChildren(
     h('div', { class: 'page-stack' },
