@@ -99,6 +99,48 @@ class MatEnv(unittest.TestCase):
         self.assertIn("-v", calls[0])
 
 
+class TestCommandEnvironment(unittest.TestCase):
+    def test_test_command_passes_compose_environment(self):
+        calls = {}
+
+        class FakeDocker:
+            compose = ["docker", "compose"]
+
+            def ensure_ready(self):
+                pass
+
+            def c(self, *args, **kwargs):
+                pass
+
+        class FakeProcess:
+            stdout = ()
+
+            def wait(self):
+                return 0
+
+        class Args:
+            file = "tests/unit/example.test.js"
+            only = None
+            lint_only = False
+            verbose = False
+
+        env = {"POSTGRES_PASSWORD": "test-password", "JWT_SECRET": "j" * 32}
+        with tempfile.TemporaryDirectory() as directory:
+            original_log_dir = run.LOG_DIR
+            run.LOG_DIR = Path(directory)
+            try:
+                with patch.object(run, "compose_env", return_value=env), \
+                     patch.object(run.subprocess, "Popen", side_effect=lambda *a, **kw: (
+                         calls.update(args=a, kwargs=kw) or FakeProcess()
+                     )), \
+                     patch("sys.stdout", new_callable=io.StringIO):
+                    self.assertEqual(run.cmd_test(FakeDocker(), Args()), 0)
+            finally:
+                run.LOG_DIR = original_log_dir
+
+        self.assertEqual(calls["kwargs"]["env"], env)
+
+
 class PublicMode(unittest.TestCase):
     def test_url_hop_le_duoc_chuan_hoa(self):
         self.assertEqual(run.normalize_public_url("https://Ten.NGROK-free.app/"), "https://ten.ngrok-free.app")
