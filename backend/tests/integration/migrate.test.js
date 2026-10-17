@@ -2,7 +2,7 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
 const { run, query, resetSchema } = require('../helpers/db');
 
-const TABLES = ['accounting_periods', 'alerts', 'audit_logs', 'charge_points', 'charging_profile_log', 'charging_sessions', 'connector_errors', 'connector_status_events', 'connectors', 'data_erasure_requests', 'email_outbox', 'id_tags', 'idempotency_keys', 'invoice_lines', 'login_throttle', 'meter_values', 'notifications', 'ocpp_messages', 'orphan_messages', 'remote_start_requests', 'reservations', 'roles', 'session_invoices', 'stations', 'tariff_periods', 'tariffs', 'user_roles', 'users', 'wallet_ledger', 'wallet_topups', 'wallets'];
+const TABLES = ['accounting_periods', 'alerts', 'audit_logs', 'charge_points', 'charging_profile_log', 'charging_sessions', 'connector_errors', 'connector_status_events', 'connectors', 'data_erasure_requests', 'email_outbox', 'id_tags', 'idempotency_keys', 'invoice_lines', 'login_throttle', 'meter_values', 'notifications', 'ocpp_messages', 'orphan_messages', 'partner_share_rates', 'remote_start_requests', 'reservations', 'roles', 'session_invoices', 'stations', 'tariff_periods', 'tariffs', 'user_roles', 'users', 'wallet_ledger', 'wallet_topups', 'wallets'];
 
 async function tables() {
   const r = await query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name <> 'schema_migrations' ORDER BY 1");
@@ -83,7 +83,7 @@ describe('S-01 migrate: baseline up/down/up', () => {
     assert.ok(!await index('stations_owner_id_idx') && !await index('charge_points_station_id_idx'));
     assert.deepStrictEqual(
       await tables(),
-      TABLES.filter((table) => !['accounting_periods', 'alerts', 'charging_profile_log', 'charging_sessions', 'connector_errors', 'connector_status_events', 'data_erasure_requests', 'email_outbox', 'id_tags', 'idempotency_keys', 'invoice_lines', 'meter_values', 'notifications', 'ocpp_messages', 'orphan_messages', 'remote_start_requests', 'reservations', 'session_invoices', 'tariff_periods', 'tariffs', 'wallet_ledger', 'wallet_topups', 'wallets'].includes(table))
+      TABLES.filter((table) => !['accounting_periods', 'alerts', 'charging_profile_log', 'charging_sessions', 'connector_errors', 'connector_status_events', 'data_erasure_requests', 'email_outbox', 'id_tags', 'idempotency_keys', 'invoice_lines', 'meter_values', 'notifications', 'ocpp_messages', 'orphan_messages', 'partner_share_rates', 'remote_start_requests', 'reservations', 'session_invoices', 'tariff_periods', 'tariffs', 'wallet_ledger', 'wallet_topups', 'wallets'].includes(table))
     );
     assert.strictEqual(run('src/db/migrate.js').status, 0);
   });
