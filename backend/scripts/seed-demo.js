@@ -4,6 +4,9 @@
 const { z } = require('zod');
 const { pool } = require('../src/db/pool');
 const { hashPassword } = require('../src/lib/password');
+const { withTransaction } = require('../src/db/tx');
+const { postEntry } = require('../src/modules/wallet/ledger.service');
+const { purchaseSubscription } = require('../src/modules/wallet/subscription.service');
 
 const input = z.object({
   ALLOW_DEMO_SEED: z.literal('1', { message: 'đặt ALLOW_DEMO_SEED=1 để xác nhận đây là môi trường demo' }),
@@ -90,6 +93,37 @@ async function seedStations(client, ownerIds) {
   return { stations, points };
 }
 
+async function seedPowerWindows(client, ownerIds) {
+  const station = await client.query(
+    "SELECT id FROM stations WHERE owner_id = $1 AND name = 'Trạm Cầu Giấy' LIMIT 1",
+    [ownerIds.owner]
+  );
+  if (!station.rows[0]) throw new Error('Không tìm thấy trạm demo Trạm Cầu Giấy');
+  const stationId = station.rows[0].id;
+  await client.query(
+    'UPDATE stations SET power_limit_w = COALESCE(power_limit_w, 44000) WHERE id = $1',
+    [stationId]
+  );
+  const windows = [
+    { start: 0, end: 360, limit: 22000 },
+    { start: 1020, end: 1260, limit: 22000 },
+  ];
+  for (const window of windows) {
+    const existing = await client.query(
+      `SELECT 1 FROM station_power_windows
+       WHERE station_id = $1 AND start_minute = $2 AND end_minute = $3 AND deleted_at IS NULL`,
+      [stationId, window.start, window.end]
+    );
+    if (!existing.rowCount) {
+      await client.query(
+        `INSERT INTO station_power_windows (station_id, start_minute, end_minute, limit_w, created_by)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [stationId, window.start, window.end, window.limit, ownerIds.owner]
+      );
+    }
+  }
+}
+
 async function seedIdTags(client, ids) {
   const driverId = ids.driver;
   const demoTags = [
@@ -109,15 +143,31 @@ async function seedIdTags(client, ids) {
   return tags;
 }
 
+async function seedDriverSubscription(driverId) {
+  await withTransaction((client) => postEntry(client, {
+    driverId,
+    entryType: 'TOPUP_MANUAL',
+    amountDong: 1000000,
+    receiptCode: `DEMO-SEED-DRIVER-WALLET-${driverId}`,
+    reason: 'DEMO_SEED',
+  }));
+  await purchaseSubscription(
+    { id: driverId },
+    'seed-demo-vip-subscription'
+  );
+}
+
 (async () => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const { ids, created } = await seedUsers(client);
     const counts = await seedStations(client, ids);
+    await seedPowerWindows(client, ids);
     const tagCount = await seedIdTags(client, ids);
     await client.query('COMMIT');
-    console.log(`Seed demo xong: ${created.length} tài khoản mới, ${counts.stations} trạm mới, ${counts.points} trụ mới, ${tagCount} thẻ demo mới.`);
+    await seedDriverSubscription(ids.driver);
+    console.log(`Seed demo xong: ${created.length} tài khoản mới, ${counts.stations} trạm mới, ${counts.points} trụ mới, ${tagCount} thẻ demo mới, gói VIP và lịch hạn mức đã sẵn sàng.`);
     console.log(`Tài khoản demo (mật khẩu = giá trị DEMO_PASSWORD): ${ACCOUNTS.map((a) => emailOf(a.key)).join(', ')}`);
   } catch (error) {
     await client.query('ROLLBACK');
