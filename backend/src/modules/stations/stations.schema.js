@@ -36,8 +36,13 @@ const powerProfileSlot = z.object({
 });
 
 const normalizeStationPowerLimit = (data) => {
-  const limitKw = data.power_limit_kw ?? data.power_limit_w;
+  const limitKw = data.power_limit_kw !== undefined ? data.power_limit_kw : data.power_limit_w;
   if (limitKw === undefined) return data;
+  if (limitKw === null) {
+    data.power_limit_w = null;
+    delete data.power_limit_kw;
+    return data;
+  }
 
   const watts = typeof limitKw === 'number' && Number.isFinite(limitKw)
     ? limitKw

@@ -74,6 +74,7 @@ describe('migration 048: settlement_statements & settlement_lines append-only', 
     for (const expectedLast of [
       '053_reservation_cancellation_queue.sql',
       '052_station_power_windows.sql',
+      '052_station_power_profiles.sql',
       '051_users_disabled_at.sql',
       '050_health_minutes.sql',
       '049_alerts_notified_at.sql',
