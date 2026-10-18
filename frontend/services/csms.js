@@ -14,6 +14,11 @@ export const stations = {
   // Key sinh một lần cho mỗi lần mở form; gửi lại cùng key khi bấm lưu hai lần → backend không tạo trạm thứ hai.
   newKey: idempotencyKey,
   create: (body, key) => api('/api/stations', { method: 'POST', body, headers: { 'Idempotency-Key': key } }),
+  powerWindows: {
+    list: (id) => api(`/api/stations/${encodeURIComponent(id)}/power-windows`),
+    create: (id, body) => api(`/api/stations/${encodeURIComponent(id)}/power-windows`, { method: 'POST', body }),
+    delete: (stationId, windowId) => api(`/api/stations/${encodeURIComponent(stationId)}/power-windows/${encodeURIComponent(windowId)}`, { method: 'DELETE' }),
+  },
 };
 
 export const chargePoints = {
