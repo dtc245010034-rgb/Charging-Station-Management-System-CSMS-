@@ -241,7 +241,7 @@ async function cancel(driver, reservationId, { commandSender, ip = null, db = re
   }
 
   const reservation = await repo.findById(db, parsedId);
-  if (!reservation || reservation.driver_id !== driver.id) {
+  if (!reservation || String(reservation.driver_id) !== String(driver.id)) {
     await denyOrNotFound(driver, 'reservation', parsedId, repo.existsById, 'Không tìm thấy đặt chỗ');
   }
 
