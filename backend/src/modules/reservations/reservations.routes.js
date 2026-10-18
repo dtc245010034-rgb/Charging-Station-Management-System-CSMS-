@@ -21,4 +21,12 @@ router.get('/me/reservations', { access: access('reservations:read-own') }, asyn
   res.json(await service.listMine(req.user.id));
 });
 
+router.post('/reservations/:id/cancel', { access: access('reservations:cancel') }, async (req, res) => {
+  const result = await service.cancel(req.user, req.params.id, {
+    commandSender: req.app.locals.commandSender,
+    ip: req.ip,
+  });
+  res.status(200).json(result);
+});
+
 module.exports = router;

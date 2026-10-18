@@ -20,6 +20,7 @@ export const PERMISSIONS = {
   'remote-start:create': ['DRIVER'],
   'reservations:create': ['DRIVER'],
   'reservations:read-own': ['DRIVER'],
+  'reservations:cancel': ['DRIVER'],
   'stations:lock': ADMIN,
   'sessions:read-own': ['DRIVER'],
   'sessions:read': ['ADMIN', 'OPERATOR', 'ACCOUNTANT', 'STATION_OWNER'],

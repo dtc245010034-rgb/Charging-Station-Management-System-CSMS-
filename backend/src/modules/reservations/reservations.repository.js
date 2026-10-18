@@ -160,10 +160,34 @@ async function fulfillAcceptedReservation(db, { reservationId, connectorId, driv
   return result.rows[0] || null;
 }
 
+async function existsById(id) {
+  const result = await pool.query('SELECT 1 FROM reservations WHERE id = $1', [id]);
+  return Boolean(result.rowCount);
+}
+
+async function cancelAcceptedReservation(client, id, now = new Date()) {
+  const isoTime = now instanceof Date ? now.toISOString() : new Date(now).toISOString();
+  const result = await client.query(
+    `UPDATE reservations
+     SET status = 'CANCELLED',
+         cancelled_at = $2::timestamptz,
+         cancel_status = 'PENDING',
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1
+       AND status = 'ACCEPTED'
+       AND expires_at > $2::timestamptz
+     RETURNING id, ocpp_reservation_id, connector_id, cancel_status`,
+    [id, isoTime]
+  );
+  return result.rows[0] || null;
+}
+
 module.exports = {
   pool,
   findIdempotencyKey,
   findById,
+  existsById,
+  cancelAcceptedReservation,
   listForDriver,
   findConnector,
   findActiveTag,
