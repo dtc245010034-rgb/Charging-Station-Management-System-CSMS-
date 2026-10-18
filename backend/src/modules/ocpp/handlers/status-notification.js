@@ -3,6 +3,7 @@ const { OcppCallError } = require('../frames');
 const { mapOcppConnectorStatus, OCPP_CONNECTOR_STATUS_MAP } = require('../../connectors/status-mapping');
 const { publish } = require('../../fleet-status/fleet-status.events');
 const { finalizeSession: finalizeSessionByDefault } = require('../../billing/finalize-session');
+const { triggerPowerRebalance } = require('../../power/rebalance-trigger');
 
 const MAX_TEXT_LENGTH = 50;
 const MAX_CONNECTOR_ID = 2147483647;
@@ -43,6 +44,7 @@ function createStatusNotificationHandler({
   now = Date.now,
   warningIntervalMs = 60000,
   errorDedupSeconds = 60,
+  rebalanceStation = null,
 } = {}) {
   const aggregatedLogs = new Map();
   const exclusiveQueues = new Map();
@@ -195,6 +197,9 @@ function createStatusNotificationHandler({
     }
     const updated = result.rows?.[0];
     if (updated) {
+      if (updated.changed) {
+        triggerPowerRebalance(rebalanceStation, updated.station_id, 'STATUS_NOTIFICATION', logError);
+      }
       if (updated.changed) {
         publish({
           ownerId: updated.owner_id,

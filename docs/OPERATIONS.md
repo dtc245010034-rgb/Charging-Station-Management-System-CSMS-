@@ -81,11 +81,31 @@ git checkout <thẻ-cũ> && python3 run.py down && python3 run.py
 ```
 ⚠️ Quay code **không** lùi migration. Nếu bản mới đã thêm migration, chạy `docker compose exec app npm run migrate:down` (lùi một migration mỗi lần) **trước khi** chuyển code, hoặc khôi phục từ bản sao lưu ở dưới. Luôn sao lưu trước khi cập nhật.
 
-**Sao lưu:** `tools/backup-db.sh` chạy `pg_dump`, ghi `~/csms-backups/csms-<ngày-giờ>.sql` (quyền 600, ngoài repo) và giữ 7 bản mới nhất (đổi bằng `BACKUP_DIR`, `KEEP`). Mẫu cron, mỗi ngày 02:00 (thay đường dẫn cho đúng):
+**Thanh toán sandbox (chỉ máy dev/staging):** Docker Compose chuyển các biến dưới đây từ `.env` ở gốc repo vào container `app`; `backend/.env` không được Compose đọc. Bật giả lập bằng cách đặt trong `.env` (không commit), rồi khởi động lại app:
 ```
-0 2 * * * cd /home/<user>/Charging-Station-Management-System-CSMS- && tools/backup-db.sh >> $HOME/csms-backups/backup.log 2>&1
+SANDBOX_GATEWAY=1
+PAYMENT_WEBHOOK_SECRET=<khoá-ngẫu-nhiên-riêng-tối-thiểu-32-ký-tự>
+INTERNAL_BASE_URL=http://127.0.0.1:3000
+EMAIL_TRANSPORT=log
 ```
-Cron phải chạy bằng đúng tài khoản trong nhóm `docker`. Khôi phục: `docker compose exec -T db psql -U csms -d csms < file.sql` vào DB trống. Bản sao lưu chứa dữ liệu cá nhân: không commit, không gửi công khai.
+Khi tắt sandbox, đặt `SANDBOX_GATEWAY=0`; không dùng khoá mẫu của `backend/.env.example` ở môi trường dùng chung. Với seed demo mặc định, tài khoản tài xế là `driver@demo.csms.local`; mật khẩu lấy từ `DEMO_PASSWORD` trong `.env`/đầu ra chạy demo, không ghi vào tài liệu. Cổng này giả lập, không kết nối VNPay/MoMo thật.
+
+**Sao lưu mã hoá:** `tools/backup-db.sh` dùng `pg_dump` rồi mã hoá AES-256-CBC/PBKDF2 bằng OpenSSL, ghi `~/csms-backups/csms-<ngày-giờ>.sql.enc` với quyền chỉ chủ sở hữu đọc/ghi (POSIX `600`; Windows ACL chỉ tài khoản chạy task), và giữ 7 bản mới nhất (`BACKUP_DIR`, `KEEP`). `BACKUP_PASSPHRASE` là bắt buộc; cấp biến này từ kho bí mật của tài khoản vận hành, không đặt trong lệnh, cron, log hay repo. Tuỳ chọn `BACKUP_ALLOW_PLAINTEXT=1` chỉ dành cho máy dev cô lập, không dùng trên staging/production.
+
+Lịch chạy mỗi đêm lúc 02:00 trên Linux (thay đường dẫn; cron phải chạy bằng đúng tài khoản trong nhóm `docker`). Tạo tệp `~/.config/csms/backup.env` chỉ chứa `export BACKUP_PASSPHRASE=...`, giới hạn quyền `chmod 600`, không đặt tệp trong repo:
+```
+0 2 * * * . "$HOME/.config/csms/backup.env" && cd /home/<user>/Charging-Station-Management-System-CSMS- && tools/backup-db.sh >> "$HOME/csms-backups/backup.log" 2>&1
+```
+
+Trên Windows, tạo task trong Task Scheduler chạy hằng ngày 02:00 dưới tài khoản có quyền dùng Docker; Program là `C:\Program Files\Git\bin\bash.exe`, arguments là `-lc "cd /c/<đường-dẫn-repo> && tools/backup-db.sh"` và **Start in** là thư mục repo. Đặt `BACKUP_PASSPHRASE` trong biến môi trường người dùng của chính tài khoản chạy task (không ghi trong arguments); `BACKUP_DIR` phải ở ngoài repo và chỉ tài khoản vận hành được đọc.
+
+Khôi phục vào DB mới/trống (script từ chối ghi đè DB đã có bảng):
+```
+read -rsp 'BACKUP_PASSPHRASE: ' BACKUP_PASSPHRASE; export BACKUP_PASSPHRASE; printf '\n'
+tools/restore-db.sh ~/csms-backups/csms-<ngày-giờ>.sql.enc csms_restore
+unset BACKUP_PASSPHRASE
+```
+Sau mỗi lần thay đổi quy trình hoặc định kỳ, nhập passphrase như trên rồi chạy `tools/backup-restore-drill.sh`; script so số dòng các bảng người dùng/phiên/hoá đơn/ví/sổ cái, so tổng sổ cái với tổng số dư ví, rồi xoá DB kiểm tra. **Chưa kiểm trên máy chủ thật.** Bản sao chứa dữ liệu cá nhân theo Nghị định 13: không commit, không gửi công khai, bảo vệ passphrase riêng với bản sao lưu.
 
 **Tunnel ngrok** (cửa sổ/dịch vụ riêng trên cùng máy; ví dụ minh hoạ, đuôi tên miền có thể là `ngrok.dev` hoặc `ngrok-free.app`):
 ```
@@ -191,6 +211,14 @@ Kiểm tra nhanh sau mỗi lần deploy: `/api/health` → `"ok":true`; đăng n
 | `OCPP_LOCK_TIMEOUT_SECONDS` | cả hai | Không | `5` giây; `lock_timeout` chỉ cho truy vấn của handler OCPP (F10) |
 | `DB_QUERY_TIMEOUT_SECONDS` | cả hai | Không | `30` giây; truy vấn PostgreSQL quá hạn thì báo lỗi (`0` = không giới hạn). Migration lớn có thể cần đặt cao hơn |
 | `SSE_MAX_CONNECTIONS_PER_USER` | cả hai | Không | `5` luồng SSE đồng thời mỗi tài khoản (một tiến trình); mở thêm thì đóng luồng cũ nhất. Đăng xuất đóng mọi luồng |
+| `SANDBOX_GATEWAY` | `backend/.env` | Không | `0`; đặt `1` để bật cổng giả lập chỉ trên dev/staging; bỏ hoặc đặt `0` để `/sandbox-gateway/*` trả 404 |
+| `PAYMENT_WEBHOOK_SECRET` | kho bí mật / `backend/.env` cục bộ | Khi bật sandbox | Khoá giả lập tối thiểu 32 ký tự; không dùng secret thật ở client, không commit |
+| `INTERNAL_BASE_URL` | `backend/.env` | Không | `http://127.0.0.1:3000`; URL nội bộ để giả lập gọi webhook |
+| `EMAIL_TRANSPORT` | `backend/.env` | Không | `log`; email SMTP thật chưa được triển khai |
+| `BACKUP_PASSPHRASE` | môi trường bảo mật của tài khoản chạy backup | Có | Bắt buộc để mã hoá/giải mã backup; không ghi trong repo, tham số lệnh hoặc log |
+| `BACKUP_DIR` | môi trường của script backup | Không | `~/csms-backups`, ngoài repo |
+| `KEEP` | môi trường của script backup | Không | `7` bản mới nhất |
+| `BACKUP_ALLOW_PLAINTEXT` | chỉ môi trường dev | Không | Mặc định `0`; chỉ đặt `1` tạm thời để cho phép SQL rõ trên máy dev cô lập |
 | `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | cả hai | Không | `30` lần/phút/tài khoản cho `check-code` (429 + `Retry-After`) |
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | cả hai | Không | `5` lần dò email trùng/giờ/IP; vượt thì đăng ký từ IP đó trả 429. IP lấy theo `TRUST_PROXY` |
 | `OCPP_HANDSHAKE_LIMIT_PER_10S` | cả hai | Không | `5` lần bắt tay/10 giây/(IP, mã trụ), kiểm trước khi truy vấn DB |

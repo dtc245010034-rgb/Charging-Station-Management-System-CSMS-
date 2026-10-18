@@ -119,7 +119,12 @@ describe('S-18 StopTransaction handler', () => {
       'REMOTE_STOP',
       'charging_session',
       17,
-      { reason: 'Remote', meter_stop: 1250, stopped_at: new Date(NOW).toISOString() },
+      {
+        charge_point_code: 'STOP-UNIT-CP',
+        reason: 'Remote',
+        meter_stop: 1250,
+        stopped_at: new Date(NOW).toISOString(),
+      },
       'STOPPED',
       null,
       pool,
@@ -180,6 +185,37 @@ describe('S-18 StopTransaction handler', () => {
     assert.match(update.sql, /CHARGE_POINT_OFFLINE_TIMEOUT/);
     assert.match(update.sql, /STOP_TRANSACTION_TIMEOUT/);
     assert.match(update.sql, /status IN \('CHARGING', 'ABNORMAL'\)/);
+  });
+
+  it('yêu cầu chia lại sau khi phiên được chốt thành công', async () => {
+    const calls = [];
+    const handler = createHandler({
+      pool: {
+        query: async (sql) => sql.includes('UPDATE charging_sessions')
+          ? { rowCount: 1, rows: [{ station_id: '7', connector_id: '9', driver_id: null }] }
+          : { rowCount: 1, rows: [] },
+      },
+      now: () => NOW,
+      logError: () => {},
+      rebalanceStation: (...args) => calls.push(args),
+    });
+
+    assert.deepEqual(await handler(validPayload(), { connection: CONNECTION }), {});
+    assert.deepEqual(calls, [['7', { reason: 'STOP_TRANSACTION' }]]);
+  });
+
+  it('không yêu cầu chia lại nếu phiên không được chốt', async () => {
+    const calls = [];
+    const handler = createHandler({
+      pool: { query: async () => ({ rowCount: 0, rows: [] }) },
+      now: () => NOW,
+      logWarning: () => {},
+      logError: () => {},
+      rebalanceStation: (...args) => calls.push(args),
+    });
+
+    assert.deepEqual(await handler(validPayload(), { connection: CONNECTION }), {});
+    assert.deepEqual(calls, []);
   });
 
   it('timestamp lệch quá 24 giờ thay bằng giờ nhận và bật needs_review', async () => {

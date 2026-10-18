@@ -48,6 +48,45 @@ describe('StatusNotification handler', () => {
     assert.deepEqual(queries[0].params, ['OCCUPIED', 'Charging', 'CP-TEST', 2]);
   });
 
+  it('schedules power rebalance only when a relevant connector status changes', async () => {
+    const calls = [];
+    let changed = true;
+    const handler = createStatusNotificationHandler({
+      pool: {
+        query: async (sql) => sql.includes('UPDATE connectors')
+          ? { rowCount: 1, rows: [{ previous_ocpp_status: 'SuspendedEV', changed, station_id: '7' }] }
+          : { rowCount: 1, rows: [] },
+      },
+      rebalanceStation: (...args) => calls.push(args),
+    });
+
+    await handler({ connectorId: 1, status: 'Charging' }, { connection: { chargePointCode: 'CP-TEST' } });
+    changed = false;
+    await handler({ connectorId: 1, status: 'Charging' }, { connection: { chargePointCode: 'CP-TEST' } });
+    assert.deepEqual(calls, [['7', { reason: 'STATUS_NOTIFICATION' }]]);
+  });
+
+  it('does not block OCPP acknowledgement if power rebalance fails', async () => {
+    const errors = [];
+    const handler = createStatusNotificationHandler({
+      pool: {
+        query: async (sql) => sql.includes('UPDATE connectors')
+          ? { rowCount: 1, rows: [{ previous_ocpp_status: 'Available', changed: true, station_id: '7' }] }
+          : { rowCount: 1, rows: [] },
+      },
+      rebalanceStation: async () => { throw new Error('rebalance unavailable'); },
+      logError: (...args) => errors.push(args),
+    });
+
+    assert.deepEqual(
+      await handler({ connectorId: 1, status: 'Charging' }, { connection: { chargePointCode: 'CP-TEST' } }),
+      {}
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(errors.length, 1);
+    assert.match(errors[0][0], /power rebalance failed/i);
+  });
+
   it('marks an open session for review on Available, but leaves it untouched on Charging', async () => {
     const queries = [];
     const handler = createStatusNotificationHandler({

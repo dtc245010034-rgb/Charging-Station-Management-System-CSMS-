@@ -83,6 +83,202 @@ describe('S-02 frontend: router', () => {
     assert.ok(pages('driver').includes('sessions'));
   });
 
+  it('S-47: Tìm trạm có menu và route chỉ cho tài xế với quyền stations:search', async () => {
+    const { visibleNav, WORKSPACES } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const driverPages = visibleNav('driver', WORKSPACES.driver.role, can).flatMap((group) => group.items.map((item) => item.page));
+
+    assert.ok(driverPages.includes('find'));
+    assert.ok(driverPages.includes('reservations'));
+    assert.strictEqual(typeof pageLoader('find', 'driver'), 'function');
+    assert.strictEqual(pageLoader('find', 'operator'), null);
+    assert.strictEqual(PAGE_NEEDS.find, 'stations:search');
+    assert.strictEqual(typeof pageLoader('reservations', 'driver'), 'function');
+    assert.strictEqual(pageLoader('reservations', 'operator'), null);
+    assert.strictEqual(PAGE_NEEDS.reservations, 'reservations:read-own');
+  });
+
+  it('S-47: chỉ xin vị trí sau khi bấm; từ chối vị trí vẫn tìm được theo q', async () => {
+    const saved = new Map();
+    const define = (name, value) => {
+      saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+      Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+    };
+    class Element {
+      constructor(tag) {
+        this.tag = tag;
+        this.attributes = {};
+        this.children = [];
+        this.listeners = {};
+        this.style = {};
+        this.disabled = false;
+        this.value = '';
+      }
+      setAttribute(name, value) { this.attributes[name] = String(value); }
+      addEventListener(name, handler) { this.listeners[name] = handler; }
+      append(...children) { this.children.push(...children); }
+      replaceChildren(...children) { this.children = children; }
+      get textContent() { return this.children.map((child) => child.textContent ?? '').join(''); }
+    }
+    let geoCalls = 0;
+    const requests = [];
+    define('Node', Element);
+    define('document', {
+      createElement: (tag) => new Element(tag),
+      createElementNS: (_namespace, tag) => new Element(tag),
+      createTextNode: (text) => ({ textContent: String(text) }),
+    });
+    define('navigator', { geolocation: {
+      getCurrentPosition: (_success, failure) => { geoCalls += 1; failure(new Error('denied')); },
+    } });
+    define('location', { pathname: '/app.html' });
+    define('fetch', async (url, options) => {
+      requests.push({ url, options });
+      return { ok: true, status: 200, json: async () => [] };
+    });
+
+    let dispose;
+    try {
+      const { render } = await load('pages/driver/find.js');
+      const root = new Element('root');
+      dispose = render({ root });
+      const find = (node, predicate) => [
+        ...(predicate(node) ? [node] : []),
+        ...node.children.flatMap((child) => child instanceof Element ? find(child, predicate) : []),
+      ];
+      assert.strictEqual(geoCalls, 0);
+      find(root, (node) => node.tag === 'button' && node.textContent === 'Vị trí hiện tại')[0].listeners.click();
+      assert.strictEqual(geoCalls, 1);
+      assert.ok(root.textContent.includes('Không có quyền vị trí'));
+
+      find(root, (node) => node.tag === 'input')[0].value = 'Bến Thành';
+      find(root, (node) => node.tag === 'form')[0].listeners.submit({ preventDefault() {} });
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.strictEqual(requests.length, 2);
+      const searchRequest = requests.find((request) => request.url === '/api/stations/search');
+      assert.ok(searchRequest);
+      assert.deepStrictEqual(JSON.parse(searchRequest.options.body), { q: 'Bến Thành' });
+    } finally {
+      dispose?.();
+      for (const [name, descriptor] of saved) {
+        if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+        else delete globalThis[name];
+      }
+    }
+  });
+
+  it('S-48: yêu cầu xác nhận trước POST và trang Đặt chỗ của tôi render text an toàn', async () => {
+    const saved = new Map();
+    const define = (name, value) => {
+      saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+      Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+    };
+    class Element {
+      constructor(tag) {
+        this.tag = tag;
+        this.attributes = {};
+        this.children = [];
+        this.listeners = {};
+        this.style = {};
+        this.dataset = {};
+        this.disabled = false;
+        this.value = '';
+      }
+      setAttribute(name, value) { this.attributes[name] = String(value); }
+      addEventListener(name, handler) { this.listeners[name] = handler; }
+      append(...children) { this.children.push(...children); }
+      replaceChildren(...children) { this.children = children; }
+      get textContent() { return this.children.map((child) => child.textContent ?? '').join(''); }
+    }
+    const requests = [];
+    define('Node', Element);
+    define('document', {
+      body: new Element('body'),
+      createElement: (tag) => new Element(tag),
+      createElementNS: (_namespace, tag) => new Element(tag),
+      createTextNode: (text) => ({ textContent: String(text) }),
+    });
+    define('location', { pathname: '/app.html', hash: '#/driver/find' });
+    define('fetch', async (url, options = {}) => {
+      requests.push({ url: String(url), options });
+      if (String(url) === '/api/stations/search') {
+        return { ok: true, status: 200, json: async () => [{
+          stationId: 8,
+          name: 'Trạm S-48',
+          address: 'Đường A',
+          distanceKm: 0.4,
+          connectors: { free: 1, total: 1, types: ['TYPE_2'] },
+          price: { pricePerKwh: '4000', periodLabel: 'Cả ngày' },
+          idleFee: { graceMin: 15, perMinDong: '1000' },
+        }] };
+      }
+      if (String(url) === '/api/driver/charge-points') {
+        return { ok: true, status: 200, json: async () => [{
+          station_id: 8,
+          connectors: [{ connector_id: 71, connector_no: 1, connector_type: 'TYPE_2', available: true }],
+        }] };
+      }
+      if (String(url) === '/api/reservations') {
+        return { ok: true, status: 201, json: async () => ({ id: 9, status: 'ACCEPTED', expiresAt: new Date(Date.now() + 45 * 60000).toISOString() }) };
+      }
+      if (String(url) === '/api/me/reservations') {
+        return { ok: true, status: 200, json: async () => [{
+          id: 9,
+          status: 'ACCEPTED',
+          expiresAt: new Date(Date.now() + 45 * 60000).toISOString(),
+          stationName: '<img src=x onerror=alert(1)>',
+          stationAddress: 'Đường A',
+          chargePointCode: 'CP-1',
+          connectorNo: 1,
+          connectorType: 'TYPE_2',
+        }] };
+      }
+      throw new Error(`Unexpected request ${url}`);
+    });
+
+    let dispose;
+    try {
+      const { render } = await load('pages/driver/find.js');
+      const root = new Element('root');
+      const find = (node, predicate) => [
+        ...(predicate(node) ? [node] : []),
+        ...node.children.flatMap((child) => child instanceof Element ? find(child, predicate) : []),
+      ];
+      dispose = render({ root, params: { page: 'find' } });
+      find(root, (node) => node.tag === 'input')[0].value = 'Trạm';
+      find(root, (node) => node.tag === 'form')[0].listeners.submit({ preventDefault() {} });
+      await new Promise((resolve) => setImmediate(resolve));
+
+      const selects = find(root, (node) => node.tag === 'select');
+      assert.equal(selects.length, 2);
+      selects[1].value = '60';
+      find(root, (node) => node.tag === 'button' && node.textContent === 'Đặt chỗ')[0].listeners.click();
+      assert.ok(root.textContent.includes('Xác nhận đặt chỗ'));
+      assert.equal(requests.some((request) => request.url === '/api/reservations'), false);
+      find(root, (node) => node.tag === 'button' && node.textContent === 'Xác nhận đặt chỗ')[0].listeners.click();
+      await new Promise((resolve) => setImmediate(resolve));
+      const createRequest = requests.find((request) => request.url === '/api/reservations');
+      assert.deepStrictEqual(JSON.parse(createRequest.options.body), { connectorId: '71', arriveInMinutes: 60 });
+      assert.ok(createRequest.options.headers['Idempotency-Key']);
+
+      dispose?.();
+      root.replaceChildren();
+      dispose = render({ root, params: { page: 'reservations' } });
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.ok(requests.some((request) => request.url === '/api/me/reservations'));
+      assert.ok(root.textContent.includes('<img src=x onerror=alert(1)>'));
+      assert.equal(find(root, (node) => node.tag === 'img').length, 0);
+      assert.ok(root.textContent.includes('45'));
+    } finally {
+      dispose?.();
+      for (const [name, descriptor] of saved) {
+        if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+        else delete globalThis[name];
+      }
+    }
+  });
+
   it('S-11 T-24: operator và owner có đường dẫn tới lưới trạng thái', async () => {
     const { visibleNav, WORKSPACES } = await load('app/workspace.js');
     const { can } = await load('app/permissions.js');
@@ -139,6 +335,17 @@ describe('S-02 frontend: router', () => {
     assert.strictEqual(pageLoader('history', 'operator'), null);
     assert.strictEqual(PAGE_NEEDS.history, 'sessions:read-own');
     assert.ok(driverPages.includes('history'));
+  });
+
+  it('S-59: trang thông báo và mục điều hướng chỉ dành cho tài xế', async () => {
+    const { pageLoader, PAGE_NEEDS } = await load('app/router.js');
+    const { visibleNav } = await load('app/workspace.js');
+    const { can } = await load('app/permissions.js');
+    const driverPages = visibleNav('driver', 'DRIVER', can).flatMap((group) => group.items.map((item) => item.page));
+    assert.strictEqual(typeof pageLoader('notifications', 'driver'), 'function');
+    assert.strictEqual(pageLoader('notifications', 'admin'), null);
+    assert.strictEqual(PAGE_NEEDS.notifications, 'notifications:read-own');
+    assert.ok(driverPages.includes('notifications'));
   });
 
   it('S-40: trang ví chỉ hiện và tải cho tài xế', async () => {
@@ -243,10 +450,10 @@ describe('S-02 frontend: router', () => {
             action: 'REMOTE_START',
             entity: 'connector',
             entity_id: '2',
-            charge_point_code: 'CP-2',
+            charge_point_code: null,
             result: 'ACCEPTED',
             ip: '203.0.113.42',
-            metadata: { note: '<img src=x onerror=alert(1)>' },
+            metadata: { charge_point_code: 'CP-2', note: '<img src=x onerror=alert(1)>' },
           }, {
             id: '2',
             created_at: '2026-10-11T17:01:00.000Z',
@@ -289,10 +496,12 @@ describe('S-02 frontend: router', () => {
       assert.match(pre.textContent, /<img src=x onerror=alert\(1\)>/);
       assert.equal(find(root, (node) => node.tag === 'img').length, 0);
       assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Bắt đầu sạc từ xa'));
+      assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'CP-2'));
       assert.ok(find(root, (node) => node.tag === 'span').some((node) => node.textContent === 'Đã chấp nhận'));
       assert.ok(find(root, (node) => node.tag === 'td').some((node) => node.textContent === '203.0.113.42'));
       assert.ok(find(root, (node) => node.tag === 'span' && node.attributes.class === 'badge badge--ready').length > 0);
       assert.equal(auditActionLabel('UNKNOWN_ACTION'), 'UNKNOWN_ACTION');
+      assert.equal(auditActionLabel('STATION_STATUS_CHANGED'), 'Thay đổi trạng thái trạm');
       assert.equal(auditActionLabel('WALLET_TOPUP_MANUAL'), 'Nạp tiền vào ví');
       assert.equal(auditActionLabel('WALLET_ADJUST'), 'Điều chỉnh ví');
       assert.equal(auditActionLabel('WALLET_UNLOCK'), 'Mở khóa ví');
@@ -424,10 +633,12 @@ describe('S-02 frontend: router', () => {
     assert.equal(typeof pageLoader(route.page, route.workspace), 'function');
   });
 
-  it('quyền nút trên giao diện: Reset cho Admin/Operator, khoá trạm chỉ Admin', async () => {
+  it('quyền nút trên giao diện: cấu hình và Reset cho Admin/Operator, khoá trạm chỉ Admin', async () => {
     const { can } = await load('app/permissions.js');
     assert.ok(can('ADMIN', 'charge-points:reset') && can('OPERATOR', 'charge-points:reset'));
     assert.ok(!can('STATION_OWNER', 'charge-points:reset') && !can('DRIVER', 'charge-points:reset'));
+    assert.ok(can('ADMIN', 'charge-points:configure') && can('OPERATOR', 'charge-points:configure'));
+    assert.ok(!can('STATION_OWNER', 'charge-points:configure') && !can('DRIVER', 'charge-points:configure'));
     assert.ok(can('ADMIN', 'stations:lock'));
     for (const role of ['OPERATOR', 'STATION_OWNER', 'ACCOUNTANT', 'DRIVER']) assert.ok(!can(role, 'stations:lock'), role);
   });
@@ -574,6 +785,28 @@ describe('S-02 frontend: api.js và auth.js', () => {
     env = stubBrowser({ respond: () => ({ status: 400, body: { error: { code: 'VALIDATION_ERROR', message: 'Email không hợp lệ', details } } }) });
     const { api } = await load('services/api.js');
     await assert.rejects(api('/api/auth/register', { method: 'POST', body: {} }), (e) => e.status === 400 && JSON.stringify(e.details) === JSON.stringify(details));
+  });
+});
+
+describe('S-60 frontend: API cấu hình trụ', () => {
+  let env;
+  afterEach(() => env?.restore());
+
+  it('đổi cấu hình và đọc lại theo khóa đã chọn', async () => {
+    env = stubBrowser({ respond: (url) => ({
+      body: url.includes('?key=') ? { key: 'HeartbeatInterval', value: '45', readonly: false } : { status: 'Accepted' },
+    }) });
+    const { chargePoints } = await load('services/csms.js');
+
+    const result = await chargePoints.changeConfiguration(7, 'HeartbeatInterval', '45');
+    const current = await chargePoints.getConfiguration(7, 'HeartbeatInterval');
+
+    assert.deepStrictEqual(result, { status: 'Accepted' });
+    assert.deepStrictEqual(current, { key: 'HeartbeatInterval', value: '45', readonly: false });
+    assert.deepStrictEqual(env.calls.fetch.map(({ url, options }) => [url, options.method, options.body]), [
+      ['/api/charge-points/7/configuration', 'POST', JSON.stringify({ key: 'HeartbeatInterval', value: '45' })],
+      ['/api/charge-points/7/configuration?key=HeartbeatInterval', 'GET', undefined],
+    ]);
   });
 });
 

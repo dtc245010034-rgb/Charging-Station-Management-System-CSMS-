@@ -3,6 +3,7 @@ import { api } from '../../services/api.js';
 import { icon } from '../../components/icons.js';
 import { emptyState, loadingState } from '../../components/empty-state.js';
 import { formatNumber } from '../../app/format.js';
+import { routeFor } from '../../app/workspace.js';
 
 // Mobile-first: một cột, nút to, không có bảng rộng.
 export function render(ctx) {
@@ -10,6 +11,7 @@ export function render(ctx) {
   const firstName = ctx.user.name.trim().split(/\s+/).slice(-1)[0];
 
   const sessionContainer = h('div', {}, loadingState(2));
+  const notificationsContainer = h('div', {}, loadingState(1));
 
   ctx.root.append(
     h('section', {},
@@ -17,8 +19,12 @@ export function render(ctx) {
       h('h1', { class: 'page-head__title', style: 'margin-top:4px' }, `Xin chào, ${firstName}!`)
     ),
     h('section', { class: 'card', 'aria-label': 'Phiên sạc' },
-      h('div', { class: 'card__body' }, sessionContainer)
-    )
+      h('div', { class: 'card__body' }, sessionContainer)),
+    h('section', { class: 'card', 'aria-label': 'Thông báo mới' },
+      h('div', { class: 'card__body', style: 'display:grid;gap:10px' },
+        h('h2', { style: 'margin:0;font-size:16px' }, 'Thông báo mới'),
+        notificationsContainer,
+        h('a', { class: 'btn btn--ghost', href: routeFor('driver', 'notifications') }, 'Xem tất cả thông báo')))
   );
 
   async function checkSession() {
@@ -72,6 +78,22 @@ export function render(ctx) {
   }
 
   checkSession();
+  void api('/api/me/notifications?unread=1').then((result) => {
+    if (isUnmounted) return;
+    if (result.notifications.length === 0) {
+      mount(notificationsContainer, h('p', { class: 'muted' }, 'Bạn chưa có thông báo mới.'));
+      return;
+    }
+    mount(notificationsContainer, ...result.notifications.slice(0, 3).map((item) => h('p', {
+      style: 'margin:0',
+    }, item.kind === 'SESSION_REMOTE_STOPPED'
+      ? 'Phiên sạc đã bị dừng từ xa'
+      : item.kind === 'IDLE_FEE_STARTED'
+        ? 'Phiên sạc bắt đầu tính phí chiếm trụ'
+        : 'Phiên sạc đã kết thúc')));
+  }).catch((error) => {
+    if (!isUnmounted) mount(notificationsContainer, h('p', { class: 'badge badge--fault', role: 'alert' }, `Không thể tải thông báo: ${error.message}`));
+  });
 
   return () => {
     isUnmounted = true;

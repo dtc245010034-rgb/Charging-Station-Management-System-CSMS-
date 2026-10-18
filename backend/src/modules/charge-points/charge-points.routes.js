@@ -6,7 +6,13 @@ const { BadRequestError, TooManyRequestsError } = require('../../lib/errors');
 const { createRateLimiter } = require('../../lib/rate-limit');
 const { CHARGE_POINT_CODE_PATTERN, CHARGE_POINT_CODE_MESSAGE } = require('../../lib/constants');
 const service = require('./charge-points.service');
-const { createBody, updateBody, resetBody } = require('./charge-points.schema');
+const {
+  createBody,
+  updateBody,
+  resetBody,
+  configurationBody,
+  configurationQuery,
+} = require('./charge-points.schema');
 
 function createChargePointsRouter({ commandSender } = {}) {
   const router = secureRouter();
@@ -30,6 +36,16 @@ function createChargePointsRouter({ commandSender } = {}) {
   router.patch('/charge-points/:id', { access: access('charge-points:write') }, async (req, res) => {
     const { id } = idParam.parse(req.params);
     res.json(await service.update(req.user, id, updateBody.parse(req.body ?? {})));
+  });
+  router.post('/charge-points/:id/configuration', { access: access('charge-points:configure') }, async (req, res) => {
+    const { id } = idParam.parse(req.params);
+    const { key, value } = configurationBody.parse(req.body ?? {});
+    res.json(await service.changeConfiguration(req.user, id, key, value, commandSender, { ip: req.ip }));
+  });
+  router.get('/charge-points/:id/configuration', { access: access('charge-points:configure') }, async (req, res) => {
+    const { id } = idParam.parse(req.params);
+    const { key } = configurationQuery.parse(req.query);
+    res.json(await service.getConfiguration(req.user, id, key, commandSender));
   });
   router.post('/charge-points/:id/reset', { access: access('charge-points:reset') }, async (req, res) => {
     const { id } = idParam.parse(req.params);

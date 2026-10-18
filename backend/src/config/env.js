@@ -28,8 +28,12 @@ const schema = z.object({
   OCPP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(50),
   // Thời gian chờ phản hồi CALL từ trụ (giây), mặc định 30
   OCPP_COMMAND_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(30),
+  // Cửa sổ gộp các sự kiện chia lại công suất tại cùng một trạm
+  POWER_REBALANCE_MIN_INTERVAL_MS: z.coerce.number().int().positive().default(2000),
   // Thời gian chờ StopTransaction sau RemoteStopTransaction Accepted, mặc định 2 phút
   REMOTE_STOP_WAIT_SECONDS: z.coerce.number().int().positive().default(120),
+  // Thời gian giữ thêm sau giờ tài xế dự kiến đến khi đặt reservation
+  RESERVATION_HOLD_MIN: z.coerce.number().int().positive().default(15),
   // Thời gian trụ không gửi tin trước khi phiên sạc bị đánh dấu bất thường, mặc định 6 giờ
   SESSION_ABNORMAL_AFTER_SECONDS: z.coerce.number().int().positive().default(21600),
   // Trần chờ trụ rời Finishing/SuspendedEV trước khi chốt phí chiếm chỗ
@@ -59,6 +63,22 @@ const schema = z.object({
     z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional()
   ),
   WALLET_AUDIT_INTERVAL_MS: z.coerce.number().int().positive().default(300000),
+  RECON_TOLERANCE_DONG: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).default(0),
+  SANDBOX_GATEWAY: z.coerce.number().int().min(0).max(1).default(0),
+  PAYMENT_WEBHOOK_SECRET: z.string().min(32).optional(),
+  INTERNAL_BASE_URL: z.preprocess(
+    (value) => value === '' ? undefined : value,
+    z.string().url().optional()
+  ),
+  EMAIL_TRANSPORT: z.enum(['log', 'smtp']).default('log'),
+}).superRefine((data, ctx) => {
+  if (data.SANDBOX_GATEWAY === 1 && (!data.PAYMENT_WEBHOOK_SECRET || data.PAYMENT_WEBHOOK_SECRET.length < 32)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'PAYMENT_WEBHOOK_SECRET bắt buộc và phải có ít nhất 32 ký tự khi SANDBOX_GATEWAY=1',
+      path: ['PAYMENT_WEBHOOK_SECRET'],
+    });
+  }
 });
 
 const parsed = schema.safeParse(process.env);

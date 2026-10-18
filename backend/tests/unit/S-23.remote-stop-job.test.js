@@ -12,7 +12,7 @@ describe('S-23 remote stop timeout job', () => {
         sqlSeen = sql;
         return {
           rowCount: 1,
-          rows: [{ id: 15, charge_point_id: '4', driver_id: null, remote_stop_requested_by: '9', remote_stop_deadline: deadline, remote_stop_status: 'TIMED_OUT' }],
+          rows: [{ id: 15, charge_point_id: '4', charge_point_code: 'CP-04', driver_id: null, remote_stop_requested_by: '9', remote_stop_deadline: deadline, remote_stop_status: 'TIMED_OUT' }],
         };
       },
     };
@@ -29,6 +29,7 @@ describe('S-23 remote stop timeout job', () => {
     assert.doesNotMatch(sqlSeen, /status = 'COMPLETED'/);
     assert.equal(result.rowCount, 1);
     assert.deepEqual(auditArgs.slice(0, 4), ['9', 'REMOTE_STOP', 'charging_session', 15]);
+    assert.equal(auditArgs[4].charge_point_code, 'CP-04');
     assert.equal(auditArgs[4].result, 'TIMED_OUT');
     assert.equal(auditArgs[4].deadline, deadline.toISOString());
     assert.equal(auditArgs[7], 'TIMED_OUT');

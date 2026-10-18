@@ -7,6 +7,20 @@
 
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
+const { profileResult, resolveSetChargingProfile, profileLimitW, meterReading } = require('./lib/charging-profile');
+
+const CONFIGURATION_RANGES = Object.freeze({
+  HeartbeatInterval: { min: 10, max: 86400 },
+  MeterValueSampleInterval: { min: 0, max: 3600 },
+});
+const RESERVATION_RESULTS = Object.freeze(['Accepted', 'Faulted', 'Unavailable', 'Rejected']);
+
+function reservationResult(value = 'Accepted') {
+  if (!RESERVATION_RESULTS.includes(value)) {
+    throw new Error(`reservation result must be one of: ${RESERVATION_RESULTS.join(', ')}`);
+  }
+  return value;
+}
 
 // Nạp .env nếu có (dành cho chạy trực tiếp ngoài Docker)
 try {
@@ -45,6 +59,9 @@ function parseOptions(argv = process.argv.slice(2), env = process.env) {
     count: Math.max(1, parseInt(env.VCP_COUNT, 10) || 20),
     prefix: (env.VCP_PREFIX || 'VCP-').toUpperCase(),
     heartbeatInterval: Math.max(5, parseInt(env.VCP_HEARTBEAT_INTERVAL, 10) || 60),
+    profileResult: profileResult(env.VCP_PROFILE_RESULT || 'Accepted'),
+    reservationResult: reservationResult(env.VCP_RESERVATION_RESULT || 'Accepted'),
+    rebootRequiredKey: env.VCP_REBOOT_REQUIRED_KEY || null,
     email: env.ADMIN_EMAIL || '',
     password: env.ADMIN_PASSWORD || '',
   };
@@ -56,10 +73,16 @@ function parseOptions(argv = process.argv.slice(2), env = process.env) {
     else if (arg === '--count' && val) { options.count = Math.max(1, parseInt(val, 10) || 20); i += 1; }
     else if (arg === '--prefix' && val) { options.prefix = val.toUpperCase(); i += 1; }
     else if (arg === '--heartbeat' && val) { options.heartbeatInterval = Math.max(5, parseInt(val, 10) || 60); i += 1; }
+    else if (arg === '--profile-result' && val) { options.profileResult = profileResult(val); i += 1; }
+    else if (arg === '--reservation-result' && val) { options.reservationResult = reservationResult(val); i += 1; }
+    else if (arg === '--reboot-required-key' && val) { options.rebootRequiredKey = val; i += 1; }
     else if (arg === '--email' && val) { options.email = val; i += 1; }
     else if (arg === '--password' && val) { options.password = val; i += 1; }
   }
 
+  if (options.rebootRequiredKey && !Object.hasOwn(CONFIGURATION_RANGES, options.rebootRequiredKey)) {
+    throw new Error(`Không hỗ trợ khóa cấu hình RebootRequired: ${options.rebootRequiredKey}`);
+  }
   if (!options.email || !options.password) {
     throw new Error('Thiếu thông tin đăng nhập quản trị (ADMIN_EMAIL / ADMIN_PASSWORD)');
   }
@@ -177,10 +200,18 @@ async function ensureFleetProvisioned(api, options) {
 }
 
 class ManagedChargePoint {
-  constructor(code, wsBaseUrl, heartbeatInterval = 60) {
+  constructor(code, wsBaseUrl, heartbeatInterval = 60, setChargingProfileResult = 'Accepted', {
+    rebootRequiredKey = null,
+    reservationResult: configuredReservationResult = 'Accepted',
+  } = {}) {
     this.code = code;
     this.wsBaseUrl = wsBaseUrl;
     this.heartbeatInterval = heartbeatInterval;
+    this.configuration = {
+      HeartbeatInterval: String(heartbeatInterval),
+      MeterValueSampleInterval: '10',
+    };
+    this.rebootRequiredKey = rebootRequiredKey;
     this.socket = null;
     this.heartbeatTimer = null;
     this.meterValuesTimer = null;
@@ -192,9 +223,13 @@ class ManagedChargePoint {
     // Trạng thái phiên sạc nội tại của trụ
     this.currentTransactionId = null;
     this.currentConnectorId = null;
+    this.currentReservation = null;
+    this.currentChargingProfile = null;
     // Khắc phục LỖI 2: Thanh ghi năng lượng tích lũy đơn điệu tăng (Monotonically Increasing Accumulator)
     this.currentMeterWh = 10000;
     this.currentIdTag = 'TAG-DEMO-01';
+    this.setChargingProfileResult = profileResult(setChargingProfileResult);
+    this.reservationResult = reservationResult(configuredReservationResult);
   }
 
   async connect() {
@@ -304,9 +339,13 @@ class ManagedChargePoint {
   // Khắc phục LỖI 3 (Vòng 2) & DEF-02 (Vòng 3): Bổ sung Current.Import và SoC vào bản tin MeterValues định kỳ
   startMeterValuesReporting(connectorId, transactionId) {
     clearInterval(this.meterValuesTimer);
+    const intervalSeconds = Number(this.configuration.MeterValueSampleInterval);
+    if (intervalSeconds === 0) return;
     this.meterValuesTimer = setInterval(async () => {
       if (this.socket && this.socket.readyState === WebSocket.OPEN && this.currentTransactionId === transactionId) {
-        this.currentMeterWh += 100; // Tích lũy 100 Wh mỗi kỳ báo cáo
+        const limitW = profileLimitW(this.currentChargingProfile, connectorId, transactionId);
+        const reading = meterReading(this.currentMeterWh, limitW);
+        this.currentMeterWh = reading.meterWh;
         this.currentSoC = Math.min(100, (this.currentSoC || 20) + 1); // Tăng tiến mức pin %
         await this.call('MeterValues', {
           connectorId,
@@ -321,7 +360,7 @@ class ManagedChargePoint {
                 unit: 'Wh',
               },
               {
-                value: '7200',
+                value: String(reading.powerW),
                 context: 'Sample.Periodic',
                 measurand: 'Power.Active.Import',
                 unit: 'W',
@@ -342,7 +381,7 @@ class ManagedChargePoint {
           }],
         });
       }
-    }, 10000);
+    }, intervalSeconds * 1000);
     this.meterValuesTimer.unref?.();
   }
 
@@ -386,9 +425,85 @@ class ManagedChargePoint {
     if (frame[0] === 2) {
       const [, messageId, action, payload = {}] = frame;
 
-      if (action === 'Reset') {
+      if (action === 'SetChargingProfile') {
+        const result = resolveSetChargingProfile(payload, this.setChargingProfileResult);
+        if (result.status === 'Accepted') this.currentChargingProfile = result.profile;
+        this.socket.send(JSON.stringify([3, messageId, { status: result.status }]));
+      } else if (action === 'ChangeConfiguration') {
+        const { key, value } = payload;
+        const range = CONFIGURATION_RANGES[key];
+        let status = 'NotSupported';
+        if (range) {
+          const parsedValue = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : NaN;
+          status = Number.isInteger(parsedValue) && parsedValue >= range.min && parsedValue <= range.max
+            ? (key === this.rebootRequiredKey ? 'RebootRequired' : 'Accepted')
+            : 'Rejected';
+          if (status === 'Accepted' || status === 'RebootRequired') {
+            this.configuration[key] = value;
+            if (status === 'Accepted' && key === 'HeartbeatInterval') {
+              this.heartbeatInterval = parsedValue;
+              if (this.heartbeatTimer) this.startHeartbeat(parsedValue);
+            }
+            if (status === 'Accepted' && key === 'MeterValueSampleInterval' && this.currentTransactionId) {
+              this.startMeterValuesReporting(this.currentConnectorId, this.currentTransactionId);
+            }
+          }
+        }
+        this.socket.send(JSON.stringify([3, messageId, { status }]));
+      } else if (action === 'GetConfiguration') {
+        const keys = Array.isArray(payload.key) ? payload.key : Object.keys(this.configuration);
+        const configurationKey = [];
+        const unknownKey = [];
+        for (const key of keys) {
+          if (Object.hasOwn(this.configuration, key)) {
+            configurationKey.push({ key, value: this.configuration[key], readonly: false });
+          } else {
+            unknownKey.push(key);
+          }
+        }
+        this.socket.send(JSON.stringify([3, messageId, { configurationKey, unknownKey }]));
+      } else if (action === 'Reset') {
         this.socket.send(JSON.stringify([3, messageId, { status: 'Accepted' }]));
         setTimeout(() => this.reconnect(), 1000);
+      } else if (action === 'ReserveNow') {
+        const { connectorId, expiryDate, idTag, reservationId } = payload;
+        const expired = this.currentReservation && Date.parse(this.currentReservation.expiryDate) <= Date.now();
+        if (expired) this.currentReservation = null;
+        let status = this.reservationResult;
+        if (this.currentTransactionId && this.currentConnectorId === connectorId) status = 'Occupied';
+        else if (status === 'Accepted' && (
+          connectorId !== 1
+          || !Number.isSafeInteger(reservationId)
+          || typeof idTag !== 'string'
+          || !Number.isFinite(Date.parse(expiryDate))
+          || this.currentReservation
+        )) status = 'Rejected';
+
+        if (status === 'Accepted') {
+          this.currentReservation = { connectorId, expiryDate, idTag, reservationId };
+        }
+        this.socket.send(JSON.stringify([3, messageId, { status }]));
+        if (status === 'Accepted') {
+          void this.call('StatusNotification', {
+            connectorId,
+            status: 'Reserved',
+            errorCode: 'NoError',
+            timestamp: new Date().toISOString(),
+          }).catch(() => {});
+        }
+      } else if (action === 'CancelReservation') {
+        const reservation = this.currentReservation;
+        const status = reservation && reservation.reservationId === payload.reservationId ? 'Accepted' : 'Rejected';
+        if (status === 'Accepted') this.currentReservation = null;
+        this.socket.send(JSON.stringify([3, messageId, { status }]));
+        if (status === 'Accepted') {
+          void this.call('StatusNotification', {
+            connectorId: reservation.connectorId,
+            status: 'Available',
+            errorCode: 'NoError',
+            timestamp: new Date().toISOString(),
+          }).catch(() => {});
+        }
       } else if (action === 'RemoteStartTransaction') {
         const { idTag, connectorId = 1 } = payload;
         this.currentConnectorId = connectorId;
@@ -406,14 +521,21 @@ class ManagedChargePoint {
             });
             // Khắc phục LỖI 2: Dùng chỉ số tích lũy hiện tại (không reset về 10.000 Wh)
             const meterStart = this.currentMeterWh;
+            const reservation = this.currentReservation;
+            const reservationId = reservation?.connectorId === this.currentConnectorId
+              && reservation.idTag === this.currentIdTag
+              ? reservation.reservationId
+              : payload.reservationId;
             const startRes = await this.call('StartTransaction', {
               connectorId: this.currentConnectorId,
               idTag: this.currentIdTag,
               meterStart,
               timestamp: new Date().toISOString(),
+              ...(reservationId === undefined ? {} : { reservationId }),
             });
             if (startRes && Number.isSafeInteger(startRes.transactionId)) {
               this.currentTransactionId = startRes.transactionId;
+              if (reservationId !== undefined && reservation?.reservationId === reservationId) this.currentReservation = null;
               await this.call('StatusNotification', {
                 connectorId: this.currentConnectorId,
                 status: 'Charging',
@@ -450,6 +572,9 @@ class ManagedChargePoint {
               reason: 'Remote',
             });
             this.currentTransactionId = null;
+            if (this.currentChargingProfile?.csChargingProfiles.transactionId === txIdToStop) {
+              this.currentChargingProfile = null;
+            }
 
             await this.call('StatusNotification', {
               connectorId: connIdToStop,
@@ -535,7 +660,13 @@ async function runFleet() {
   console.log(`[VCP] Đã kiểm tra/tạo ${codes.length} trụ sạc thành công.`);
 
   const wsBaseUrl = options.url.replace(/^http/i, 'ws').replace(/\/+$/, '');
-  const fleet = codes.map((code) => new ManagedChargePoint(code, wsBaseUrl, options.heartbeatInterval));
+  const fleet = codes.map((code) => new ManagedChargePoint(
+    code,
+    wsBaseUrl,
+    options.heartbeatInterval,
+    options.profileResult,
+    { rebootRequiredKey: options.rebootRequiredKey, reservationResult: options.reservationResult }
+  ));
 
   console.log(`[VCP] Đang thiết lập kết nối OCPP 1.6J cho ${fleet.length} trụ...`);
   // Pacing 150ms để không vi phạm rate-limit bắt tay

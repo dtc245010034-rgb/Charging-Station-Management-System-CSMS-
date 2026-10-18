@@ -1,5 +1,6 @@
 import { h } from '../../app/dom.js';
 import { stationStatusLabels } from '../../app/status.js';
+import { kilowattsToWatts } from '../../app/power.js';
 import * as csms from '../../services/csms.js';
 import { openModal } from '../../components/modal.js';
 import { createPickerMap } from '../../components/station-map.js';
@@ -18,6 +19,11 @@ export function openStationForm({ station = null, onSaved }) {
   const input = (id, props) => h('input', { class: 'input', id, ...props });
   const name = input('sf-name', { maxlength: 255, required: true, value: station?.name ?? '', autocomplete: 'off' });
   const address = input('sf-address', { maxlength: 500, required: true, value: station?.address ?? '', autocomplete: 'off' });
+  const powerLimit = input('sf-power-limit', {
+    type: 'text', inputmode: 'decimal', autocomplete: 'off',
+    value: station?.power?.limitKw ?? '',
+    'aria-describedby': 'sf-power-hint',
+  });
   const lat = input('sf-lat', { type: 'number', step: 'any', inputmode: 'decimal', min: -90, max: 90, value: station?.latitude ?? '', disabled: locked });
   const lng = input('sf-lng', { type: 'number', step: 'any', inputmode: 'decimal', min: -180, max: 180, value: station?.longitude ?? '', disabled: locked });
   const status = h('select', { class: 'select', id: 'sf-status' },
@@ -34,7 +40,12 @@ const TIMEZONES = [
   const tz = h('select', { class: 'select', id: 'sf-timezone' },
     TIMEZONES.map(({ value, label }) => h('option', { value, selected: (station?.timezone ?? 'Asia/Ho_Chi_Minh') === value }, label)));
 
-  const errors = { name: h('p', { class: 'field__error', hidden: true }), address: h('p', { class: 'field__error', hidden: true }), coords: h('p', { class: 'field__error', hidden: true }) };
+  const errors = {
+    name: h('p', { class: 'field__error', hidden: true }),
+    address: h('p', { class: 'field__error', hidden: true }),
+    power: h('p', { class: 'field__error', hidden: true }),
+    coords: h('p', { class: 'field__error', hidden: true }),
+  };
   const formError = h('p', { class: 'form-alert', role: 'alert', hidden: true });
   const setError = (field, message) => { errors[field].textContent = message || ''; errors[field].hidden = !message; fieldError[field] = message; };
 
@@ -52,6 +63,8 @@ const TIMEZONES = [
     h('div', { class: 'form-grid' },
       h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Tên trạm'), name, errors.name),
       h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Địa chỉ'), address, errors.address),
+      h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Hạn mức công suất (kW)'), powerLimit,
+        h('span', { class: 'field__hint', id: 'sf-power-hint' }, 'Để trống nếu không giới hạn; tối đa 1 chữ số thập phân.'), errors.power),
       h('label', { class: editing ? 'field' : 'field span-2' }, h('span', { class: 'field__label' }, 'Múi giờ'), tz),
       editing && h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Trạng thái'), status)),
     locked
@@ -69,6 +82,11 @@ const TIMEZONES = [
     setError('name', name.value.trim() ? '' : 'Tên trạm là bắt buộc');
     setError('address', address.value.trim() ? '' : 'Địa chỉ là bắt buộc');
     ok = !fieldError.name && !fieldError.address;
+    const powerText = powerLimit.value.trim();
+    const powerWatts = powerText ? kilowattsToWatts(powerText) : null;
+    const validPower = powerText === '' || powerWatts !== null;
+    setError('power', validPower ? '' : 'Công suất phải từ 0,1 đến 100.000 kW và tối đa 1 chữ số thập phân');
+    ok = ok && validPower;
     let coords = '';
     if (!locked) {
       const hasLat = lat.value.trim() !== '';
@@ -85,8 +103,20 @@ const TIMEZONES = [
   function payload() {
     const body = {};
     const next = { name: name.value.trim(), address: address.value.trim(), timezone: tz.value };
-    if (!editing) return { ...next, latitude: lat.value.trim(), longitude: lng.value.trim() };
+    if (!editing) {
+      return {
+        ...next,
+        latitude: lat.value.trim(),
+        longitude: lng.value.trim(),
+        ...(powerLimit.value.trim() ? { power_limit_kw: powerLimit.value.trim() } : {}),
+      };
+    }
     for (const field of ['name', 'address', 'timezone']) if (next[field] !== station[field]) body[field] = next[field];
+    const enteredPower = powerLimit.value.trim();
+    const enteredWatts = enteredPower ? kilowattsToWatts(enteredPower) : null;
+    if (enteredWatts !== (station.power_limit_w === null ? null : BigInt(station.power_limit_w))) {
+      body.power_limit_kw = enteredPower || null;
+    }
     if (!locked && lat.value.trim() && (Number(lat.value) !== Number(station.latitude) || Number(lng.value) !== Number(station.longitude))) {
       body.latitude = lat.value.trim();
       body.longitude = lng.value.trim();

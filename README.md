@@ -166,16 +166,27 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `OCPP_PING_INTERVAL` | Chu kỳ WebSocket Ping giữ kết nối OCPP (B9) | Giây | `30` |
 | `SSE_MAX_CONNECTIONS_PER_USER` | Số luồng SSE (phiên sạc, fleet-status) đồng thời tối đa mỗi tài khoản; mở thêm thì luồng cũ nhất bị đóng. Đăng xuất đóng mọi luồng của tài khoản | Luồng | `5` |
 | `OCPP_RATE_LIMIT_MAX` | Giới hạn tần suất tin nhắn mỗi kết nối OCPP (B3) | Tin/giây | `50` |
+| `POWER_REBALANCE_MIN_INTERVAL_MS` | Cửa sổ gộp các sự kiện chia lại công suất tại cùng một trạm | Mili giây | `2000` |
 | `OCPP_ERROR_DEDUP_SECONDS` | Bỏ qua lỗi đầu nối y hệt (cùng đầu nối, `errorCode`, `vendorErrorCode`, trạng thái không đổi) đã ghi trong N giây gần nhất; `0` = tắt | Giây | `60` |
 | `OCPP_MESSAGE_RETENTION_DAYS` | Số ngày giữ câu trả lời đã gửi để nhận ra tin OCPP trùng `messageId` (S-14). Job dọn chạy khi khởi động và mỗi giờ | Ngày | `7` |
 | `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` | Cửa sổ phát lại tin trùng: chỉ phát lại câu cũ khi cùng `messageId`, hành động, nội dung và chưa quá N giây (F8) | Giây | `600` |
 | `OCPP_LOCK_TIMEOUT_SECONDS` | `lock_timeout` cho truy vấn của handler OCPP; API, migration và job không bị ảnh hưởng (F10) | Giây | `5` |
 | `DB_QUERY_TIMEOUT_SECONDS` | Thời gian tối đa chờ một truy vấn PostgreSQL trả kết quả (cả hai pool); quá hạn thì truy vấn báo lỗi. `0` = không giới hạn | Giây | `30` |
 | `REMOTE_STOP_WAIT_SECONDS` | Thời gian chờ `StopTransaction` thực tế sau khi trụ `Accepted` lệnh dừng; hết hạn chỉ đánh dấu phiên cần xem xét, không tự đóng phiên | Giây | `120` |
+| `RESERVATION_HOLD_MIN` | Thời gian giữ thêm sau `arriveInMinutes` khi đặt chỗ connector | Phút | `15` |
 | `SESSION_ABNORMAL_AFTER_SECONDS` | Thời gian không nhận tin từ trụ trước khi job đánh dấu phiên đang sạc `ABNORMAL` (job cũng đánh dấu bất thường khi quá 120 giây chờ `StopTransaction`) | Giây | `21600` |
 | `IDLE_MAX_WAIT_MIN` | Thời gian tối đa chờ đầu nối rời `Finishing`/`SuspendedEV` trước khi chốt hóa đơn phí chiếm chỗ | Phút | `60` |
 | `BILLING_JOB_INTERVAL_MS` | Chu kỳ job nền tìm phiên cần lập hóa đơn và thử lại phiên lỗi | Mili giây | `30000` |
 | `WALLET_AUDIT_INTERVAL_MS` | Chu kỳ job nền đối chiếu số dư ví với sổ cái và khóa ví lệch | Mili giây | `300000` |
+| `RECON_TOLERANCE_DONG` | Chênh lệch tiền tối đa được bỏ qua trong báo cáo đối soát | Đồng | `0` |
+| `SANDBOX_GATEWAY` | Bật giao diện cổng thanh toán giả lập; chỉ dùng dev/staging | `0` hoặc `1` | `0` |
+| `PAYMENT_WEBHOOK_SECRET` | Khoá HMAC-SHA256 của webhook; bắt buộc khi bật sandbox, tối thiểu 32 ký tự | Bí mật | **bắt buộc khi bật sandbox** |
+| `INTERNAL_BASE_URL` | URL nội bộ mà cổng giả lập dùng để gọi webhook | URL | `http://127.0.0.1:3000` |
+| `EMAIL_TRANSPORT` | Kênh email thông báo; hiện chỉ hỗ trợ ghi hộp thư ra log | `log` | `log` |
+| `BACKUP_PASSPHRASE` | Passphrase OpenSSL để mã hoá/giải mã bản sao lưu; cấp từ kho bí mật, không ghi vào repo | Bí mật | **bắt buộc cho backup mã hoá** |
+| `BACKUP_DIR` | Thư mục lưu bản sao lưu đã mã hoá, nằm ngoài repo | Đường dẫn | `~/csms-backups` |
+| `KEEP` | Số bản sao lưu mới nhất cần giữ | Số nguyên dương | `7` |
+| `BACKUP_ALLOW_PLAINTEXT` | Cho phép SQL rõ chỉ trên máy dev; không bật trên staging/production | `0` hoặc `1` | `0` |
 | `WALLET_MIN_BALANCE_DONG` | Ngưỡng tối thiểu để bắt đầu phiên; để trống thì tự tính 5 kWh theo giá kWh cao nhất trong các biểu giá đang hiệu lực | Đồng | `5 kWh × giá cao nhất` |
 | `CHECK_CODE_RATE_LIMIT_PER_MINUTE` | Số lần gọi `GET /api/charge-points/check-code` mỗi tài khoản (quá mức trả 429 + `Retry-After`) | Lần/phút | `30` |
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
@@ -198,7 +209,7 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | Kế toán | `ACCOUNTANT` | `#/accountant` | Khung trống (chờ sprint tính tiền) |
 | Tài xế | `DRIVER` | `#/driver` | Tự đăng ký/đăng nhập, giao diện điện thoại; chưa có chức năng sạc |
 
-Menu của chức năng chưa có backend bị **ẩn** (`frontend/app/workspace.js`, mỗi mục ghi story sẽ bật nó): phiên sạc, cảnh báo, điều khiển từ xa, hiệu suất, doanh thu, đối soát, ví, tìm trạm…
+Menu của chức năng chưa có backend bị **ẩn** (`frontend/app/workspace.js`, mỗi mục ghi story sẽ bật nó): cảnh báo, điều khiển từ xa, hiệu suất, doanh thu, đối soát, tìm trạm… Tài xế hiện có phiên sạc, ví và thông báo trong workspace riêng.
 
 ### Tạo tài khoản
 

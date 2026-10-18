@@ -9,19 +9,32 @@ import { statusBadge } from '../../components/badge.js';
 const PAGE_SIZE = 50;
 const ACTION_LABELS = {
   ACCESS_DENIED: 'Truy cập bị từ chối',
+  ALERT_CLOSED: 'Đóng cảnh báo',
+  CHANGE_CONFIGURATION: 'Đổi cấu hình trụ',
   CREATE: 'Tạo mới',
+  DATA_ERASURE_COMPLETED: 'Ẩn danh hóa dữ liệu',
+  DATA_ERASURE_REJECTED: 'Từ chối yêu cầu xóa dữ liệu',
+  DATA_ERASURE_REQUESTED: 'Yêu cầu ẩn danh hóa dữ liệu',
   LOCK: 'Khoá trạm',
   REMOTE_START: 'Bắt đầu sạc từ xa',
   REMOTE_STOP: 'Dừng sạc từ xa',
   RESET: 'Khởi động lại trụ',
   SESSION_MANUALLY_CLOSED: 'Đóng phiên bất thường',
+  STATION_STATUS_CHANGED: 'Thay đổi trạng thái trạm',
   TARIFF_CREATED: 'Khai báo biểu giá',
   UNLOCK: 'Mở khoá trạm',
   UPDATE: 'Cập nhật',
   WALLET_ADJUST: 'Điều chỉnh ví',
   WALLET_MISMATCH: 'Phát hiện lệch sổ cái ví',
+  WALLET_TOPUP_GATEWAY: 'Nạp ví qua cổng thanh toán',
   WALLET_TOPUP_MANUAL: 'Nạp tiền vào ví',
   WALLET_UNLOCK: 'Mở khóa ví',
+  PERIOD_CLOSED: 'Chốt kỳ kế toán',
+  PERIOD_REOPENED: 'Mở lại kỳ kế toán',
+  BILLING_PERIOD_CLOSED: 'Không lập hóa đơn do kỳ đã chốt',
+  WEBHOOK_AMOUNT_MISMATCH: 'Lệch số tiền webhook',
+  WEBHOOK_BAD_SIGNATURE: 'Chữ ký webhook không hợp lệ',
+  PARTNER_RATE_CREATED: 'Khai báo tỉ lệ chia đối tác',
 };
 const RESULT_PRESENTATION = {
   ACCEPTED: { label: 'Đã chấp nhận', tone: 'ready' },
@@ -54,9 +67,9 @@ export function render(ctx) {
   const initialPage = Number(initialQuery.page);
   let pageNumber = Number.isSafeInteger(initialPage) && initialPage > 0 ? initialPage : 1;
   let total = 0;
-  const page = h('div', { class: 'page-stack', style: 'max-width:1200px;margin:0 auto' });
-  const results = h('div', { style: 'display:grid;gap:12px' }, loadingState(2));
-  const pagination = h('footer', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap' });
+  const page = h('div', { class: 'page-stack audit-log-page' });
+  const results = h('div', { class: 'audit-log-results' }, loadingState(2));
+  const pagination = h('footer', { class: 'audit-pagination' });
   const chargePointInput = h('input', {
     class: 'input', name: 'charge_point', type: 'search', maxlength: 100, autocomplete: 'off',
     placeholder: 'Ví dụ: VCP-01', 'aria-label': 'Lọc theo mã trụ',
@@ -88,7 +101,7 @@ export function render(ctx) {
       {
         key: 'target',
         label: 'Đối tượng',
-        render: (row) => h('span', {}, row.charge_point_code || `${row.entity || 'Đối tượng'} #${row.entity_id ?? '—'}`),
+        render: (row) => h('span', {}, row.charge_point_code || row.metadata?.charge_point_code || `${row.entity || 'Đối tượng'} #${row.entity_id ?? '—'}`),
       },
       { key: 'ip', label: 'Địa chỉ IP', render: (row) => row.ip || '—' },
       {
@@ -137,8 +150,7 @@ export function render(ctx) {
   const pageStatus = h('span', { class: 'muted', 'aria-live': 'polite' });
 
   const filterForm = h('form', {
-    class: 'card',
-    style: 'padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end',
+    class: 'card audit-filter',
     onsubmit: (event) => {
       event.preventDefault();
       pageNumber = 1;
@@ -151,7 +163,7 @@ export function render(ctx) {
   h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Mã tài xế'), driverIdInput),
   h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Từ ngày'), fromInput),
   h('label', { style: 'display:grid;gap:5px' }, h('span', { class: 'muted' }, 'Đến ngày'), toInput),
-  h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
+  h('div', { class: 'audit-filter__actions' },
     h('button', { class: 'btn btn--primary', type: 'submit' }, 'Lọc nhật ký'),
     h('button', {
       class: 'btn', type: 'button', onclick: () => {
@@ -167,14 +179,14 @@ export function render(ctx) {
     }, 'Xoá lọc')));
 
   const refreshButton = h('button', {
-    class: 'btn', type: 'button', onclick: () => { void refresh(); },
+    class: 'btn page-refresh', type: 'button', onclick: () => { void refresh(); },
   }, icon('refresh'), 'Làm mới');
   page.append(
-    h('header', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap' },
+    h('header', { class: 'page-head' },
       h('div', {},
         h('p', { class: 'eyebrow' }, 'Vận hành'),
         h('h1', { class: 'page-head__title' }, 'Nhật ký điều khiển'),
-        h('p', { class: 'muted' }, 'Tra cứu thao tác theo trụ sạc, người thực hiện và khoảng thời gian.')
+        h('p', { class: 'page-head__sub' }, 'Tra cứu thao tác theo trụ sạc, người thực hiện và khoảng thời gian.')
       ),
       refreshButton
     ),

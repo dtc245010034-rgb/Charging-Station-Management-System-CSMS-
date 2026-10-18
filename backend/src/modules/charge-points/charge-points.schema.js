@@ -31,4 +31,11 @@ const resetBody = z.object({
   type: z.enum(['Soft', 'Hard'], { message: 'type phải là Soft hoặc Hard' }),
 });
 
-module.exports = { createBody, updateBody, resetBody };
+const configurationKey = z.enum(['HeartbeatInterval', 'MeterValueSampleInterval']);
+const configurationBody = z.object({
+  key: configurationKey,
+  value: z.union([z.string(), z.number().int()]),
+}).strict();
+const configurationQuery = z.object({ key: configurationKey }).strict();
+
+module.exports = { createBody, updateBody, resetBody, configurationBody, configurationQuery };

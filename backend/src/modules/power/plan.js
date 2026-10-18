@@ -44,7 +44,11 @@ function getCurrentMinutes(date, timezone) {
 }
 
 function resolvePowerLimit(station, date = new Date()) {
-  const baseLimit = asNumber(station?.power_limit_kw ?? station?.powerCapKw ?? 0, 0);
+  const wattLimit = station?.power_limit_w ?? station?.powerLimitW ?? null;
+  const baseLimit = asNumber(
+    station?.power_limit_kw ?? station?.powerCapKw ?? (wattLimit == null ? 0 : wattLimit / 1000),
+    0,
+  );
   const schedule = normalizeScheduleItems(station?.power_profile ?? station?.powerProfile ?? []);
   if (!schedule.length) return baseLimit;
 

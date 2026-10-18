@@ -16,11 +16,20 @@ export const PAGE_NEEDS = {
   history: 'sessions:read-own',
   invoice: 'invoices:read-own',
   wallet: 'wallets:read-own',
+  notifications: 'notifications:read-own',
   wallets: 'wallets:manage',
   'unexpected-sessions': 'sessions:unexpected:read',
   'control-log': 'audit-logs:read',
   start: 'remote-start:create',
+  find: 'stations:search',
+  reservations: 'reservations:read-own',
   tariffs: 'tariffs:read',
+  revenue: 'reports:revenue',
+  reconciliation: 'reports:reconcile',
+  periods: 'periods:manage',
+  'erasure-requests': 'erasure:manage',
+  settlements: 'settlements:read',
+  health: 'health:dashboard',
 };
 
 const fleetOverview = () => import('../pages/shared/fleet-overview.js');
@@ -37,6 +46,12 @@ const PAGES = {
   start: {
     driver: () => import('../pages/driver/start.js'),
   },
+  find: {
+    driver: () => import('../pages/driver/find.js'),
+  },
+  reservations: {
+    driver: () => import('../pages/driver/find.js'),
+  },
   sessions: {
     driver: () => import('../pages/driver/session.js'),
     operator: () => import('../pages/shared/sessions.js'),
@@ -50,6 +65,9 @@ const PAGES = {
   },
   wallet: {
     driver: () => import('../pages/driver/wallet.js'),
+  },
+  notifications: {
+    driver: () => import('../pages/driver/notifications.js'),
   },
   wallets: {
     admin: () => import('../pages/admin/wallets.js'),
@@ -69,6 +87,31 @@ const PAGES = {
   users: () => import('../pages/admin/users.js'),
   account: () => import('../pages/shared/account.js'),
   tariffs: () => import('../pages/shared/tariffs.js'),
+  revenue: {
+    owner: () => import('../pages/shared/revenue.js'),
+    accountant: () => import('../pages/shared/revenue.js'),
+    admin: () => import('../pages/shared/revenue.js'),
+  },
+  reconciliation: {
+    accountant: () => import('../pages/shared/reconciliation.js'),
+    admin: () => import('../pages/shared/reconciliation.js'),
+  },
+  periods: {
+    accountant: () => import('../pages/shared/periods.js'),
+    admin: () => import('../pages/shared/periods.js'),
+  },
+  'erasure-requests': {
+    admin: () => import('../pages/admin/erasure-requests.js'),
+  },
+  settlements: {
+    owner: () => import('../pages/shared/settlements.js'),
+    accountant: () => import('../pages/shared/settlements.js'),
+    admin: () => import('../pages/shared/settlements.js'),
+  },
+  health: {
+    operator: () => import('../pages/shared/health.js'),
+    admin: () => import('../pages/shared/health.js'),
+  },
 };
 
 export function pageLoader(page, workspace) {

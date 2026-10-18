@@ -74,24 +74,46 @@ async function findInvoice(client, sessionId) {
 
 async function markError(sessionId, poolInstance, error, logError) {
   const database = poolInstance || require('../../db/pool').pool;
+  const periodClosed = error?.code === '55000' && error?.message?.includes('PERIOD_CLOSED');
+  const billingReason = periodClosed ? 'PERIOD_CLOSED' : 'FINALIZATION_FAILED';
   try {
     await database.query(
       `UPDATE charging_sessions
        SET billing_status = 'ERROR',
-           billing_reason = 'FINALIZATION_FAILED',
+           billing_reason = $2,
            billing_attempts = billing_attempts + 1,
-           billing_next_at = CURRENT_TIMESTAMP
-             + make_interval(secs => LEAST(600, 30 * (1 << LEAST(billing_attempts + 1, 5)))),
+           billing_next_at = CASE WHEN $2 = 'PERIOD_CLOSED' THEN NULL ELSE
+             CURRENT_TIMESTAMP
+               + make_interval(secs => LEAST(600, 30 * (1 << LEAST(billing_attempts + 1, 5))))
+             END,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 AND status = 'COMPLETED'
          AND NOT EXISTS (SELECT 1 FROM session_invoices WHERE session_id = $1)`,
-      [sessionId]
+      [sessionId, billingReason]
     );
   } catch (updateError) {
     logError(
       `[Billing] Không thể ghi trạng thái ERROR cho phiên ${sessionId}:`,
       sanitizeErrorMessage(updateError?.message || updateError)
     );
+  }
+  if (periodClosed) {
+    try {
+      await require('../audit/audit.repository').record(
+        null,
+        'BILLING_PERIOD_CLOSED',
+        'charging_session',
+        sessionId,
+        { reason: 'PERIOD_CLOSED' },
+        null,
+        database
+      );
+    } catch (auditError) {
+      logError(
+        `[Billing] Không thể ghi audit kỳ đã chốt cho phiên ${sessionId}:`,
+        sanitizeErrorMessage(auditError?.message || auditError)
+      );
+    }
   }
   logError(
     `[Billing] Không thể lập hóa đơn cho phiên ${sessionId}:`,
@@ -287,13 +309,27 @@ async function finalizeSession(sessionId, {
   logError = console.error,
 } = {}) {
   try {
-    return await withTransaction(
+    const outcome = await withTransaction(
       (client) => finalizeInTransaction(client, sessionId, now(), maxWaitMinutes),
       poolInstance
     );
+    if (outcome.status === 'FINAL' && outcome.invoice?.lines?.some((line) => line.kind === 'IDLE')) {
+      await require('../notifications/notify').notifySessionEvent({
+        sessionId,
+        kind: 'IDLE_FEE_STARTED',
+        db: poolInstance || require('../../db/pool').pool,
+        logError,
+      });
+    }
+    return outcome;
   } catch (error) {
     await markError(sessionId, poolInstance, error, logError);
-    return { status: 'ERROR', reason: 'FINALIZATION_FAILED' };
+    return {
+      status: 'ERROR',
+      reason: error?.code === '55000' && error?.message?.includes('PERIOD_CLOSED')
+        ? 'PERIOD_CLOSED'
+        : 'FINALIZATION_FAILED',
+    };
   }
 }
 

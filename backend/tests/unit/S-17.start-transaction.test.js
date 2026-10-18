@@ -205,6 +205,32 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
       assert.strictEqual(session.driver_id, 99);
     });
 
+    it('yêu cầu chia lại sau commit khi tạo phiên mới và không chặn phản hồi OCPP', async () => {
+      const { mockPool } = createMockEnvironment();
+      const calls = [];
+      let resolveRebalance;
+      const pendingRebalance = new Promise((resolve) => { resolveRebalance = resolve; });
+      const handler = createStartTransactionHandler({
+        pool: mockPool,
+        now: () => new Date('2026-10-07T10:00:00.000Z'),
+        rebalanceStation: (...args) => { calls.push(args); return pendingRebalance; },
+        logInfo: () => {},
+        logWarning: () => {},
+        logError: () => {},
+      });
+
+      const response = await handler({
+        connectorId: 1,
+        idTag: 'TAG-VALID',
+        meterStart: 503,
+        timestamp: '2026-10-07T10:00:00.000Z',
+      }, { connection: { chargePoint: { id: 1, code: 'CP-01' } } });
+
+      assert.equal(response.idTagInfo.status, 'Accepted');
+      assert.deepEqual(calls, [[10, { reason: 'START_TRANSACTION' }]]);
+      resolveRebalance();
+    });
+
     it('AC wallet: số dư dưới ngưỡng -> Blocked và phiên được đánh dấu needs_review', async () => {
       const { mockPool, dbCalls } = createMockEnvironment({ walletBalance: '19999' });
       const handler = createStartTransactionHandler({
@@ -403,9 +429,11 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
       const { mockPool, dbCalls } = createMockEnvironment({
         existingNaturalSession: { id: 77, status: 'CHARGING', needs_review: false, review_reason: null },
       });
+      const calls = [];
       const fixedNow = new Date('2026-10-07T10:00:00.000Z');
       const handler = createStartTransactionHandler({
         pool: mockPool,
+        rebalanceStation: (...args) => calls.push(args),
         now: () => fixedNow,
         logInfo: () => {},
         logWarning: () => {},
@@ -426,6 +454,7 @@ describe('S-17 StartTransaction unit tests (T-37)', () => {
       assert.strictEqual(dbCalls.closedSessions.length, 0, 'Tin trùng tự nhiên tuyệt đối không được đóng phiên cũ thành ABNORMAL');
       assert.strictEqual(dbCalls.insertedSessions.length, 0, 'Không insert dòng mới khi đã có phiên trùng tự nhiên');
       assert.strictEqual(dbCalls.locks.length, 1, 'Đầu nối phải được khoá bằng SELECT FOR UPDATE');
+      assert.deepStrictEqual(calls, []);
     });
 
     it('D6 + D4: Đồng hồ trụ về 1970 rồi gửi lại với messageId mới không sinh phiên ma', async () => {

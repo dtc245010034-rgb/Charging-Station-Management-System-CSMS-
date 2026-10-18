@@ -123,7 +123,11 @@ async function claimRemoteStart(driver, connectorId, db) {
       [connectorId]
     );
 
-    if (connector.station_status !== 'ACTIVE' || connector.station_locked_at) {
+    if (connector.station_status !== 'ACTIVE') {
+      throw new AppError(409, 'STATION_NOT_ACTIVE', 'Trạm sạc hiện không hoạt động.');
+    }
+
+    if (connector.station_locked_at) {
       throw new AppError(409, 'STATION_UNAVAILABLE', 'Trạm sạc hiện không hoạt động.');
     }
 
