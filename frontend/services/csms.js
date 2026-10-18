@@ -4,6 +4,7 @@ import { api } from './api.js';
 const idempotencyKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export const health = () => fetch('/api/health', { credentials: 'include' }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('health'))));
+export const healthOverview = () => api('/api/health/overview');
 
 export const stations = {
   list: () => api('/api/stations'),
@@ -49,6 +50,21 @@ export const alerts = {
 export const admin = {
   roles: () => api('/api/roles'),
   createUser: (body) => api('/api/admin/users', { method: 'POST', body }),
+  listUsers: () => api('/api/admin/users'),
+  setUserRole: (id, role) => api(`/api/admin/users/${encodeURIComponent(id)}/role`, { method: 'PUT', body: { role } }),
+  disableUser: (id) => api(`/api/admin/users/${encodeURIComponent(id)}/disable`, { method: 'POST', body: {} }),
+  enableUser: (id) => api(`/api/admin/users/${encodeURIComponent(id)}/enable`, { method: 'POST', body: {} }),
+};
+
+export const partners = {
+  list: () => api('/api/partners'),
+  shareRates: (ownerId) => api(`/api/partners/${encodeURIComponent(ownerId)}/share-rates`),
+  createShareRate: (ownerId, body) => api(`/api/partners/${encodeURIComponent(ownerId)}/share-rates`, { method: 'POST', body }),
+};
+
+export const settlements = {
+  get: (month) => api(`/api/settlements/${encodeURIComponent(month)}`),
+  generate: (month) => api(`/api/settlements/${encodeURIComponent(month)}/generate`, { method: 'POST', body: {} }),
 };
 
 export const tariffs = {

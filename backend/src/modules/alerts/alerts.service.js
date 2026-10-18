@@ -13,11 +13,18 @@ async function close(actor, id, { ip = null } = {}) {
   return withTransaction(async (client) => {
     const result = await client.query(
       `UPDATE alerts SET closed_at = CURRENT_TIMESTAMP, closed_by = $2
-       WHERE id = $1 AND closed_at IS NULL RETURNING *`,
+       WHERE id = $1 AND closed_at IS NULL
+       RETURNING id, kind, severity, station_id, charge_point_id, connector_id,
+                 session_id, message, details, dedup_key, opened_at, closed_at, closed_by`,
       [id, actor.id]
     );
     if (!result.rowCount) {
-      const current = await client.query('SELECT * FROM alerts WHERE id = $1', [id]);
+      const current = await client.query(
+        `SELECT id, kind, severity, station_id, charge_point_id, connector_id,
+                session_id, message, details, dedup_key, opened_at, closed_at, closed_by
+         FROM alerts WHERE id = $1`,
+        [id]
+      );
       if (!current.rowCount) return denyOrNotFound(actor, 'alert', id, repo.existsById, 'Không tìm thấy cảnh báo');
       return current.rows[0];
     }
