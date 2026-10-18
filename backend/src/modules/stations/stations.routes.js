@@ -4,6 +4,8 @@ const { idParam } = require('../../lib/schemas');
 const { BadRequestError } = require('../../lib/errors');
 const service = require('./stations.service');
 const { createBody, updateBody, lockBody, connectorPowerBody, stationSearchBody } = require('./stations.schema');
+const powerWindows = require('../power/schedule.service');
+const { createPowerWindowBody } = require('../power/schedule.schema');
 
 const router = secureRouter();
 
@@ -23,6 +25,25 @@ router.get('/stations/:id', { access: access('stations:read') }, async (req, res
 router.patch('/stations/:id', { access: access('stations:write') }, async (req, res) => {
   const { id } = idParam.parse(req.params);
   res.json(await service.update(req.user, id, updateBody.parse(req.body ?? {}), {
+    rebalanceStation: req.app?.locals?.rebalanceStation,
+  }));
+});
+router.get('/stations/:id/power-windows', { access: access('stations:write') }, async (req, res) => {
+  const { id } = idParam.parse(req.params);
+  res.json(await powerWindows.list(req.user, id));
+});
+router.post('/stations/:id/power-windows', { access: access('stations:write') }, async (req, res) => {
+  const { id } = idParam.parse(req.params);
+  const body = createPowerWindowBody.parse(req.body ?? {});
+  const window = await powerWindows.create(req.user, id, body, {
+    rebalanceStation: req.app?.locals?.rebalanceStation,
+  });
+  res.status(201).json(window);
+});
+router.delete('/stations/:id/power-windows/:windowId', { access: access('stations:write') }, async (req, res) => {
+  const { id } = idParam.parse(req.params);
+  const { id: windowId } = idParam.parse({ id: req.params.windowId });
+  res.json(await powerWindows.remove(req.user, id, windowId, {
     rebalanceStation: req.app?.locals?.rebalanceStation,
   }));
 });

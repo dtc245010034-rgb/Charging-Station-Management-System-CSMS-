@@ -35,6 +35,8 @@ const ACTION_LABELS = {
   WEBHOOK_AMOUNT_MISMATCH: 'Lệch số tiền webhook',
   WEBHOOK_BAD_SIGNATURE: 'Chữ ký webhook không hợp lệ',
   PARTNER_RATE_CREATED: 'Khai báo tỉ lệ chia đối tác',
+  POWER_WINDOW_CREATED: 'Thêm hạn mức công suất theo giờ',
+  POWER_WINDOW_DELETED: 'Xoá hạn mức công suất theo giờ',
 };
 const RESULT_PRESENTATION = {
   ACCEPTED: { label: 'Đã chấp nhận', tone: 'ready' },

@@ -10,6 +10,7 @@ const { withTransaction } = require('../../db/tx');
 const { BadRequestError, ConflictError } = require('../../lib/errors');
 const { wattsToKilowatts } = require('../power/units');
 const { triggerPowerRebalance } = require('../power/rebalance-trigger');
+const powerWindowsRepository = require('../power/schedule.repository');
 
 const NOT_FOUND = 'Không tìm thấy trạm';
 const EARTH_RADIUS_KM = 6371.0088;
@@ -158,7 +159,17 @@ async function update(actor, id, data, { rebalanceStation = null } = {}) {
   }
   const changedFields = repo.UPDATABLE.filter((key) => data[key] !== undefined);
   const statusChanged = data.status !== undefined && data.status !== station.status;
-  await repo.update(id, data);
+  if (data.power_limit_w === null) {
+    await withTransaction(async (client) => {
+      await client.query('SELECT id FROM stations WHERE id = $1 FOR UPDATE', [id]);
+      if (await powerWindowsRepository.hasActiveWindows(client, id)) {
+        throw new ConflictError('Không thể xoá hạn mức nền khi trạm còn khung giờ');
+      }
+      await repo.updateWithClient(client, id, data);
+    });
+  } else {
+    await repo.update(id, data);
+  }
   if (statusChanged) {
     await audit.record(actor.id, 'STATION_STATUS_CHANGED', 'station', id, {
       from: station.status,
@@ -208,4 +219,4 @@ async function setLock(actor, id, locked) {
   return repo.findById(actor, id);
 }
 
-module.exports = { list, searchNearby, get, create, update, setLock, setConnectorPower };
+module.exports = { list, searchNearby, find, get, create, update, setLock, setConnectorPower };

@@ -78,6 +78,16 @@ const update = (id, fields) => {
   return prepare(`UPDATE stations SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
     .run(...keys.map((key) => normalized[key]), id);
 };
+const updateWithClient = (client, id, fields) => {
+  const keys = UPDATABLE.filter((key) => fields[key] !== undefined);
+  const values = keys.map((key) => fields[key]);
+  const assignments = keys.map((key, index) => `${key} = $${index + 1}`);
+  values.push(id);
+  return client.query(
+    `UPDATE stations SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${values.length}`,
+    values
+  );
+};
 
 const setLock = (id, locked, actorId) => {
   if (locked) {
@@ -104,6 +114,6 @@ const updateConnectorPower = (id, watts) => prepare(
 ).run(watts, id);
 
 module.exports = {
-  list, searchCandidates, searchConnectors, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, setLock, UPDATABLE,
+  list, searchCandidates, searchConnectors, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, updateWithClient, setLock, UPDATABLE,
   connectorById, connectorExistsById, updateConnectorPower,
 };
