@@ -209,6 +209,23 @@ async function finalizeInTransaction(client, sessionId, now, maxWaitMinutes) {
     session.stopped_at,
     session.meter_start
   );
+  const subscriptionResult = await client.query(
+    `SELECT id, plan_code, plan_name, price_per_kwh_dong, starts_at, expires_at
+     FROM driver_subscriptions
+     WHERE driver_id = $1
+       AND starts_at <= $2::timestamptz
+       AND expires_at > $2::timestamptz
+     ORDER BY starts_at DESC, id DESC
+     LIMIT 1`,
+    [session.driver_id, session.started_at]
+  );
+  const subscription = subscriptionResult.rows[0] || null;
+  const billingPeriods = subscription
+    ? tariff.periods.map((period) => ({
+      ...period,
+      pricePerKwh: Number(subscription.price_per_kwh_dong),
+    }))
+    : tariff.periods;
   const priced = priceSession({
     startedAt: session.started_at,
     stoppedAt: session.stopped_at,
@@ -216,15 +233,25 @@ async function finalizeInTransaction(client, sessionId, now, maxWaitMinutes) {
     meterStopWh: session.meter_stop,
     samples,
     timezone: session.timezone,
-    tariff: { periods: tariff.periods, idle: tariff.idle },
+    tariff: { periods: billingPeriods, idle: tariff.idle },
     idleInterval,
   });
   const periodDate = toLocalParts(session.stopped_at, session.timezone).localDate;
   const tariffSnapshot = {
     version: tariff.version,
     effectiveFrom: tariff.effectiveFrom,
-    periods: tariff.periods,
+    periods: billingPeriods,
     idle: tariff.idle,
+    ...(subscription ? {
+      subscription: {
+        id: subscription.id,
+        planCode: subscription.plan_code,
+        planName: subscription.plan_name,
+        pricePerKwhDong: Number(subscription.price_per_kwh_dong),
+        startsAt: subscription.starts_at,
+        expiresAt: subscription.expires_at,
+      },
+    } : {}),
   };
   const invoiceResult = await client.query(
     `INSERT INTO session_invoices (
