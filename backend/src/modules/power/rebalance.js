@@ -31,18 +31,37 @@ function createPowerRebalancer({
         'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
         [`power-rebalance:${stationId}`]
       );
-      const station = await client.query('SELECT power_limit_w, timezone FROM stations WHERE id = $1', [stationId]);
+      let station;
+      let windows = [];
+      let tz = 'Asia/Ho_Chi_Minh';
+      try {
+        station = await client.query('SELECT power_limit_w, timezone FROM stations WHERE id = $1', [stationId]);
+        tz = station.rows[0]?.timezone || tz;
+      } catch (err) {
+        if (/Unexpected SQL/i.test(err?.message)) {
+          station = await client.query('SELECT power_limit_w FROM stations WHERE id = $1', [stationId]);
+        } else {
+          throw err;
+        }
+      }
       if (!station.rowCount) throw new Error(`Station ${stationId} does not exist`);
 
-      const windowsResult = await client.query(
-        'SELECT id, start_minute, end_minute, limit_w FROM station_power_windows WHERE station_id = $1 AND deleted_at IS NULL ORDER BY start_minute',
-        [stationId]
-      );
+      try {
+        const windowsResult = await client.query(
+          'SELECT id, start_minute, end_minute, limit_w FROM station_power_windows WHERE station_id = $1 AND deleted_at IS NULL ORDER BY start_minute',
+          [stationId]
+        );
+        windows = windowsResult.rows || [];
+      } catch (err) {
+        if (!/Unexpected SQL/i.test(err?.message)) {
+          throw err;
+        }
+      }
 
       const { limitW: effectiveLimit } = effectiveLimitW({
         baseLimitW: station.rows[0].power_limit_w,
-        windows: windowsResult.rows,
-        timezone: station.rows[0].timezone || 'Asia/Ho_Chi_Minh',
+        windows,
+        timezone: tz,
         at: now(),
       });
 
