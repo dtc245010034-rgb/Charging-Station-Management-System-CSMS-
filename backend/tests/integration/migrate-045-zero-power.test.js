@@ -55,6 +55,6 @@ describe('migration 045: permits zero-watt charging profiles [GYM-69]', () => {
       [stationId]
     );
     const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
-    assert.strictEqual(latest.rows[0].version, '051_users_disabled_at.sql');
+    assert.strictEqual(latest.rows[0].version, '054_monthly_subscriptions.sql');
   });
 });

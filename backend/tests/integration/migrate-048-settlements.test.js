@@ -72,6 +72,9 @@ describe('migration 048: settlement_statements & settlement_lines append-only', 
 
   it('migration 048 rolls back and reapplies', async () => {
     for (const expectedLast of [
+      '053_reservation_cancellation_queue.sql',
+      '052_station_power_windows.sql',
+      '051_users_disabled_at.sql',
       '050_health_minutes.sql',
       '049_alerts_notified_at.sql',
       '048_settlement_statements.sql',
