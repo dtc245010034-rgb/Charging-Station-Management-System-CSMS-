@@ -144,16 +144,46 @@ function renderMyReservations(ctx) {
           ? h('span', { class: 'mono', 'aria-live': 'polite' }, timeRemaining(reservation.expiresAt))
           : h('span', { class: 'muted' }, '—');
         if (['PENDING', 'ACCEPTED'].includes(reservation.status)) countdowns.push({ el: countdown, expiresAt: reservation.expiresAt });
+
+        let badgeTone = 'badge--warning';
+        if (reservation.status === 'ACCEPTED') badgeTone = 'badge--ready';
+        else if (reservation.status === 'FULFILLED') badgeTone = 'badge--charging';
+        else if (reservation.status === 'EXPIRED') badgeTone = 'badge--fault';
+        else if (reservation.status === 'CANCELLED') badgeTone = 'badge--muted';
+
+        const canCancel = reservation.status === 'ACCEPTED' && Date.parse(reservation.expiresAt) > Date.now();
+        const cancelBtn = canCancel ? h('button', {
+          class: 'btn btn--danger btn--sm',
+          type: 'button',
+          onclick: async () => {
+            if (!confirm('Bạn có chắc chắn muốn huỷ đặt chỗ này?')) return;
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = 'Đang huỷ…';
+            try {
+              await api(`/api/reservations/${reservation.id}/cancel`, { method: 'POST' });
+              void load();
+            } catch (err) {
+              alert(err.message);
+              cancelBtn.disabled = false;
+              cancelBtn.textContent = 'Huỷ đặt chỗ';
+            }
+          },
+        }, 'Huỷ đặt chỗ') : null;
+
         return h('article', { class: 'card', style: 'padding:14px;display:grid;gap:8px' },
           h('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap' },
             h('strong', {}, reservation.stationName),
-            h('span', { class: `badge ${reservation.status === 'ACCEPTED' ? 'badge--ready' : 'badge--warning'}` }, status)
+            h('span', { class: `badge ${badgeTone}` }, status)
           ),
           h('p', { class: 'muted' }, reservation.stationAddress),
           h('p', {}, `${reservation.chargePointCode} · Đầu ${reservation.connectorNo} · ${reservation.connectorType}`),
           h('p', { class: 'muted' }, `Hạn giữ: ${formatDateTime(reservation.expiresAt)}`),
-          h('p', { class: 'muted' }, 'Thời gian còn lại: ', countdown),
-          reservation.rejectReason ? h('p', { role: 'status' }, reservation.rejectReason) : null
+          h('p', { class: 'muted' }, 'Phí không đến: ', formatDong(reservation.noShowFeeDong || 0)),
+          ['PENDING', 'ACCEPTED'].includes(reservation.status)
+            ? h('p', { class: 'muted' }, 'Thời gian còn lại: ', countdown)
+            : null,
+          reservation.rejectReason ? h('p', { role: 'status' }, reservation.rejectReason) : null,
+          cancelBtn ? h('div', { class: 'toolbar' }, cancelBtn) : null
         );
       });
       mount(content, ...(cards.length ? cards : [h('section', { class: 'card', style: 'padding:18px' },
