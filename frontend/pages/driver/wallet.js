@@ -192,6 +192,96 @@ export function render(ctx) {
     }, 3000);
   }
 
+  function subscriptionSection(wallet) {
+    const sectionContainer = h('section', { class: 'card', style: 'padding:20px;display:grid;gap:12px' });
+    const sectionFeedback = h('div', { style: 'display:grid;gap:8px' });
+
+    async function loadPlans() {
+      try {
+        const [plansRes, activeSubRes] = await Promise.all([
+          api('/api/subscription-plans'),
+          api('/api/me/subscriptions'),
+        ]);
+        if (disposed) return;
+
+        const activeSub = activeSubRes.activeSubscription;
+        const plans = plansRes.plans || [];
+
+        const subCard = activeSub
+          ? h('div', { class: 'card', style: 'padding:14px;background:var(--surface-sunken, #f8fafc);display:grid;gap:6px' },
+              h('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap' },
+                h('strong', { style: 'color:var(--brand-primary)' }, `Gói đang dùng: ${activeSub.planName || activeSub.planCode}`),
+                h('span', { class: 'badge badge--success' }, 'Đang hiệu lực')
+              ),
+              h('span', { class: 'muted' }, `Thời hạn: ${formatDateTime(activeSub.startsAt)} – ${formatDateTime(activeSub.endsAt)}`),
+              h('span', { class: 'muted' }, `Giá gói: ${formatDong(activeSub.priceDong)}`)
+            )
+          : h('div', { class: 'muted' }, 'Bạn chưa đăng ký gói thuê bao nào.');
+
+        const planCards = plans.map((plan) => {
+          const buyButton = h('button', {
+            class: 'btn btn--primary',
+            type: 'button',
+            disabled: !!activeSub,
+            onclick: async () => {
+              if (activeSub) return;
+              if (BigInt(wallet.balanceDong) < BigInt(plan.priceDong)) {
+                mount(sectionFeedback, h('p', { class: 'badge badge--fault' }, 'Số dư ví không đủ để mua gói này. Vui lòng nạp thêm tiền!'));
+                return;
+              }
+              buyButton.disabled = true;
+              buyButton.textContent = 'Đang xử lý...';
+              mount(sectionFeedback);
+              try {
+                const idempotencyKey = `sub-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+                await api('/api/me/subscriptions', {
+                  method: 'POST',
+                  headers: { 'Idempotency-Key': idempotencyKey },
+                  body: { planId: plan.id },
+                });
+                mount(sectionFeedback, h('p', { class: 'badge badge--success' }, 'Mua gói thuê bao thành công!'));
+                void loadPage();
+              } catch (err) {
+                buyButton.disabled = false;
+                buyButton.textContent = 'Mua gói';
+                mount(sectionFeedback, h('p', { class: 'badge badge--fault' }, err.message || 'Lỗi khi mua gói'));
+              }
+            },
+          }, activeSub ? 'Đã có gói' : 'Mua gói');
+
+          const periodDescriptions = (plan.periods || []).map((p) =>
+            `${Math.floor(p.startMinute / 60).toString().padStart(2, '0')}:${(p.startMinute % 60).toString().padStart(2, '0')} - ${Math.floor(p.endMinute / 60).toString().padStart(2, '0')}:${(p.endMinute % 60).toString().padStart(2, '0')}: ${formatDong(p.pricePerKwhDong)}/kWh`
+          ).join(', ');
+
+          return h('div', { class: 'card', style: 'padding:14px;display:grid;gap:8px' },
+            h('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap' },
+              h('strong', {}, plan.name),
+              h('strong', { style: 'color:var(--brand-primary);font-size:18px' }, formatDong(plan.priceDong))
+            ),
+            h('span', { class: 'muted' }, `Thời hạn: ${plan.durationDays} ngày`),
+            periodDescriptions ? h('span', { class: 'muted' }, `Biểu giá: ${periodDescriptions}`) : null,
+            buyButton
+          );
+        });
+
+        mount(sectionContainer,
+          h('h3', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
+          subCard,
+          planCards.length ? h('div', { style: 'display:grid;gap:10px' }, ...planCards) : null,
+          sectionFeedback
+        );
+      } catch (err) {
+        mount(sectionContainer,
+          h('h3', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
+          h('div', { class: 'muted' }, `Không thể tải danh sách gói: ${err.message}`)
+        );
+      }
+    }
+
+    void loadPlans();
+    return sectionContainer;
+  }
+
   const prevButton = h('button', {
     class: 'btn',
     type: 'button',
@@ -216,11 +306,13 @@ export function render(ctx) {
   const pagination = h('div', {
     style: 'display:flex;align-items:center;justify-content:space-between;gap:12px',
   }, prevButton, pageLabel, nextButton);
+  const subscriptionSlot = h('div');
 
   ctx.root.replaceChildren(
     h('header', {}, h('p', { class: 'eyebrow' }, 'Tài xế'), h('h1', { class: 'page-head__title' }, 'Ví của tôi')),
     topupTracker,
     topupSection(),
+    subscriptionSlot,
     content,
     pagination
   );
@@ -245,6 +337,7 @@ export function render(ctx) {
       prevButton.disabled = currentPage <= 1;
       nextButton.disabled = !transactions.hasMore;
       const balance = BigInt(wallet.balanceDong);
+      mount(subscriptionSlot, subscriptionSection(wallet));
       const banners = [
         wallet.inDebt
           ? h('p', { class: 'badge badge--warning', role: 'status' }, `Đang nợ ${formatDong(-balance)}.`)

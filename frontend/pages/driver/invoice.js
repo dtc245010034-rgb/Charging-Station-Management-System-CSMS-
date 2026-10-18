@@ -71,6 +71,9 @@ export function render(ctx) {
       const invoice = result.invoice;
       const tariffVer = invoice.tariffSnapshot?.version ? `v${invoice.tariffSnapshot.version}` : 'v1';
       const tariffDate = invoice.tariffSnapshot?.effectiveFrom ? ` (hiệu lực từ ${invoice.tariffSnapshot.effectiveFrom})` : '';
+      const tariffLine = invoice.tariffSource === 'SUBSCRIPTION'
+        ? h('div', { class: 'muted', style: 'color:var(--brand-primary);font-weight:600' }, `Áp dụng gói: ${invoice.tariffSnapshot?.plan?.name || 'Gói thuê bao'}`)
+        : h('div', { class: 'muted' }, `Biểu giá áp dụng: Phiên bản ${tariffVer}${tariffDate}`);
 
       // Nhóm dòng theo ngày địa phương (localDate)
       const linesByDate = new Map();
@@ -95,7 +98,7 @@ export function render(ctx) {
           ),
           h('div', { style: 'font-size:28px;font-weight:800;color:var(--brand-primary)' }, `${formatNumber(invoice.totalDong)} đ`),
           h('div', { class: 'muted' }, `Phiên #${result.sessionId} · ${invoice.periodDate} · Múi giờ: ${invoice.timezone}`),
-          h('div', { class: 'muted' }, `Biểu giá áp dụng: Phiên bản ${tariffVer}${tariffDate}`),
+          tariffLine,
           h('div', { style: 'display:grid;gap:14px' }, ...groupedSections),
           h('p', { class: 'muted', style: 'margin:0' }, `Quy tắc làm tròn: ${invoice.roundingRule}`)
         ),
