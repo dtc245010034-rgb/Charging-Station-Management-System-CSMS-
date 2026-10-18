@@ -13,7 +13,6 @@ const { createOcppHandlers } = require('./modules/ocpp/handlers');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
 const { markAllChargePointsOffline, markChargePointSeen } = require('./modules/charge-points/presence');
 const { startChargePointOfflineJob } = require('./modules/charge-points/offline-job');
-const { startChargePointAlertJob } = require('./modules/charge-points/charge-point-alert-job');
 const { createShutdown } = require('./modules/ocpp/shutdown');
 const { createMessageStore } = require('./modules/ocpp/messages.repository');
 const { createCommandSender } = require('./modules/ocpp/commands');
@@ -117,7 +116,6 @@ async function purgeOldMessages() {
 
 const shutdown = createShutdown({ server, wss, pool: { query: (...args) => pool.query(...args), end: () => Promise.all([pool.end(), ocppPool.end()]) } });
 let stopChargePointOfflineJob = () => {};
-let stopChargePointAlertJob = () => {};
 let stopRemoteStopJob = () => {};
 let stopAbnormalSessionJob = () => {};
 let stopBillingFinalizationJob = () => {};
@@ -129,7 +127,6 @@ let stopIdleFeeNotificationJob = () => {};
 let stopPowerProfileRetryJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();
-	stopChargePointAlertJob();
 	stopRemoteStopJob();
 	stopAbnormalSessionJob();
 	stopBillingFinalizationJob();
@@ -154,7 +151,6 @@ async function start() {
 	purgeTimer = setInterval(purgeOldMessages, PURGE_INTERVAL_MS);
 	purgeTimer.unref();
 	stopChargePointOfflineJob = startChargePointOfflineJob().stop;
-	stopChargePointAlertJob = startChargePointAlertJob().stop;
 	stopRemoteStopJob = startRemoteStopTimeoutJob().stop;
 	stopAbnormalSessionJob = startAbnormalSessionJob({
 	  abnormalAfterSeconds: env.SESSION_ABNORMAL_AFTER_SECONDS,

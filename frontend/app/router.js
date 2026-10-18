@@ -27,8 +27,6 @@ export const PAGE_NEEDS = {
   revenue: 'reports:revenue',
   reconciliation: 'reports:reconcile',
   periods: 'periods:manage',
-  settlements: 'settlements:read',
-  'system-health': 'health:dashboard',
   'erasure-requests': 'erasure:manage',
 };
 
@@ -99,15 +97,6 @@ const PAGES = {
   periods: {
     accountant: () => import('../pages/shared/periods.js'),
     admin: () => import('../pages/shared/periods.js'),
-  },
-  settlements: {
-    owner: () => import('../pages/shared/settlements.js'),
-    accountant: () => import('../pages/shared/settlements.js'),
-    admin: () => import('../pages/shared/settlements.js'),
-  },
-  'system-health': {
-    operator: () => import('../pages/shared/system-health.js'),
-    admin: () => import('../pages/shared/system-health.js'),
   },
   'erasure-requests': {
     admin: () => import('../pages/admin/erasure-requests.js'),

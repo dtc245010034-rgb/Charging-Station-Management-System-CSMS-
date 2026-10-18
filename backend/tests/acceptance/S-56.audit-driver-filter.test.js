@@ -65,10 +65,6 @@ describe('S-56 audit log driver filter', { concurrency: false }, () => {
   });
 
   it('migration 037 có thể chạy tiến, lùi rồi tiến lại', async () => {
-    while ((await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1')).rows[0]?.version !== '046_reservations.sql') {
-      const laterDown = run('src/db/migrate.js', ['down']);
-      assert.strictEqual(laterDown.status, 0, laterDown.stderr);
-    }
     for (const version of [
       '046_reservations.sql',
       '045_zero_watt_profile_limits.sql',

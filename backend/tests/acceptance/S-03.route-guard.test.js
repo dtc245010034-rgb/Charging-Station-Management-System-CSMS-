@@ -107,8 +107,6 @@ describe('S-03 route guard: mặc định từ chối', () => {
     assert.strictEqual(p['payments:webhook'], 'public');
     assert.deepStrictEqual(p['notifications:read-own'], ['DRIVER']);
     assert.deepStrictEqual(p['reports:revenue'], ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER']);
-    assert.deepStrictEqual(p['partner-rates:manage'], ['ADMIN', 'ACCOUNTANT']);
-    assert.deepStrictEqual(p['partner-rates:read'], ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER']);
     assert.deepStrictEqual(p['reports:reconcile'], ['ADMIN', 'ACCOUNTANT']);
     assert.deepStrictEqual(p['periods:manage'], ['ADMIN', 'ACCOUNTANT']);
     assert.deepStrictEqual(p['periods:reopen'], ['ADMIN']);

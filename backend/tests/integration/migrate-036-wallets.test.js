@@ -133,9 +133,6 @@ describe('S-41 wallet ledger migration', () => {
 
   it('AC S-41: rollback migration 036 gỡ ví và ledger rồi có thể áp dụng lại', async () => {
     for (const version of [
-      '049_user_account_management.sql',
-      '048_settlement_statements.sql',
-      '047_partner_share_rates.sql',
       '046_reservations.sql',
       '045_zero_watt_profile_limits.sql',
       '044_alerts_power_profile_log.sql',
