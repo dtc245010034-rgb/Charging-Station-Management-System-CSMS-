@@ -2,6 +2,7 @@ const { secureRouter } = require('../../security/routeGuard');
 const { access } = require('../../security/permissions');
 const { pool } = require('../../db/pool');
 const { AppError } = require('../../lib/errors');
+const service = require('./health-metrics');
 
 const router = secureRouter();
 
@@ -12,6 +13,10 @@ router.get('/health', { access: access('health:read') }, async (req, res) => {
     throw new AppError(503, 'DB_UNAVAILABLE', 'Cơ sở dữ liệu không sẵn sàng');
   }
   res.json({ ok: true, service: 'csms-backend', database: 'postgresql', time: new Date().toISOString() });
+});
+
+router.get('/health/overview', { access: access('health:dashboard') }, async (req, res) => {
+  res.json(await service.overview({ db: pool }));
 });
 
 module.exports = router;
