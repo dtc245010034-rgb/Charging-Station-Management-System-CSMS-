@@ -241,3 +241,33 @@ Nguồn: lịch sử `git` trên `main`, chạy thật ngày 12/10/2026 (Docker,
 | Menu "Phiên sạc" cho Chủ trạm và Kế toán; `driver_id` trong API phiên của Chủ trạm (NĐ 13) | Chưa cam kết ở Sprint 3; PO quyết |
 | Hồ sơ kiểm thử S-18, S-24, S-27 | Thiếu trong `docs/testing/stories/S/` (vùng của vai trò kiểm thử) |
 | Jira, tile bản đồ thật, trụ thật | Chưa kiểm |
+
+## 14. Chặng 9 — phần đã triển khai trên `dev` (19/10/2026)
+
+Phạm vi: S-45, S-50, S-51, S-65 và tài liệu tổng duyệt. Đây là trạng thái mã nguồn/kiểm thử, không phải xác nhận Done của Jira. Chưa merge vào `main`, chưa push; chưa xác minh CI, staging hoặc thiết bị sạc vật lý.
+
+| Story | Phần đã triển khai | Bằng chứng kiểm thử |
+|---|---|---|
+| S-45 / GYM-71 | Lịch hạn mức công suất theo giờ trạm, API/UI, job cập nhật profile ở ranh giới | `S-45.power-windows.test.js`, `migrate-052-station-power-windows.test.js`; demo smoke kiểm API sau seed |
+| S-50 / GYM-76 | Hết hạn đặt chỗ, ghi phí vắng mặt 20.000 đ một lần, hàng đợi `CancelReservation` và thử lại | `S-50-51.reservation-lifecycle.test.js`, `migrate-053-reservation-cancellation-queue.test.js` |
+| S-51 / GYM-77 | Huỷ miễn phí trước hạn khi còn `ACCEPTED`; xử lý tranh chấp với job quá hạn | `S-50-51.reservation-lifecycle.test.js` |
+| S-65 / GYM-91 | VIP 299.000 đ/30 ngày, 30.000 đ/kWh, gia hạn nối tiếp, snapshot hoá đơn | `S-65.subscription.test.js`, `migrate-054-monthly-subscriptions.test.js` |
+
+Seed `seed-demo` bổ sung hai khung hạn mức trên Trạm Cầu Giấy, số dư ví demo và gói VIP. `tools/demo-smoke.js` được gọi qua HTTP trên ứng dụng thật trong `tests/integration/seed-demo.test.js`. Kịch bản tổng duyệt: `docs/demo/KICH-BAN-DEMO.md`; ma trận tổng kết: `docs/dev/TONG-KET-DU-AN.md`.
+
+**Kiểm thử đã chạy trong phiên này (các lệnh gần nhất):**
+
+| Lệnh | Kết quả |
+|---|---|
+| `python test.py --lint-only` | `KẾT QUẢ: ĐẠT — 12 giây` |
+| `python test.py --only unit` | `KẾT QUẢ: ĐẠT (510 test pass, 0 fail) — 30 giây` |
+| `python test.py --file tests/integration/seed-demo.test.js` | `KẾT QUẢ: ĐẠT (7 test pass, 0 fail) — 14 giây` |
+| `python test.py --file tests/acceptance/S-65.subscription.test.js` | `KẾT QUẢ: ĐẠT (3 test pass, 0 fail) — 13 giây` |
+| `python test.py --file tests/integration/migrate-054-monthly-subscriptions.test.js` | `KẾT QUẢ: ĐẠT (2 test pass, 0 fail) — 10 giây` |
+| `python test.py --file tests/integration/migrate.test.js` | `KẾT QUẢ: ĐẠT (3 test pass, 0 fail) — 44 giây` |
+| `python test.py --file tests/integration/migrate-045-zero-power.test.js` | `KẾT QUẢ: ĐẠT (1 test pass, 0 fail) — 15 giây` |
+| `python test.py --file tests/integration/migrate-048-settlements.test.js` | `KẾT QUẢ: ĐẠT (3 test pass, 0 fail) — 12 giây` |
+| `python test.py --file tests/integration/seed-demo.test.js` | `KẾT QUẢ: ĐẠT (7 test pass, 0 fail) — 17 giây` |
+| `python test.py` | `KẾT QUẢ: ĐẠT (1175 test pass, 0 fail) — 1054 giây`; `run.py` tự kiểm: `OK (skipped=1)`. |
+
+**Còn mở:** tổng duyệt bởi nhóm; trạng thái Jira, CI và triển khai staging; thử trụ thật; phê duyệt chính sách lưu trữ/xoá dữ liệu theo Nghị định 13. Người dùng đã xác nhận phí vắng mặt vẫn ghi vào ledger khi ví bị khoá.
