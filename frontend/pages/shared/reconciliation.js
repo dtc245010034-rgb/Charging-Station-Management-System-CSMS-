@@ -25,15 +25,26 @@ export function render(ctx) {
   const period = monthRange();
   const from = h('input', { class: 'input', type: 'date', name: 'from', value: period.from, required: true });
   const to = h('input', { class: 'input', type: 'date', name: 'to', value: period.to, required: true });
+  const delimiter = h('select', { class: 'select', name: 'delimiter', value: 'semicolon' },
+    h('option', { value: 'semicolon' }, 'Dấu chấm phẩy (;)'),
+    h('option', { value: 'comma' }, 'Dấu phẩy (,)'));
+  const csvLink = h('a', { class: 'btn btn--secondary', download: true }, 'Tải CSV');
   const button = h('button', { class: 'btn btn--primary', type: 'submit' }, 'Đối soát');
   const content = h('div', { class: 'card__body' }, loadingState(5));
+  const updateCsvLink = () => {
+    const query = new URLSearchParams({ from: from.value, to: to.value, delimiter: delimiter.value });
+    csvLink.setAttribute('href', `/api/reports/reconciliation.csv?${query}`);
+  };
+  for (const input of [from, to, delimiter]) input.addEventListener('change', updateCsvLink);
+  updateCsvLink();
   const form = h('form', { class: 'toolbar', onsubmit: async (event) => {
     event.preventDefault();
     await refresh();
   } },
   h('label', { class: 'field' }, h('span', {}, 'Từ ngày'), from),
   h('label', { class: 'field' }, h('span', {}, 'Đến ngày'), to),
-  button);
+  h('label', { class: 'field' }, h('span', {}, 'Phân cách CSV'), delimiter),
+  button, csvLink);
   ctx.root.replaceChildren(
     h('div', { class: 'page-stack' },
       h('header', { class: 'page-head' }, h('div', {},

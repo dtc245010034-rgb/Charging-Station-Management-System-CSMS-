@@ -13,6 +13,8 @@ const { createOcppHandlers } = require('./modules/ocpp/handlers');
 const { startKeepalive, registerOcppConnection } = require('./modules/ocpp/ws-connection');
 const { markAllChargePointsOffline, markChargePointSeen } = require('./modules/charge-points/presence');
 const { startChargePointOfflineJob } = require('./modules/charge-points/offline-job');
+const { startChargePointHealthJob } = require('./modules/alerts/charge-point-health-job');
+const { createHealthMetrics, startHealthMetricsJob } = require('./modules/health/health-metrics');
 const { createShutdown } = require('./modules/ocpp/shutdown');
 const { createMessageStore } = require('./modules/ocpp/messages.repository');
 const { createCommandSender } = require('./modules/ocpp/commands');
@@ -29,6 +31,7 @@ const { createPowerRebalancer } = require('./modules/power/rebalance');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
+const healthMetrics = createHealthMetrics();
 const now = () => new Date().toISOString();
 async function updateChargePointLastSeen(connection) {
 	const code = connection?.chargePointCode || connection?.chargePoint?.code;
@@ -50,6 +53,7 @@ const ocppMessages = createOcppMessageHandler({
 		rebalanceStation: (...args) => powerRebalancer.rebalanceStation(...args),
 	}),
 	updateLastSeen: updateChargePointLastSeen,
+	recordOcppCall: healthMetrics.recordOcppCall,
 	messageStore,
 	callTimeoutMs: env.OCPP_COMMAND_TIMEOUT_SECONDS * 1000,
 });
@@ -116,6 +120,8 @@ async function purgeOldMessages() {
 
 const shutdown = createShutdown({ server, wss, pool: { query: (...args) => pool.query(...args), end: () => Promise.all([pool.end(), ocppPool.end()]) } });
 let stopChargePointOfflineJob = () => {};
+let stopChargePointHealthJob = () => {};
+let stopHealthMetricsJob = () => {};
 let stopRemoteStopJob = () => {};
 let stopAbnormalSessionJob = () => {};
 let stopBillingFinalizationJob = () => {};
@@ -127,6 +133,8 @@ let stopIdleFeeNotificationJob = () => {};
 let stopPowerProfileRetryJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();
+	stopChargePointHealthJob();
+	stopHealthMetricsJob();
 	stopRemoteStopJob();
 	stopAbnormalSessionJob();
 	stopBillingFinalizationJob();
@@ -151,6 +159,8 @@ async function start() {
 	purgeTimer = setInterval(purgeOldMessages, PURGE_INTERVAL_MS);
 	purgeTimer.unref();
 	stopChargePointOfflineJob = startChargePointOfflineJob().stop;
+	stopChargePointHealthJob = startChargePointHealthJob({ db: pool }).stop;
+	stopHealthMetricsJob = startHealthMetricsJob({ db: pool, metrics: healthMetrics }).stop;
 	stopRemoteStopJob = startRemoteStopTimeoutJob().stop;
 	stopAbnormalSessionJob = startAbnormalSessionJob({
 	  abnormalAfterSeconds: env.SESSION_ABNORMAL_AFTER_SECONDS,
