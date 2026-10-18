@@ -71,6 +71,7 @@ export function render(ctx) {
       const invoice = result.invoice;
       const tariffVer = invoice.tariffSnapshot?.version ? `v${invoice.tariffSnapshot.version}` : 'v1';
       const tariffDate = invoice.tariffSnapshot?.effectiveFrom ? ` (hiệu lực từ ${invoice.tariffSnapshot.effectiveFrom})` : '';
+      const subscription = invoice.tariffSnapshot?.subscription;
 
       // Nhóm dòng theo ngày địa phương (localDate)
       const linesByDate = new Map();
@@ -96,6 +97,10 @@ export function render(ctx) {
           h('div', { style: 'font-size:28px;font-weight:800;color:var(--brand-primary)' }, `${formatNumber(invoice.totalDong)} đ`),
           h('div', { class: 'muted' }, `Phiên #${result.sessionId} · ${invoice.periodDate} · Múi giờ: ${invoice.timezone}`),
           h('div', { class: 'muted' }, `Biểu giá áp dụng: Phiên bản ${tariffVer}${tariffDate}`),
+          subscription
+            ? h('div', { class: 'badge badge--ready' },
+              `Gói ${subscription.planName} (${subscription.planCode}) · ${formatNumber(subscription.pricePerKwhDong)} đ/kWh`)
+            : null,
           h('div', { style: 'display:grid;gap:14px' }, ...groupedSections),
           h('p', { class: 'muted', style: 'margin:0' }, `Quy tắc làm tròn: ${invoice.roundingRule}`)
         ),

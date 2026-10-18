@@ -58,9 +58,11 @@ export function render(ctx) {
   const topupRef = ctx.params.query.topup;
   const content = h('div', { style: 'display:grid;gap:12px' }, loadingState(3));
   const topupTracker = h('div', { style: 'display:grid;gap:8px' });
+  const subscriptionContainer = h('div', { style: 'display:grid;gap:8px' }, loadingState(1));
   const formFeedback = h('div', { style: 'display:grid;gap:8px' });
   let pollTimer = null;
   let pollCount = 0;
+  let reloadRequested = false;
   const MAX_POLLS = 100; // 100 * 3s = 300s = 5 phút
 
   function onFeedback(message, tone = 'fault') {
@@ -134,6 +136,53 @@ export function render(ctx) {
       submitButton
     ),
     formFeedback);
+  }
+
+  async function loadSubscription() {
+    try {
+      const result = await api('/api/me/subscription');
+      if (disposed) return;
+      const current = result.current
+        ? h('p', { class: 'badge badge--ready', role: 'status' },
+          `Gói ${result.current.planName} đang hiệu lực đến ${formatDateTime(result.current.expiresAt)}.`)
+        : h('p', { class: 'muted' }, 'Bạn chưa có gói thuê bao đang hiệu lực.');
+      const purchaseButton = h('button', {
+        class: 'btn btn--primary',
+        type: 'button',
+        onclick: async () => {
+          purchaseButton.disabled = true;
+          purchaseButton.textContent = 'Đang mua gói...';
+          try {
+            const idempotencyKey = `subscription-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+            await api('/api/me/subscription', {
+              method: 'POST',
+              headers: { 'Idempotency-Key': idempotencyKey },
+              body: {},
+            });
+            onFeedback('Đã mua hoặc gia hạn gói VIP thành công.', 'ready');
+            await Promise.all([loadSubscription(), loadPage()]);
+          } catch (error) {
+            onFeedback(error.message, 'fault');
+            purchaseButton.disabled = false;
+            purchaseButton.textContent = 'Mua hoặc gia hạn gói';
+          }
+        },
+      }, 'Mua hoặc gia hạn gói');
+      mount(subscriptionContainer,
+        h('section', { class: 'card', style: 'padding:16px;display:grid;gap:10px' },
+          h('div', { class: 'eyebrow' }, 'Gói tháng'),
+          h('strong', {}, `${result.plan.name} · ${formatDong(result.plan.feeDong)} / 30 ngày`),
+          h('span', { class: 'muted' }, `Giá điện khi có gói: ${formatDong(result.plan.pricePerKwhDong)} / kWh`),
+          current,
+          purchaseButton
+        )
+      );
+    } catch (error) {
+      if (!disposed) mount(subscriptionContainer, errorState({
+        message: error.message,
+        onRetry: () => { void loadSubscription(); },
+      }));
+    }
   }
 
   async function checkTopupStatus() {
@@ -220,13 +269,18 @@ export function render(ctx) {
   ctx.root.replaceChildren(
     h('header', {}, h('p', { class: 'eyebrow' }, 'Tài xế'), h('h1', { class: 'page-head__title' }, 'Ví của tôi')),
     topupTracker,
+    subscriptionContainer,
     topupSection(),
     content,
     pagination
   );
 
   async function loadPage() {
-    if (loading || disposed) return;
+    if (disposed) return;
+    if (loading) {
+      reloadRequested = true;
+      return;
+    }
     loading = true;
     prevButton.disabled = true;
     nextButton.disabled = true;
@@ -278,10 +332,15 @@ export function render(ctx) {
       }
     } finally {
       loading = false;
+      if (reloadRequested && !disposed) {
+        reloadRequested = false;
+        void loadPage();
+      }
     }
   }
 
   void loadPage();
+  void loadSubscription();
   return () => {
     disposed = true;
     if (pollTimer) clearInterval(pollTimer);
