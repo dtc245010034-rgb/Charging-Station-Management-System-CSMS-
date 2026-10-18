@@ -151,7 +151,7 @@ function powerWindowsSection(station, canWrite, reload) {
     errorEl.hidden = true;
     try {
       const windows = await csms.stations.powerWindows.list(station.id);
-      listEl.innerHTML = '';
+      listEl.replaceChildren();
       if (!windows.length) {
         listEl.append(h('p', { class: 'field__hint' }, 'Chưa có khung giờ nào được thiết lập.'));
         return;
