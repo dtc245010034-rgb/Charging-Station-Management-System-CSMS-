@@ -18,12 +18,20 @@ const timezoneSchema = z.string().trim().refine((val) => {
   }
 }, 'Múi giờ không hợp lệ');
 
+const powerProfileSlot = z.object({
+  start: z.string().regex(/^([0-1]?\d|2[0-3]):[0-5]\d$/).optional(),
+  end: z.string().regex(/^([0-1]?\d|2[0-3]):[0-5]\d$/).optional(),
+  maxKw: z.coerce.number().min(0).optional(),
+});
+
 const createBody = z.object({
   name: text(REQUIRED),
   address: text(REQUIRED),
   latitude: coordinate('Vĩ độ', -90, 90),
   longitude: coordinate('Kinh độ', -180, 180),
   timezone: timezoneSchema.optional(),
+  power_limit_kw: z.coerce.number().min(0).optional(),
+  power_profile: z.array(powerProfileSlot).optional(),
   status: z.undefined({ message: NO_STATUS }).optional(),
 }, { message: REQUIRED });
 
@@ -33,6 +41,8 @@ const updateBody = z.object({
   latitude: coordinate('Vĩ độ', -90, 90).optional(),
   longitude: coordinate('Kinh độ', -180, 180).optional(),
   timezone: timezoneSchema.optional(),
+  power_limit_kw: z.coerce.number().min(0).optional(),
+  power_profile: z.array(powerProfileSlot).optional(),
   status: status.optional(),
 }).superRefine((data, context) => {
   if ((data.latitude !== undefined) !== (data.longitude !== undefined)) {
