@@ -34,6 +34,7 @@ const ACTION_LABELS = {
   BILLING_PERIOD_CLOSED: 'Không lập hóa đơn do kỳ đã chốt',
   WEBHOOK_AMOUNT_MISMATCH: 'Lệch số tiền webhook',
   WEBHOOK_BAD_SIGNATURE: 'Chữ ký webhook không hợp lệ',
+  PARTNER_RATE_CREATED: 'Khai báo tỉ lệ chia đối tác',
 };
 const RESULT_PRESENTATION = {
   ACCEPTED: { label: 'Đã chấp nhận', tone: 'ready' },

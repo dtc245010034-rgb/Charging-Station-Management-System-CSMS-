@@ -561,7 +561,7 @@ def cmd_test(docker, args):
     with open(log_path, "w", encoding="utf-8") as log:
         try:
             process = subprocess.Popen(command, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                       text=True, encoding="utf-8", errors="replace")
+                                       text=True, encoding="utf-8", errors="replace", env=compose_env())
         except FileNotFoundError:
             raise Fail("Không chạy được docker compose.")
         for line in process.stdout:
