@@ -86,4 +86,27 @@ const stationSearchBody = z.object({
   }
 });
 
-module.exports = { createBody, updateBody, lockBody, connectorPowerBody, stationSearchBody };
+const powerWindowBody = z.object({
+  startTime: z.string({ message: 'startTime là bắt buộc' }).trim().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'startTime phải có dạng HH:MM (00:00 - 23:59)'),
+  endTime: z.string({ message: 'endTime là bắt buộc' }).trim().regex(/^(?:([01]\d|2[0-3]):[0-5]\d|24:00)$/, 'endTime phải có dạng HH:MM hoặc 24:00'),
+  limitKw: powerKilowatts,
+}, { message: 'Dữ liệu khung giờ là bắt buộc' }).transform((data) => ({
+  startTime: data.startTime,
+  endTime: data.endTime,
+  limit_w: data.limitKw,
+}));
+
+const windowIdParam = z.object({
+  id: z.coerce.number().int().positive('id phải là số nguyên dương'),
+  windowId: z.coerce.number().int().positive('windowId phải là số nguyên dương'),
+});
+
+module.exports = {
+  createBody,
+  updateBody,
+  lockBody,
+  connectorPowerBody,
+  stationSearchBody,
+  powerWindowBody,
+  windowIdParam,
+};

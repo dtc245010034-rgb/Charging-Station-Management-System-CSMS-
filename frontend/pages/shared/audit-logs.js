@@ -35,6 +35,11 @@ const ACTION_LABELS = {
   WEBHOOK_AMOUNT_MISMATCH: 'Lệch số tiền webhook',
   WEBHOOK_BAD_SIGNATURE: 'Chữ ký webhook không hợp lệ',
   PARTNER_RATE_CREATED: 'Khai báo tỉ lệ chia đối tác',
+  POWER_WINDOW_CREATED: 'Tạo khung giờ hạn mức',
+  POWER_WINDOW_DELETED: 'Xoá khung giờ hạn mức',
+  RESERVATION_EXPIRED: 'Hết hạn giữ chỗ',
+  RESERVATION_CANCELLED: 'Huỷ đặt chỗ',
+  SUBSCRIPTION_PURCHASED: 'Mua gói thuê bao',
 };
 const RESULT_PRESENTATION = {
   ACCEPTED: { label: 'Đã chấp nhận', tone: 'ready' },
