@@ -1,6 +1,6 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { run, query, resetSchema } = require('../helpers/db');
+const { run, query, resetSchema, rollbackToMigration } = require('../helpers/db');
 
 const tableSessions = async () => (await query("SELECT to_regclass('public.charging_sessions') AS t")).rows[0].t;
 const tableMeterValues = async () => (await query("SELECT to_regclass('public.meter_values') AS t")).rows[0].t;
@@ -91,6 +91,7 @@ describe('migrations 017-035: charging sessions, billing, and append-only audit 
   });
 
   it('down: rollback lần lượt 035 tới 017 và up lại sạch sẽ', async () => {
+    await rollbackToMigration('046_reservations.sql');
     for (const version of [
       '046_reservations.sql',
       '045_zero_watt_profile_limits.sql',

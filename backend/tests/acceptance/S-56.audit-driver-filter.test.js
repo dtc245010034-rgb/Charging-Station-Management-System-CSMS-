@@ -2,7 +2,7 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
 const { app, closePool } = require('../helpers/app');
-const { query, run, resetSchema, truncateAll } = require('../helpers/db');
+const { query, run, resetSchema, truncateAll, rollbackToMigration } = require('../helpers/db');
 const { createUser } = require('../helpers/auth');
 const auditRepository = require('../../src/modules/audit/audit.repository');
 const { migrate, rollbackLastMigration } = require('../../src/db/migrate');
@@ -65,6 +65,7 @@ describe('S-56 audit log driver filter', { concurrency: false }, () => {
   });
 
   it('migration 037 có thể chạy tiến, lùi rồi tiến lại', async () => {
+    await rollbackToMigration('046_reservations.sql');
     for (const version of [
       '046_reservations.sql',
       '045_zero_watt_profile_limits.sql',
