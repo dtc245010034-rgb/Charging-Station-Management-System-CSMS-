@@ -41,7 +41,7 @@ function validateEntry({ driverId, entryType, amountDong }) {
   return amount;
 }
 
-async function findDuplicate(client, entryType, { sessionId, topupId, reservationId, receiptCode }) {
+async function findDuplicate(client, entryType, { sessionId, topupId, reservationId, subscriptionId, receiptCode }) {
   if (entryType === 'SESSION_DEBIT' && sessionId != null) {
     return client.query(
       "SELECT id FROM wallet_ledger WHERE entry_type = 'SESSION_DEBIT' AND session_id = $1 LIMIT 1",
@@ -66,6 +66,12 @@ async function findDuplicate(client, entryType, { sessionId, topupId, reservatio
       [reservationId]
     );
   }
+  if (entryType === 'SUBSCRIPTION_FEE' && subscriptionId != null) {
+    return client.query(
+      "SELECT id FROM wallet_ledger WHERE entry_type = 'SUBSCRIPTION_FEE' AND subscription_id = $1 LIMIT 1",
+      [subscriptionId]
+    );
+  }
   return { rowCount: 0, rows: [] };
 }
 
@@ -76,6 +82,7 @@ async function postEntry(client, {
   sessionId = null,
   topupId = null,
   reservationId = null,
+  subscriptionId = null,
   receiptCode = null,
   reason = null,
   createdBy = null,
@@ -104,6 +111,7 @@ async function postEntry(client, {
     sessionId,
     topupId,
     reservationId,
+    subscriptionId,
     receiptCode,
   });
   if (duplicate.rowCount) return { duplicated: true };
@@ -123,10 +131,10 @@ async function postEntry(client, {
   const entryResult = await client.query(
     `INSERT INTO wallet_ledger (
        driver_id, entry_type, amount_dong, balance_after_dong,
-       session_id, topup_id, reservation_id, receipt_code, reason, created_by, period_date
+       session_id, topup_id, reservation_id, subscription_id, receipt_code, reason, created_by, period_date
      ) VALUES (
-       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-       COALESCE($11::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date)
+       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+       COALESCE($12::date, (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date)
      )
      ON CONFLICT DO NOTHING
      RETURNING *`,
@@ -138,6 +146,7 @@ async function postEntry(client, {
       sessionId,
       topupId,
       reservationId,
+      subscriptionId,
       receiptCode,
       reason,
       createdBy,

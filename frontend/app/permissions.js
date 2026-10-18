@@ -49,6 +49,10 @@ export const PERMISSIONS = {
   'partner-rates:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
   'settlements:manage': ['ADMIN', 'ACCOUNTANT'],
   'settlements:read': ['ADMIN', 'ACCOUNTANT', 'STATION_OWNER'],
+  'plans:manage': ['ADMIN', 'ACCOUNTANT'],
+  'plans:read': ['ADMIN', 'ACCOUNTANT', 'DRIVER'],
+  'subscriptions:buy': ['DRIVER'],
+  'subscriptions:read-own': ['DRIVER'],
 };
 
 export const can = (role, key) => (PERMISSIONS[key] ?? []).includes(role);

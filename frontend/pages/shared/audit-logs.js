@@ -40,6 +40,8 @@ const ACTION_LABELS = {
   RESERVATION_EXPIRED: 'Hết hạn giữ chỗ',
   RESERVATION_CANCELLED: 'Huỷ đặt chỗ',
   SUBSCRIPTION_PURCHASED: 'Mua gói thuê bao',
+  SUBSCRIPTION_PLAN_CREATED: 'Tạo gói thuê bao',
+  SUBSCRIPTION_PLAN_RETIRED: 'Ngừng bán gói thuê bao',
 };
 const RESULT_PRESENTATION = {
   ACCEPTED: { label: 'Đã chấp nhận', tone: 'ready' },
