@@ -3,6 +3,8 @@ import { api } from '../../services/api.js';
 import { errorState, loadingState } from '../../components/empty-state.js';
 import { icon } from '../../components/icons.js';
 import { formatDateTime } from '../../app/format.js';
+import { openModal } from '../../components/modal.js';
+import { toast } from '../../components/toast.js';
 
 const dongFormat = new Intl.NumberFormat('vi-VN');
 const distanceFormat = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -141,6 +143,42 @@ function renderMyReservations(ctx) {
           ? h('span', { class: 'mono', 'aria-live': 'polite' }, timeRemaining(reservation.expiresAt))
           : h('span', { class: 'muted' }, '—');
         if (['PENDING', 'ACCEPTED'].includes(reservation.status)) countdowns.push({ el: countdown, expiresAt: reservation.expiresAt });
+        const canCancel = reservation.status === 'ACCEPTED' && Date.parse(reservation.expiresAt) > Date.now();
+        const cancelButton = canCancel && h('button', {
+          class: 'btn btn--danger',
+          type: 'button',
+          onclick: () => {
+            const dismiss = h('button', { class: 'btn', type: 'button' }, 'Giữ đặt chỗ');
+            const confirm = h('button', { class: 'btn btn--danger', type: 'button' }, 'Huỷ đặt chỗ');
+            const requestError = h('p', { class: 'form-alert', role: 'alert', hidden: true });
+            const modal = openModal({
+              title: 'Huỷ đặt chỗ?',
+              body: h('div', {},
+                h('p', {}, 'Huỷ trước hạn sẽ không mất phí. Nếu đặt chỗ hết hạn trước khi yêu cầu được xử lý, phí vắng mặt 20.000 đ có thể được ghi nhận.'),
+                requestError),
+              footer: [dismiss, confirm],
+            });
+            dismiss.addEventListener('click', () => modal.close());
+            confirm.addEventListener('click', async () => {
+              confirm.disabled = true;
+              try {
+                const result = await api(`/api/me/reservations/${encodeURIComponent(reservation.id)}`, {
+                  method: 'DELETE',
+                  body: {},
+                });
+                modal.close();
+                toast(result.cancelCommandStatus === 'PENDING'
+                  ? 'Đã huỷ chỗ; lệnh tới trụ đang chờ gửi lại.'
+                  : 'Đã huỷ đặt chỗ.');
+                await load();
+              } catch (error) {
+                requestError.textContent = error.message;
+                requestError.hidden = false;
+                confirm.disabled = false;
+              }
+            });
+          },
+        }, icon('x'), 'Huỷ đặt chỗ');
         return h('article', { class: 'card', style: 'padding:14px;display:grid;gap:8px' },
           h('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap' },
             h('strong', {}, reservation.stationName),
@@ -150,7 +188,10 @@ function renderMyReservations(ctx) {
           h('p', {}, `${reservation.chargePointCode} · Đầu ${reservation.connectorNo} · ${reservation.connectorType}`),
           h('p', { class: 'muted' }, `Hạn giữ: ${formatDateTime(reservation.expiresAt)}`),
           h('p', { class: 'muted' }, 'Thời gian còn lại: ', countdown),
-          reservation.rejectReason ? h('p', { role: 'status' }, reservation.rejectReason) : null
+          reservation.rejectReason ? h('p', { role: 'status' }, reservation.rejectReason) : null,
+          reservation.cancelCommandStatus === 'PENDING' && h('p', { class: 'field__hint', role: 'status' }, 'Lệnh huỷ đang chờ được gửi tới trụ.'),
+          reservation.cancelCommandStatus === 'REJECTED' && h('p', { class: 'form-alert', role: 'alert' }, 'Trụ đã từ chối lệnh huỷ.'),
+          cancelButton
         );
       });
       mount(content, ...(cards.length ? cards : [h('section', { class: 'card', style: 'padding:18px' },
