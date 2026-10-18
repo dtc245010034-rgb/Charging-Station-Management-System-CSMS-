@@ -28,6 +28,8 @@ const { startEmailJob } = require('./modules/notifications/email-job');
 const { startIdleFeeNotificationJob } = require('./modules/notifications/idle-fee-notification-job');
 const { startPowerProfileRetryJob } = require('./modules/power/profile-retry-job');
 const { createPowerRebalancer } = require('./modules/power/rebalance');
+const { startPowerScheduleJob } = require('./modules/power/schedule-job');
+const powerScheduleRepository = require('./modules/power/schedule.repository');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
 
@@ -67,6 +69,7 @@ powerRebalancer = createPowerRebalancer({
 	pool,
 	commandSender,
 	minIntervalMs: env.POWER_REBALANCE_MIN_INTERVAL_MS,
+	scheduleRepository: powerScheduleRepository,
 });
 const server = http.createServer(createApp({ commandSender, powerRebalancer }));
 
@@ -131,6 +134,7 @@ let stopReservationPendingCleanupJob = () => {};
 let stopEmailJob = () => {};
 let stopIdleFeeNotificationJob = () => {};
 let stopPowerProfileRetryJob = () => {};
+let stopPowerScheduleJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();
 	stopChargePointHealthJob();
@@ -144,6 +148,7 @@ for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopEmailJob();
 	stopIdleFeeNotificationJob();
 	stopPowerProfileRetryJob();
+	stopPowerScheduleJob();
 	if (purgeTimer) clearInterval(purgeTimer);
 	shutdown(signal);
 });
@@ -187,6 +192,11 @@ async function start() {
 		db: pool,
 		commandSender,
 		commandTimeoutSeconds: env.OCPP_COMMAND_TIMEOUT_SECONDS + 5,
+	}).stop;
+	stopPowerScheduleJob = startPowerScheduleJob({
+		db: pool,
+		rebalanceStation: (...args) => powerRebalancer.rebalanceStation(...args),
+		intervalMs: env.POWER_SCHEDULE_TICK_MS,
 	}).stop;
 	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
 }
