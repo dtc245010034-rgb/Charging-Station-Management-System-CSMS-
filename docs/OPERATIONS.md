@@ -133,6 +133,19 @@ Giới hạn gói miễn phí ngrok, đối chiếu lại ngày 04/10/2026 tại
 
 Cổng vẫn bị chiếm sau khi tắt (process mồ côi): `lsof -i :3000` (Linux) hoặc `netstat -ano | findstr :3000` (Windows) rồi kết thúc process. `down` không xoá `.env`; chỉ `reset` xoá dữ liệu Postgres.
 
+### Dữ liệu demo & Kiểm khói hệ thống (Chặng 9)
+
+Khởi tạo dữ liệu mẫu cho buổi demo (chạy sau khi server app & db đã sẵn sàng):
+```bash
+export DEMO_PASSWORD="MatKhauDemoBaoMat2026!"
+node tools/seed-demo.js
+```
+Kiểm khói toàn diện các luồng API thật của 5 vai trò (Driver, Owner, Operator, Accountant, Admin):
+```bash
+node tools/demo-smoke.js
+```
+Xem thêm chi tiết tại [`docs/demo/KICH-BAN-DEMO.md`](demo/KICH-BAN-DEMO.md) và [`docs/demo/CHECKLIST-TRUOC-DEMO.md`](demo/CHECKLIST-TRUOC-DEMO.md).
+
 ## 5. Lệnh Docker tương đương (khi cần làm tay)
 
 ```

@@ -192,6 +192,9 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
 | `OCPP_HANDSHAKE_LIMIT_PER_10S` | Số lần bắt tay WebSocket mỗi cặp (IP, mã trụ), kiểm tra trước khi truy vấn DB; quá mức trả 429 | Lần/10 giây | `5` |
 | `AUDIT_DENIED_LIMIT_PER_MINUTE` | Số dòng `ACCESS_DENIED` tối đa ghi vào `audit_logs` mỗi tài khoản (phản hồi vẫn 403) | Dòng/phút | `20` |
+| `POWER_SCHEDULE_TICK_MS` | Chu kỳ job quét ranh giới khung giờ công suất và rebalance trạm (S-45) | Mili giây | `15000` |
+| `RESERVATION_EXPIRY_JOB_MS` | Chu kỳ job quét chỗ đặt quá hạn và trừ phí không đến (S-50) | Mili giây | `15000` |
+| `DEMO_PASSWORD` | Mật khẩu tài khoản dựng sẵn khi khởi tạo demo qua `tools/seed-demo.js` (≥ 12 ký tự) | Chuỗi bí mật | — |
 
 ---
 
