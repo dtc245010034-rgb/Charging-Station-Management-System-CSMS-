@@ -71,6 +71,8 @@ const schema = z.object({
     z.string().url().optional()
   ),
   EMAIL_TRANSPORT: z.enum(['log', 'smtp']).default('log'),
+  POWER_SCHEDULE_TICK_MS: z.coerce.number().int().positive().default(15000),
+  RESERVATION_EXPIRY_JOB_MS: z.coerce.number().int().positive().default(15000),
 }).superRefine((data, ctx) => {
   if (data.SANDBOX_GATEWAY === 1 && (!data.PAYMENT_WEBHOOK_SECRET || data.PAYMENT_WEBHOOK_SECRET.length < 32)) {
     ctx.addIssue({
