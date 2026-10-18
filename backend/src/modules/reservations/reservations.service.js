@@ -5,6 +5,10 @@ const { getMinBalanceDong } = require('../wallet/min-balance.service');
 const connections = require('../charge-points/connection-registry');
 const audit = require('../audit/audit.repository');
 const repo = require('./reservations.repository');
+const {
+  dispatchReservationCancellation,
+  expireStaleAcceptedReservations,
+} = require('./pending-cleanup-job');
 const { OcppCommandError } = require('../ocpp/commands');
 const { OcppRemoteCallError } = require('../ocpp/message-handler');
 const { sanitizeErrorMessage } = require('../../lib/constants');
@@ -39,6 +43,7 @@ async function listMine(driverId, db = repo.pool) {
   const rows = await repo.listForDriver(db, driverId);
   return rows.map((row) => ({
     ...toResponse(row),
+    cancelCommandStatus: row.cancel_command_status || null,
     stationName: row.station_name,
     stationAddress: row.station_address,
     chargePointCode: row.charge_point_code,
@@ -83,6 +88,10 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
   const startsAt = now.toISOString();
   const expiresAt = new Date(now.getTime() + (data.arriveInMinutes + env.RESERVATION_HOLD_MIN) * 60000).toISOString();
   const requestHash = createHash('sha256').update(JSON.stringify(data)).digest('hex');
+  const expired = await expireStaleAcceptedReservations(db, driver.id);
+  for (const reservation of expired.rows) {
+    await dispatchReservationCancellation(db, commandSender, reservation.id);
+  }
 
   let created;
   let conflictContext = null;
@@ -131,7 +140,7 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
       if (connector.ocpp_status !== 'Available' || connector.connector_status !== 'AVAILABLE') {
         throw new AppError(409, 'CONNECTOR_UNAVAILABLE', 'Đầu nối không ở trạng thái sẵn sàng để đặt chỗ.');
       }
-      if (await repo.findActiveForDriver(client, driver.id, now)) {
+      if (await repo.findActiveForDriver(client, driver.id)) {
         throw new AppError(409, 'RESERVATION_ALREADY_ACTIVE', 'Bạn đang có một chỗ đặt còn hiệu lực.');
       }
 
@@ -229,4 +238,61 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
   throw new ServiceUnavailableError('Trụ sạc trả phản hồi ReserveNow không hợp lệ');
 }
 
-module.exports = { RESERVATION_CALL_TIMEOUT_MS, create, listMine, toResponse };
+async function cancel(driver, reservationId, { commandSender, ip = null, db = repo.pool } = {}) {
+  const due = await expireStaleAcceptedReservations(db, driver.id);
+  for (const reservation of due.rows) {
+    await dispatchReservationCancellation(db, commandSender, reservation.id);
+  }
+
+  const result = await withTransaction(async (client) => {
+    const selected = await client.query(
+      `SELECT id, ocpp_reservation_id, driver_id, connector_id, id_tag_id, status,
+              starts_at, expires_at, reject_reason
+       FROM reservations
+       WHERE id = $1 AND driver_id = $2
+       FOR UPDATE`,
+      [reservationId, driver.id]
+    );
+    const reservation = selected.rows[0];
+    if (!reservation) throw new NotFoundError('Không tìm thấy đặt chỗ');
+    if (reservation.status === 'CANCELLED') return { reservation, changed: false };
+    if (reservation.status !== 'ACCEPTED') {
+      if (reservation.status === 'EXPIRED') {
+        throw new AppError(409, 'RESERVATION_EXPIRED', 'Đặt chỗ đã hết hạn và bị tính phí vắng mặt.');
+      }
+      throw new AppError(409, 'RESERVATION_NOT_CANCELLABLE', 'Chỉ có thể huỷ đặt chỗ đã được trụ xác nhận.');
+    }
+
+    const cancelled = await client.query(
+      `UPDATE reservations
+       SET status = 'CANCELLED', updated_at = clock_timestamp()
+       WHERE id = $1 AND status = 'ACCEPTED' AND expires_at > clock_timestamp()
+       RETURNING id, ocpp_reservation_id, driver_id, connector_id, id_tag_id, status,
+                 starts_at, expires_at, reject_reason`,
+      [reservationId]
+    );
+    if (!cancelled.rows[0]) return { reservation, expired: true };
+    await client.query(
+      `INSERT INTO reservation_cancellation_queue (reservation_id)
+       VALUES ($1) ON CONFLICT (reservation_id) DO NOTHING`,
+      [reservationId]
+    );
+    return { reservation: cancelled.rows[0], changed: true };
+  }, db);
+
+  if (result.expired) {
+    const expired = await expireStaleAcceptedReservations(db, driver.id);
+    for (const reservation of expired.rows) {
+      await dispatchReservationCancellation(db, commandSender, reservation.id);
+    }
+    throw new AppError(409, 'RESERVATION_EXPIRED', 'Đặt chỗ đã hết hạn và bị tính phí vắng mặt.');
+  }
+
+  if (result.changed) {
+    await recordAudit(driver.id, 'RESERVATION_CANCELLED', result.reservation, {}, ip, 'CANCELLED');
+  }
+  const cancelCommandStatus = await dispatchReservationCancellation(db, commandSender, reservationId);
+  return { ...toResponse(result.reservation), cancelCommandStatus };
+}
+
+module.exports = { RESERVATION_CALL_TIMEOUT_MS, create, cancel, listMine, toResponse };

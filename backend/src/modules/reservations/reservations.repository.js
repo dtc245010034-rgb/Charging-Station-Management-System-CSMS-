@@ -21,9 +21,11 @@ async function findById(client, id) {
 async function listForDriver(db, driverId) {
   const result = await db.query(
     `SELECT r.id, r.ocpp_reservation_id, r.connector_id, r.status, r.starts_at, r.expires_at, r.reject_reason,
+            rcq.status AS cancel_command_status,
             s.name AS station_name, s.address AS station_address,
             cp.code AS charge_point_code, c.connector_no, c.type AS connector_type
      FROM reservations r
+     LEFT JOIN reservation_cancellation_queue rcq ON rcq.reservation_id = r.id
      JOIN connectors c ON c.id = r.connector_id
      JOIN charge_points cp ON cp.id = c.charge_point_id
      JOIN stations s ON s.id = cp.station_id
@@ -98,19 +100,7 @@ async function findWalletForUpdate(client, driverId) {
   return result.rows[0] || null;
 }
 
-async function expireStaleForDriver(client, driverId, now = new Date()) {
-  await client.query(
-    `UPDATE reservations
-     SET status = 'EXPIRED', updated_at = CURRENT_TIMESTAMP
-     WHERE driver_id = $1
-       AND status = 'ACCEPTED'
-       AND expires_at <= $2::timestamptz`,
-    [driverId, now]
-  );
-}
-
-async function findActiveForDriver(client, driverId, now = new Date()) {
-  await expireStaleForDriver(client, driverId, now);
+async function findActiveForDriver(client, driverId) {
   const result = await client.query(
     `SELECT id FROM reservations
      WHERE driver_id = $1 AND status IN ('PENDING', 'ACCEPTED')
@@ -169,7 +159,6 @@ module.exports = {
   updateStatus,
   insertIdempotencyKey,
   findWalletForUpdate,
-  expireStaleForDriver,
   findActiveForDriver,
   findAvailableSuggestions,
   fulfillAcceptedReservation,

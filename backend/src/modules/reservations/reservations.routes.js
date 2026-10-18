@@ -1,6 +1,7 @@
 const { secureRouter } = require('../../security/routeGuard');
 const { access } = require('../../security/permissions');
 const { BadRequestError } = require('../../lib/errors');
+const { idParam } = require('../../lib/schemas');
 const service = require('./reservations.service');
 const { createReservationBody } = require('./reservations.schema');
 
@@ -19,6 +20,14 @@ router.post('/reservations', { access: access('reservations:create') }, async (r
 
 router.get('/me/reservations', { access: access('reservations:read-own') }, async (req, res) => {
   res.json(await service.listMine(req.user.id));
+});
+
+router.delete('/me/reservations/:id', { access: access('reservations:read-own') }, async (req, res) => {
+  const { id } = idParam.parse(req.params);
+  res.json(await service.cancel(req.user, id, {
+    commandSender: req.app.locals.commandSender,
+    ip: req.ip,
+  }));
 });
 
 module.exports = router;

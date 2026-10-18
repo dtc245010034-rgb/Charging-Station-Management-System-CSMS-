@@ -182,7 +182,7 @@ async function start() {
 	stopTopupExpiryJob = startTopupExpiryJob({
 		db: pool,
 	}).stop;
-	stopReservationPendingCleanupJob = startReservationPendingCleanupJob({ db: pool }).stop;
+	stopReservationPendingCleanupJob = startReservationPendingCleanupJob({ db: pool, commandSender }).stop;
 	stopEmailJob = startEmailJob({
 		db: pool,
 		transport: env.EMAIL_TRANSPORT,

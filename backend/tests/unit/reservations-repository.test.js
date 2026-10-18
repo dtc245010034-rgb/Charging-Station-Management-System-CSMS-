@@ -6,13 +6,12 @@ const { BASE, env } = require('../helpers/db');
 Object.assign(process.env, env({ DATABASE_URL: BASE }));
 
 const {
-  expireStaleForDriver,
   findActiveForDriver,
   fulfillAcceptedReservation,
 } = require('../../src/modules/reservations/reservations.repository');
 
 describe('reservations repository - expiry and fulfillment [GYM-74]', () => {
-  it('expires stale ACCEPTED reservation and clears driver active lock', async () => {
+  it('leaves expired reservations for the fee-bearing cleanup job', async () => {
     const executedQueries = [];
     const reservations = [
       { id: 101, driver_id: 5, status: 'ACCEPTED', expires_at: new Date('2026-10-17T10:00:00Z') },
@@ -21,15 +20,6 @@ describe('reservations repository - expiry and fulfillment [GYM-74]', () => {
     const mockClient = {
       async query(sql, params = []) {
         executedQueries.push({ sql, params });
-        if (sql.includes("SET status = 'EXPIRED'")) {
-          const [driverId, now] = params;
-          for (const r of reservations) {
-            if (r.driver_id === driverId && r.status === 'ACCEPTED' && r.expires_at <= new Date(now)) {
-              r.status = 'EXPIRED';
-            }
-          }
-          return { rowCount: 1, rows: [] };
-        }
         if (sql.includes('SELECT id FROM reservations')) {
           const [driverId] = params;
           const active = reservations.filter(
@@ -41,11 +31,10 @@ describe('reservations repository - expiry and fulfillment [GYM-74]', () => {
       },
     };
 
-    const now = new Date('2026-10-17T10:30:00Z'); // Sau expires_at
-    await expireStaleForDriver(mockClient, 5, now);
-    const activeBefore = await findActiveForDriver(mockClient, 5, now);
-    assert.strictEqual(activeBefore, null, 'Đặt chỗ quá hạn phải được chuyển sang EXPIRED và trả về null');
-    assert.strictEqual(reservations[0].status, 'EXPIRED');
+    const activeBefore = await findActiveForDriver(mockClient, 5);
+    assert.strictEqual(activeBefore.id, 101);
+    assert.strictEqual(reservations[0].status, 'ACCEPTED');
+    assert.equal(executedQueries.some(({ sql }) => sql.includes("SET status = 'EXPIRED'")), false);
   });
 
   it('keeps active ACCEPTED reservation if still within validity period', async () => {
@@ -55,15 +44,6 @@ describe('reservations repository - expiry and fulfillment [GYM-74]', () => {
 
     const mockClient = {
       async query(sql, params = []) {
-        if (sql.includes("SET status = 'EXPIRED'")) {
-          const [driverId, now] = params;
-          for (const r of reservations) {
-            if (r.driver_id === driverId && r.status === 'ACCEPTED' && r.expires_at <= new Date(now)) {
-              r.status = 'EXPIRED';
-            }
-          }
-          return { rowCount: 0, rows: [] };
-        }
         if (sql.includes('SELECT id FROM reservations')) {
           const [driverId] = params;
           const active = reservations.filter(
@@ -75,8 +55,7 @@ describe('reservations repository - expiry and fulfillment [GYM-74]', () => {
       },
     };
 
-    const now = new Date('2026-10-17T10:30:00Z'); // Trước expires_at
-    const active = await findActiveForDriver(mockClient, 6, now);
+    const active = await findActiveForDriver(mockClient, 6);
     assert.ok(active, 'Đặt chỗ còn hạn phải được trả về');
     assert.strictEqual(active.id, 102);
     assert.strictEqual(reservations[0].status, 'ACCEPTED');
