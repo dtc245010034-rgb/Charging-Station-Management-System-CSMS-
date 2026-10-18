@@ -225,7 +225,10 @@ async function buySubscription(driver, { planId }, idempotencyKey, { ip = null, 
     return { subscription: newSub, replayed: false };
   });
 
-  return formatSubscription(purchased.subscription);
+  return {
+    subscription: formatSubscription(purchased.subscription),
+    replayed: Boolean(purchased.replayed),
+  };
 }
 
 async function listMySubscriptions(driver) {

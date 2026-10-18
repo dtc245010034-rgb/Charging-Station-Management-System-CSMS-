@@ -24,7 +24,7 @@ router.post('/subscription-plans/:id/retire', { access: access('plans:manage') }
 router.post('/me/subscriptions', { access: access('subscriptions:buy') }, async (req, res) => {
   const idempotencyKey = req.header('idempotency-key');
   const data = buySubscriptionSchema.parse(req.body ?? {});
-  const subscription = await service.buySubscription(req.user, data, idempotencyKey, { ip: req.ip });
+  const { subscription } = await service.buySubscription(req.user, data, idempotencyKey, { ip: req.ip });
   res.status(201).json(subscription);
 });
 
