@@ -56,9 +56,12 @@ function stationResult(station, chargePoints, onReserve) {
       const connector = connectorChoices.find((item) => item.connectorId === connectorSelect.value);
       if (!connector) return;
       confirmation.hidden = false;
+      const noShowFee = station.noShowFeeDong || 0;
+      const totalHoldMinutes = Number(arriveSelect.value) + 15;
       mount(confirmation,
         h('strong', {}, 'Xác nhận đặt chỗ'),
-        h('p', { class: 'muted' }, `${connector.chargePointCode} · Đầu ${connector.connectorNo}; dự kiến đến sau ${arriveSelect.value} phút.`),
+        h('p', { class: 'muted' }, `${connector.chargePointCode} · Đầu ${connector.connectorNo}; dự kiến đến sau ${arriveSelect.value} phút (hạn giữ: ${totalHoldMinutes} phút).`),
+        h('p', { class: 'muted' }, `Phí không đến: ${formatDong(noShowFee)} (sẽ trừ ví nếu quá hạn mà không đến sạc).`),
         h('div', { class: 'toolbar' },
           h('button', {
             class: 'btn btn--primary',

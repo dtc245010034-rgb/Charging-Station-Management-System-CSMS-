@@ -35,11 +35,17 @@ const createBody = z.object({
   longitude: coordinate('Kinh độ', -180, 180),
   timezone: timezoneSchema.optional(),
   power_limit_kw: powerKilowatts.nullable().optional(),
+  no_show_fee_dong: z.coerce.number().int().min(0).max(1000000).optional(),
+  noShowFeeDong: z.coerce.number().int().min(0).max(1000000).optional(),
   status: z.undefined({ message: NO_STATUS }).optional(),
 }, { message: REQUIRED }).transform((data) => {
   if (data.power_limit_kw !== undefined) {
     data.power_limit_w = data.power_limit_kw;
     delete data.power_limit_kw;
+  }
+  if (data.noShowFeeDong !== undefined) {
+    data.no_show_fee_dong = data.noShowFeeDong;
+    delete data.noShowFeeDong;
   }
   return data;
 });
@@ -51,6 +57,8 @@ const updateBody = z.object({
   longitude: coordinate('Kinh độ', -180, 180).optional(),
   timezone: timezoneSchema.optional(),
   power_limit_kw: powerKilowatts.nullable().optional(),
+  no_show_fee_dong: z.coerce.number().int().min(0).max(1000000).optional(),
+  noShowFeeDong: z.coerce.number().int().min(0).max(1000000).optional(),
   status: status.optional(),
 }).superRefine((data, context) => {
   if ((data.latitude !== undefined) !== (data.longitude !== undefined)) {
@@ -60,6 +68,10 @@ const updateBody = z.object({
   if (data.power_limit_kw !== undefined) {
     data.power_limit_w = data.power_limit_kw;
     delete data.power_limit_kw;
+  }
+  if (data.noShowFeeDong !== undefined) {
+    data.no_show_fee_dong = data.noShowFeeDong;
+    delete data.noShowFeeDong;
   }
   return data;
 });

@@ -32,6 +32,8 @@ function toResponse(row) {
     expiresAt: expiresAt.toISOString(),
     arriveInMinutes,
     rejectReason: row.reject_reason,
+    noShowFeeDong: Number(row.no_show_fee_dong || 0),
+    cancelStatus: row.cancel_status || 'NONE',
   };
 }
 
@@ -141,6 +143,7 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
         idTagId: tag.id,
         startsAt,
         expiresAt,
+        noShowFeeDong: connector.station_no_show_fee_dong || 0,
       });
       await repo.insertIdempotencyKey(client, driver.id, idempotencyKey, requestHash, reservation.id);
       return { reservation, connector, tag, replayed: false };

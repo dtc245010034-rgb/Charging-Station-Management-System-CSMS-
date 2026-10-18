@@ -53,7 +53,7 @@ const insertForIdempotency = async (client, actor, station) => {
   return result.rows[0];
 };
 
-const UPDATABLE = ['name', 'address', 'latitude', 'longitude', 'status', 'timezone', 'power_limit_w'];
+const UPDATABLE = ['name', 'address', 'latitude', 'longitude', 'status', 'timezone', 'power_limit_w', 'no_show_fee_dong'];
 const update = (id, fields) => {
   const keys = UPDATABLE.filter((key) => fields[key] !== undefined);
   return prepare(`UPDATE stations SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)

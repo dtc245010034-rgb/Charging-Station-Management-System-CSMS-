@@ -28,6 +28,7 @@ function stationWithPower(station) {
   const limitW = station.power_limit_w === null ? null : BigInt(station.power_limit_w);
   return {
     ...station,
+    noShowFeeDong: Number(station.no_show_fee_dong || 0),
     power: {
       limitKw: wattsToKilowatts(limitW),
       ratedTotalKw: wattsToKilowatts(totalW),
