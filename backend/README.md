@@ -2,7 +2,7 @@
 
 Backend PostgreSQL cho hệ thống quản lý trạm sạc, phục vụ frontend từ thư mục `frontend/` (cùng origin, không build): JWT + httpOnly cookie, RBAC với 5 role, khóa tài khoản sau 5 lần sai, giới hạn đăng nhập theo IP, trạng thái trụ thời gian thực (REST + SSE) và WebSocket OCPP 1.6J (xác thực mã trụ, BootNotification, Heartbeat, StatusNotification, thay thế kết nối trùng, rate limiting, keepalive ping, tắt máy sạch).
 
-**Cách chạy, cấu hình `.env`, tạo tài khoản, kiểm thử:** xem `README.md` ở thư mục gốc. **Build, dừng, khởi động lại, sao lưu, staging:** xem `docs/OPERATIONS.md`. Tài liệu này chỉ mô tả sâu API, bảo mật và các lưu ý riêng của backend.
+**Cách chạy, cấu hình `.env`, tạo tài khoản, kiểm thử:** xem `README.md` ở thư mục gốc. **Build, dừng, khởi động lại, sao lưu, staging:** xem `docs/guides/OPERATIONS.md`. Tài liệu này chỉ mô tả sâu API, bảo mật và các lưu ý riêng của backend.
 
 ## Lệnh npm (trong `backend/`)
 
@@ -87,7 +87,7 @@ Tọa độ lưu bằng `NUMERIC(10,8)` / `NUMERIC(11,8)` và có giới hạn �
 
 `charge_points.code` luôn được chuẩn hoá về chữ hoa trước khi lưu (kể cả khi client gửi chữ thường), khớp cách `connection-registry.js` so khớp mã trụ ở WebSocket. `power_kw` phải là số không âm (chuỗi rác hoặc số âm → 400); `status` do hệ thống quản lý, client gửi → 400.
 
-Không có API xóa tài khoản/trạm; tài khoản có thể được vô hiệu hóa qua API quản trị mà không xóa dữ liệu. FK `stations.owner_id` dùng `ON DELETE RESTRICT` để bảo toàn dữ liệu sở hữu. Schema hiện cũng chưa có `charging_sessions`, do đó chưa thể chặn đổi mã dựa trên lịch sử phiên sạc thật — xem `docs/spikes/S-05-AC3-ghi-nhan-cho-PO.md`. Trạng thái kết nối OCPP hiện được đếm trong bộ nhớ của từng process và ngăn đổi mã khi socket đang mở; trạng thái này không bền qua restart và chưa dùng được an toàn khi chạy nhiều replica.
+Không có API xóa tài khoản/trạm; tài khoản có thể được vô hiệu hóa qua API quản trị mà không xóa dữ liệu. FK `stations.owner_id` dùng `ON DELETE RESTRICT` để bảo toàn dữ liệu sở hữu. Schema hiện cũng chưa có `charging_sessions`, do đó chưa thể chặn đổi mã dựa trên lịch sử phiên sạc thật — xem `docs/archive/spikes/S-05-AC3-ghi-nhan-cho-PO.md`. Trạng thái kết nối OCPP hiện được đếm trong bộ nhớ của từng process và ngăn đổi mã khi socket đang mở; trạng thái này không bền qua restart và chưa dùng được an toàn khi chạy nhiều replica.
 
 ## Phân quyền và bảo mật request
 
@@ -108,5 +108,5 @@ Vài điểm riêng của backend:
 - Cấu trúc mã: `src/app.js` (Express app), `src/server.js` (listen + WebSocket), `src/modules/<domain>/` (routes → service → repository), `src/db/`, `src/lib/`, `src/middlewares/`.
 - Migration đầu tiên nằm tại `migrations/001_baseline.sql`, rollback tại `migrations/001_baseline.down.sql`. Đây là mẫu quy ước cho các migration sau: tên `snake_case`, khóa chính `id`, và cột `created_at`/`updated_at`.
 - `charge_points.code` có UNIQUE trực tiếp trong PostgreSQL (trên giá trị đã chuẩn hoá chữ hoa); duplicate race được trả về 409. Mỗi trụ tạo số connector theo `connector_count` với trạng thái `UNKNOWN`.
-- WebSocket OCPP tại `ws://localhost:3000/ocpp/:chargePointCode` xác thực mã trụ đã đăng ký và subprotocol `ocpp1.6`. Module frame thuần đọc/ghi `CALL`, `CALLRESULT`, `CALLERROR`; dispatcher giữ nguyên `messageId`, trả `NotImplemented` cho action chưa đăng ký, và không đóng kết nối khi frame sai. `BootNotification` kiểm tra trạng thái trạm (từ chối nếu trạm không ACTIVE hoặc bị khoá) và lưu thông tin `serial_number`, `vendor`, `model`, `firmware_version` vào DB; `Heartbeat` cập nhật `last_seen_at` cho mọi tin nhắn hợp lệ; `StatusNotification` là handler thật (xem trên); `MeterValues` ghi đồng bộ bằng một câu `INSERT` nhiều dòng rồi mới trả lời; số đo không khớp phiên được lưu vào `orphan_messages`; `Authorize` kiểm tra thẻ, trạm và ví tài xế. Bản ghi phiên sạc đầy đủ, kết quả các kịch bản và danh sách trường cần lưu (theo schema OCPP 1.6 chính thức): `docs/spikes/K-01-ocpp-simulator.md`.
-- Mã trụ ảo và máy chủ tham chiếu để thử: `docs/spikes/k01/` (không thuộc backend, không lint/test cùng backend).
+- WebSocket OCPP tại `ws://localhost:3000/ocpp/:chargePointCode` xác thực mã trụ đã đăng ký và subprotocol `ocpp1.6`. Module frame thuần đọc/ghi `CALL`, `CALLRESULT`, `CALLERROR`; dispatcher giữ nguyên `messageId`, trả `NotImplemented` cho action chưa đăng ký, và không đóng kết nối khi frame sai. `BootNotification` kiểm tra trạng thái trạm (từ chối nếu trạm không ACTIVE hoặc bị khoá) và lưu thông tin `serial_number`, `vendor`, `model`, `firmware_version` vào DB; `Heartbeat` cập nhật `last_seen_at` cho mọi tin nhắn hợp lệ; `StatusNotification` là handler thật (xem trên); `MeterValues` ghi đồng bộ bằng một câu `INSERT` nhiều dòng rồi mới trả lời; số đo không khớp phiên được lưu vào `orphan_messages`; `Authorize` kiểm tra thẻ, trạm và ví tài xế. Bản ghi phiên sạc đầy đủ, kết quả các kịch bản và danh sách trường cần lưu (theo schema OCPP 1.6 chính thức): `docs/archive/spikes/K-01-ocpp-simulator.md`.
+- Mã trụ ảo và máy chủ tham chiếu để thử: `docs/archive/spikes/k01/` (không thuộc backend, không lint/test cùng backend).

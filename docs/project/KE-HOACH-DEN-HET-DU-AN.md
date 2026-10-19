@@ -119,7 +119,7 @@ Chặng 1 cần hai tệp **đã ký** làm chuẩn so sánh: `docs/testing/bill
 
 ## 6. Mẫu bàn giao, quy ước nhánh/commit/PR
 
-**Tệp bàn giao** `docs/dev/CHANG-0N_<YYYY-MM-DD>.md` — AI chặng sau đọc để biết dùng lại hàm gì:
+**Tệp bàn giao** `docs/project/handover/CHANG-0N_<YYYY-MM-DD>.md` — AI chặng sau đọc để biết dùng lại hàm gì:
 1) Thẻ đã xong / chưa xong (kèm lý do nếu chưa).  2) Danh sách commit (hash ngắn + message).  3) File chính đã thêm/sửa.  4) Bảng DB + migration (số, tên, ý nghĩa).  5) API mới (method, đường dẫn, quyền, ví dụ request/response).  6) Hàm/module để chặng sau TÁI SỬ DỤNG (đường dẫn + chữ ký + 1 dòng cách dùng).  7) Biến môi trường mới (tên + giá trị mẫu, KHÔNG ghi bí mật thật).  8) Quyết định đã áp dụng + giới hạn đã biết.  9) Cách chạy thử/demo (lệnh + tài khoản từ seed).  10) Kết quả lệnh (dán dòng cuối: số pass/fail).  11) Phát hiện thêm (không tự sửa).
 
 **Nhánh:** `feat/GYM-<mã thẻ đầu>-chang-0N-<slug>` (ví dụ chặng 1: `feat/GYM-54-chang-01-bieu-gia`). **Commit:** `<type>(phạm vi): mô tả [GYM-xx]` theo `CONTRIBUTING.md` mục 3 — phần mô tả tiếng Việt, bắt đầu bằng động từ, ≤72 ký tự, không dấu chấm cuối; mỗi commit một ý. **PR:** tiêu đề `[GYM-54, GYM-55, GYM-56, GYM-57, GYM-58] Chặng 1 — Biểu giá và hàm tính tiền`; mô tả mẫu ở mục E của mỗi tệp prompt (có dòng bằng chứng `python test.py` và mục «Dùng AI»). **Merge:** *Create a merge commit* để giữ 8–20 commit; nếu chọn *Squash* thì chặng thành một commit (Phúc quyết một lần — `CONTRIBUTING.md` hiện ghi squash).
@@ -191,7 +191,7 @@ Prompt đã **chốt sẵn một mặc định** cho mọi chỗ «chưa refine�
 2. `main`: `python test.py` xanh; CI 3 job xanh; `session-scenario` xanh; `npm audit --omit=dev --audit-level=high` sạch.
 3. `tools/demo-smoke.js` toàn PASS trên bản dữ liệu `seed-demo`.
 4. Nam và Phúc chạy trọn `docs/demo/KICH-BAN-DEMO.md` một lần không lỗi chặn.
-5. `docs/dev/TONG-KET-DU-AN.md` có bảng 39 thẻ ↔ test ↔ giới hạn, danh sách việc chưa làm, câu hỏi PO còn mở.
+5. `docs/project/TONG-KET-DU-AN.md` có bảng 39 thẻ ↔ test ↔ giới hạn, danh sách việc chưa làm, câu hỏi PO còn mở.
 6. Khối «Xác nhận» của `ca-tinh-tay.md` đã ký; bảng đáp án các chặng khác đã có người tính lại.
 
 ## 10. Việc Phúc cần làm ngay (theo thứ tự)

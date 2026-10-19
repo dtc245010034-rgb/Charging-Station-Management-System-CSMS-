@@ -72,7 +72,7 @@ describe('C2: một bộ seed demo duy nhất', () => {
 
   it('không còn tools/seed-demo.js; tài liệu và mã chỉ trỏ tới `npm run seed-demo`', () => {
     assert.ok(!fs.existsSync(path.join(repoRoot, 'tools/seed-demo.js')));
-    for (const file of ['README.md', 'run.py', 'docs/OPERATIONS.md', 'docs/demo/CHECKLIST-TRUOC-DEMO.md', 'docs/demo/KICH-BAN-DEMO.md', 'backend/.env.example']) {
+    for (const file of ['README.md', 'run.py', 'docs/guides/OPERATIONS.md', 'docs/demo/CHECKLIST-TRUOC-DEMO.md', 'docs/demo/KICH-BAN-DEMO.md', 'backend/.env.example']) {
       assert.ok(!fs.readFileSync(path.join(repoRoot, file), 'utf8').includes('tools/seed-demo.js'), `${file} còn trỏ tới tools/seed-demo.js`);
     }
   });

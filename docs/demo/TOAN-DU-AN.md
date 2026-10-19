@@ -1,6 +1,6 @@
 # Hướng dẫn demo toàn dự án CSMS (Sprint 1–3 và Chặng 1–9, S-01 → S-66)
 
-Tài liệu này mở rộng [`DEMO_SPRINT2.md`](DEMO_SPRINT2.md) và [`DEMO_SPRINT3.md`](DEMO_SPRINT3.md) cho **toàn bộ dự án**: từ lệnh khởi động, dữ liệu mẫu, từng vai trò, đến các chức năng sau Sprint 3 (biểu giá, ví, công suất, đặt chỗ, đối soát, gói thuê bao). Mọi bước đều có lệnh hoặc thao tác cụ thể và kết quả mong đợi. Các chi tiết trụ ảo tương tác, khung hỏng, kết nối trùng… đã có trong hai tài liệu Sprint 2 và Sprint 3, nên ở đây chỉ nhắc lệnh chính và dẫn mục.
+Tài liệu này mở rộng [`SPRINT2.md`](SPRINT2.md) và [`SPRINT3.md`](SPRINT3.md) cho **toàn bộ dự án**: từ lệnh khởi động, dữ liệu mẫu, từng vai trò, đến các chức năng sau Sprint 3 (biểu giá, ví, công suất, đặt chỗ, đối soát, gói thuê bao). Mọi bước đều có lệnh hoặc thao tác cụ thể và kết quả mong đợi. Các chi tiết trụ ảo tương tác, khung hỏng, kết nối trùng… đã có trong hai tài liệu Sprint 2 và Sprint 3, nên ở đây chỉ nhắc lệnh chính và dẫn mục.
 
 Thời lượng: bản đầy đủ khoảng **75 phút**; bản rút gọn **20 phút** ở mục 3.0. Không cần trụ sạc thật.
 
@@ -11,14 +11,14 @@ Mỗi khối ở mục 4 ghi rõ nguồn của "kết quả mong đợi":
 | Nhãn | Ý nghĩa |
 |---|---|
 | **[ĐÃ CHẠY 19/10]** | Chạy thật khi soạn tài liệu này (19/10/2026) trên backend Node 22 + PostgreSQL 16 cục bộ, **không dùng Docker**, dữ liệu do `npm run seed-demo` tạo, khung OCPP gửi qua WebSocket thật; riêng giao diện kiểm bằng Chromium (Playwright) |
-| **[THEO SPRINT 2/3]** | Lấy từ `DEMO_SPRINT2.md` / `DEMO_SPRINT3.md`, đã chạy ngày 07/10 và 12/10/2026 bằng Docker; chưa chạy lại hôm nay |
+| **[THEO SPRINT 2/3]** | Lấy từ `SPRINT2.md` / `SPRINT3.md`, đã chạy ngày 07/10 và 12/10/2026 bằng Docker; chưa chạy lại hôm nay |
 | **[CHƯA CHẠY LẠI]** | Mô tả theo mã nguồn và test tự động, chưa chạy tay trên giao diện; xem bằng chứng test ở mục 7 |
 
 Các lệnh bọc Docker (`python run.py …`) **chưa chạy lại** trong lần soạn này vì môi trường soạn không có Docker daemon; chúng lấy từ `run.py` và hai tài liệu Sprint trước.
 
 ## 1. Bản đồ giai đoạn → story → chức năng → mục demo
 
-«Sprint 1–3» là ba sprint đầu (S-01 → S-27). «Chặng 1–9» là chín chặng cuối theo [`KE_HOACH_DEN_HET_DU_AN.md`](KE_HOACH_DEN_HET_DU_AN.md) (S-28 → S-66).
+«Sprint 1–3» là ba sprint đầu (S-01 → S-27). «Chặng 1–9» là chín chặng cuối theo [`KE-HOACH-DEN-HET-DU-AN.md`](../project/KE-HOACH-DEN-HET-DU-AN.md) (S-28 → S-66).
 
 | Giai đoạn | Story | Chức năng | Chứng minh bằng | Mục |
 |---|---|---|---|---|
@@ -34,9 +34,9 @@ Các lệnh bọc Docker (`python run.py …`) **chưa chạy lại** trong lầ
 | Chặng 7 | S-47, S-48, S-49, S-66 | Tìm trạm gần, đặt chỗ, chống đặt trùng, đưa trạm vào hoạt động/tạm ngừng | Trang «Tìm trạm» + trụ ảo | 4.2, 4.8 |
 | Chặng 8 | S-46, S-54, S-58, S-61, S-63 | Cảnh báo trụ, chia doanh thu đối tác, xuất CSV, quản lý tài khoản, sức khoẻ hệ thống | Các trang Kế toán/Admin | 4.1, 4.8, 4.9, 4.10 |
 | Chặng 9 | S-45, S-50, S-51, S-65 | Hạn mức theo khung giờ, phí không đến, huỷ chỗ, gói thuê bao tháng | Trang «Ví», hoá đơn | 4.7, 4.8, 4.11 |
-| Mục D | — | Trụ vật lý ESP32 | [`demo/THONG-SO-NOI-TRU-VAT-LY.md`](demo/THONG-SO-NOI-TRU-VAT-LY.md) | 4.12 |
+| Mục D | — | Trụ vật lý ESP32 | [`demo/THONG-SO-NOI-TRU-VAT-LY.md`](THONG-SO-NOI-TRU-VAT-LY.md) | 4.12 |
 
-Trạng thái từng thẻ trên Jira nằm trong [`dev/TONG-KET-DU-AN.md`](dev/TONG-KET-DU-AN.md) (S-45, S-50, S-51, S-65 đang ở **Review** ngày 19/10/2026).
+Trạng thái từng thẻ trên Jira nằm trong [`project/TONG-KET-DU-AN.md`](../project/TONG-KET-DU-AN.md) (S-45, S-50, S-51, S-65 đang ở **Review** ngày 19/10/2026).
 
 ## 2. Chuẩn bị (làm trước buổi demo, khoảng 15 phút)
 
@@ -66,7 +66,7 @@ python run.py          # Windows: py run.py   |   Linux/macOS: python3 run.py
 | Dừng và **xoá** dữ liệu (hỏi xác nhận) | `python run.py reset` |
 | Lint + toàn bộ test trong Docker | `python run.py test` (hoặc `python test.py`) |
 
-Đổi `.env` xong phải tạo lại container: `python run.py down` rồi `python run.py` (xem cảnh báo `ContainerConfig` ở [`DEMO_SPRINT2.md`](DEMO_SPRINT2.md) mục 2).
+Đổi `.env` xong phải tạo lại container: `python run.py down` rồi `python run.py` (xem cảnh báo `ContainerConfig` ở [`SPRINT2.md`](SPRINT2.md) mục 2).
 
 ### 2.3 Chạy không Docker  [ĐÃ CHẠY 19/10]
 
@@ -250,7 +250,7 @@ Quy ước: `→` là khung trụ gửi, `←` là máy chủ trả. Lệnh gõ 
 
 ### 4.3 Sprint 2: OCPP, thời gian thực (S-06 → S-16)  [THEO SPRINT 2/3 — đã chạy 07/10 và 12/10]
 
-Đủ 11 story, từng bước và bảng kết quả nằm ở [`DEMO_SPRINT2.md`](DEMO_SPRINT2.md) mục 3. Bản tóm tắt để trình diễn nhanh (Admin mở **Trạng thái trụ**):
+Đủ 11 story, từng bước và bảng kết quả nằm ở [`SPRINT2.md`](SPRINT2.md) mục 3. Bản tóm tắt để trình diễn nhanh (Admin mở **Trạng thái trụ**):
 
 | Việc | Lệnh | Mong đợi |
 |---|---|---|
@@ -270,7 +270,7 @@ Quy ước: `→` là khung trụ gửi, `←` là máy chủ trả. Lệnh gõ 
 
 ### 4.4 Sprint 3: phiên sạc (S-17 → S-27)  [THEO SPRINT 2/3 — đã chạy 12/10; 4.4.5 ĐÃ CHẠY 19/10]
 
-Chi tiết: [`DEMO_SPRINT3.md`](DEMO_SPRINT3.md) mục 3. Tóm tắt:
+Chi tiết: [`SPRINT3.md`](SPRINT3.md) mục 3. Tóm tắt:
 
 1. **Bắt đầu phiên (S-17)**: `start 1 TAG-DEMO-01 2000` → `transactionId` mới, `Accepted`; trang **Phiên sạc** (Vận hành) hiện phiên `CHARGING`. `start 1 TAG-DEMO-01 3000` khi phiên chưa kết thúc → phiên cũ thành **Phiên bất thường** («Bị thay bằng phiên mới trên cùng đầu nối»). `start 2 TAG-BLOCKED-01 500` → thẻ khoá vẫn cấp `transactionId` nhưng đánh dấu «Cần xem xét».
 2. **Mất kết nối giữa phiên (S-21)**: `start 1 TAG-DEMO-01 7000`, `drop` (hoặc `kill`), phiên **không** bị đóng; `connect` → phiên vẫn `CHARGING`.
@@ -410,7 +410,7 @@ Kịch bản có số liệu so sánh được. Bắt đầu từ DB vừa seed 
 
 ### 4.12 Mục D (tuỳ chọn, bỏ qua nếu thiếu thời gian): trụ vật lý ESP32 và dữ liệu cá nhân
 
-Bảng thông số (URL `ws://<IP>:<cổng>/ocpp/ESP32-DEMO-01`, subprotocol `ocpp1.6`, đầu nối 1, thẻ `TAG-ESP32-01`, giới hạn bắt tay 5 lần/10 giây → 429): [`demo/THONG-SO-NOI-TRU-VAT-LY.md`](demo/THONG-SO-NOI-TRU-VAT-LY.md). Khi chưa có thiết bị: `node tools/demo-charge-point.js ESP32-DEMO-01 --connectors 1`.
+Bảng thông số (URL `ws://<IP>:<cổng>/ocpp/ESP32-DEMO-01`, subprotocol `ocpp1.6`, đầu nối 1, thẻ `TAG-ESP32-01`, giới hạn bắt tay 5 lần/10 giây → 429): [`demo/THONG-SO-NOI-TRU-VAT-LY.md`](THONG-SO-NOI-TRU-VAT-LY.md). Khi chưa có thiết bị: `node tools/demo-charge-point.js ESP32-DEMO-01 --connectors 1`.
 
 Điểm nói về dữ liệu cá nhân (Nghị định 13/2023): log ứng dụng chỉ giữ 4 ký tự cuối của thẻ; `audit_logs` không lưu toạ độ GPS thô hay mật khẩu; mật khẩu băm Argon2id; phiên bằng cookie `HttpOnly`; tài khoản `admin/admin` và mật khẩu demo cố định chỉ có ở máy cá nhân.
 
@@ -494,13 +494,13 @@ Ngày 19/10/2026, nhánh `fix/pre-main-lan37`, Node 22 + PostgreSQL 16 cục b�
 | Axe (Playwright) 6 trang × 360/1280 px × sáng/tối | 0 vi phạm serious/critical, không tràn ngang |
 | `python test.py` (toàn bộ như CI) | **CHƯA KIỂM**: cần Docker |
 
-Mỗi story có file test tương ứng, liệt kê trong [`dev/TONG-KET-DU-AN.md`](dev/TONG-KET-DU-AN.md). Ví dụ chạy riêng một story: `python test.py --file tests/acceptance/S-45.power-windows.test.js` (hoặc, không Docker, `cd backend && node --test --test-concurrency=1 tests/acceptance/S-45.power-windows.test.js`).
+Mỗi story có file test tương ứng, liệt kê trong [`project/TONG-KET-DU-AN.md`](../project/TONG-KET-DU-AN.md). Ví dụ chạy riêng một story: `python test.py --file tests/acceptance/S-45.power-windows.test.js` (hoặc, không Docker, `cd backend && node --test --test-concurrency=1 tests/acceptance/S-45.power-windows.test.js`).
 
 ## 8. Câu hỏi mentor hay hỏi và giới hạn cần nói thật
 
 | Câu hỏi | Trả lời trung thực |
 |---|---|
-| Trụ nào cũng kết nối được nếu biết mã? | **Đúng, rủi ro B5**: chưa xác thực trụ (chưa có khoá/mật khẩu trụ). Có đề xuất ở [`B5-xac-thuc-tru-de-xuat-thiet-ke.md`](B5-xac-thuc-tru-de-xuat-thiet-ke.md), chờ PO chọn. Giảm thiểu: giới hạn bắt tay 5 lần/10 giây theo (IP, mã trụ). |
+| Trụ nào cũng kết nối được nếu biết mã? | **Đúng, rủi ro B5**: chưa xác thực trụ (chưa có khoá/mật khẩu trụ). Có đề xuất ở [`B5-xac-thuc-tru-de-xuat-thiet-ke.md`](../guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md), chờ PO chọn. Giảm thiểu: giới hạn bắt tay 5 lần/10 giây theo (IP, mã trụ). |
 | Thanh toán có thật không? | **Không**: chỉ cổng sandbox giả lập, không nối VNPay/MoMo. |
 | Chạy nổi 50 trụ chưa? | **Chưa kiểm** trên máy chủ nhóm; công cụ `simulate-fleet.js` có nhưng chưa chạy ở quy mô đó. Registry kết nối nằm trong bộ nhớ nên chỉ đúng khi chạy **một tiến trình**. |
 | Chạy với trụ thật chưa? | Chưa. Trụ ảo gửi khung OCPP 1.6J viết tay qua `ws` (không dùng lại khung của backend); chỗ cắm cho ESP32 đã sẵn (mục 4.12). |
@@ -537,5 +537,5 @@ Mỗi story có file test tương ứng, liệt kê trong [`dev/TONG-KET-DU-AN.m
 | Xoá sạch và làm lại từ đầu | `python run.py reset` rồi `python run.py` |
 | Seed lại (không nhân đôi) | `npm run seed-demo` (trong `backend/`, cần `ALLOW_DEMO_SEED=1`, `DEMO_PASSWORD`) |
 | Đặt lại ví/gói về trạng thái ban đầu | Sổ cái và đăng ký gói là bảng **chỉ-chèn**, không xoá được: dùng `reset` để quay về dữ liệu sạch |
-| Chuẩn bị 30 phút trước demo | [`demo/CHECKLIST-TRUOC-DEMO.md`](demo/CHECKLIST-TRUOC-DEMO.md) |
-| Kịch bản 5 vai trò rút gọn (Chặng 9) | [`demo/KICH-BAN-DEMO.md`](demo/KICH-BAN-DEMO.md) |
+| Chuẩn bị 30 phút trước demo | [`demo/CHECKLIST-TRUOC-DEMO.md`](CHECKLIST-TRUOC-DEMO.md) |
+| Kịch bản 5 vai trò rút gọn (Chặng 9) | [`demo/KICH-BAN-DEMO.md`](KICH-BAN-DEMO.md) |

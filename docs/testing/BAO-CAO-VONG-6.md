@@ -102,7 +102,7 @@ Quan sát: lần SIGTERM thứ hai giết tiến trình theo hành vi mặc đ�
 
 | Mục | Tình trạng | Đề xuất |
 |---|---|---|
-| B5 xác thực trụ (Cao) | PO (qua Phúc) chọn **chỉ ghi nhận rủi ro**, không viết code. Đã ghi vào README "Giới hạn đã biết": chấp nhận cho demo/staging 03/10/2026, **không** chấp nhận cho production. Thiết kế phương án A giữ ở `docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md` | PO Lê Đình Tuấn chốt trước khi lên production |
+| B5 xác thực trụ (Cao) | PO (qua Phúc) chọn **chỉ ghi nhận rủi ro**, không viết code. Đã ghi vào README "Giới hạn đã biết": chấp nhận cho demo/staging 03/10/2026, **không** chấp nhận cho production. Thiết kế phương án A giữ ở `docs/guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md` | PO Lê Đình Tuấn chốt trước khi lên production |
 | K-01 Boot trùng `messageId` | Giữ nguyên, thuộc S-14 | Làm S-14 sớm |
 | F5 trạng thái mức trụ (`connectorId=0`) | Trả `{}`, ghi log gom, chưa lưu DB. Đã kiểm S-11 (#70) và `feat/s-11-fleet-status-copy`: không bao phủ F5 | Phúc/PO chốt thiết kế cột hoặc bảng (`connector_errors.connector_id` đang `NOT NULL`) |
 | Trụ ONLINE có đầu nối `UNKNOWN` | PO chọn **giữ xanh "Sẵn sàng"**; trụ ONLINE mà mọi đầu nối `UNAVAILABLE` nay hiện ngoại tuyến. Ghi trong README | QA (Nam) xác nhận |

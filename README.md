@@ -42,7 +42,7 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 
 ## Trạng thái dự án (05/10)
 
-*Cập nhật 05/10/2026, khớp `main` sau PR #85 (S-15) và commit S-16 `6e74180` (**commit S-16 mới có trên `main` cục bộ, chưa qua PR**). Đã kiểm bằng server thật ngày 04/10: [`docs/testing/BAO-CAO-VONG-7.md`](docs/testing/BAO-CAO-VONG-7.md); S-14/S-15/S-16: [`docs/testing/stories/S/`](docs/testing/stories/S/). Trạng thái Done chính thức theo Jira (bảng GYM, **chưa đối chiếu bằng API**); bảng đầy đủ: [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md).*
+*Cập nhật 05/10/2026, khớp `main` sau PR #85 (S-15) và commit S-16 `6e74180` (**commit S-16 mới có trên `main` cục bộ, chưa qua PR**). Đã kiểm bằng server thật ngày 04/10: [`docs/testing/BAO-CAO-VONG-7.md`](docs/testing/BAO-CAO-VONG-7.md); S-14/S-15/S-16: [`docs/testing/stories/S/`](docs/testing/stories/S/). Trạng thái Done chính thức theo Jira (bảng GYM, **chưa đối chiếu bằng API**); bảng đầy đủ: [`docs/archive/SPRINT-STATUS.md`](docs/archive/SPRINT-STATUS.md).*
 
 | Hạng mục | Tình trạng |
 |---|---|
@@ -62,7 +62,7 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 | 3 | **F8** chỉ phát lại tin trùng khi cùng `messageId`, cùng hành động và cùng nội dung trong cửa sổ `OCPP_DUPLICATE_REPLAY_WINDOW_SECONDS` | Xong | Có test viết trước, thấy FAIL trên code cũ rồi PASS; Heartbeat không còn lưu chống trùng (F11). Xem [Giới hạn đã biết](#giới-hạn-đã-biết) |
 | 4 | **F9** job S-12 và Heartbeat dùng chung hằng số trạng thái; Heartbeat đưa trụ về `ONLINE` thì tính lại trạng thái đầu nối từ `ocpp_status` đã lưu | Xong | Test đơn vị + test server thật (`ocpp-heartbeat-recovery*.test.js`) |
 | 5 | **F10** `lock_timeout` 5 giây (`OCPP_LOCK_TIMEOUT_SECONDS`) chỉ cho truy vấn của handler OCPP (pool riêng `ocppPool`) | Xong | Test server thật: khoá hàng 8 giây thì handler trả lỗi sau khoảng 5 giây, Heartbeat không bị chặn |
-| 6 | `tools/simulate-fleet.js` (50 trụ ảo, 6 kịch bản, ngưỡng định sẵn) | Xong trên laptop | Chạy trên DB `_chk` ở localhost: 11/11 PASS. **Chưa chạy trên máy chủ nhóm/ngrok** (xem [`docs/OPERATIONS.md`](docs/OPERATIONS.md)) |
+| 6 | `tools/simulate-fleet.js` (50 trụ ảo, 6 kịch bản, ngưỡng định sẵn) | Xong trên laptop | Chạy trên DB `_chk` ở localhost: 11/11 PASS. **Chưa chạy trên máy chủ nhóm/ngrok** (xem [`docs/guides/OPERATIONS.md`](docs/guides/OPERATIONS.md)) |
 | 7 | Cập nhật Jira (S-08…S-16), xoá nhánh đã merge | 1–2 giờ | |
 | 8 | **Quyết định PO:** B5 (Basic Auth hay chấp nhận rủi ro), quy tắc `messageId`, lỗi mức trụ có đổi trạng thái tổng không, nhãn "Ngoại tuyến" cho trụ có mọi đầu nối tạm ngừng | — | Chốt trước demo |
 
@@ -70,18 +70,18 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 
 ### Tiến độ Sprint 3 (12/10)
 
-*Cập nhật 12/10/2026. Phần "Trạng thái dự án" ở trên dừng ở mốc 05/10; bảng này thay cho ghi chú S-22 ngày 10/10. Chi tiết: [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md) mục 13. Hướng dẫn demo: [`docs/DEMO_SPRINT3.md`](docs/DEMO_SPRINT3.md).*
+*Cập nhật 12/10/2026. Phần "Trạng thái dự án" ở trên dừng ở mốc 05/10; bảng này thay cho ghi chú S-22 ngày 10/10. Chi tiết: [`docs/archive/SPRINT-STATUS.md`](docs/archive/SPRINT-STATUS.md) mục 13. Hướng dẫn demo: [`docs/demo/SPRINT3.md`](docs/demo/SPRINT3.md).*
 
 | Hạng mục | Tình trạng |
 |---|---|
 | Code Sprint 3 (S-17 → S-27) | **Đã vào `main`** qua PR #91 (S-17), #93 (S-18), #94 (S-19), #96 (S-20), #98 (S-21), #101 (S-22), #103 (S-23), #106/#107 (S-24), #108 (S-25), #110 (S-26), #113 (S-27). Trạng thái Done chính thức theo Jira **chưa đối chiếu** |
 | Kiểm tra 12/10/2026 | `python test.py` trên `main`: **710 test pass, 0 fail** (358 giây); `npm audit --omit=dev --audit-level=high`: 0 vulnerabilities. Một phiên sạc có ngắt kết nối giữa chừng, xả 200 `MeterValues` dồn và `StopTransaction` đến muộn chốt đúng kWh (đã chạy trên server thật) |
-| Sửa lỗi rà soát 12/10 | Đóng được phiên bất thường chưa có số đo (ô tích "0 kWh"), dịch lý do cần xem xét sang tiếng Việt, sửa trang "Bắt đầu sạc" của tài xế, mỗi tài xế một phiên khi bắt đầu từ ứng dụng. Chi tiết ở mục cuối [`docs/DEMO_SPRINT3.md`](docs/DEMO_SPRINT3.md) |
+| Sửa lỗi rà soát 12/10 | Đóng được phiên bất thường chưa có số đo (ô tích "0 kWh"), dịch lý do cần xem xét sang tiếng Việt, sửa trang "Bắt đầu sạc" của tài xế, mỗi tài xế một phiên khi bắt đầu từ ứng dụng. Chi tiết ở mục cuối [`docs/demo/SPRINT3.md`](docs/demo/SPRINT3.md) |
 | Còn mở | B5 (trụ chưa xác thực, phải chốt trước khi tính tiền), kịch bản 20 trụ ngắt–nối trên staging, menu "Phiên sạc" cho Chủ trạm/Kế toán, hồ sơ kiểm thử S-18, S-24, S-27, trạng thái Jira |
 
 ---|---|
 | S-22 (GYM-48): tài xế xem phiên đang sạc | **Chưa Done.** Bản giao đầu ở nhánh `nam/gym48-s-22`, chưa vào `main`. Các lỗi của báo cáo review lần 27 đã sửa trên nhánh `phuc/GYM-48-sua-loi-review-s22`: kWh và công suất theo đúng đơn vị trụ gửi, lưu `SoC`, SSE lọc theo tài xế và đúng thứ tự, màn hình kết thúc phiên, đồng bộ lại khi SSE nối lại. Chưa mở PR, chưa được duyệt |
-| Còn lại | Mở PR và review; kiểm tay trên trình duyệt (**chưa chạy**); chạy toàn bộ test trong môi trường CI và ghi tổng số; tách thẻ riêng cho các phát hiện ngoài phạm vi. Hồ sơ: [`docs/dev/S-22_2026-10-10.md`](docs/dev/S-22_2026-10-10.md), [`kiem-thu-S-22.md`](docs/testing/stories/S/kiem-thu-S-22.md) |
+| Còn lại | Mở PR và review; kiểm tay trên trình duyệt (**chưa chạy**); chạy toàn bộ test trong môi trường CI và ghi tổng số; tách thẻ riêng cho các phát hiện ngoài phạm vi. Hồ sơ: [`docs/project/handover/S-22_2026-10-10.md`](docs/project/handover/S-22_2026-10-10.md), [`kiem-thu-S-22.md`](docs/testing/stories/S/kiem-thu-S-22.md) |
 
 ---
 
@@ -98,7 +98,7 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 
 | Lệnh | Việc |
 |---|---|
-| `python run.py` | Build (nếu cần) + chạy + tài khoản + demo + mở trình duyệt. Tuỳ chọn: `--port 4000`, `--no-open`, `--no-demo`, `--rebuild`, `--public-url https://…` (staging công khai qua tunnel, xem [`docs/OPERATIONS.md`](docs/OPERATIONS.md) mục 3), `--local` (quay về chế độ máy này) |
+| `python run.py` | Build (nếu cần) + chạy + tài khoản + demo + mở trình duyệt. Tuỳ chọn: `--port 4000`, `--no-open`, `--no-demo`, `--rebuild`, `--public-url https://…` (staging công khai qua tunnel, xem [`docs/guides/OPERATIONS.md`](docs/guides/OPERATIONS.md) mục 3), `--local` (quay về chế độ máy này) |
 | `python run.py down` | Dừng, **giữ dữ liệu** |
 | `python run.py reset` | Dừng và **xoá dữ liệu** (hỏi xác nhận; `--yes` bỏ hỏi) |
 | `python run.py logs` | Xem log app (`logs db` cho Postgres); `Ctrl+C` để thoát, app vẫn chạy |
@@ -131,7 +131,7 @@ ngrok http 3000 --url https://abc.ngrok.dev              # mở tunnel, chạy �
 python3 run.py --local                                   # quay về chế độ chạy trên máy này
 ```
 
-Chế độ này bật cookie `Secure` (`NODE_ENV=production`), đặt `TRUST_PROXY=1`, sinh **mật khẩu ngẫu nhiên** cho admin và tài khoản demo (in một lần), ép cổng ứng dụng và Postgres chỉ mở cho `127.0.0.1`, và **từ chối khởi động nếu DB còn tài khoản mật khẩu mặc định** (`admin/admin`, `demo12345`, `demo12345678`): khi đó chạy `python3 run.py reset --yes` rồi chạy lại. Chi tiết: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) mục 3.
+Chế độ này bật cookie `Secure` (`NODE_ENV=production`), đặt `TRUST_PROXY=1`, sinh **mật khẩu ngẫu nhiên** cho admin và tài khoản demo (in một lần), ép cổng ứng dụng và Postgres chỉ mở cho `127.0.0.1`, và **từ chối khởi động nếu DB còn tài khoản mật khẩu mặc định** (`admin/admin`, `demo12345`, `demo12345678`): khi đó chạy `python3 run.py reset --yes` rồi chạy lại. Chi tiết: [`docs/guides/OPERATIONS.md`](docs/guides/OPERATIONS.md) mục 3.
 
 - **Tên miền ngrok:** tài khoản miễn phí có 1 tên miền "development"; đuôi tên miền có thể là `ngrok.dev` hoặc `ngrok-free.app`, `run.py` nhận mọi địa chỉ `https://` gốc. Cú pháp `--url` theo [tài liệu ngrok](https://ngrok.com/docs/agent/cli/) (`--domain` đã bị đánh dấu lỗi thời); kiểm bằng `ngrok http --help`.
 - **Giới hạn gói miễn phí ngrok** ([nguồn](https://ngrok.com/docs/pricing-limits/free-plan-limits)): 20.000 yêu cầu HTTP, 1 GB dữ liệu ra và 5.000 kết nối TCP mỗi tháng; trang cảnh báo chỉ hiện với trình duyệt. Chưa kiểm chứng WebSocket OCPP qua ngrok thật: thử 1 trụ ảo bằng `wss://` trước.
@@ -152,7 +152,7 @@ Chỉ có **trên máy cá nhân** (do `python run.py` tạo):
 
 ### Biến môi trường
 
-Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Docker Compose, do `run.py` tạo) và `backend/.env` (chỉ khi chạy Node trực tiếp, mẫu: `backend/.env.example`). Bảng đầy đủ kèm biến chỉ dùng cho `run.py`/seed/test: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) mục 10.
+Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Docker Compose, do `run.py` tạo) và `backend/.env` (chỉ khi chạy Node trực tiếp, mẫu: `backend/.env.example`). Bảng đầy đủ kèm biến chỉ dùng cho `run.py`/seed/test: [`docs/guides/OPERATIONS.md`](docs/guides/OPERATIONS.md) mục 10.
 
 | Biến | Ý nghĩa | Đơn vị | Mặc định |
 |---|---|---|---|
@@ -308,7 +308,7 @@ Trụ kết nối tại `ws://localhost:3000/ocpp/<mã trụ>` với subprotocol
 | `Reset` (máy chủ → trụ) | Vận hành/Quản trị bấm "Khởi động lại" ở màn hình Trạng thái trụ hoặc gọi `POST /api/charge-points/:id/reset`; chờ trả lời tối đa `OCPP_COMMAND_TIMEOUT_SECONDS` (30 giây), không chặn tin khác trên kết nối (S-16) |
 | Action khác | Trả `NotImplemented`, không đóng kết nối |
 
-Mẫu trụ ảo: `docs/spikes/k01-simulator.js`, `docs/spikes/k01/` (xem [`docs/spikes/K-01-ocpp-simulator.md`](docs/spikes/K-01-ocpp-simulator.md)), và các kịch bản kiểm chứng trong `tools/` (đọc thông tin đăng nhập từ biến môi trường, chỉ chạy trên DB thử `_test`/`_chk`). Kết quả kiểm chứng vòng 6: [`docs/testing/BAO-CAO-VONG-6.md`](docs/testing/BAO-CAO-VONG-6.md).
+Mẫu trụ ảo: `docs/archive/spikes/k01-simulator.js`, `docs/archive/spikes/k01/` (xem [`docs/archive/spikes/K-01-ocpp-simulator.md`](docs/archive/spikes/K-01-ocpp-simulator.md)), và các kịch bản kiểm chứng trong `tools/` (đọc thông tin đăng nhập từ biến môi trường, chỉ chạy trên DB thử `_test`/`_chk`). Kết quả kiểm chứng vòng 6: [`docs/testing/BAO-CAO-VONG-6.md`](docs/testing/BAO-CAO-VONG-6.md).
 
 ---
 
@@ -346,7 +346,7 @@ Staging chạy **cùng Dockerfile** với `docker-compose`, triển khai trên [
    - `ADMIN_EMAIL`, `ADMIN_PASSWORD` (≥ 12 ký tự, tránh ký tự `#`): Quản trị đầu tiên, tự tạo lúc khởi động.
 4. Sau lần deploy đầu, mở `<URL>/api/health` phải thấy `"ok":true`, rồi đăng nhập bằng admin.
 
-**Vận hành:** merge vào `main` → Render chờ CI xanh (`autoDeployTrigger: checksPass`) → build → migrate → mở cổng. CI đỏ hoặc deploy lỗi thì giữ bản cũ. Bí mật nằm ở Render, không nằm trong repo. Rollback, tạm dừng, danh sách biến: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) mục 9.
+**Vận hành:** merge vào `main` → Render chờ CI xanh (`autoDeployTrigger: checksPass`) → build → migrate → mở cổng. CI đỏ hoặc deploy lỗi thì giữ bản cũ. Bí mật nằm ở Render, không nằm trong repo. Rollback, tạm dừng, danh sách biến: [`docs/guides/OPERATIONS.md`](docs/guides/OPERATIONS.md) mục 9.
 
 **Giới hạn gói free (biết trước):**
 - Service **ngủ sau 15 phút không có request**, mở lại chờ 30–60 giây: **mở trang trước buổi demo 5 phút**.
@@ -406,8 +406,8 @@ Công nghệ: Node ≥ 22.7 · Express 5 · PostgreSQL 16 · Zod · argon2id · 
 | Sprint | Mục tiêu | Trạng thái |
 |---|---|---|
 | 1 (21–28/9) | Khai báo trạm, trụ, đầu nối; cả nhóm chạy được dự án | **Xong** (12 SP) |
-| 2 (28/9–5/10) | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ | Code đạt AC đủ 20/20 SP (S-06…S-16). S-16 còn thiếu ghi vết `audit_logs` và chưa qua PR. Kế hoạch: [`docs/SPRINT_2_PLAN.md`](docs/SPRINT_2_PLAN.md) |
-| 3 (7/10–14/10) | Một phiên sạc trọn vẹn, kWh đúng dù trụ mất kết nối | Code S-17…S-27 đã vào `main`; kiểm 12/10: 710 test pass. Kế hoạch: [`docs/SPRINT_3_PLAN.md`](docs/SPRINT_3_PLAN.md); demo: [`docs/DEMO_SPRINT3.md`](docs/DEMO_SPRINT3.md) |
+| 2 (28/9–5/10) | Trụ ảo nối vào hệ thống được xác thực; vận hành viên thấy đúng trạng thái mọi trụ | Code đạt AC đủ 20/20 SP (S-06…S-16). S-16 còn thiếu ghi vết `audit_logs` và chưa qua PR. Kế hoạch: [`docs/archive/SPRINT-2-PLAN.md`](docs/archive/SPRINT-2-PLAN.md) |
+| 3 (7/10–14/10) | Một phiên sạc trọn vẹn, kWh đúng dù trụ mất kết nối | Code S-17…S-27 đã vào `main`; kiểm 12/10: 710 test pass. Kế hoạch: [`docs/archive/SPRINT-3-PLAN.md`](docs/archive/SPRINT-3-PLAN.md); demo: [`docs/demo/SPRINT3.md`](docs/demo/SPRINT3.md) |
 | 4 | Tính đúng tiền theo biểu giá nhiều khung giờ | Chưa |
 | 5 | Nạp ví (sandbox), tự trừ tiền | Chưa; **chưa có hồ sơ sandbox thanh toán** |
 | 6–8 | Phân bổ công suất · Tìm trạm, đặt chỗ · Đối soát | Chưa |
@@ -424,7 +424,7 @@ Các mục dưới đây là hiện trạng thật trên `main`, không phải l
 
 | Mã | Giới hạn | Hướng xử lý |
 |---|---|---|
-| **B5** | **Trụ chưa được xác thực.** WebSocket `/ocpp/:mã` chỉ kiểm tra mã trụ tồn tại và trạm không bị khoá. Kết nối ẩn danh biết mã trụ có thể thay thế (đá) trụ thật theo logic S-13. **Rủi ro được ghi nhận và chấp nhận tạm cho demo/staging (03/10/2026); không dùng nguyên trạng cho production.** | Đề xuất thiết kế, chưa có code, chờ PO chọn phương án: [`docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`](docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md) |
+| **B5** | **Trụ chưa được xác thực.** WebSocket `/ocpp/:mã` chỉ kiểm tra mã trụ tồn tại và trạm không bị khoá. Kết nối ẩn danh biết mã trụ có thể thay thế (đá) trụ thật theo logic S-13. **Rủi ro được ghi nhận và chấp nhận tạm cho demo/staging (03/10/2026); không dùng nguyên trạng cho production.** | Đề xuất thiết kế, chưa có code, chờ PO chọn phương án: [`docs/guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md`](docs/guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md) |
 | — | **Giới hạn tần suất (#10, #22, #28, #29) lưu trong bộ nhớ một tiến trình**: mất khi khởi động lại, không chia sẻ giữa nhiều bản server. `POST /api/auth/register` vẫn trả 409 "Email đã tồn tại" nên còn dò được email từ nhiều IP khác nhau (mỗi IP bị chặn sau 5 lần/giờ); bắt tay OCPP bị giới hạn theo (IP, mã trụ) chứ không theo riêng mã trụ, để kẻ lạ không khoá được trụ thật. IP lấy theo `TRUST_PROXY` (giá trị đúng trên Render chưa kiểm chứng). | Cần kho dùng chung (DB/Redis) trước khi mở rộng ngang; B5 mới là biện pháp chặn giả mạo trụ |
 | **K-01** | **Đã xử lý (S-14):** tin trùng (cùng trụ, cùng `messageId`) nhận lại đúng câu cũ, lưu ở bảng `ocpp_messages` nên khởi động lại vẫn nhận ra. Ngoại lệ: `BootNotification` và `Heartbeat` không lưu chống trùng (Boot ghi `ONLINE` và đánh dấu kết nối; Heartbeat vốn idempotent, F11). Chỉ lưu khi handler thành công; `messageId` dài hơn 64 ký tự bỏ qua chống trùng. Tin đang xử lý bị bỏ rơi quá 30 giây thì được xử lý lại. | Cần PO xác nhận ngoại lệ Boot/Heartbeat; xem F8 |
 | — | **Trạng thái mức trụ (F5, `connectorId = 0`) đã được lưu** vào `charge_points.ocpp_status`, `last_error_code`, `status_updated_at`; lỗi vào `connector_errors` (cột `charge_point_id`, `connector_id` để trống). Trạng thái `ONLINE` của trụ **không đổi** theo lỗi mức trụ, giao diện chỉ thêm huy hiệu "Lỗi mức trụ". Quy tắc ảnh hưởng đến trạng thái tổng của trụ và trạm chưa có, chờ PO. Huy hiệu mới chưa kiểm bằng trình duyệt. | Chờ PO/QA xác nhận |
@@ -474,13 +474,13 @@ run.py / test.py          chạy dự án / chạy toàn bộ test bằng Docker
 
 | Cần gì | Đọc |
 |---|---|
-| Build, chạy, dừng, sao lưu DB, staging, biến môi trường | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
-| Dự án đang ở đâu (từng story, rủi ro, DoD) | [`docs/SPRINT_STATUS.md`](docs/SPRINT_STATUS.md), [`docs/SPRINT_2_PLAN.md`](docs/SPRINT_2_PLAN.md), [`docs/SPRINT_3_PLAN.md`](docs/SPRINT_3_PLAN.md) |
-| Demo cho mentor | [`docs/DEMO_SPRINT2.md`](docs/DEMO_SPRINT2.md), [`docs/DEMO_SPRINT3.md`](docs/DEMO_SPRINT3.md) |
+| Build, chạy, dừng, sao lưu DB, staging, biến môi trường | [`docs/guides/OPERATIONS.md`](docs/guides/OPERATIONS.md) |
+| Dự án đang ở đâu (từng story, rủi ro, DoD) | [`docs/archive/SPRINT-STATUS.md`](docs/archive/SPRINT-STATUS.md), [`docs/archive/SPRINT-2-PLAN.md`](docs/archive/SPRINT-2-PLAN.md), [`docs/archive/SPRINT-3-PLAN.md`](docs/archive/SPRINT-3-PLAN.md) |
+| Demo cho mentor | [`docs/demo/SPRINT2.md`](docs/demo/SPRINT2.md), [`docs/demo/SPRINT3.md`](docs/demo/SPRINT3.md) |
 | Đóng góp code (nhánh, commit, review, DoD) | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | API, phân quyền, khoá đăng nhập, migration | [`backend/README.md`](backend/README.md) |
 | Thiết kế giao diện | [`docs/design/`](docs/design/) |
-| OCPP: spike K-01 và đề xuất xác thực trụ B5 | [`docs/spikes/K-01-ocpp-simulator.md`](docs/spikes/K-01-ocpp-simulator.md), [`docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`](docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md) |
+| OCPP: spike K-01 và đề xuất xác thực trụ B5 | [`docs/archive/spikes/K-01-ocpp-simulator.md`](docs/archive/spikes/K-01-ocpp-simulator.md), [`docs/guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md`](docs/guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md) |
 | Kiểm thử/QA, báo cáo vòng 6 | [`docs/testing/README.md`](docs/testing/README.md), [`docs/testing/BAO-CAO-VONG-6.md`](docs/testing/BAO-CAO-VONG-6.md) |
 | Backlog (nguồn sự thật về phạm vi và AC) | File ghim trong nhóm Zalo Khối 8 |
 | Theo dõi công việc | Jira, bảng **GYM** (Team-CodeGym) |

@@ -2,7 +2,7 @@
 // Trụ sạc ảo TƯƠNG TÁC (OCPP 1.6J) để demo Sprint 2 (S-06 → S-16) trên máy chủ CSMS đang chạy.
 // Giữ kết nối, tự gửi Heartbeat, trả lời lệnh Reset/RemoteStop của máy chủ, và nhận lệnh gõ tay.
 // Chỉ gửi/nhận khung JSON thô qua `ws`, không dùng thư viện OCPP, nên gửi được cả khung hỏng để thử S-07.
-// Hướng dẫn từng bước: docs/DEMO_SPRINT2.md
+// Hướng dẫn từng bước: docs/demo/SPRINT2.md
 'use strict';
 
 const fs = require('node:fs');

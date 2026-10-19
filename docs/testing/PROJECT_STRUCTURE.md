@@ -11,7 +11,7 @@
 
 ---
 
-> **Cập nhật 03/10/2026:** cây dưới đây là snapshot 30/09. Thêm sau đó trên `main`: `backend/src/modules/fleet-status/` (REST + SSE), `modules/ocpp/handlers/status-notification.js`, `modules/ocpp/shutdown.js`, migration `010`–`012`, `docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`, `docs/testing/BAO-CAO-VONG-6.md`, `docs/testing/ui-round6/`, `docs/testing/round6/`, các `tools/verify-*-round6.js`. Cấu trúc hiện hành: `README.md` mục 7.
+> **Cập nhật 03/10/2026:** cây dưới đây là snapshot 30/09. Thêm sau đó trên `main`: `backend/src/modules/fleet-status/` (REST + SSE), `modules/ocpp/handlers/status-notification.js`, `modules/ocpp/shutdown.js`, migration `010`–`012`, `docs/guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md`, `docs/testing/BAO-CAO-VONG-6.md`, `docs/testing/ui-round6/`, `docs/testing/round6/`, các `tools/verify-*-round6.js`. Cấu trúc hiện hành: `README.md` mục 7.
 
 ## 0. Cập nhật cấu trúc toàn diện (30/09/2026)
 
@@ -20,18 +20,18 @@ Tài liệu này được tái tạo toàn bộ (**Rescanned and Rebuilt**) từ
 1. **Bổ sung các thành phần mới trong mã nguồn & tài liệu**:
    - `CONTRIBUTING.md`: Quy ước làm việc nhóm CSMS, quy tắc đặt tên nhánh theo mã Jira, commit message, checklist PR.
    - `backend/scripts/seed-demo-if-enabled.js`: Script cross-platform kiểm tra `ALLOW_DEMO_SEED=1` trước khi chạy seed demo cho `npm run start:staging`.
-   - `docs/SPRINT_2_PLAN.md`: Kế hoạch chi tiết phân làn làm việc Sprint 2 (S-06 → S-16: kiến trúc module OCPP, WebSocket, simulator).
+   - `docs/archive/SPRINT-2-PLAN.md`: Kế hoạch chi tiết phân làn làm việc Sprint 2 (S-06 → S-16: kiến trúc module OCPP, WebSocket, simulator).
    - `docs/Audit/`: Toàn bộ bộ khung tiêu chuẩn kiểm toán an ninh độc lập **AI Security Audit Framework v3.0** gồm 6 thư mục con (`01_standards/`, `02_runbook/`, `03_catalogs/`, `04_templates/`, `05_references/`, `results/`) với 26 tệp tiêu chuẩn, runbook và báo cáo kiểm toán ngày 29/09/2026.
 2. **Chi tiết hóa toàn bộ cây thư mục Frontend và Assets**:
    - Khai báo đầy đủ từng tệp component trong `frontend/components/` (`badge.js`, `donut.js`, `empty-state.js`, `hero.js`, `icons.js`, `kpi-card.js`, `modal.js`, `palette.js`, `sidebar.js`, `station-map.js`, `table.js`, `toast.js`, `topbar.js`).
    - Khai báo đầy đủ từng tệp trang dùng chung trong `frontend/pages/shared/` (`account.js`, `charge-points.js`, `fleet.js`, `fleet-overview.js`, `map-page.js`, `station-drawer.js`, `station-form.js`, `stations.js`).
    - Khai báo chi tiết các tệp thư viện bản đồ và tài nguyên ảnh tại `frontend/vendor/leaflet/` và `frontend/vendor/leaflet/images/`.
    - Khai báo toàn bộ 30 tệp ảnh chụp màn hình nghiệm thu giao diện thực tế tại `docs/design/screenshots/`.
-   - Khai báo chi tiết 8 tệp thực thi và dữ liệu trong cụm spike OCPP `docs/spikes/k01/`.
+   - Khai báo chi tiết 8 tệp thực thi và dữ liệu trong cụm spike OCPP `docs/archive/spikes/k01/`.
 3. **Làm rõ ranh giới vị trí các thư mục tài liệu**:
    - `docs/stories/`: Chứa toàn bộ 5 hồ sơ kiểm thử User Story (`S-01.md` đến `S-05.md`) — *lưu ý: nằm trực tiếp dưới `docs/stories/`, không nằm trong `docs/testing/stories/`*.
    - `docs/integration/`: Chứa hồ sơ kiểm thử tích hợp `FRONTEND_BACKEND.md` — *lưu ý: nằm trực tiếp dưới `docs/integration/`, không nằm trong `docs/testing/integration/`*.
-   - `docs/spikes/`: Chứa các tài liệu nghiên cứu OCPP (`K-01-ocpp-simulator.md`, `k01-session-log.json`, `k01-simulator.js`, `S-05-AC3-ghi-nhan-cho-PO.md`) và mã chạy lại `k01/` — *lưu ý: nằm trực tiếp dưới `docs/spikes/`, không nằm trong `docs/testing/spikes/`*.
+   - `docs/archive/spikes/`: Chứa các tài liệu nghiên cứu OCPP (`K-01-ocpp-simulator.md`, `k01-session-log.json`, `k01-simulator.js`, `S-05-AC3-ghi-nhan-cho-PO.md`) và mã chạy lại `k01/` — *lưu ý: nằm trực tiếp dưới `docs/archive/spikes/`, không nằm trong `docs/testing/spikes/`*.
    - `docs/testing/`: Chỉ chứa 4 báo cáo kiểm thử tổng hợp (`BUG_REPORT.md`, `REGRESSION_REPORT.md`, `TEST_PLAN.md`, `TEST_REPORT.md`).
 4. **Bảng tra cứu lịch sử chuyển đổi Frontend (từ ngày 28/09/2026)**:
 
@@ -551,11 +551,11 @@ Toàn bộ các tệp tin và thư mục trong dự án được ghi nhận vớ
 `docs/Audit/README.md` — Tài liệu tổng quan và nhạc trưởng điều phối quy trình kiểm toán bảo mật 5 bước (SOP)
 `docs/Audit/results/` — Thư mục lưu trữ kết quả và báo cáo các đợt kiểm toán bảo mật
 `docs/Audit/results/audit_29_9_2026.md` — Báo cáo kết quả kiểm toán an ninh bảo mật ngày 29/09/2026
-`docs/OPERATIONS.md` — Sổ tay vận hành: hướng dẫn build, chạy, dừng container, quản trị DB, staging và biến môi trường
+`docs/guides/OPERATIONS.md` — Sổ tay vận hành: hướng dẫn build, chạy, dừng container, quản trị DB, staging và biến môi trường
 `docs/PROJECT_STRUCTURE.md` — Bản đồ cấu trúc toàn bộ dự án và hệ thống tài liệu QA (tệp này)
 `docs/README.md` — AI Tester Entry Point & Router điều hướng tài liệu kiểm thử cho mọi loại tác vụ
-`docs/SPRINT_2_PLAN.md` — Kế hoạch chi tiết triển khai Sprint 2 (S-06 → S-16: phân làn làm việc, kiến trúc module OCPP, timeline)
-`docs/SPRINT_STATUS.md` — Báo cáo tổng hợp tình trạng tiến độ và trạng thái chi tiết của các Sprint
+`docs/archive/SPRINT-2-PLAN.md` — Kế hoạch chi tiết triển khai Sprint 2 (S-06 → S-16: phân làn làm việc, kiến trúc module OCPP, timeline)
+`docs/archive/SPRINT-STATUS.md` — Báo cáo tổng hợp tình trạng tiến độ và trạng thái chi tiết của các Sprint
 `docs/TESTER_STANDARD.md` — Bộ quy chuẩn kiểm thử trung tâm chi phối toàn bộ hoạt động kiểm thử của Tester
 `docs/TEST_INVENTORY.md` — Bảng kê tập trung danh mục toàn bộ test case và trạng thái thực thi kiểm thử
 `docs/design/` — Thư mục tài liệu thiết kế giao diện UX Redesign Level 3
@@ -595,20 +595,20 @@ Toàn bộ các tệp tin và thư mục trong dự án được ghi nhận vớ
 `docs/design/screenshots/63-operator-mobile-menu.png` — Ảnh menu điều hướng Operator trên màn hình thiết bị di động
 `docs/integration/` — Thư mục tài liệu kiểm thử tích hợp giữa các hệ thống
 `docs/integration/FRONTEND_BACKEND.md` — Hồ sơ kịch bản & bằng chứng kiểm thử tích hợp Frontend ↔ Backend (FB-01 đến FB-11)
-`docs/spikes/` — Thư mục nghiên cứu kỹ thuật và báo cáo gửi Product Owner
-`docs/spikes/K-01-ocpp-simulator.md` — Báo cáo nghiên cứu kỹ thuật Spike K-01: kết nối và mô phỏng giao thức OCPP 1.6-J
-`docs/spikes/S-05-AC3-ghi-nhan-cho-PO.md` — Báo cáo gửi PO đề xuất phương án và hoãn tiêu chí S-05 AC3 sang Sprint 3
-`docs/spikes/k01/` — Thư mục mã nguồn chạy lại được phục vụ nghiên cứu thử nghiệm OCPP 1.6
-`docs/spikes/k01-session-log.json` — Nhật ký mẫu ghi lại phiên kết nối WebSocket và trao đổi bản tin OCPP
-`docs/spikes/k01-simulator.js` — Script Node.js mô phỏng trụ sạc kết nối WebSocket và gửi các bản tin OCPP
-`docs/spikes/k01/findings.json` — Tệp dữ liệu ghi nhận các phát hiện kỹ thuật từ quá trình chạy thử nghiệm OCPP
-`docs/spikes/k01/frame-log.js` — Script ghi nhận log chi tiết từng khung frame tin WebSocket gửi và nhận
-`docs/spikes/k01/package-lock.json` — Khóa phiên bản các package npm phụ thuộc phục vụ module thử nghiệm k01
-`docs/spikes/k01/package.json` — Khai báo dependencies riêng phục vụ chạy thử nghiệm module k01 (ocpp-rpc, ws,...)
-`docs/spikes/k01/reference-server.js` — Máy chủ CSMS tham chiếu tối thiểu hỗ trợ bắt tay WebSocket OCPP 1.6
-`docs/spikes/k01/run-all.js` — Script tự động chạy toàn bộ quy trình thử nghiệm máy chủ và trụ ảo mô phỏng
-`docs/spikes/k01/session-log.json` — Tệp nhật ký chi tiết phiên chạy thử nghiệm OCPP sinh ra tự động
-`docs/spikes/k01/virtual-charge-point.js` — Trụ sạc ảo mô phỏng đầy đủ vòng đời OCPP (BootNotification, Heartbeat, StatusNotification)
+`docs/archive/spikes/` — Thư mục nghiên cứu kỹ thuật và báo cáo gửi Product Owner
+`docs/archive/spikes/K-01-ocpp-simulator.md` — Báo cáo nghiên cứu kỹ thuật Spike K-01: kết nối và mô phỏng giao thức OCPP 1.6-J
+`docs/archive/spikes/S-05-AC3-ghi-nhan-cho-PO.md` — Báo cáo gửi PO đề xuất phương án và hoãn tiêu chí S-05 AC3 sang Sprint 3
+`docs/archive/spikes/k01/` — Thư mục mã nguồn chạy lại được phục vụ nghiên cứu thử nghiệm OCPP 1.6
+`docs/archive/spikes/k01-session-log.json` — Nhật ký mẫu ghi lại phiên kết nối WebSocket và trao đổi bản tin OCPP
+`docs/archive/spikes/k01-simulator.js` — Script Node.js mô phỏng trụ sạc kết nối WebSocket và gửi các bản tin OCPP
+`docs/archive/spikes/k01/findings.json` — Tệp dữ liệu ghi nhận các phát hiện kỹ thuật từ quá trình chạy thử nghiệm OCPP
+`docs/archive/spikes/k01/frame-log.js` — Script ghi nhận log chi tiết từng khung frame tin WebSocket gửi và nhận
+`docs/archive/spikes/k01/package-lock.json` — Khóa phiên bản các package npm phụ thuộc phục vụ module thử nghiệm k01
+`docs/archive/spikes/k01/package.json` — Khai báo dependencies riêng phục vụ chạy thử nghiệm module k01 (ocpp-rpc, ws,...)
+`docs/archive/spikes/k01/reference-server.js` — Máy chủ CSMS tham chiếu tối thiểu hỗ trợ bắt tay WebSocket OCPP 1.6
+`docs/archive/spikes/k01/run-all.js` — Script tự động chạy toàn bộ quy trình thử nghiệm máy chủ và trụ ảo mô phỏng
+`docs/archive/spikes/k01/session-log.json` — Tệp nhật ký chi tiết phiên chạy thử nghiệm OCPP sinh ra tự động
+`docs/archive/spikes/k01/virtual-charge-point.js` — Trụ sạc ảo mô phỏng đầy đủ vòng đời OCPP (BootNotification, Heartbeat, StatusNotification)
 `docs/stories/` — Thư mục tài liệu kiểm thử chi tiết theo từng User Story Jira
 `docs/stories/S-01.md` — Hồ sơ kiểm thử Story S-01 (Khung ứng dụng chạy trên máy cá nhân & DB PostgreSQL T-01)
 `docs/stories/S-02.md` — Hồ sơ kiểm thử Story S-02 (Xác thực email/mật khẩu, Argon2id, lockout 15 phút, phiên cookie HttpOnly T-04, T-05)
@@ -742,12 +742,12 @@ Hệ thống tài liệu kiểm định chất lượng của dự án được 
 | **[`docs/TESTER_STANDARD.md`](./TESTER_STANDARD.md)** | **Central Rulebook & Standards**: Bộ quy chuẩn trung tâm chứa toàn bộ nguyên tắc kiểm thử, luồng Requirement Testing vs General Review, mô hình E→S→T, đồ thị phụ thuộc đa cấp, Canonical Enums, tiêu chuẩn bằng chứng và an toàn. | Khi có sự thay đổi về chính sách kiểm thử hoặc cập nhật phiên bản quy chuẩn. | Là nguồn luật pháp lý cao nhất chi phối toàn bộ hoạt động của Tester. |
 | **[`docs/PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md)** | **Verified Project Map (Project Facts)**: Bản đồ cấu trúc 298 mục trên filesystem đã xác minh, component mapping, đồ thị phụ thuộc thực tế, ánh xạ lịch sử kiểm thử và metadata snapshot. | Trước mỗi task kiểm thử mới (đồng bộ nếu filesystem thay đổi) hoặc khi có file/module mới. | Cung cấp sự thật cấu trúc (Project Facts) cho mọi tác vụ QA. |
 | **[`docs/TEST_INVENTORY.md`](./TEST_INVENTORY.md)** | **Verified Test Index (Test Facts)**: Danh mục toàn bộ 92 Test Case thực tế của dự án, tình trạng PASS/FAIL/BLOCKED, bằng chứng liên kết và mức độ xác minh. | Bắt buộc cập nhật ngay sau khi thực thi bất kỳ ca kiểm thử nào. | Cung cấp dữ liệu sự thật kiểm thử (Test Facts) cho báo cáo chất lượng. |
-| **[`docs/OPERATIONS.md`](./OPERATIONS.md)** | **Sổ tay vận hành hệ thống**: Chi tiết hướng dẫn Docker, cấu hình cổng mạng, lệnh reset DB, seed demo và biến môi trường staging. | Khi thay đổi cấu hình runtime, cổng mạng hoặc quy trình triển khai. | Hỗ trợ Tester thiết lập đúng môi trường trước khi chạy test. |
-| **[`docs/SPRINT_STATUS.md`](./SPRINT_STATUS.md)** | **Báo cáo tiến độ Sprint**: Bảng tổng kết trạng thái thực hiện các User Story theo từng Sprint. | Khi kết thúc sprint hoặc có thay đổi trạng thái story. | Đối chiếu phạm vi hoàn thành của team với yêu cầu PO. |
-| **[`docs/SPRINT_2_PLAN.md`](./SPRINT_2_PLAN.md)** | **Kế hoạch chi tiết Sprint 2**: Đề xuất phân làn kỹ thuật, thiết kế module OCPP, WebSocket server, simulator và lịch trình thực hiện. | Khi lập kế hoạch và điều chỉnh tiến độ Sprint 2. | Cung cấp bối cảnh kiến trúc cho các kiểm thử OCPP tiếp theo. |
+| **[`docs/guides/OPERATIONS.md`](./OPERATIONS.md)** | **Sổ tay vận hành hệ thống**: Chi tiết hướng dẫn Docker, cấu hình cổng mạng, lệnh reset DB, seed demo và biến môi trường staging. | Khi thay đổi cấu hình runtime, cổng mạng hoặc quy trình triển khai. | Hỗ trợ Tester thiết lập đúng môi trường trước khi chạy test. |
+| **[`docs/archive/SPRINT-STATUS.md`](./SPRINT_STATUS.md)** | **Báo cáo tiến độ Sprint**: Bảng tổng kết trạng thái thực hiện các User Story theo từng Sprint. | Khi kết thúc sprint hoặc có thay đổi trạng thái story. | Đối chiếu phạm vi hoàn thành của team với yêu cầu PO. |
+| **[`docs/archive/SPRINT-2-PLAN.md`](./SPRINT_2_PLAN.md)** | **Kế hoạch chi tiết Sprint 2**: Đề xuất phân làn kỹ thuật, thiết kế module OCPP, WebSocket server, simulator và lịch trình thực hiện. | Khi lập kế hoạch và điều chỉnh tiến độ Sprint 2. | Cung cấp bối cảnh kiến trúc cho các kiểm thử OCPP tiếp theo. |
 | **`docs/Audit/`** | **Khung kiểm toán an ninh AI Security Audit v3.0**: Bộ tiêu chuẩn 15 nguyên tắc, runbook 5 bước, từ điển catalog bài test, templates và kết quả kiểm toán an ninh. | Sau mỗi chu kỳ kiểm toán bảo mật định kỳ. | Cung cấp bằng chứng an ninh chuyên sâu bổ trợ cho QA. |
 | **`docs/stories/`** | **Hồ sơ kiểm thử User Stories**: Chứa chi tiết kiểm thử cho từng Story từ `S-01.md` đến `S-05.md` (*vị trí thực tế nằm tại `docs/stories/`*). | Khi Story hoặc Task kỹ thuật liên quan có sự cập nhật hoặc chạy lại kiểm thử. | Phản ánh chi tiết kết quả cụm bài test baseline/story vào `TEST_INVENTORY.md`. |
-| **`docs/spikes/`** | **Tài liệu nghiên cứu kỹ thuật & Báo cáo PO**: Chứa tài liệu spike OCPP (`K-01-ocpp-simulator.md`), mã thử nghiệm `k01/`, session log và báo cáo gửi PO (`S-05-AC3-ghi-nhan-cho-PO.md`). | Khi hoàn thành đợt nghiên cứu spike kỹ thuật hoặc gửi kiến nghị/báo cáo lên PO. | Cung cấp luận cứ kỹ thuật và bối cảnh kiến trúc cho các quyết định nghiệp vụ của PO. |
+| **`docs/archive/spikes/`** | **Tài liệu nghiên cứu kỹ thuật & Báo cáo PO**: Chứa tài liệu spike OCPP (`K-01-ocpp-simulator.md`), mã thử nghiệm `k01/`, session log và báo cáo gửi PO (`S-05-AC3-ghi-nhan-cho-PO.md`). | Khi hoàn thành đợt nghiên cứu spike kỹ thuật hoặc gửi kiến nghị/báo cáo lên PO. | Cung cấp luận cứ kỹ thuật và bối cảnh kiến trúc cho các quyết định nghiệp vụ của PO. |
 | **`docs/integration/`** | **Hồ sơ kiểm thử tích hợp**: Kịch bản và bằng chứng kiểm thử giao tiếp toàn trình giữa Frontend Client và Backend API (`FRONTEND_BACKEND.md` từ FB-01 đến FB-11). | Khi hợp đồng API, cấu hình fetch client hoặc chuỗi middleware Express thay đổi. | Tổng hợp kết quả tích hợp đa tầng giữa S-01, S-02 và S-03. |
 | **`docs/testing/TEST_PLAN.md`** | **Kế hoạch kiểm thử tổng thể**: Chiến lược kiểm thử đa tầng, môi trường yêu cầu, tiêu chí Entry/Exit và phạm vi các đợt phát hành. | Khi bắt đầu sprint mới hoặc thay đổi phạm vi kiểm thử. | Định nghĩa phạm vi tổng thể cho các tài liệu kiểm thử chi tiết. |
 | **`docs/testing/TEST_REPORT.md`** | **Báo cáo kết quả snapshot**: Báo cáo tổng hợp chất lượng tại mốc snapshot hiện tại, tỷ lệ PASS/FAIL, các rào cản môi trường. | Khi hoàn thành chu kỳ kiểm thử snapshot hoặc trước các mốc release. | Tổng hợp số liệu từ `TEST_INVENTORY.md`. |
@@ -916,7 +916,7 @@ Các thành phần mã nguồn hoặc chức năng hiện tại chưa được h
    - *Đánh giá an toàn*: **NOT VERIFIED**. Tuân thủ nghiêm ngặt quy tắc Tester: Không tự ý thêm route rác vào mã nguồn để kiểm thử tính năng này.
 2. **Kịch bản chặn sửa mã trụ khi đã phát sinh phiên sạc (`S05-AC-03` / `TC-S05-03`)**:
    - *Hiện trạng*: Trong Sprint 1, cơ sở dữ liệu chưa có bảng lưu trữ phiên sạc (`charging_sessions`). Cơ chế kiểm tra hiện tại mới dừng ở mức kiểm tra kết nối WebSocket trong RAM qua `connection-registry.js`.
-   - *Đánh giá an toàn*: **NOT VERIFIED / DEFERRED TO SPRINT 3**. Đã lập báo cáo kỹ thuật gửi PO tại [`docs/spikes/S-05-AC3-ghi-nhan-cho-PO.md`](./spikes/S-05-AC3-ghi-nhan-cho-PO.md) đề xuất chính thức hoàn thiện kịch bản này khi có bảng phiên sạc ở Sprint 3.
+   - *Đánh giá an toàn*: **NOT VERIFIED / DEFERRED TO SPRINT 3**. Đã lập báo cáo kỹ thuật gửi PO tại [`docs/archive/spikes/S-05-AC3-ghi-nhan-cho-PO.md`](./spikes/S-05-AC3-ghi-nhan-cho-PO.md) đề xuất chính thức hoàn thiện kịch bản này khi có bảng phiên sạc ở Sprint 3.
 3. **Môi trường máy host không có sẵn `supertest` toàn cục**:
    - *Hiện trạng*: `supertest` được khai báo trong `backend/package.json` devDependencies. Một số test case acceptance cần chạy trong môi trường đã `npm install` đầy đủ hoặc bên trong container.
    - *Đánh giá*: Đã có bằng chứng thực thi thành công từ snapshot ngày 24/09/2026, 27/09/2026, 28/09/2026 và 30/09/2026.

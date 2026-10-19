@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// Kiểm tra docs/dev/TONG-KET-DU-AN.md: mọi tên tệp kiểm thử được nhắc phải tồn tại và
+// Kiểm tra docs/project/TONG-KET-DU-AN.md: mọi tên tệp kiểm thử được nhắc phải tồn tại và
 // số thẻ trong tiêu đề phải bằng số dòng của bảng. Chạy trong CI: node tools/check-docs.js
 const fs = require('node:fs');
 const path = require('node:path');
@@ -16,7 +16,7 @@ function listFiles(dir) {
   });
 }
 
-function checkSummary(docPath = path.join(root, 'docs', 'dev', 'TONG-KET-DU-AN.md')) {
+function checkSummary(docPath = path.join(root, 'docs', 'project', 'TONG-KET-DU-AN.md')) {
   const text = fs.readFileSync(docPath, 'utf8');
   const problems = [];
   const known = listFiles(testsDir).map((file) => path.relative(testsDir, file).split(path.sep).join('/'));
