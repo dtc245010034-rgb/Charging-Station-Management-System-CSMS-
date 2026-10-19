@@ -98,7 +98,7 @@ Lần đầu mất vài phút (build image). Xong, trình duyệt tự mở `htt
 
 | Lệnh | Việc |
 |---|---|
-| `python run.py` | Build (nếu cần) + chạy + tài khoản + demo + mở trình duyệt. Tuỳ chọn: `--port 4000`, `--no-open`, `--no-demo`, `--rebuild`, `--public-url https://…` (staging công khai qua tunnel, xem [`docs/guides/OPERATIONS.md`](docs/guides/OPERATIONS.md) mục 3), `--local` (quay về chế độ máy này) |
+| `python run.py` | Build (nếu cần) + chạy + tài khoản + demo + mở trình duyệt. Tuỳ chọn: `--port 4000`, `--no-open`, `--no-demo`, `--rebuild`, `--public-url https://…` (staging công khai qua tunnel, xem [`docs/guides/OPERATIONS.md`](docs/guides/OPERATIONS.md) mục 3), `--local` (quay về chế độ máy này), `--sandbox` / `--no-sandbox` (bật/tắt cổng thanh toán giả lập, tự sinh `PAYMENT_WEBHOOK_SECRET`; giữ trạng thái đã lưu khi không ghi cờ) |
 | `python run.py down` | Dừng, **giữ dữ liệu** |
 | `python run.py reset` | Dừng và **xoá dữ liệu** (hỏi xác nhận; `--yes` bỏ hỏi) |
 | `python run.py logs` | Xem log app (`logs db` cho Postgres); `Ctrl+C` để thoát, app vẫn chạy |

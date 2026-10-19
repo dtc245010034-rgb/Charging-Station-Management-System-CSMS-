@@ -7,6 +7,8 @@
     python run.py logs       xem log (Ctrl+C để thoát, app vẫn chạy)
     python run.py status     trạng thái, địa chỉ, tài khoản
     python run.py test       lint + toàn bộ test (unit, integration, acceptance) trong Docker — giống: python test.py
+    python run.py --sandbox  như `python run.py` nhưng bật cổng thanh toán giả lập (tự sinh PAYMENT_WEBHOOK_SECRET);
+                             `--no-sandbox` để tắt. Không ghi cờ nào thì giữ trạng thái đã lưu trong .env
 
 Windows: dùng `python run.py` hoặc `py run.py`. Linux/macOS: `python3 run.py`.
 Chỉ dùng thư viện chuẩn của Python (>= 3.8), không cần cài thêm gì.
@@ -30,6 +32,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 ENV_FILE = ROOT / ".env"
+SANDBOX_COMPOSE = "docker-compose.sandbox.yml"  # chỉ được nạp khi bật sandbox (xem compose_files)
 LOG_DIR = ROOT / ".run"
 
 DEFAULT_APP_PORT = 3000
@@ -96,6 +99,7 @@ class Docker:
 
     def __init__(self):
         self.compose = None
+        self.files = []  # các file compose (-f); rỗng = dùng docker-compose.yml mặc định
 
     def ensure_ready(self):
         if run(["docker", "--version"], check=False, capture=True).returncode != 0:
@@ -126,7 +130,8 @@ class Docker:
 
     def c(self, *args, **kwargs):
         kwargs.setdefault("env", compose_env())
-        return run([*self.compose, *args], **kwargs)
+        files = [part for path in self.files for part in ("-f", str(path))]
+        return run([*self.compose, *files, *args], **kwargs)
 
     def running_services(self):
         result = self.c("ps", "--services", "--filter", "status=running", check=False, capture=True)
@@ -188,6 +193,33 @@ def write_env_updates(updates):
 
 def new_secrets():
     return {"POSTGRES_PASSWORD": secrets.token_hex(16), "JWT_SECRET": secrets.token_hex(32)}
+
+
+def sandbox_updates(env, enabled):
+    """Các khoá .env cần ghi để bật/tắt cổng thanh toán sandbox; chỉ trả phần thay đổi.
+    Bật: sinh PAYMENT_WEBHOOK_SECRET khi chưa có hoặc ngắn hơn 32 ký tự (backend từ chối khởi động nếu thiếu)."""
+    wanted = {"SANDBOX_GATEWAY": "1" if enabled else "0"}
+    if enabled and len(env.get("PAYMENT_WEBHOOK_SECRET", "")) < 32:
+        wanted["PAYMENT_WEBHOOK_SECRET"] = secrets.token_hex(32)
+    return {key: value for key, value in wanted.items() if env.get(key) != value}
+
+
+def compose_files(sandbox):
+    """docker-compose.yml không chuyển SANDBOX_GATEWAY/PAYMENT_WEBHOOK_SECRET vào container; file sandbox làm việc đó
+    và chỉ được nạp khi bật, để app không bị truyền secret rỗng (backend từ chối chuỗi dưới 32 ký tự)."""
+    return [ROOT / "docker-compose.yml", ROOT / SANDBOX_COMPOSE] if sandbox else []
+
+
+def app_sandbox_state(docker):
+    """Sandbox đang bật hay tắt trong container app ĐANG CHẠY (None nếu app không chạy)."""
+    result = docker.c("exec", "-T", "app", "sh", "-c", "echo ${SANDBOX_GATEWAY:-0}", check=False, capture=True)
+    return (result.stdout or "").strip() == "1" if result.returncode == 0 else None
+
+
+def sandbox_changed(current, enabled):
+    """Đổi bật/tắt làm đổi cấu hình container; docker-compose 1.x tự tạo lại thì lỗi KeyError 'ContainerConfig'
+    (xem docs/demo/SPRINT2.md), nên phải xoá container app trước rồi mới `up`."""
+    return current is not None and current != enabled
 
 
 # ---------------------------------------------------------------- cổng
@@ -364,6 +396,14 @@ def cmd_up(docker, args):
         ok("Quay về chế độ máy này (--local)")
         updates.update({"NODE_ENV": "development", "TRUST_PROXY": "0"})
 
+    sandbox = env.get("SANDBOX_GATEWAY") == "1" if args.sandbox is None else args.sandbox
+    if args.sandbox is not None or sandbox:
+        updates.update(sandbox_updates(env, sandbox))
+    docker.files = compose_files(sandbox)
+    recreate_app = stack_running and sandbox_changed(app_sandbox_state(docker), sandbox)
+    if sandbox:
+        ok("Cổng thanh toán sandbox: BẬT (tắt bằng: python run.py --no-sandbox)")
+
     bind_host = env.get("BIND_HOST", "127.0.0.1")
     if public_url and not is_local_only(bind_host):
         warn(f"Chế độ công khai: đổi BIND_HOST={bind_host} về 127.0.0.1 (tunnel chạy cùng máy; Postgres không được lộ ra mạng)")
@@ -396,6 +436,9 @@ def cmd_up(docker, args):
     step("Build và chạy (lần đầu có thể mất vài phút)")
     if args.rebuild:
         docker.c("build", "--no-cache", "app")
+    if recreate_app:
+        warn("Đổi trạng thái sandbox: tạo lại container app (dữ liệu Postgres giữ nguyên)")
+        docker.c("rm", "-sf", "app")
     # Chỉ bật db + app: không bật db_test (tránh xung đột cổng 5433).
     docker.c("up", "-d", "--build", "db", "app")
 
@@ -611,6 +654,10 @@ def build_parser():
     mode.add_argument("--public-url", help="staging công khai qua tunnel, ví dụ https://ten.ngrok-free.app (giữ APP_ORIGIN, mật khẩu ngẫu nhiên, NODE_ENV=production)")
     mode.add_argument("--local", action="store_true", help="quay về chế độ chạy trên máy này (bỏ --public-url đã lưu)")
     up.add_argument("--rebuild", action="store_true", help="build lại từ đầu, bỏ cache")
+    sandbox = up.add_mutually_exclusive_group()
+    sandbox.add_argument("--sandbox", dest="sandbox", action="store_const", const=True, default=None,
+                         help="bật cổng thanh toán giả lập, tự sinh PAYMENT_WEBHOOK_SECRET (lưu trong .env)")
+    sandbox.add_argument("--no-sandbox", dest="sandbox", action="store_const", const=False, help="tắt cổng thanh toán giả lập")
 
     sub.add_parser("down", help="dừng, giữ dữ liệu")
     reset = sub.add_parser("reset", help="dừng và XOÁ dữ liệu")

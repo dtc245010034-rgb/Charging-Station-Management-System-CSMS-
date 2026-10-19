@@ -238,6 +238,73 @@ class Arguments(unittest.TestCase):
         self.assertEqual(parser.parse_args(["test", "--only", "unit"]).only, "unit")
 
 
+class Sandbox(unittest.TestCase):
+    def test_bat_sinh_secret_du_dai_khi_chua_co(self):
+        updates = run.sandbox_updates({}, True)
+        self.assertEqual(updates["SANDBOX_GATEWAY"], "1")
+        self.assertGreaterEqual(len(updates["PAYMENT_WEBHOOK_SECRET"]), 32)
+        self.assertNotEqual(updates["PAYMENT_WEBHOOK_SECRET"], run.sandbox_updates({}, True)["PAYMENT_WEBHOOK_SECRET"])
+
+    def test_bat_giu_nguyen_secret_da_co(self):
+        updates = run.sandbox_updates({"PAYMENT_WEBHOOK_SECRET": "s" * 40}, True)
+        self.assertNotIn("PAYMENT_WEBHOOK_SECRET", updates)
+
+    def test_bat_thay_secret_qua_ngan(self):
+        updates = run.sandbox_updates({"PAYMENT_WEBHOOK_SECRET": "ngan"}, True)
+        self.assertGreaterEqual(len(updates["PAYMENT_WEBHOOK_SECRET"]), 32)
+
+    def test_tat_chi_dat_co_va_khong_sinh_secret(self):
+        self.assertEqual(run.sandbox_updates({"SANDBOX_GATEWAY": "1", "PAYMENT_WEBHOOK_SECRET": "s" * 40}, False), {"SANDBOX_GATEWAY": "0"})
+
+    def test_khong_ghi_lai_khi_da_dung_trang_thai(self):
+        self.assertEqual(run.sandbox_updates({"SANDBOX_GATEWAY": "1", "PAYMENT_WEBHOOK_SECRET": "s" * 40}, True), {})
+        self.assertEqual(run.sandbox_updates({"SANDBOX_GATEWAY": "0"}, False), {})
+
+    def test_doi_trang_thai_thi_phai_tao_lai_container(self):
+        """docker-compose 1.x lỗi KeyError 'ContainerConfig' khi tạo lại container đổi cấu hình; run.py phải xoá app trước."""
+        self.assertTrue(run.sandbox_changed(False, True))
+        self.assertTrue(run.sandbox_changed(True, False))
+        self.assertFalse(run.sandbox_changed(True, True))
+        self.assertFalse(run.sandbox_changed(False, False))
+        self.assertFalse(run.sandbox_changed(None, True))  # app chưa chạy: không có gì để tạo lại
+
+    def test_doc_trang_thai_sandbox_cua_app_dang_chay(self):
+        class FakeDocker:
+            def __init__(self, code, out):
+                self.code, self.out = code, out
+
+            def c(self, *args, **kwargs):
+                return type("R", (), {"returncode": self.code, "stdout": self.out})()
+
+        self.assertIs(run.app_sandbox_state(FakeDocker(0, "1\n")), True)
+        self.assertIs(run.app_sandbox_state(FakeDocker(0, "0\n")), False)
+        self.assertIsNone(run.app_sandbox_state(FakeDocker(1, "")))
+
+    def test_chi_nap_file_override_khi_bat(self):
+        self.assertEqual(run.compose_files(False), [])
+        files = [Path(f).name for f in run.compose_files(True)]
+        self.assertEqual(files, ["docker-compose.yml", "docker-compose.sandbox.yml"])
+
+    def test_lenh_compose_kem_file_override(self):
+        docker = run.Docker()
+        docker.compose = ["docker", "compose"]
+        docker.files = run.compose_files(True)
+        seen = []
+        with patch.object(run, "run", side_effect=lambda cmd, **kw: seen.append(cmd)):
+            docker.c("up", "-d", "app")
+        self.assertEqual(seen[0][:2], ["docker", "compose"])
+        self.assertEqual(seen[0][2::2][:2], ["-f", "-f"])
+        self.assertEqual(seen[0][-3:], ["up", "-d", "app"])
+
+    def test_co_sandbox_mac_dinh_la_none_va_hai_co_loai_tru_nhau(self):
+        parser = run.build_parser()
+        self.assertIsNone(parser.parse_args(["up"]).sandbox)
+        self.assertIs(parser.parse_args(["up", "--sandbox"]).sandbox, True)
+        self.assertIs(parser.parse_args(["up", "--no-sandbox"]).sandbox, False)
+        with patch("sys.stderr", new_callable=io.StringIO), self.assertRaises(SystemExit):
+            parser.parse_args(["up", "--sandbox", "--no-sandbox"])
+
+
 class ComposeFile(unittest.TestCase):
     def test_app_co_ten_image_tuong_minh(self):
         """docker-compose v1 tự đặt tag '<thư-mục>_app'; thư mục kết thúc bằng '-' làm tag không hợp lệ."""
