@@ -98,7 +98,7 @@ BASE=http://localhost:3000
 curl -s -c cookies.txt -X POST $BASE/api/auth/login -H "Content-Type: application/json" \
   -d "{\"email\":\"accountant@demo.csms.local\",\"password\":\"$DEMO_PASSWORD\"}"
 
-# 2. Tạo gói mới (bắt buộc Idempotency-Key >= 16 ký tự; giờ tính theo phút hoặc "HH:MM", đồng/kWh là số nguyên)
+# 2. Tạo gói mới (bắt buộc Idempotency-Key 8–128 ký tự gồm chữ, số và . _ : -; giờ tính theo phút hoặc "HH:MM", đồng/kWh là số nguyên)
 curl -s -b cookies.txt -X POST $BASE/api/subscription-plans \
   -H "Content-Type: application/json" -H "Idempotency-Key: demo-plan-$(date +%s)-0001" \
   -d '{"code":"GOI_THANG_MOI","name":"Gói Tháng Mới","priceDong":250000,"durationDays":30,
