@@ -463,7 +463,7 @@ frontend/                 HTML/CSS/JS thuần, ES modules, không build
   services/               api.js (mọi request), csms.js (endpoint), realtime.js (SSE + polling dự phòng)
   vendor/leaflet/         thư viện bản đồ (MIT), không dùng CDN
 tools/                    test_run.py (test của run.py) và kịch bản kiểm chứng chạy server thật (test-*-live.js, verify-*-round6.js)
-docs/                     OPERATIONS · SPRINT_STATUS · SPRINT_2_PLAN · B5 · design/ · spikes/ · testing/ · Audit/
+docs/                     demo/ · guides/ · project/ · design/ · testing/ · Audit/ · archive/ (xem docs/README.md)
 render.yaml               blueprint staging trên Render
 run.py / test.py          chạy dự án / chạy toàn bộ test bằng Docker
 ```
