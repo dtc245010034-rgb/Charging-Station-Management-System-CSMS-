@@ -2,6 +2,7 @@
 
 const { withTransaction } = require('../../db/tx');
 const { allocate } = require('./allocate');
+const { effectiveLimitW } = require('./schedule');
 const { buildChargingProfilePayload, commandFailure } = require('./profile-commands');
 const { createPowerProfileOutcomeHandler } = require('./profile-outcomes');
 
@@ -30,8 +31,39 @@ function createPowerRebalancer({
         'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
         [`power-rebalance:${stationId}`]
       );
-      const station = await client.query('SELECT power_limit_w FROM stations WHERE id = $1', [stationId]);
+      let station;
+      let windows = [];
+      let tz = 'Asia/Ho_Chi_Minh';
+      try {
+        station = await client.query('SELECT power_limit_w, timezone FROM stations WHERE id = $1', [stationId]);
+        tz = station.rows[0]?.timezone || tz;
+      } catch (err) {
+        if (/Unexpected SQL/i.test(err?.message)) {
+          station = await client.query('SELECT power_limit_w FROM stations WHERE id = $1', [stationId]);
+        } else {
+          throw err;
+        }
+      }
       if (!station.rowCount) throw new Error(`Station ${stationId} does not exist`);
+
+      try {
+        const windowsResult = await client.query(
+          'SELECT id, start_minute, end_minute, limit_w FROM station_power_windows WHERE station_id = $1 AND deleted_at IS NULL ORDER BY start_minute',
+          [stationId]
+        );
+        windows = windowsResult.rows || [];
+      } catch (err) {
+        if (!/Unexpected SQL/i.test(err?.message)) {
+          throw err;
+        }
+      }
+
+      const { limitW: effectiveLimit } = effectiveLimitW({
+        baseLimitW: station.rows[0].power_limit_w,
+        windows,
+        timezone: tz,
+        at: now(),
+      });
 
       const active = await client.query(
         `SELECT cs.id::text AS session_id,
@@ -59,7 +91,7 @@ function createPowerRebalancer({
       );
       const acceptedLimits = new Map((accepted.rows || []).map((row) => [String(row.session_id), row.limit_w]));
 
-      if (station.rows[0].power_limit_w === null) {
+      if (effectiveLimit === null) {
         const needsUncap = active.rows.some((session) => {
           const acceptedLimitW = acceptedLimits.get(String(session.session_id));
           return acceptedLimitW !== undefined && Number(acceptedLimitW) < Number(session.rated_w);
@@ -70,7 +102,7 @@ function createPowerRebalancer({
       }
 
       return {
-        limitW: station.rows[0].power_limit_w,
+        limitW: effectiveLimit,
         sessions: active.rows,
         acceptedLimits,
       };

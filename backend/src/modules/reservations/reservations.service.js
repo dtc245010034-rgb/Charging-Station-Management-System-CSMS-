@@ -8,6 +8,8 @@ const repo = require('./reservations.repository');
 const { OcppCommandError } = require('../ocpp/commands');
 const { OcppRemoteCallError } = require('../ocpp/message-handler');
 const { sanitizeErrorMessage } = require('../../lib/constants');
+const { denyOrNotFound } = require('../../lib/ownership');
+const { sendCancelReservation } = require('./cancel-retry-job');
 const {
   AppError,
   BadRequestError,
@@ -32,6 +34,8 @@ function toResponse(row) {
     expiresAt: expiresAt.toISOString(),
     arriveInMinutes,
     rejectReason: row.reject_reason,
+    noShowFeeDong: Number(row.no_show_fee_dong || 0),
+    cancelStatus: row.cancel_status || 'NONE',
   };
 }
 
@@ -141,6 +145,7 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
         idTagId: tag.id,
         startsAt,
         expiresAt,
+        noShowFeeDong: connector.station_no_show_fee_dong || 0,
       });
       await repo.insertIdempotencyKey(client, driver.id, idempotencyKey, requestHash, reservation.id);
       return { reservation, connector, tag, replayed: false };
@@ -229,4 +234,77 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
   throw new ServiceUnavailableError('Trụ sạc trả phản hồi ReserveNow không hợp lệ');
 }
 
-module.exports = { RESERVATION_CALL_TIMEOUT_MS, create, listMine, toResponse };
+async function cancel(driver, reservationId, { commandSender, ip = null, db = repo.pool, now = new Date() } = {}) {
+  const parsedId = Number(reservationId);
+  if (!Number.isSafeInteger(parsedId) || parsedId <= 0) {
+    throw new BadRequestError('Mã đặt chỗ không hợp lệ');
+  }
+
+  const reservation = await repo.findById(db, parsedId);
+  if (!reservation || String(reservation.driver_id) !== String(driver.id)) {
+    await denyOrNotFound(driver, 'reservation', parsedId, repo.existsById, 'Không tìm thấy đặt chỗ');
+  }
+
+  if (reservation.status === 'CANCELLED') {
+    return { already: true, status: 'CANCELLED' };
+  }
+
+  if (reservation.status === 'PENDING') {
+    throw new AppError(409, 'RESERVATION_PENDING', 'Không thể huỷ đặt chỗ đang chờ xác nhận từ trụ');
+  }
+
+  const currentTime = now instanceof Date ? now : new Date(now);
+  const expiresAt = new Date(reservation.expires_at);
+
+  if (expiresAt <= currentTime || reservation.status === 'EXPIRED') {
+    throw new AppError(409, 'RESERVATION_EXPIRED', 'Đặt chỗ đã quá hạn, đã tính phí');
+  }
+
+  if (reservation.status !== 'ACCEPTED') {
+    throw new AppError(409, 'INVALID_RESERVATION_STATUS', 'Không thể huỷ đặt chỗ ở trạng thái hiện tại');
+  }
+
+  const updated = await repo.cancelAcceptedReservation(db, parsedId, currentTime);
+  if (!updated) {
+    const refreshed = await repo.findById(db, parsedId);
+    if (refreshed?.status === 'CANCELLED') {
+      return { already: true, status: 'CANCELLED' };
+    }
+    if (new Date(refreshed?.expires_at) <= currentTime || refreshed?.status === 'EXPIRED') {
+      throw new AppError(409, 'RESERVATION_EXPIRED', 'Đặt chỗ đã quá hạn, đã tính phí');
+    }
+    throw new AppError(409, 'RESERVATION_CANCEL_CONFLICT', 'Không thể huỷ đặt chỗ');
+  }
+
+  await audit.record(
+    driver.id,
+    'RESERVATION_CANCELLED',
+    'reservation',
+    parsedId,
+    { cancelledBy: driver.id },
+    ip,
+    null,
+    'COMPLETED'
+  );
+
+  if (commandSender && updated.ocpp_reservation_id) {
+    try {
+      const connector = await repo.findConnector(db, updated.connector_id);
+      if (connector?.charge_point_code) {
+        void sendCancelReservation({
+          db,
+          commandSender,
+          reservationId: parsedId,
+          chargePointCode: connector.charge_point_code,
+          ocppReservationId: updated.ocpp_reservation_id,
+        });
+      }
+    } catch (err) {
+      console.warn('[Reservation] Không gửi được CancelReservation:', sanitizeErrorMessage(err?.message || err));
+    }
+  }
+
+  return { id: parsedId, status: 'CANCELLED', cancelledAt: currentTime.toISOString() };
+}
+
+module.exports = { RESERVATION_CALL_TIMEOUT_MS, create, listMine, cancel, toResponse };

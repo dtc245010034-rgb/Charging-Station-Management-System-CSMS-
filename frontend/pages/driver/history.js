@@ -29,6 +29,9 @@ function sessionCard(session) {
         ? (STATUS_LABELS[session.billingStatus] || 'Đang xử lý hóa đơn')
         : `Tổng: ${formatNumber(session.invoiceTotalDong)} đ`)
     ),
+    session.tariffSource === 'SUBSCRIPTION'
+      ? h('div', { class: 'badge badge--success', style: 'width:fit-content' }, `Áp dụng gói: ${session.subscriptionPlanName || session.subscriptionPlanCode || 'Gói thuê bao'}`)
+      : null,
     invoiceLink
   );
 }

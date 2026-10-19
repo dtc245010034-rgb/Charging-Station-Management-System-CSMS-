@@ -24,9 +24,12 @@ const { startBillingFinalizationJob } = require('./modules/billing/finalization-
 const { startWalletAuditJob } = require('./modules/wallet/wallet-audit-job');
 const { startTopupExpiryJob } = require('./modules/payments/topup-expiry-job');
 const { startReservationPendingCleanupJob } = require('./modules/reservations/pending-cleanup-job');
+const { startReservationExpiryJob } = require('./modules/reservations/expiry-job');
+const { startReservationCancelRetryJob } = require('./modules/reservations/cancel-retry-job');
 const { startEmailJob } = require('./modules/notifications/email-job');
 const { startIdleFeeNotificationJob } = require('./modules/notifications/idle-fee-notification-job');
 const { startPowerProfileRetryJob } = require('./modules/power/profile-retry-job');
+const { startPowerScheduleJob } = require('./modules/power/schedule-job');
 const { createPowerRebalancer } = require('./modules/power/rebalance');
 
 const { MAX_WS_PAYLOAD, safeLog, sanitizeErrorMessage } = require('./lib/constants');
@@ -128,9 +131,12 @@ let stopBillingFinalizationJob = () => {};
 let stopWalletAuditJob = () => {};
 let stopTopupExpiryJob = () => {};
 let stopReservationPendingCleanupJob = () => {};
+let stopReservationExpiryJob = () => {};
+let stopReservationCancelRetryJob = () => {};
 let stopEmailJob = () => {};
 let stopIdleFeeNotificationJob = () => {};
 let stopPowerProfileRetryJob = () => {};
+let stopPowerScheduleJob = () => {};
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopChargePointOfflineJob();
 	stopChargePointHealthJob();
@@ -141,9 +147,12 @@ for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
 	stopWalletAuditJob();
 	stopTopupExpiryJob();
 	stopReservationPendingCleanupJob();
+	stopReservationExpiryJob();
+	stopReservationCancelRetryJob();
 	stopEmailJob();
 	stopIdleFeeNotificationJob();
 	stopPowerProfileRetryJob();
+	stopPowerScheduleJob();
 	if (purgeTimer) clearInterval(purgeTimer);
 	shutdown(signal);
 });
@@ -177,7 +186,17 @@ async function start() {
 	stopTopupExpiryJob = startTopupExpiryJob({
 		db: pool,
 	}).stop;
-	stopReservationPendingCleanupJob = startReservationPendingCleanupJob({ db: pool }).stop;
+	stopReservationPendingCleanupJob = startReservationPendingCleanupJob({ db: pool, includeExpired: false }).stop;
+	stopReservationExpiryJob = startReservationExpiryJob({
+		db: pool,
+		commandSender,
+		intervalMs: env.RESERVATION_EXPIRY_JOB_MS,
+	}).stop;
+	stopReservationCancelRetryJob = startReservationCancelRetryJob({
+		db: pool,
+		commandSender,
+		intervalMs: 30000,
+	}).stop;
 	stopEmailJob = startEmailJob({
 		db: pool,
 		transport: env.EMAIL_TRANSPORT,
@@ -187,6 +206,11 @@ async function start() {
 		db: pool,
 		commandSender,
 		commandTimeoutSeconds: env.OCPP_COMMAND_TIMEOUT_SECONDS + 5,
+	}).stop;
+	stopPowerScheduleJob = startPowerScheduleJob({
+		rebalanceStation: (...args) => powerRebalancer.rebalanceStation(...args),
+		db: pool,
+		intervalMs: env.POWER_SCHEDULE_TICK_MS,
 	}).stop;
 	server.listen(env.PORT, () => console.log(`CSMS backend listening on http://localhost:${env.PORT}`));
 }

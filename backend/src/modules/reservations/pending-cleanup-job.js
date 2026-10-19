@@ -29,6 +29,7 @@ async function expireStaleAcceptedReservations(db = pool) {
 function startReservationPendingCleanupJob({
   db = pool,
   intervalMs = RESERVATION_PENDING_SCAN_INTERVAL_MS,
+  includeExpired = true,
   logInfo = console.info,
   logError = console.error,
 } = {}) {
@@ -42,9 +43,12 @@ function startReservationPendingCleanupJob({
         if (pendingResult.rowCount > 0) {
           logInfo(`[Reservation cleanup] Đã chuyển ${pendingResult.rowCount} đặt chỗ PENDING quá hạn sang FAILED`);
         }
-        const expiredResult = await expireStaleAcceptedReservations(db);
-        if (expiredResult.rowCount > 0) {
-          logInfo(`[Reservation cleanup] Đã chuyển ${expiredResult.rowCount} đặt chỗ ACCEPTED quá hạn sang EXPIRED`);
+        let expiredResult = { rowCount: 0 };
+        if (includeExpired) {
+          expiredResult = await expireStaleAcceptedReservations(db);
+          if (expiredResult.rowCount > 0) {
+            logInfo(`[Reservation cleanup] Đã chuyển ${expiredResult.rowCount} đặt chỗ ACCEPTED quá hạn sang EXPIRED`);
+          }
         }
         return { pending: pendingResult, expired: expiredResult };
       } catch (error) {

@@ -7,7 +7,7 @@ const { findEffectiveTariff } = require('../billing/tariffs.repository');
 const { toLocalParts } = require('../billing/tz');
 const { denyOrNotFound } = require('../../lib/ownership');
 const { withTransaction } = require('../../db/tx');
-const { BadRequestError, ConflictError } = require('../../lib/errors');
+const { BadRequestError, ConflictError, NotFoundError } = require('../../lib/errors');
 const { wattsToKilowatts } = require('../power/units');
 const { triggerPowerRebalance } = require('../power/rebalance-trigger');
 
@@ -28,6 +28,7 @@ function stationWithPower(station) {
   const limitW = station.power_limit_w === null ? null : BigInt(station.power_limit_w);
   return {
     ...station,
+    noShowFeeDong: Number(station.no_show_fee_dong || 0),
     power: {
       limitKw: wattsToKilowatts(limitW),
       ratedTotalKw: wattsToKilowatts(totalW),
@@ -152,6 +153,15 @@ async function create(actor, data, idempotencyKey) {
 async function update(actor, id, data, { rebalanceStation = null } = {}) {
   if (!repo.UPDATABLE.some((key) => data[key] !== undefined)) throw new BadRequestError('Không có trường cần cập nhật');
   const station = await find(actor, id);
+  if (data.power_limit_w === null && station.power_limit_w !== null) {
+    const activeWindows = await pool.query(
+      'SELECT 1 FROM station_power_windows WHERE station_id = $1 AND deleted_at IS NULL LIMIT 1',
+      [id]
+    );
+    if (activeWindows.rowCount > 0) {
+      throw new ConflictError('Không thể xoá hạn mức nền khi còn khung giờ hoạt động');
+    }
+  }
   const changingCoordinates = data.latitude !== undefined || data.longitude !== undefined;
   if (station.status === 'ACTIVE' && changingCoordinates) {
     throw new BadRequestError('Hãy chuyển trạm sang INACTIVE trước khi sửa tọa độ');
@@ -208,4 +218,130 @@ async function setLock(actor, id, locked) {
   return repo.findById(actor, id);
 }
 
-module.exports = { list, searchNearby, get, create, update, setLock, setConnectorPower };
+function timeStringToMinutes(timeStr) {
+  if (timeStr === '24:00') return 1440;
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTimeString(minutes) {
+  if (minutes === 1440) return '24:00';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function formatPowerWindow(row) {
+  return {
+    id: Number(row.id),
+    stationId: Number(row.station_id),
+    startMinute: row.start_minute,
+    endMinute: row.end_minute,
+    startTime: minutesToTimeString(row.start_minute),
+    endTime: minutesToTimeString(row.end_minute),
+    limitW: row.limit_w,
+    limitKw: wattsToKilowatts(BigInt(row.limit_w)),
+    createdAt: row.created_at,
+    createdBy: row.created_by ? Number(row.created_by) : null,
+  };
+}
+
+async function listPowerWindows(actor, stationId) {
+  await find(actor, stationId);
+  const res = await pool.query(
+    'SELECT id, station_id, start_minute, end_minute, limit_w, created_at, created_by FROM station_power_windows WHERE station_id = $1 AND deleted_at IS NULL ORDER BY start_minute ASC',
+    [stationId]
+  );
+  return res.rows.map(formatPowerWindow);
+}
+
+async function createPowerWindow(actor, stationId, { startTime, endTime, limit_w }, { rebalanceStation = null } = {}) {
+  const station = await find(actor, stationId);
+  if (station.power_limit_w === null || station.power_limit_w === undefined) {
+    throw new ConflictError('BASE_LIMIT_REQUIRED');
+  }
+
+  const startMinute = timeStringToMinutes(startTime);
+  const endMinute = timeStringToMinutes(endTime);
+
+  if (endMinute <= startMinute) {
+    throw new BadRequestError('Khung giờ kết thúc phải lớn hơn bắt đầu. Nếu qua nửa đêm, vui lòng tách thành 2 khung: đến 24:00 và từ 00:00');
+  }
+
+  let result;
+  try {
+    result = await pool.query(
+      'INSERT INTO station_power_windows (station_id, start_minute, end_minute, limit_w, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [stationId, startMinute, endMinute, limit_w, actor.id]
+    );
+  } catch (err) {
+    if (err.code === '23P01') {
+      throw new ConflictError('Khung giờ bị chồng lấn với khung giờ khác');
+    }
+    throw err;
+  }
+
+  const window = formatPowerWindow(result.rows[0]);
+
+  try {
+    await audit.record(actor.id, 'POWER_WINDOW_CREATED', 'station', stationId, {
+      windowId: window.id,
+      startTime,
+      endTime,
+      limitKw: window.limitKw,
+      limitW: limit_w,
+    });
+  } catch {
+    // K4
+  }
+
+  triggerPowerRebalance(rebalanceStation, stationId, 'POWER_WINDOW_CREATED');
+
+  return window;
+}
+
+async function deletePowerWindow(actor, stationId, windowId, { rebalanceStation = null } = {}) {
+  await find(actor, stationId);
+  const existing = await pool.query(
+    'SELECT id, start_minute, end_minute, limit_w FROM station_power_windows WHERE id = $1 AND station_id = $2 AND deleted_at IS NULL',
+    [windowId, stationId]
+  );
+  if (!existing.rowCount) {
+    throw new NotFoundError('Không tìm thấy khung giờ');
+  }
+
+  const row = existing.rows[0];
+  await pool.query(
+    'UPDATE station_power_windows SET deleted_at = CURRENT_TIMESTAMP, deleted_by = $1 WHERE id = $2',
+    [actor.id, windowId]
+  );
+
+  try {
+    await audit.record(actor.id, 'POWER_WINDOW_DELETED', 'station', stationId, {
+      windowId: Number(windowId),
+      startMinute: row.start_minute,
+      endMinute: row.end_minute,
+      limitW: row.limit_w,
+      limitKw: wattsToKilowatts(BigInt(row.limit_w)),
+    });
+  } catch {
+    // K4
+  }
+
+  triggerPowerRebalance(rebalanceStation, stationId, 'POWER_WINDOW_DELETED');
+
+  return { success: true };
+}
+
+module.exports = {
+  list,
+  searchNearby,
+  get,
+  create,
+  update,
+  setLock,
+  setConnectorPower,
+  listPowerWindows,
+  createPowerWindow,
+  deletePowerWindow,
+};
