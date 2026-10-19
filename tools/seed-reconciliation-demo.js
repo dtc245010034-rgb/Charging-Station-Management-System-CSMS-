@@ -149,8 +149,8 @@ async function seed() {
       "SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date::text AS local_date"
     );
     const date = dateResult.rows[0].local_date;
-    const ownerId = await findOrCreateUser('Chủ trạm demo đối soát', 'reconciliation-owner@demo.invalid');
-    const driverId = await findOrCreateUser('Tài xế demo đối soát', 'reconciliation-driver@demo.invalid');
+    const ownerId = await findOrCreateUser(client, 'Chủ trạm demo đối soát', 'reconciliation-owner@demo.invalid');
+    const driverId = await findOrCreateUser(client, 'Tài xế demo đối soát', 'reconciliation-driver@demo.invalid');
     const stationResult = await client.query(
       `SELECT id FROM stations WHERE owner_id = $1 AND name = 'Trạm demo đối soát' LIMIT 1`,
       [ownerId]

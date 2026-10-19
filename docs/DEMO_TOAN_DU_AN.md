@@ -373,7 +373,7 @@ Chạy ít nhất hai phiên mẫu (mục 2.9) trước khi trình diễn.
 3. **Đối soát (S-53)**: Kế toán → **Đối soát** → chọn khoảng ngày: `sessionsChecked 2`, `issueCount 0`, `whMeter = whBilled`. Phiên lệch giữa điện đo và điện đã lập hoá đơn được liệt kê ở «Phiên cần xem xét»; ngưỡng bỏ qua chênh tiền `RECON_TOLERANCE_DONG` (mặc định 0). API: `GET /api/reports/reconciliation?from=…&to=…` (và `.csv`).
 4. **Kỳ đối soát (S-55)**: Kế toán → **Kỳ đối soát** → «Tháng cần chốt». **Chỉ chốt được tháng đã kết thúc**: chốt tháng hiện tại trả `400 "Chỉ được chốt kỳ đã kết thúc"`. Kỳ đã chốt thì hoá đơn phát sinh cho tháng đó bị chặn (phiên gắn lỗi `PERIOD_CLOSED`); **Mở lại kỳ** cần lý do và chỉ **Admin** (`403` với Kế toán).
 5. **Bảng kê chia doanh thu (S-54)**: Kế toán → **Bảng kê đối tác**: **Khai tỷ lệ chia** (điểm cơ bản 0–10000, ví dụ 8500 = 85 %, ngày hiệu lực, ghi chú, tuỳ chọn tính phí chiếm trụ vào nền chia) → **Lưu tỷ lệ**; **Lập bảng kê** cho tháng → **Xem bảng kê** (doanh thu, phần chủ trạm, phần nền tảng, theo từng đoạn tỷ lệ). **Chỉ lập được cho kỳ đã chốt** (chưa chốt → `409 PERIOD_NOT_CLOSED`, đã chạy 19/10).
-6. **Giới hạn khi demo ngày 21/10/2026**: tháng 10 chưa kết thúc nên không thể chốt kỳ, và máy chủ **không cho lùi ngày** để tạo dữ liệu tháng trước (thời điểm trụ báo lệch quá 24 giờ bị gắn `CLOCK_SKEW`, 4.12). Hãy trình diễn hai điểm chặn ở các mục 4 và 5, và chạy bằng chứng đầy đủ của chốt kỳ + bảng kê: `python test.py --file tests/acceptance/S-55.periods.test.js` và `S-54.revenue-sharing.test.js`. Công cụ `tools/seed-reconciliation-demo.js` hiện **lỗi** (`client.query is not a function`), đừng dùng cho buổi demo.
+6. **Giới hạn khi demo ngày 21/10/2026**: tháng 10 chưa kết thúc nên không thể chốt kỳ, và máy chủ **không cho lùi ngày** để tạo dữ liệu tháng trước (thời điểm trụ báo lệch quá 24 giờ bị gắn `CLOCK_SKEW`, 4.12). Hãy trình diễn hai điểm chặn ở các mục 4 và 5, và chạy bằng chứng đầy đủ của chốt kỳ + bảng kê: `python test.py --file tests/acceptance/S-55.periods.test.js` và `S-54.revenue-sharing.test.js`. Để có sẵn dữ liệu hoá đơn giả cho báo cáo/đối soát (ngày hôm nay, không phải tháng đã chốt): `DATABASE_URL=… node tools/seed-reconciliation-demo.js` (idempotent, chỉ tạo dữ liệu `@demo.invalid`).
 
 ### 4.10 Chặng 2–8: truy vết, quyền riêng tư, cấu hình, sức khoẻ, sao lưu, lịch sử (S-56 → S-64)
 
@@ -408,7 +408,7 @@ Kịch bản có số liệu so sánh được. Bắt đầu từ DB vừa seed 
 
    Giá trị phải là số nguyên JSON trong cận: `priceDong` 1 → 100.000.000, `durationDays` 1 → 366, `idleGraceMin` 0 → 1440, `idlePerMinDong` 0 → 100.000, đơn giá 0 → 1.000.000 đ/kWh; chuỗi như `"1e3"` bị từ chối 400.
 
-### 4.12 Mục D: nối trụ vật lý ESP32 và dữ liệu cá nhân
+### 4.12 Mục D (tuỳ chọn, bỏ qua nếu thiếu thời gian): trụ vật lý ESP32 và dữ liệu cá nhân
 
 Bảng thông số (URL `ws://<IP>:<cổng>/ocpp/ESP32-DEMO-01`, subprotocol `ocpp1.6`, đầu nối 1, thẻ `TAG-ESP32-01`, giới hạn bắt tay 5 lần/10 giây → 429): [`demo/THONG-SO-NOI-TRU-VAT-LY.md`](demo/THONG-SO-NOI-TRU-VAT-LY.md). Khi chưa có thiết bị: `node tools/demo-charge-point.js ESP32-DEMO-01 --connectors 1`.
 
