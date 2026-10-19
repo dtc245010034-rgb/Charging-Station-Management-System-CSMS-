@@ -375,6 +375,7 @@ describe('S-65: Nghiệm thu Gói thuê bao tháng (Bảng G01–G12) [GYM-91]',
       .post('/api/subscription-plans')
       .set('Content-Type', 'application/json')
       .set('Cookie', admin.cookie)
+      .set('Idempotency-Key', 'S65-PLAN-NEW-400K') // POST tạo gói cần Idempotency-Key
       .send({
         code: 'GOI_THANG_NEW_400K',
         name: 'Gói Tháng Mới 400k',

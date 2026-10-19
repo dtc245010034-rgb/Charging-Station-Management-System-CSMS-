@@ -73,6 +73,7 @@ describe('S-65: API gói thuê bao và mua gói qua ví (GYM-91)', { concurrency
       .post('/api/subscription-plans')
       .set('Content-Type', 'application/json')
       .set('Cookie', admin.cookie)
+      .set('Idempotency-Key', 'SUBS-API-PLAN-0001') // POST tạo gói cần Idempotency-Key
       .send(validPlan);
     assert.equal(adminRes.status, 201);
     assert.equal(adminRes.body.code, 'GOI_THANG_3500');

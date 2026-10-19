@@ -5,6 +5,7 @@ const audit = require('../audit/audit.repository');
 const { withTransaction } = require('../../db/tx');
 const { postEntry } = require('../wallet/ledger.service');
 const { BadRequestError, NotFoundError, ConflictError, AppError } = require('../../lib/errors');
+const { createHash } = require('node:crypto');
 const { normalizePeriods, minutesToTime } = require('./tariff-periods');
 
 function formatPlan(plan, periods = []) {
@@ -58,17 +59,12 @@ async function listPlans(actor) {
   return result;
 }
 
-async function createPlan(actor, data, ip = null) {
+async function createPlan(actor, data, idempotencyKey, ip = null) {
   const normalized = normalizePeriods(data.periods);
   if (!normalized.ok) {
     const err = new BadRequestError('Biểu giá của gói phải phủ kín 24 giờ và không chồng lấn');
     err.details = { errors: normalized.errors };
     throw err;
-  }
-
-  const existing = await repo.findPlanByCode(undefined, data.code);
-  if (existing) {
-    throw new ConflictError('Mã gói thuê bao đã tồn tại');
   }
 
   const periodsToInsert = normalized.periods.map((p) => ({
@@ -77,8 +73,21 @@ async function createPlan(actor, data, ip = null) {
     pricePerKwhDong: p.pricePerKwh,
     label: p.label,
   }));
+  const requestHash = createHash('sha256').update(JSON.stringify(data)).digest('hex');
 
-  const created = await withTransaction(async (client) => {
+  return withTransaction(async (client) => {
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`plan-create:${actor.id}:${idempotencyKey}`]);
+    // Cùng khoá + cùng nội dung: trả lại gói đã tạo (kể cả khi mã gói đã tồn tại do chính lần đó); khác nội dung: 409.
+    const prior = await client.query('SELECT request_hash, response_body FROM idempotency_keys WHERE user_id = $1 AND key = $2', [actor.id, idempotencyKey]);
+    if (prior.rowCount) {
+      if (prior.rows[0].request_hash !== requestHash) throw new ConflictError('Idempotency-Key đã được dùng cho yêu cầu khác');
+      return prior.rows[0].response_body;
+    }
+
+    if (await repo.findPlanByCode(client, data.code)) {
+      throw new ConflictError('Mã gói thuê bao đã tồn tại');
+    }
+
     const plan = await repo.insertPlan(client, {
       code: data.code,
       name: data.name,
@@ -101,10 +110,19 @@ async function createPlan(actor, data, ip = null) {
       'COMPLETED'
     );
 
-    return plan;
+    // Cùng hình dạng với danh sách gói (formatPlan đọc cột snake_case của DB, đơn giá là chuỗi bigint).
+    const response = JSON.parse(JSON.stringify(formatPlan(plan, periodsToInsert.map((p) => ({
+      start_minute: p.startMinute,
+      end_minute: p.endMinute,
+      price_per_kwh_dong: String(p.pricePerKwhDong),
+      label: p.label,
+    })))));
+    await client.query(
+      'INSERT INTO idempotency_keys (user_id, key, request_hash, response_body) VALUES ($1, $2, $3, $4::jsonb)',
+      [actor.id, idempotencyKey, requestHash, JSON.stringify(response)]
+    );
+    return response;
   });
-
-  return formatPlan(created, periodsToInsert);
 }
 
 async function retirePlan(actor, planId, ip = null) {

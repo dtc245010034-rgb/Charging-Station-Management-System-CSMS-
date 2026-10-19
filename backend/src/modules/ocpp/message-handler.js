@@ -2,6 +2,7 @@ const { randomUUID } = require('node:crypto');
 const { safeLog, sanitizeErrorMessage } = require('../../lib/constants');
 const { OcppFrameError, OcppCallError, parseFrame, encodeCall, encodeCallResult, encodeCallError } = require('./frames');
 const { hashCall, MAX_MESSAGE_ID_LENGTH } = require('./messages.repository');
+const { containsNul } = require('../../middlewares/rejectNulBytes');
 
 class OcppRemoteCallError extends Error {
 	constructor(response) {
@@ -180,6 +181,14 @@ function createOcppMessageHandler({
 				failed = true;
 				logWarning(`[OCPP] Unsupported action | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
 				await sendCallError(connection, request.messageId, 'NotImplemented', 'Action is not supported');
+				return;
+			}
+
+			if (containsNul(request.payload)) {
+				// PostgreSQL không lưu được NUL: trả lỗi khung tin thay vì để handler gặp lỗi CSDL (InternalError).
+				failed = true;
+				logWarning(`[OCPP] FormationViolation: payload chứa ký tự NUL | messageId: ${safeLog(request.messageId)} | action: ${safeLog(request.action)}`);
+				await sendCallError(connection, request.messageId, 'FormationViolation', 'Payload contains an invalid character');
 				return;
 			}
 
