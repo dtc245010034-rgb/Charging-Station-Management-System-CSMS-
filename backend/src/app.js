@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const env = require('./config/env');
 const { errorHandler } = require('./middlewares/errorHandler');
 const { requireJson } = require('./middlewares/requireJson');
+const { rejectNulBytes } = require('./middlewares/rejectNulBytes');
 const healthRoutes = require('./modules/health/health.routes');
 const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
@@ -59,6 +60,7 @@ function createApp({ commandSender, powerRebalancer, rebalanceStation } = {}) {
   app.use('/api', requireJson);
   app.use(express.json());
   app.use(cookieParser());
+  app.use('/api', rejectNulBytes);
   app.use(express.static(path.resolve(__dirname, '../../frontend')));
 
   app.use('/api', healthRoutes, authRoutes, usersRoutes, stationsRoutes, createChargePointsRouter({ commandSender }), remoteStartRoutes, reservationsRoutes, fleetStatusRoutes, sessionsRoutes, auditRoutes, tariffsRoutes, invoicesRoutes, walletRoutes, notificationsRoutes, reportsRoutes, periodsRoutes, reconciliationRoutes, erasureRoutes, alertsRoutes, partnersRoutes, settlementsRoutes, subscriptionsRoutes);

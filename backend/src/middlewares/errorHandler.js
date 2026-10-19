@@ -23,6 +23,11 @@ function errorHandler(err, req, res, next) {
     status = 400;
     code = 'BAD_REQUEST';
     message = 'Dữ liệu không đúng kiểu';
+  } else if (err.code === '22021' || err.code === '22P05') {
+    // Lưới an toàn: ký tự không lưu được trong PostgreSQL (vd. NUL) lọt qua rejectNulBytes.
+    status = 400;
+    code = 'BAD_REQUEST';
+    message = 'Dữ liệu chứa ký tự không hợp lệ';
   } else if (err.code === '23505') {
     status = 409;
     code = 'CONFLICT';
