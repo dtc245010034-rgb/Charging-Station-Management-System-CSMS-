@@ -97,7 +97,7 @@ async function createPlan(actor, data, ip = null) {
       plan.id,
       { code: plan.code, priceDong: plan.price_dong, durationDays: plan.duration_days },
       ip,
-      null,
+      client,
       'COMPLETED'
     );
 

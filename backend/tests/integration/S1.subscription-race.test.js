@@ -15,12 +15,13 @@ const ROUNDS = 20;
 
 describe('S1: mua gói song song không trả 5xx (không xin kết nối thứ hai khi đang giữ khoá)', { concurrency: false }, () => {
   let planId;
+  let admin;
 
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
     await truncateAll();
-    const admin = await createUser('s1-admin@test.invalid', 'ADMIN');
+    admin = await createUser('s1-admin@test.invalid', 'ADMIN');
     const plan = await query(
       "INSERT INTO subscription_plans (code, name, price_dong, duration_days, created_by) VALUES ('GOI_S1', 'Gói S1', $1, 30, $2) RETURNING id",
       [PRICE_DONG, admin.id]
@@ -57,6 +58,18 @@ describe('S1: mua gói song song không trả 5xx (không xin kết nối thứ 
       }
     });
   }
+
+  it('tạo 40 gói song song (khác mã) đều 201: ghi audit trong giao dịch không xin thêm kết nối', async () => {
+    const results = await Promise.all(Array.from({ length: 40 }, (_, i) => request(app)
+      .post('/api/subscription-plans')
+      .set('Cookie', admin.cookie)
+      .set('Idempotency-Key', `S1-PLAN-${i}-padding-padding`)
+      .send({ code: `GOI_S1_${i}`, name: `Gói ${i}`, priceDong: 100000, periods: [{ from: 0, to: 1440, pricePerKwh: 3000, label: 'Đồng giá' }] })));
+    const summary = [...new Set(results.map((r) => `${r.status}${r.body?.error?.code ? `:${r.body.error.code}` : ''}`))].join(', ');
+    assert.deepEqual(results.filter((r) => r.status !== 201).length, 0, `kết quả: ${summary}`);
+    assert.equal((await query("SELECT count(*)::int n FROM subscription_plans WHERE code LIKE 'GOI_S1_%'")).rows[0].n, 40);
+    assert.equal((await query("SELECT count(*)::int n FROM audit_logs WHERE action = 'SUBSCRIPTION_PLAN_CREATED'")).rows[0].n, 40);
+  });
 
   it('Σ sổ cái = Σ số dư ví và mỗi lần mua gói chỉ ghi đúng 1 dòng audit', async () => {
     const totals = (await query('SELECT (SELECT COALESCE(sum(amount_dong), 0) FROM wallet_ledger) AS ledger, (SELECT COALESCE(sum(balance_dong), 0) FROM wallets) AS wallets')).rows[0];
