@@ -27,7 +27,7 @@
   1. Vào màn hình **Ví**: Cho người xem thấy số dư hiện tại (1.000.000 đ sau lần seed đầu) và danh mục **Gói thuê bao tháng**.
   2. Bấm **Mua gói**: Chọn «Gói Tháng Tiết Kiệm 3.500» (300.000 đ/30 ngày).
      * *Kết quả:* Số dư ví bị trừ 300.000 đ qua dòng sổ cái `SUBSCRIPTION_FEE`. Xuất hiện thẻ «Gói đang dùng: Gói Tháng Tiết Kiệm 3.500 (Đang hiệu lực)».
-  3. Vào màn hình **Tìm trạm / Đặt chỗ**: Tìm «Trạm Cầu Giấy».
+  3. Vào màn hình **Tìm trạm / Đặt chỗ**: Tìm «Trạm Cầu Giấy». Đặt chỗ cần trụ đang online: bật trước trụ ảo `node tools/demo-charge-point.js DEMO-ST01-CP1` (ở cửa sổ khác).
      * Thấy mức phí không đến niêm yết rõ: `20.000 đ`. Bấm **Đặt chỗ** cổng 1.
   4. Đổi ý: Bấm **Huỷ đặt chỗ** tại trang «Đặt chỗ của tôi» (`#/driver/find`).
      * *Kết quả (S-51):* Chỗ đặt chuyển sang `CANCELLED`, đầu nối mở lại `Available`, ví không bị trừ phí.
@@ -47,7 +47,7 @@
      * Hiện đang có khung giờ cao điểm `17:00 – 20:00` hạ công suất còn `15 kW` (hạn mức nền `30 kW`).
   3. Thao tác thêm khung giờ mới hoặc thử khung qua nửa đêm:
      * Nhập `22:00 – 06:00` và bấm nút **Qua nửa đêm**.
-     * *Kết quả:* Hệ thống tự động tách thành 2 khung hợp lệ `22:00 – 24:00` và `00:00 – 06:00` theo quy tắc K10/Mục 3.1.
+     * *Kết quả:* Giao diện tách thành 2 khung hợp lệ `22:00 – 24:00` và `00:00 – 06:00` theo quy tắc K10/Mục 3.1 (API từ chối khung vắt qua nửa đêm với 400, nên phải gửi hai khung riêng).
   4. Xem trường **Phí không đến khi đặt chỗ (S-50)**: Đang cấu hình `20.000 đ`.
 * **Phương án dự phòng:** Khung giờ bị trùng lặp sẽ bị PostgreSQL `btree_gist EXCLUDE` chặn với mã 409 Conflict.
 
