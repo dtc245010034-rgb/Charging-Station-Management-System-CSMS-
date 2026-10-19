@@ -111,12 +111,11 @@ Kỳ vọng `KẾT QUẢ KIỂM KHÓI: 6/6 NHÓM ĐẠT (PASS)` (health + 5 vai 
 |---|---|---|
 | `OCPP_HEARTBEAT_INTERVAL` | `2` | Trụ im quá 4 giây là ngoại tuyến (mặc định 60 giây quá chậm) |
 | `OCPP_COMMAND_TIMEOUT_SECONDS` | `5` | Reset/ChangeConfiguration hết hạn sau 5 giây thay vì 30 |
-| `SANDBOX_GATEWAY` | `1` | Bật cổng thanh toán giả lập (mục 4.6) |
-| `PAYMENT_WEBHOOK_SECRET` | chuỗi ngẫu nhiên ≥ 32 ký tự | Bắt buộc khi bật sandbox |
+| `SANDBOX_GATEWAY`, `PAYMENT_WEBHOOK_SECRET` | `python run.py --sandbox` | Bật cổng thanh toán giả lập (mục 4.6): tự đặt `SANDBOX_GATEWAY=1` và sinh secret ≥ 32 ký tự vào `.env`. Tắt: `python run.py --no-sandbox` |
 | `INTERNAL_BASE_URL` | `http://127.0.0.1:3000` | Địa chỉ cổng giả lập gọi webhook (đổi nếu app chạy cổng khác) |
 | `RESERVATION_HOLD_MIN` | `1` | Giữ chỗ quá hạn sau `arriveInMinutes` + 1 phút để demo phí không đến (mục 4.8); mặc định 15 |
 
-Khi dùng Docker, các biến này nằm trong `.env` ở **thư mục gốc**; chạy không Docker thì ở `backend/.env`. Danh sách đầy đủ và mặc định: README, mục «Biến môi trường».
+Khi dùng Docker, các biến này nằm trong `.env` ở **thư mục gốc**; chạy không Docker thì ở `backend/.env`. Lưu ý: `docker-compose.yml` chỉ chuyển một danh sách biến cố định vào container (không có `INTERNAL_BASE_URL`, `RESERVATION_HOLD_MIN`), nên với Docker hai biến đó chưa có tác dụng; hai biến sandbox thì dùng `python run.py --sandbox` (file `docker-compose.sandbox.yml`, chỉ được nạp khi bật), không sửa tay `.env`. Danh sách đầy đủ và mặc định: README, mục «Biến môi trường».
 
 ### 2.7 Tài khoản
 
@@ -151,8 +150,8 @@ Trụ ảo tương tác (`start …`) **không gửi `MeterValues`**, nên kWh c
 Lưu thành `phien-sac-mau.js` (tệp tạm của bạn, không cần đưa vào repo):
 
 ```js
-// node phien-sac-mau.js <MÃ_TRỤ> <idTag> <Wh> [giây=10] [cổng=3000]
-const { WebSocket } = require('./backend/node_modules/ws');
+// Tham số: <MÃ_TRỤ> <idTag> <Wh> [giây=10] [cổng=3000]  (cách chạy: xem bên dưới)
+const { WebSocket } = require('ws');
 const [code = 'DEMO-ST01-CP1', tag = 'TAG-DEMO-01', wh = '20000', seconds = '10', port = '3000'] = process.argv.slice(2);
 const stop = Date.now();
 const start = stop - Number(seconds) * 1000;
@@ -174,9 +173,13 @@ ws.on('open', async () => {
 });
 ```
 
+Chạy bằng Docker (mục 2.2): đưa tệp vào container của app, nơi đã có Node 22 và thư viện `ws`; không cần cài gì trên máy. Tên container xem bằng `docker ps` (dạng `<tên thư mục>_app_1`); cổng 3000 là cổng **trong** container nên không đổi dù `APP_PORT` khác:
+
 ```bash
-node phien-sac-mau.js DEMO-ST01-CP1 TAG-DEMO-01 20000        # 20 kWh trong 10 giây, trạm ST01
+docker exec -i <tên container app> node - DEMO-ST01-CP1 TAG-DEMO-01 20000 < phien-sac-mau.js    # 20 kWh trong 10 giây, trạm ST01
 ```
+
+Chạy không Docker (mục 2.3, đã `npm ci` trong `backend/`): `NODE_PATH=backend/node_modules node phien-sac-mau.js DEMO-ST01-CP1 TAG-DEMO-01 20000`.
 
 Mong đợi: `Boot {"status":"Accepted",…}`, `Authorize {"idTagInfo":{"status":"Accepted"}}`, `Start {"transactionId":N,…}`, `Stop {}`. Job lập hoá đơn chạy mỗi **30 giây** (`BILLING_JOB_INTERVAL_MS`), nên chờ khoảng 30 giây rồi mới thấy hoá đơn.
 
@@ -293,13 +296,13 @@ Chi tiết: [`SPRINT3.md`](SPRINT3.md) mục 3. Tóm tắt:
 7. **Nhật ký điều khiển (S-27)**: Admin → **Nhật ký điều khiển**: mỗi lệnh dừng có hai dòng («Đã chấp nhận» rồi «Đã dừng») kèm người thực hiện, trụ, IP. Bảng chỉ-chèn: `UPDATE/DELETE/TRUNCATE` bị CSDL từ chối.
 8. **Trụ ảo trong Compose/CI (S-26)**: dịch vụ `vcp`; job CI `session-scenario`. Kịch bản đầy đủ: `node tools/test-s21-reconnect-fleet.js --count 20 --runs 3` (cần quyền admin và `STAGING_DATABASE_URL`).
 
-### 4.5 Chặng 1–2: biểu giá và hoá đơn (S-28 → S-34)  [ĐÃ CHẠY 19/10]
+### 4.5 Chặng 1–2: biểu giá và hoá đơn (S-28 → S-34)  [ĐÃ CHẠY 20/10 bước 2 và phiên mẫu của bước 3; hoá đơn 77.000 đ và bước 5: CHƯA CHẠY LẠI]
 
-1. Chủ trạm (`owner@`) → **Biểu giá** (hoặc **Biểu giá trạm sạc**). Chọn «Trạm Cầu Giấy»: biểu giá hiện hành 3.850 đ/kWh cả ngày, ghi chú `ACTIVE`.
-2. **Khai báo biểu giá mới**: ngày hiệu lực (giờ trạm), các khung giờ (**phải phủ đủ 24 giờ**, không chồng lấn; `Từ` / `Đến` / `Đơn giá` / `Nhãn`), **Thời gian ân hạn** (0–240 phút) và **Phí chiếm trụ** (đ/phút, tính sau ân hạn) → **Lưu biểu giá**. Biểu giá cũ **không bị sửa** (chỉ thêm phiên bản mới, S-34). Bằng API:
+1. Chủ trạm (`owner@`) → menu **Trạm sạc của tôi** → bấm dòng **Trạm Cầu Giấy** → kéo xuống cuối khung «Chi tiết trạm» → bấm **Biểu giá trạm** (địa chỉ có dạng `#/owner/tariffs/<id>`): biểu giá hiện hành 3.850 đ/kWh cả ngày, ghi chú `ACTIVE`. Bấm «Biểu giá» ở thanh bên (không kèm trạm) chỉ hiện màn «Chưa chọn trạm sạc» kèm nút «Mở danh sách trạm».
+2. **Khai báo biểu giá mới**: ngày hiệu lực (giờ trạm), các khung giờ (**phải phủ đủ 24 giờ**, không chồng lấn; `Từ` / `Đến` / `Đơn giá` / `Nhãn`), **Thời gian ân hạn** (0–240 phút) và **Phí chiếm trụ** (đ/phút, tính sau ân hạn) → **Lưu biểu giá**. Biểu giá cũ **không bị sửa** (chỉ thêm phiên bản mới, S-34). Bằng API (`<id>` lấy từ thanh địa chỉ ở bước 1; trong dữ liệu seed sạch, Trạm Cầu Giấy là id 1):
 
    ```bash
-   curl -s -b owner.ck -X POST $B/api/stations/2/tariffs -H 'Content-Type: application/json' \
+   curl -s -b owner.ck -X POST $B/api/stations/<id>/tariffs -H 'Content-Type: application/json' \
      -d '{"effectiveFrom":"2026-12-01","periods":[{"from":"00:00","to":"06:00","pricePerKwh":2500,"label":"Đêm"},{"from":"06:00","to":"24:00","pricePerKwh":4200,"label":"Ngày"}],"idle":{"graceMin":10,"perMinDong":1000}}'
    ```
 
@@ -321,7 +324,7 @@ Chi tiết: [`SPRINT3.md`](SPRINT3.md) mục 3. Tóm tắt:
    ```
 
    Mong đợi `{"balanceDong":"…"}` tăng 200.000; gửi lại **cùng `receiptCode`** → `409 RECEIPT_ALREADY_USED`, ví không đổi. Admin còn có **Điều chỉnh số dư** (lý do ≥ 10 ký tự) và **Mở khóa ví**; mọi thao tác ghi `audit_logs` (S-56).
-5. **Nạp qua cổng sandbox (S-35, S-39)**: bật `SANDBOX_GATEWAY=1` và `PAYMENT_WEBHOOK_SECRET` (mục 2.6), khởi động lại. Tài xế → **Ví** → nhập số tiền (10.000–5.000.000 đ) hoặc chọn nhanh → **Nạp tiền vào ví**. Trang cổng giả lập `/sandbox-gateway/pay` có các nút: **Thanh toán thành công**, **Thất bại**, **Huỷ**, **Quay về ngay, gửi webhook sau 10 giây**, **Gửi webhook 5 lần**, **Gửi webhook sai số tiền**, **Gửi webhook sai chữ ký**. Mong đợi: thành công → số dư tăng; gửi 5 lần → chỉ ghi nhận **một** lần; sai chữ ký hoặc sai số tiền → bị từ chối, số dư không đổi. Bằng chứng tự động: `S-35.wallet-topup`, `S-39.webhook-idempotency`, `payment-hmac`.
+5. **Nạp qua cổng sandbox (S-35, S-39)**: chạy `python run.py --sandbox` (tự bật cổng và sinh `PAYMENT_WEBHOOK_SECRET`, mục 2.6; app được tạo lại, dữ liệu giữ nguyên). Tài xế → **Ví** → nhập số tiền (10.000–5.000.000 đ) hoặc chọn nhanh → **Nạp tiền vào ví**. Trang cổng giả lập `/sandbox-gateway/pay` có các nút: **Thanh toán thành công**, **Thất bại**, **Huỷ**, **Quay về ngay, gửi webhook sau 10 giây**, **Gửi webhook 5 lần**, **Gửi webhook sai số tiền**, **Gửi webhook sai chữ ký**. Mong đợi: thành công → số dư tăng; gửi 5 lần → chỉ ghi nhận **một** lần; sai chữ ký hoặc sai số tiền → bị từ chối, số dư không đổi. Bằng chứng tự động: `S-35.wallet-topup`, `S-39.webhook-idempotency`, `payment-hmac`.
 6. **Sổ cái chỉ-chèn (S-41)**: `update wallet_ledger set amount_dong = 0;` → lỗi `wallet_ledger is append-only`. Job kiểm định số dư ví và sổ cái chạy mỗi `WALLET_AUDIT_INTERVAL_MS` (5 phút); lệch thì khoá ví.
 
 ### 4.7 Chặng 6 và 9: hạn mức công suất (S-42 → S-45)  [ĐÃ CHẠY 19/10]
@@ -522,7 +525,7 @@ Mỗi story có file test tương ứng, liệt kê trong [`project/TONG-KET-DU-
 | Phiên sạc không có hoá đơn sau khi chạy script | Job lập hoá đơn chạy mỗi 30 giây; hoặc thời điểm phiên lệch > 24 giờ (`CLOCK_SKEW`) | Chờ 30–40 giây; dùng script ở 2.9 (giờ hiện tại) |
 | Phiên sau khi mua gói vẫn tính giá trạm | Phiên bắt đầu **trước** thời điểm mua gói | Chạy phiên mới sau khi mua |
 | Đặt chỗ báo lỗi | Trụ chưa online hoặc trả `Rejected/Faulted/Unavailable` cho `ReserveNow` | Bật trụ ảo mặc định (`Accepted`) |
-| Nạp ví báo lỗi / không có trang cổng | Chưa bật `SANDBOX_GATEWAY=1` hoặc thiếu `PAYMENT_WEBHOOK_SECRET` | Đặt `.env`, tạo lại container |
+| Nạp ví báo lỗi / không có trang cổng | Chưa bật sandbox (container không có `SANDBOX_GATEWAY=1`; chỉ sửa `.env` thì Docker không nhận) | `python run.py --sandbox` |
 | Màn hình không tự đổi | Tab bị ẩn, mất luồng SSE | Đưa tab lên trước, bấm **Làm mới** |
 | Không thấy «Ngoại tuyến» sau `silence` | Nhịp tim còn 60 giây | Đặt `OCPP_HEARTBEAT_INTERVAL=2` và tạo lại container; gõ `info` xem nhịp tim |
 | `429` khi đăng nhập | Quá `LOGIN_IP_MAX_FAILURES` | Chờ hết 15 phút hoặc `python run.py reset` |
