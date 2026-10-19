@@ -61,6 +61,9 @@ jobs:
       # Kiểm logic thuần của run.py/test.py (không cần Docker)
       - run: python3 -m unittest discover -s tools -q
         working-directory: .
+      # C3: mọi tên tệp test được nhắc trong docs/dev/TONG-KET-DU-AN.md phải tồn tại, số thẻ khớp số dòng bảng
+      - run: node tools/check-docs.js
+        working-directory: .
 
   # Windows: nhóm dev trên Windows, còn CI/Docker chạy Linux nên lỗi riêng Windows (dấu '\' trong đường dẫn,
   # CRLF...) lọt qua. Job này chỉ chạy test backend; lint/audit đã có ở job Linux.
