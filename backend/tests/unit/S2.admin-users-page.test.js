@@ -65,7 +65,7 @@ describe('S2 giao diện: Quản lý tài khoản phân trang và tìm kiếm', 
 
     const input = ui.root.querySelector('input[type="search"]');
     input.value = 'user27';
-    input.dispatchEvent(new window.Event('input', { bubbles: true }));
+    input.dispatchEvent(new env.dom.window.Event('input', { bubbles: true }));
     await waitFor(() => ui.rows().length === 1 && ui.rows()[0] === 'user27@test.invalid');
     assert.match(ui.status(), /Hiện 1–1 \/ 1 · Trang 1 \/ 1/);
   });
@@ -74,7 +74,7 @@ describe('S2 giao diện: Quản lý tài khoản phân trang và tìm kiếm', 
     const ui = await open();
     const input = ui.root.querySelector('input[type="search"]');
     input.value = 'khong-ton-tai';
-    input.dispatchEvent(new window.Event('input', { bubbles: true }));
+    input.dispatchEvent(new env.dom.window.Event('input', { bubbles: true }));
     await waitFor(() => /Hiện 0–0 \/ 0/.test(ui.status()));
     assert.deepStrictEqual(ui.root.querySelector('tbody').textContent, 'Không tìm thấy người dùng');
   });
@@ -83,7 +83,7 @@ describe('S2 giao diện: Quản lý tài khoản phân trang và tìm kiếm', 
     const ui = await open();
     const select = ui.root.querySelector('select[aria-label="Số tài khoản mỗi trang"]');
     select.value = '10';
-    select.dispatchEvent(new window.Event('change', { bubbles: true }));
+    select.dispatchEvent(new env.dom.window.Event('change', { bubbles: true }));
     await waitFor(() => /Hiện 1–10 \/ 28 · Trang 1 \/ 3/.test(ui.status()));
     assert.ok(env.calls.some((c) => c.url.includes('page=1') && c.url.includes('limit=10')));
   });
