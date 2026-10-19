@@ -6,7 +6,7 @@ const NO_STATUS = 'Trạm mới luôn ở trạng thái chưa hoạt động, kh
 const POWER_KW_ERROR = 'Công suất phải từ 0,1 đến 100.000 kW và tối đa 1 chữ số thập phân';
 const status = z.enum(['ACTIVE', 'INACTIVE', 'MAINTENANCE'], { message: 'status không hợp lệ' });
 const text = (message) => z.string({ message }).trim().min(1, message);
-const powerKilowatts = z.union([z.string(), z.number()]).transform((value, context) => {
+const powerKilowatts = z.union([z.string(), z.number()], { error: POWER_KW_ERROR }).transform((value, context) => {
   const watts = kilowattsToWatts(value);
   if (watts === null) {
     context.addIssue({ code: 'custom', message: POWER_KW_ERROR });

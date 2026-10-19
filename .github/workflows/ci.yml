@@ -61,6 +61,9 @@ jobs:
       # Kiểm logic thuần của run.py/test.py (không cần Docker)
       - run: python3 -m unittest discover -s tools -q
         working-directory: .
+      # C3: mọi tên tệp test được nhắc trong docs/project/TONG-KET-DU-AN.md phải tồn tại, số thẻ khớp số dòng bảng
+      - run: node tools/check-docs.js
+        working-directory: .
 
   # Windows: nhóm dev trên Windows, còn CI/Docker chạy Linux nên lỗi riêng Windows (dấu '\' trong đường dẫn,
   # CRLF...) lọt qua. Job này chỉ chạy test backend; lint/audit đã có ở job Linux.
@@ -177,3 +180,77 @@ jobs:
 
           node tools/test-s21-reconnect-fleet.js --count 5 --drops 1-2 --runs 1 --seed 42 --prefix S26-CI-
 
+
+  # C2: chuỗi demo trên DB sạch: migrate -> seed (2 lần, chứng minh idempotent) -> server -> demo-smoke (6/6).
+  # Chặn mọi thay đổi làm seed hoặc tài liệu demo lệch khỏi hệ thống đang chạy.
+  demo-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: lint-and-test
+
+    services:
+      db_demo:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: csms_demo
+          POSTGRES_USER: csms
+          POSTGRES_PASSWORD: csms_demo_only
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U csms -d csms_demo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      PORT: 3000
+      NODE_ENV: test
+      JWT_SECRET: "ci-demo-smoke-jwt-secret-at-least-32-chars-long"
+      APP_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql://csms:csms_demo_only@localhost:5434/csms_demo
+      ALLOW_DEMO_SEED: "1"
+      DEMO_PASSWORD: "CiDemoSmokePass-2026"
+      APP_BASE_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npm run migrate
+
+      - name: Seed demo lần 1 và lần 2 (lần 2 không được tạo thêm gì)
+        run: |
+          set -o pipefail
+          npm run seed-demo
+          npm run seed-demo | tee seed-second.log
+          grep -q "0 tài khoản mới, 0 trạm mới, 0 trụ mới" seed-second.log
+          grep -q "0 biểu giá, 0 khung công suất, 0 lần nạp ví, 0 gói thuê bao, 0 tỷ lệ chia sẻ doanh thu" seed-second.log
+
+      - name: Khởi động máy chủ và chạy demo-smoke (kỳ vọng 6/6)
+        run: |
+          set -o pipefail
+          node src/server.js &
+          SERVER_PID=$!
+          trap "kill $SERVER_PID 2>/dev/null || true" EXIT
+
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3000/api/health | grep -q 'ok'; then
+              echo 'CSMS server is ready'
+              break
+            fi
+            sleep 1
+          done
+
+          node ../tools/demo-smoke.js | tee smoke.log
+          grep -q "6/6 NHÓM ĐẠT" smoke.log

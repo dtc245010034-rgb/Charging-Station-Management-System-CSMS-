@@ -15,12 +15,15 @@ function parseUserId(params) {
   return parsed.data.userId;
 }
 
+const MAX_PAGE = 1000000;
+const MAX_PAGE_SIZE = 100;
+
 const listUsersQuery = z.object({
   query: z.string().optional(),
   role: z.enum(['DRIVER', 'STATION_OWNER', 'OPERATOR', 'ACCOUNTANT', 'ADMIN']).optional(),
   status: z.enum(['active', 'disabled']).optional(),
-  page: z.string().regex(/^\d+$/).transform(Number).optional(),
-  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  page: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(MAX_PAGE)).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(MAX_PAGE_SIZE)).optional(),
 });
 
 router.get('/roles', { access: access('roles:read') }, async (req, res) => res.json(await service.listRoles()));

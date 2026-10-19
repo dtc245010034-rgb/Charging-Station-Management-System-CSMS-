@@ -120,6 +120,22 @@ async function overview({ db = pool, now = new Date() } = {}) {
     };
   });
 
+  // Snapshot trong health_minutes chỉ chụp mỗi SNAPSHOT_INTERVAL_MS nên trụ vừa Boot chưa được tính tới lúc chụp kế tiếp.
+  // Số liệu "hiện tại" lấy trực tiếp từ bảng (3 COUNT rẻ); lịch sử vẫn từ snapshot, điểm cuối của biểu đồ khớp số hiện tại.
+  const live = (await db.query(
+    `SELECT (SELECT COUNT(*)::int FROM charge_points WHERE status = 'ONLINE') AS cps_online,
+            (SELECT COUNT(*)::int FROM charge_points) AS cps_total,
+            (SELECT COUNT(*)::int FROM charging_sessions WHERE status = 'CHARGING') AS sessions_active`
+  )).rows[0];
+  const lastPoint = points.at(-1);
+  if (lastPoint) {
+    lastPoint.cps_online = Number(live.cps_online);
+    lastPoint.cps_total = Number(live.cps_total);
+    lastPoint.sessions_active = Number(live.sessions_active);
+    series.at(-1).cpsOnline = lastPoint.cps_online;
+    series.at(-1).sessionsActive = lastPoint.sessions_active;
+  }
+
   const latest = points.at(-1) || {};
   const latestCalls = Number(latest.ocpp_calls || 0);
   const latestLatencySum = Number(latest.latency_sum_ms || 0);

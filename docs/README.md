@@ -1,14 +1,32 @@
-# CSMS — Tài liệu dự án (Documentation)
+# CSMS — Tài liệu dự án
 
-Thư mục `docs/` chứa toàn bộ tài liệu kỹ thuật, vận hành, kiểm thử và thiết kế của dự án Charging Station Management System:
+Mục lục thư mục `docs/`. Muốn chạy hoặc demo dự án: đọc mục **Đang dùng**. Mục **Lịch sử** chỉ để tra cứu, nội dung dừng ở mốc ghi trong từng file.
 
-- **Sổ tay vận hành**: [`docs/OPERATIONS.md`](OPERATIONS.md) — Hướng dẫn build, chạy, dừng, sao lưu DB, staging và biến môi trường.
-- **Tình trạng dự án & Sprint**: [`docs/SPRINT_STATUS.md`](SPRINT_STATUS.md) và [`docs/SPRINT_2_PLAN.md`](SPRINT_2_PLAN.md).
-- **Demo Sprint 2 cho mentor**: [`docs/DEMO_SPRINT2.md`](DEMO_SPRINT2.md) — kịch bản demo S-06…S-16 từng bước, dùng trụ ảo [`tools/demo-charge-point.js`](../tools/demo-charge-point.js).
-- **Báo cáo vòng sửa lỗi 6** (03/10/2026): [`docs/testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VONG-6.md) — bảng bug trước/sau, số liệu test, kết quả bốn mục kiểm chứng.
-- **Đề xuất xác thực trụ (B5)**: [`docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`](B5-xac-thuc-tru-de-xuat-thiet-ke.md) — thiết kế, chưa có code, chờ PO chọn.
-- **Kiểm định chất lượng & QA**: [`docs/testing/README.md`](testing/README.md) — Điểm vào chính của Tester/QA, quy chuẩn kiểm thử và danh mục test case.
-- **Hồ sơ kiểm thử User Story**: [`docs/testing/stories/S/`](testing/stories/S/) — Kịch bản và báo cáo kiểm thử cho từng User Story (hồ sơ hiện có tới S-13).
-- **Thiết kế & Giao diện**: [`docs/design/`](design/) — Đặc tả UX/UI Dashboard và ảnh chụp màn hình.
-- **Kiểm toán**: [`docs/Audit/`](Audit/).
-- **Spike nghiên cứu**: [`docs/spikes/`](spikes/) — Ghi nhận nghiên cứu độc lập (K-01 OCPP simulator).
+## Đang dùng
+
+| Thư mục | Nội dung | Điểm vào |
+|---|---|---|
+| [`demo/`](demo/) | Hướng dẫn demo, kịch bản, checklist trước buổi demo | [`demo/README.md`](demo/README.md), [`demo/TOAN-DU-AN.md`](demo/TOAN-DU-AN.md) |
+| [`guides/`](guides/) | Vận hành (build, chạy, dừng, sao lưu, staging, biến môi trường) và đề xuất xác thực trụ B5 | [`guides/OPERATIONS.md`](guides/OPERATIONS.md) |
+| [`project/`](project/) | Kế hoạch tới hết dự án, tổng kết 66 thẻ story, hợp đồng tính tiền, báo cáo bàn giao từng chặng | [`project/TONG-KET-DU-AN.md`](project/TONG-KET-DU-AN.md) |
+| [`design/`](design/) | Đặc tả UX/UI Dashboard và ảnh chụp màn hình | [`design/README.md`](design/README.md) |
+| [`testing/`](testing/) | Kiểm thử/QA: quy chuẩn, test case, báo cáo từng vòng | [`testing/README.md`](testing/README.md) |
+| [`Audit/`](Audit/) | Kiểm toán độc lập | |
+
+Báo cáo bàn giao từng chặng nằm ở [`project/handover/`](project/handover/) (`CHANG-01` … `CHANG-09`, `S-17`, `S-22`).
+
+## Lịch sử
+
+[`archive/`](archive/) giữ lại, không xoá:
+
+- `SPRINT-2-PLAN.md`, `SPRINT-3-PLAN.md`, `SPRINT-STATUS.md`: kế hoạch và trạng thái Sprint 2–3 (dừng ở mốc 12/10/2026).
+- `design/S15-S16-KE-HOACH.md`: kế hoạch S-15/S-16.
+- `spikes/`: nghiên cứu K-01 (trụ ảo OCPP) và ghi nhận S-05 cho PO.
+
+Trạng thái hiện tại của từng thẻ: xem [`project/TONG-KET-DU-AN.md`](project/TONG-KET-DU-AN.md), không xem `archive/`.
+
+## Quy ước
+
+- Tên file mới: viết HOA, nối bằng dấu gạch ngang (ví dụ `KICH-BAN-DEMO.md`).
+- Chuyển hoặc đổi tên file: chạy `node tools/check-docs.js`, và quét lại link `.md` bị gãy.
+- `testing/` và `Audit/` thuộc vai trò kiểm thử: không sửa nội dung nếu không được giao.

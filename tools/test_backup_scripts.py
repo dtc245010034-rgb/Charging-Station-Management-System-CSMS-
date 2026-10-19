@@ -240,6 +240,18 @@ class BackupScripts(unittest.TestCase):
         self.assertEqual(capture.read_text(encoding="utf-8"), SQL_DUMP)
 
 
+
+class ShellScriptModes(unittest.TestCase):
+    def test_tracked_shell_scripts_are_executable_in_git(self):
+        # Tai lieu huong dan chay truc tiep (tools/backup-db.sh ...) nen moi .sh phai co mode 100755 trong git.
+        git = shutil.which("git")
+        if not git or not (ROOT / ".git").exists():
+            self.skipTest("khong co git hoac khong phai ban checkout git")
+        listing = subprocess.run([git, "ls-files", "-s", "*.sh"], cwd=ROOT, capture_output=True, text=True, check=True).stdout
+        modes = {line.split("\t", 1)[1]: line.split()[0] for line in listing.splitlines()}
+        self.assertTrue(modes, "khong tim thay file .sh nao de kiem tra")
+        self.assertEqual([path for path, mode in modes.items() if mode != "100755"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
-

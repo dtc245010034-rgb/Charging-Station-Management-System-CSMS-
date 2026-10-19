@@ -1,184 +1,127 @@
 #!/usr/bin/env node
 'use strict';
 
+// Kiểm khói demo: 6 nhóm (health + 5 vai trò) trên dữ liệu do `npm run seed-demo` tạo.
+// Một nhóm chỉ ĐẠT khi mọi kiểm tra con đều đạt. Có nhóm FAIL thì thoát mã 1.
+const path = require('node:path');
+const { ACCOUNTS, DEFAULT_EMAIL_DOMAIN, DEMO_PASSWORD_MIN_LENGTH, emailOf } = require(path.join(__dirname, '..', 'backend', 'scripts', 'lib', 'demo-accounts'));
+
 const baseUrl = (process.env.APP_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '');
-const passwordEnv = process.env.DEMO_PASSWORD;
-if (!passwordEnv || typeof passwordEnv !== 'string' || passwordEnv.trim().length < 12) {
-  console.error('LỖI: Biến môi trường DEMO_PASSWORD bắt buộc và phải có ít nhất 12 ký tự.');
-  process.exit(1);
-}
-const demoPassword = passwordEnv.trim();
+const emailDomain = process.env.DEMO_EMAIL_DOMAIN || DEFAULT_EMAIL_DOMAIN;
+const demoEmail = (key) => {
+  if (!ACCOUNTS.some((account) => account.key === key)) throw new Error(`Tài khoản demo không có trong bảng dùng chung: ${key}`);
+  return emailOf(key, emailDomain);
+};
 
-let totalSteps = 0;
-let passedSteps = 0;
-let failedSteps = 0;
-
-function logPass(msg) {
-  totalSteps += 1;
-  passedSteps += 1;
-  console.log(`  [PASS] ${msg}`);
+function readPassword(env = process.env) {
+  const value = typeof env.DEMO_PASSWORD === 'string' ? env.DEMO_PASSWORD.trim() : '';
+  if (value.length < DEMO_PASSWORD_MIN_LENGTH) {
+    console.error(`LỖI: Biến môi trường DEMO_PASSWORD bắt buộc và phải có ít nhất ${DEMO_PASSWORD_MIN_LENGTH} ký tự.`);
+    process.exit(1);
+  }
+  return value;
 }
 
-function logFail(msg, detail = '') {
-  totalSteps += 1;
-  failedSteps += 1;
-  console.error(`  [FAIL] ${msg} ${detail}`);
-}
-
-async function loginUser(email, password) {
+async function login(email, password) {
   const res = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Đăng nhập thất bại (${res.status}): ${errText}`);
-  }
-  const setCookie = res.headers.get('set-cookie');
-  let cookieHeader = '';
-  if (setCookie) {
-    cookieHeader = setCookie.split(',').map((c) => c.split(';')[0].trim()).join('; ');
-  }
+  if (!res.ok) throw new Error(`Đăng nhập ${email} thất bại (${res.status}): ${await res.text()}`);
+  const cookie = res.headers.getSetCookie().map((c) => c.split(';')[0].trim()).join('; ');
   const body = await res.json();
-  return { user: body.user, cookie: cookieHeader };
+  return { user: body.user, cookie };
 }
 
-async function apiGet(path, cookie) {
-  const res = await fetch(`${baseUrl}${path}`, {
-    method: 'GET',
-    headers: {
-      Cookie: cookie,
-      Accept: 'application/json',
-    },
-  });
+async function apiGet(apiPath, cookie) {
+  const res = await fetch(`${baseUrl}${apiPath}`, { headers: { Cookie: cookie, Accept: 'application/json' } });
   return { status: res.status, data: await res.json().catch(() => ({})) };
 }
 
-async function runSmoke() {
-  console.log(`==> Bắt đầu kiểm khói hệ thống CSMS tại ${baseUrl}...`);
+// Mỗi nhóm trả về danh sách [đạt?, mô tả, chi tiết lỗi].
+const groups = (password) => [
+  ['1. Health', async () => {
+    const res = await fetch(`${baseUrl}/api/health`);
+    return [[res.ok, `GET /api/health trả về ${res.status}`]];
+  }],
+  ['2. DRIVER', async () => {
+    const { user, cookie } = await login(demoEmail('driver'), password);
+    const wallet = await apiGet(`/api/drivers/${user.id}/wallet`, cookie);
+    const plans = await apiGet('/api/subscription-plans', cookie);
+    const planList = Array.isArray(plans.data) ? plans.data : [];
+    return [
+      [true, `Đăng nhập ${user.email}`],
+      [wallet.status === 200 && BigInt(wallet.data.balanceDong ?? -1) >= 0n, `Đọc ví (số dư ${wallet.data.balanceDong} đ)`, JSON.stringify(wallet)],
+      [plans.status === 200 && planList.length > 0, `Có gói thuê bao đang mở bán (${planList.length} gói)`, JSON.stringify(plans)],
+    ];
+  }],
+  ['3. STATION_OWNER', async () => {
+    const { user, cookie } = await login(demoEmail('owner'), password);
+    const stations = await apiGet('/api/stations', cookie);
+    const list = Array.isArray(stations.data) ? stations.data : (stations.data.items ?? []);
+    const checks = [
+      [true, `Đăng nhập ${user.email}`],
+      [stations.status === 200 && list.length > 0, `Liệt kê trạm của chủ trạm (${list.length} trạm)`, JSON.stringify(stations)],
+    ];
+    const windowCounts = await Promise.all(list.map(async (station) => {
+      const windows = await apiGet(`/api/stations/${station.id}/power-windows`, cookie);
+      return windows.status === 200 && Array.isArray(windows.data) ? windows.data.length : -1;
+    }));
+    checks.push([windowCounts.length > 0 && !windowCounts.includes(-1) && windowCounts.some((n) => n > 0), `Xem khung công suất (số khung theo trạm: ${windowCounts.join(', ')})`]);
+    return checks;
+  }],
+  ['4. OPERATOR', async () => {
+    const { user, cookie } = await login(demoEmail('operator'), password);
+    const points = await apiGet('/api/charge-points', cookie);
+    const sessions = await apiGet('/api/sessions', cookie);
+    return [
+      [true, `Đăng nhập ${user.email}`],
+      [points.status === 200, 'Giám sát danh sách trụ sạc', JSON.stringify(points)],
+      [sessions.status === 200, 'Giám sát phiên sạc', JSON.stringify(sessions)],
+    ];
+  }],
+  ['5. ACCOUNTANT', async () => {
+    const { user, cookie } = await login(demoEmail('accountant'), password);
+    const report = await apiGet('/api/reports/reconciliation?from=2026-01-01&to=2026-12-31', cookie);
+    return [
+      [true, `Đăng nhập ${user.email}`],
+      [report.status === 200, 'Truy vấn báo cáo đối soát', JSON.stringify(report)],
+    ];
+  }],
+  ['6. ADMIN', async () => {
+    const { user, cookie } = await login(demoEmail('admin'), password);
+    const audit = await apiGet('/api/audit-logs?limit=5', cookie);
+    return [
+      [true, `Đăng nhập ${user.email}`],
+      [audit.status === 200, 'Đọc nhật ký kiểm toán', JSON.stringify(audit)],
+    ];
+  }],
+];
 
-  // 1. Kiểm tra Health
-  try {
-    const hRes = await fetch(`${baseUrl}/api/health`);
-    if (hRes.ok) {
-      logPass('Bước 1: GET /api/health trả về 200 OK');
-    } else {
-      logFail(`Bước 1: GET /api/health trả về ${hRes.status}`);
+async function runSmoke(password = readPassword()) {
+  console.log(`==> Kiểm khói hệ thống CSMS tại ${baseUrl}`);
+  const list = groups(password);
+  let passed = 0;
+  for (const [title, run] of list) {
+    let checks;
+    try {
+      checks = await run();
+    } catch (error) {
+      checks = [[false, 'Lỗi không mong đợi', error.message]];
     }
-  } catch (err) {
-    logFail('Bước 1: GET /api/health gặp lỗi kết nối', err.message);
+    const ok = checks.every(([pass]) => pass);
+    if (ok) passed += 1;
+    console.log(`[${ok ? 'PASS' : 'FAIL'}] ${title}`);
+    for (const [pass, label, detail] of checks) console.log(`    ${pass ? 'ok  ' : 'LỖI'} ${label}${pass || !detail ? '' : ` -> ${detail}`}`);
   }
-
-  // 2. Vai DRIVER: Đăng nhập -> Kiểm tra số dư ví & gói thuê bao
-  try {
-    const driver = await loginUser('demo.driver@csms.local', demoPassword);
-    logPass(`Bước 2.1: Đăng nhập DRIVER thành công (${driver.user.email})`);
-
-    const wRes = await apiGet(`/api/drivers/${driver.user.id}/wallet`, driver.cookie);
-    if (wRes.status === 200 && BigInt(wRes.data.balanceDong || 0) >= 0n) {
-      logPass(`Bước 2.2: Đọc thông tin ví thành công (Số dư: ${wRes.data.balanceDong} đ)`);
-    } else {
-      logFail(`Bước 2.2: Đọc thông tin ví thất bại`, JSON.stringify(wRes));
-    }
-
-    const subRes = await apiGet('/api/subscription-plans', driver.cookie);
-    if (subRes.status === 200 && Array.isArray(subRes.data)) {
-      logPass(`Bước 2.3: Xem danh sách gói thuê bao tháng (${subRes.data.length} gói)`);
-    } else {
-      logFail(`Bước 2.3: Đọc danh sách gói thất bại`, JSON.stringify(subRes));
-    }
-  } catch (err) {
-    logFail('Bước 2: Vai DRIVER gặp lỗi', err.message);
-  }
-
-  // 3. Vai STATION_OWNER: Đăng nhập -> Xem danh sách trạm & khung giờ công suất
-  try {
-    const owner = await loginUser('demo.owner1@csms.local', demoPassword);
-    logPass(`Bước 3.1: Đăng nhập STATION_OWNER thành công (${owner.user.email})`);
-
-    const stRes = await apiGet('/api/stations', owner.cookie);
-    if (stRes.status === 200 && Array.isArray(stRes.data) && stRes.data.length > 0) {
-      logPass(`Bước 3.2: Liệt kê trạm của chủ trạm (${stRes.data.length} trạm)`);
-      const stationId = stRes.data[0].id;
-      const winRes = await apiGet(`/api/stations/${stationId}/power-windows`, owner.cookie);
-      if (winRes.status === 200 && Array.isArray(winRes.data.windows)) {
-        logPass(`Bước 3.3: Xem khung giờ công suất trạm #${stationId} (${winRes.data.windows.length} khung)`);
-      } else {
-        logFail(`Bước 3.3: Xem khung giờ công suất thất bại`, JSON.stringify(winRes));
-      }
-    } else {
-      logFail(`Bước 3.2: Liệt kê trạm của chủ trạm thất bại`, JSON.stringify(stRes));
-    }
-  } catch (err) {
-    logFail('Bước 3: Vai STATION_OWNER gặp lỗi', err.message);
-  }
-
-  // 4. Vai OPERATOR: Đăng nhập -> Xem giám sát trụ sạc & phiên sạc
-  try {
-    const operator = await loginUser('demo.operator@csms.local', demoPassword);
-    logPass(`Bước 4.1: Đăng nhập OPERATOR thành công (${operator.user.email})`);
-
-    const cpRes = await apiGet('/api/charge-points', operator.cookie);
-    if (cpRes.status === 200) {
-      logPass('Bước 4.2: Giám sát danh sách trụ sạc');
-    } else {
-      logFail('Bước 4.2: Giám sát trụ sạc thất bại', JSON.stringify(cpRes));
-    }
-
-    const sessRes = await apiGet('/api/sessions', operator.cookie);
-    if (sessRes.status === 200) {
-      logPass('Bước 4.3: Giám sát các phiên sạc đang hoạt động');
-    } else {
-      logFail('Bước 4.3: Giám sát phiên sạc thất bại', JSON.stringify(sessRes));
-    }
-  } catch (err) {
-    logFail('Bước 4: Vai OPERATOR gặp lỗi', err.message);
-  }
-
-  // 5. Vai ACCOUNTANT: Đăng nhập -> Xem đối soát & kỳ đối soát
-  try {
-    const accountant = await loginUser('demo.accountant@csms.local', demoPassword);
-    logPass(`Bước 5.1: Đăng nhập ACCOUNTANT thành công (${accountant.user.email})`);
-
-    const recRes = await apiGet('/api/reports/reconciliation?from=2026-01-01&to=2026-12-31', accountant.cookie);
-    if (recRes.status === 200) {
-      logPass('Bước 5.2: Truy vấn báo cáo đối soát doanh thu');
-    } else {
-      logFail('Bước 5.2: Truy vấn báo cáo đối soát thất bại', JSON.stringify(recRes));
-    }
-  } catch (err) {
-    logFail('Bước 5: Vai ACCOUNTANT gặp lỗi', err.message);
-  }
-
-  // 6. Vai ADMIN: Đăng nhập -> Xem nhật ký kiểm toán & quản lý gói
-  try {
-    const admin = await loginUser('demo.admin@csms.local', demoPassword);
-    logPass(`Bước 6.1: Đăng nhập ADMIN thành công (${admin.user.email})`);
-
-    const auditRes = await apiGet('/api/audit-logs?limit=5', admin.cookie);
-    if (auditRes.status === 200) {
-      logPass('Bước 6.2: Kiểm tra nhật ký kiểm toán (Audit Logs)');
-    } else {
-      logFail('Bước 6.2: Kiểm tra audit logs thất bại', JSON.stringify(auditRes));
-    }
-  } catch (err) {
-    logFail('Bước 6: Vai ADMIN gặp lỗi', err.message);
-  }
-
-  console.log('\n=============================================');
-  console.log(`KẾT QUẢ KIỂM KHÓI: ${passedSteps}/${totalSteps} BƯỚC ĐẠT (PASS)`);
-  if (failedSteps > 0) {
-    console.error(`CÓ ${failedSteps} BƯỚC THẤT BẠI!`);
-    process.exit(1);
-  }
-  console.log('TOÀN BỘ CÁC VAI ĐỀU HOẠT ĐỘNG HOÀN HẢO.');
-  process.exit(0);
+  console.log(`\nKẾT QUẢ KIỂM KHÓI: ${passed}/${list.length} NHÓM ĐẠT (PASS)`);
+  return passed === list.length;
 }
 
 if (require.main === module) {
-  runSmoke().catch((err) => {
-    console.error('LỖI KIỂM KHÓI NGHIÊM TRỌNG:', err);
+  runSmoke().then((ok) => process.exit(ok ? 0 : 1)).catch((error) => {
+    console.error('LỖI KIỂM KHÓI NGHIÊM TRỌNG:', error);
     process.exit(1);
   });
 }

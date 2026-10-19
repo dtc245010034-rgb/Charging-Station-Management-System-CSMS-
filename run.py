@@ -40,8 +40,9 @@ LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
 # Chỉ để dùng trên máy cá nhân (xem docstring). Cố ý đặt ở đây, ngoài backend/.
 LOCAL_ADMIN_EMAIL = "admin@csms.local"
 LOCAL_ADMIN_PASSWORD = "admin"
-DEMO_PASSWORD = "demo12345"
-DEMO_ACCOUNTS = ["owner", "owner2", "operator", "accountant", "driver", "multi"]
+DEMO_PASSWORD = "demo12345678"  # seed-demo yêu cầu >= 12 ký tự
+LEGACY_DEMO_PASSWORD = "demo12345"  # mật khẩu mặc định của bản cũ, vẫn phải bị từ chối ở chế độ công khai
+DEMO_ACCOUNTS = ["admin", "owner", "owner2", "operator", "accountant", "driver", "multi"]
 DEMO_DOMAIN = "demo.csms.local"
 
 
@@ -287,9 +288,9 @@ def http_login_poster(port, origin):
 
 
 def refuse_default_credentials(docker, app_port, origin):
-    """Chế độ công khai: dừng nếu DB còn tài khoản mật khẩu mặc định (admin/admin, demo12345) từ các lần chạy local."""
+    """Chế độ công khai: dừng nếu DB còn tài khoản mật khẩu mặc định (admin/admin, demo12345, demo12345678) từ các lần chạy local."""
     step("Kiểm tra tài khoản mật khẩu mặc định (bắt buộc khi công khai)")
-    pairs = [(LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_PASSWORD)] + [(f"{a}@{DEMO_DOMAIN}", DEMO_PASSWORD) for a in DEMO_ACCOUNTS]
+    pairs = [(LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_PASSWORD)] + [(f"{a}@{DEMO_DOMAIN}", password) for a in DEMO_ACCOUNTS for password in (DEMO_PASSWORD, LEGACY_DEMO_PASSWORD)]
     weak, unknown = find_weak_logins(http_login_poster(app_port, origin), pairs)
     if not weak and not unknown:
         ok("Không có tài khoản nào còn mật khẩu mặc định")

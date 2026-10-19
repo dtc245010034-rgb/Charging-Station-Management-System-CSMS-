@@ -55,7 +55,12 @@ export const alerts = {
 export const admin = {
   roles: () => api('/api/roles'),
   createUser: (body) => api('/api/admin/users', { method: 'POST', body }),
-  listUsers: () => api('/api/admin/users'),
+  // q tìm theo tên hoặc email; máy chủ nhận tham số `query`.
+  listUsers: ({ page = 1, limit = 20, q = '' } = {}) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (q) params.set('query', q);
+    return api(`/api/admin/users?${params}`);
+  },
   setUserRole: (id, role) => api(`/api/admin/users/${encodeURIComponent(id)}/role`, { method: 'PUT', body: { role } }),
   disableUser: (id) => api(`/api/admin/users/${encodeURIComponent(id)}/disable`, { method: 'POST', body: {} }),
   enableUser: (id) => api(`/api/admin/users/${encodeURIComponent(id)}/enable`, { method: 'POST', body: {} }),

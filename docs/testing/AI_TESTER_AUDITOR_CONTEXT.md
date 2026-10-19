@@ -52,12 +52,12 @@ Một lỗi có thể thuộc cả hai (ví dụ: AC yêu cầu 403 nhưng route
 ### 3.3 Ranh giới được và không được
 **Được ghi:** `docs/testing/**`, `docs/Audit/**` (chỉ **thêm** file mới hoặc thêm dòng vào chỉ mục; không đổi tên, không xoá, không viết lại file đã có).
 **Được thêm** file test/PoC mới (không sửa test đang có, không sửa `src`). Nếu thư mục test của dự án không cho phép thêm an toàn, đặt vào `docs/testing/poc/` và ghi rõ không đưa vào CI.
-**Chỉ đọc, tuyệt đối không sửa:** toàn bộ mã nguồn `backend/src`, frontend, migration, `docker-compose.yml`, `render.yaml`; và các tài liệu **không phải của chủ dự án**: `docs/spikes/`, `docs/design/`, `SPRIN_2_LAN.md`, `SPRIN_STATUS.md`.
+**Chỉ đọc, tuyệt đối không sửa:** toàn bộ mã nguồn `backend/src`, frontend, migration, `docker-compose.yml`, `render.yaml`; và các tài liệu **không phải của chủ dự án**: `docs/archive/spikes/`, `docs/design/`, `SPRIN_2_LAN.md`, `SPRIN_STATUS.md`.
 **An toàn khi thử tấn công:** PoC chỉ chạy trên môi trường cục bộ/Docker/test. **Không bao giờ** gửi payload tấn công vào bản đang chạy trên Render hoặc ngrok. Không đưa secret, mật khẩu admin, chuỗi kết nối thật vào báo cáo (repo công khai) — che bằng `***`.
 
 ### 3.4 Trạng thái lỗi đã biết (đừng báo lại như mới)
 - Đã sửa: B1–B4, B7–B9, F8/S-14 (cửa sổ chống trùng 600 giây), F10 (`ocppPool` có `lock_timeout` 5 giây). → **Chạy lại để xác nhận không hồi quy**, không báo mới.
-- **Chấp nhận rủi ro cho demo:** B5 — `/ocpp/:chargePointCode` chưa xác thực (ai biết mã trụ đều nối được; cùng với S-13 thì kẻ lạ có thể đá trụ thật khỏi kết nối). Thiết kế Basic Auth đề xuất ở `docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md`, đang chờ PO duyệt. → Chỉ ghi: trạng thái hiện tại, và **mọi chỗ mà B5 khuếch đại hậu quả** của một phát hiện khác (ví dụ: giả mạo `StopTransaction` cho phiên người khác).
+- **Chấp nhận rủi ro cho demo:** B5 — `/ocpp/:chargePointCode` chưa xác thực (ai biết mã trụ đều nối được; cùng với S-13 thì kẻ lạ có thể đá trụ thật khỏi kết nối). Thiết kế Basic Auth đề xuất ở `docs/guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md`, đang chờ PO duyệt. → Chỉ ghi: trạng thái hiện tại, và **mọi chỗ mà B5 khuếch đại hậu quả** của một phát hiện khác (ví dụ: giả mạo `StopTransaction` cho phiên người khác).
 
 ## 4. Quy trình mỗi lần được gọi
 

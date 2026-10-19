@@ -50,7 +50,7 @@ Cột trạng thái chỉ ghi kết quả đã chạy thật: file unit chạy n
 
 Giao diện DOM của `frontend/pages/driver/session.js` không có test tự động (dự án không có jsdom); logic quyết định đã được test ở `session-model.test.js` (FIX-13). Phần dưới **chưa được chạy**: chưa có kết quả, chưa có ngày chạy. Khi chạy, ghi kết quả và ngày vào đây.
 
-Cách chạy: dựng backend và một trụ ảo (xem `docs/DEMO_SPRINT2.md` và `tools/demo-charge-point.js`), đăng nhập tài xế sở hữu thẻ của trụ, mở `#/driver/session`, rồi làm lần lượt:
+Cách chạy: dựng backend và một trụ ảo (xem `docs/demo/SPRINT2.md` và `tools/demo-charge-point.js`), đăng nhập tài xế sở hữu thẻ của trụ, mở `#/driver/session`, rồi làm lần lượt:
 
 | # | Thao tác trên trụ ảo | Kết quả đúng | Kết quả thật |
 |---|---|---|---|
@@ -173,4 +173,4 @@ Các lệnh 1 đến 7 dưới đây là bằng chứng của **bản giao đầ
 ## 4. Kết luận
 Cập nhật 2026-10-10. Bản giao đầu của **S-22 (GYM-48)** đạt 4/4 AC và các NFR ở mục 1. Các lỗi review lần 27 đã được sửa trên nhánh `phuc/GYM-48-sua-loi-review-s22`; test unit mới đạt (mục 1A), test integration mới đạt 14/14, toàn bộ bộ test 646/647 đạt (1 bỏ qua vì cần Docker CLI).
 
-Chưa kết luận hoàn tất. Còn lại: kiểm tay trên trình duyệt (mục 1B), chạy toàn bộ bộ test trong môi trường CI và ghi tổng số, mở PR và được duyệt. Các phát hiện ngoài phạm vi (số kết nối SSE mỗi tài khoản, SSE không đóng khi thu hồi token, v.v.) ghi ở `docs/dev/S-22_2026-10-10.md` mục 4.
+Chưa kết luận hoàn tất. Còn lại: kiểm tay trên trình duyệt (mục 1B), chạy toàn bộ bộ test trong môi trường CI và ghi tổng số, mở PR và được duyệt. Các phát hiện ngoài phạm vi (số kết nối SSE mỗi tài khoản, SSE không đóng khi thu hồi token, v.v.) ghi ở `docs/project/handover/S-22_2026-10-10.md` mục 4.

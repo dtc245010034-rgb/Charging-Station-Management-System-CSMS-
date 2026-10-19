@@ -28,10 +28,10 @@ describe('GYM-14 seed-demo', () => {
     assert.strictEqual(r.status, 0, r.stderr);
     assert.ok(!r.stdout.includes(demo.DEMO_PASSWORD) && !r.stderr.includes(demo.DEMO_PASSWORD));
     const roles = await query("SELECT u.email, array_agg(r.code ORDER BY r.code) AS roles FROM users u JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id GROUP BY u.email ORDER BY u.email");
-    assert.strictEqual(roles.rowCount, 6);
+    assert.strictEqual(roles.rowCount, 7); // C2: thêm tài khoản admin demo cho demo-smoke
     assert.deepStrictEqual(roles.rows.find((x) => x.email.startsWith('multi@')).roles, ['OPERATOR', 'STATION_OWNER']);
     const counts = (await query('SELECT (SELECT count(*)::int FROM stations) s, (SELECT count(*)::int FROM charge_points) c, (SELECT count(*)::int FROM connectors) k')).rows[0];
-    assert.deepStrictEqual(counts, { s: 6, c: 12, k: 24 });
+    assert.deepStrictEqual(counts, { s: 7, c: 13, k: 25 }); // C2/D: thêm trạm ESP32 (1 trụ, 1 đầu nối)
     const hash = (await query("SELECT password_hash FROM users WHERE email LIKE 'owner@%'")).rows[0].password_hash;
     assert.ok(hash.startsWith('$argon2id$'));
   });
@@ -41,11 +41,11 @@ describe('GYM-14 seed-demo', () => {
     const r = run('scripts/seed-demo.js', [], demo);
     assert.strictEqual(r.status, 0, r.stderr);
     assert.match(r.stdout, /0 tài khoản mới, 0 trạm mới, 0 trụ mới/);
-    assert.strictEqual((await query('SELECT count(*)::int n FROM users')).rows[0].n, 6);
+    assert.strictEqual((await query('SELECT count(*)::int n FROM users')).rows[0].n, 7);
     assert.strictEqual((await query("SELECT status FROM charge_points WHERE code = 'DEMO-ST01-CP1'")).rows[0].status, 'Available');
   });
 
   it('mã trụ demo dùng tiền tố DEMO- để tách khỏi dữ liệu thật', async () => {
-    assert.strictEqual((await query("SELECT count(*)::int n FROM charge_points WHERE code NOT LIKE 'DEMO-%'")).rows[0].n, 0);
+    assert.strictEqual((await query("SELECT count(*)::int n FROM charge_points WHERE code NOT LIKE '%DEMO-%'")).rows[0].n, 0);
   });
 });

@@ -118,8 +118,11 @@ function installBrowser() {
         { code: 'DRIVER', name: 'Tài xế' },
         { code: 'OPERATOR', name: 'Vận hành viên' },
       ];
-    } else if (String(url).endsWith('/api/admin/users') && options.method === 'GET') {
-      body = { users };
+    } else if (new URL(String(url), 'http://localhost').pathname === '/api/admin/users' && options.method === 'GET') {
+      // S2: danh sách tài khoản phân trang và tìm kiếm phía máy chủ (tham số query/page/limit).
+      const search = (new URL(String(url), 'http://localhost').searchParams.get('query') ?? '').toLowerCase();
+      const matched = users.filter((user) => `${user.name} ${user.email}`.toLowerCase().includes(search));
+      body = { users: matched, total: matched.length, page: 1, limit: 20 };
     } else if (String(url).includes('/api/admin/users/') && options.method === 'PUT') {
       body = { user: { ...users[0], role: JSON.parse(options.body).role, roles: [JSON.parse(options.body).role] } };
     } else if (String(url).includes('/api/admin/users/') && options.method === 'POST') {
@@ -232,6 +235,8 @@ describe('Chặng 8 frontend pages', () => {
     const search = find(root, (node) => node.tag === 'input' && node.attributes.type === 'search')[0];
     search.value = 'target';
     search.listeners.input();
+    await new Promise((resolve) => setTimeout(resolve, 400)); // S2: ô tìm kiếm debounce 300 ms rồi gọi API với query=target
+    assert.ok(calls.some((call) => call.url.includes('query=target')));
     assert.ok(root.textContent.includes('target@test.invalid'));
     assert.ok(!root.textContent.includes('other@test.invalid'));
 

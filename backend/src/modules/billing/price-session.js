@@ -1,7 +1,7 @@
 /**
  * Module tính tiền phiên sạc (Price Session).
  * Hàm thuần túy (Pure function) - không gọi DB, không gọi đồng hồ hệ thống.
- * Tuân thủ quy ước K1, K2 và hợp đồng tại docs/dev/billing-contract.md.
+ * Tuân thủ quy ước K1, K2 và hợp đồng tại docs/project/BILLING-CONTRACT.md.
  */
 
 const { amountDong, roundHalfUp } = require('./money');

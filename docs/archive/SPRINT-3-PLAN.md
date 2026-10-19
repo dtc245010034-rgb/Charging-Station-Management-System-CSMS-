@@ -2,7 +2,7 @@
 
 > Lập: **05/10/2026** (Thứ Hai). Sprint chạy **Thứ Tư 7/10 → Thứ Tư 14/10/2026** (quyết định của Scrum Master 4/10). Cam kết **đủ 11 story, 20 SP, không đặt thứ tự cắt trước** (quyết định 4/10: trễ thì xử lý trong sprint, không cắt sẵn).
 > **Sprint Goal (nguyên văn file backlog):** *Một phiên sạc chạy trọn vẹn từ lúc cắm tới lúc rút với số kWh đúng, dù trụ có mất kết nối giữa chừng.*
-> Nguồn: file backlog của PO (AC, NFR, task T-xx; trang Sprints/Backlog/Tasks/Rủi ro/DoD), Jira 5/10 (Sprint 3 = GYM-43…53, chưa gán người, chưa có ngày), `main` tại `a00100c` (PR #87), `docs/SPRINT_2_PLAN.md`, `docs/SPRINT_STATUS.md`, `docs/spikes/K-01-ocpp-simulator.md`. Mọi khẳng định về mã bên dưới đã đối chiếu với `main` ngày 5/10 và, khi ghi “đã chạy”, đã chạy thật trên server cục bộ.
+> Nguồn: file backlog của PO (AC, NFR, task T-xx; trang Sprints/Backlog/Tasks/Rủi ro/DoD), Jira 5/10 (Sprint 3 = GYM-43…53, chưa gán người, chưa có ngày), `main` tại `a00100c` (PR #87), `docs/archive/SPRINT-2-PLAN.md`, `docs/archive/SPRINT-STATUS.md`, `docs/archive/spikes/K-01-ocpp-simulator.md`. Mọi khẳng định về mã bên dưới đã đối chiếu với `main` ngày 5/10 và, khi ghi “đã chạy”, đã chạy thật trên server cục bộ.
 > Tài liệu này là **đề xuất phân việc và lịch** để nhóm chỉnh và chốt ở buổi Sprint Planning; **tên người để trống đến buổi đó** (quyết định 4/10).
 
 ## 0. Điều kiện bắt đầu và thực tế về thời gian — đọc trước
@@ -110,7 +110,7 @@ Ký hiệu: **Cổng** = điều kiện để story sau ghép được. Tên fil
 
 ### S-19 · GYM-45 · 2 SP · `MeterValues` ghi liên tục *(Must)*
 - **Làn:** L2 · **Bắt đầu:** T4 sáng (bảng + khung), **tích hợp** T5 chiều sau S-18 · **Xong:** T6 sáng · **Cổng:** S-20, S-22.
-- **Việc:** **T-40** (migration 018). **T-41** `meter-values.js`: bóc `meterValue[].sampledValue[]` (hai tầng; mẫu ở `docs/spikes/k01-session-log.json`), chỉ lưu `Energy.Active.Import.Register`, `Power.Active.Import`, `Current.Import` (từ GYM-48 có thêm `SoC`, 0–100 %); giữ **đơn vị nguyên văn** và chuẩn hoá ra Wh khi tính; một câu `INSERT` nhiều dòng (D5); tin cho đầu nối không có phiên → `orphan_messages`, không tạo phiên. `MeterValues.transactionId` là **tuỳ chọn** theo đặc tả → khớp phiên bằng `transactionId` nếu có, nếu không thì bằng phiên `CHARGING` của đầu nối.
+- **Việc:** **T-40** (migration 018). **T-41** `meter-values.js`: bóc `meterValue[].sampledValue[]` (hai tầng; mẫu ở `docs/archive/spikes/k01-session-log.json`), chỉ lưu `Energy.Active.Import.Register`, `Power.Active.Import`, `Current.Import` (từ GYM-48 có thêm `SoC`, 0–100 %); giữ **đơn vị nguyên văn** và chuẩn hoá ra Wh khi tính; một câu `INSERT` nhiều dòng (D5); tin cho đầu nối không có phiên → `orphan_messages`, không tạo phiên. `MeterValues.transactionId` là **tuỳ chọn** theo đặc tả → khớp phiên bằng `transactionId` nếu có, nếu không thì bằng phiên `CHARGING` của đầu nối.
 - **AC:** giá trị + mốc lưu gắn phiên; đại lượng lạ bỏ qua không lỗi; 20 trụ × 1 tin/10 giây → trả lời **p95 < 200 ms** (đo bằng `tools/simulate-fleet.js` hoặc T-46; ghi số vào hồ sơ kiểm thử).
 - **NFR:** D5, D6, D12.
 
@@ -154,7 +154,7 @@ Ký hiệu: **Cổng** = điều kiện để story sau ghép được. Tên fil
 
 ### S-26 · GYM-52 · 2 SP · Bộ trụ ảo chạy trong `docker-compose` và trong CI *(Should)*
 - **Làn:** L6 · **Bắt đầu:** T4 sáng (T-55 độc lập) · **Xong:** T3 13/10 sáng (T-56 chờ T-46). Jira đã có sẵn subtask T-55 (GYM-93), T-56 (GYM-94).
-- **Hiện trạng:** đã có `docs/spikes/k01-simulator.js` (chạy được phiên sạc trọn vẹn) và `tools/simulate-fleet.js` (đội trụ ảo, chỉ chạy trên DB tên `_test`/`_chk`, **chưa chạy phiên sạc**). `docker-compose.yml` chưa có dịch vụ trụ ảo; CI (`.github/workflows/ci.yml`) có `lint-and-test` + `test-windows`.
+- **Hiện trạng:** đã có `docs/archive/spikes/k01-simulator.js` (chạy được phiên sạc trọn vẹn) và `tools/simulate-fleet.js` (đội trụ ảo, chỉ chạy trên DB tên `_test`/`_chk`, **chưa chạy phiên sạc**). `docker-compose.yml` chưa có dịch vụ trụ ảo; CI (`.github/workflows/ci.yml`) có `lint-and-test` + `test-windows`.
 - **Việc:** **T-55** dịch vụ `vcp` trong compose (biến `VCP_COUNT`, `CSMS_URL`; mã trụ tiền tố `VCP-`, seed idempotent qua API bằng tài khoản admin; không đi qua ngrok — nhớ hạn mức HTTP của gói miễn phí). **T-46** kịch bản 20 trụ ngắt–nối ngẫu nhiên (tham số `--count`, `--drops`, `--seed` để lặp lại được), in bảng đối chiếu (mã phiên, kWh mong đợi, kWh thực). **T-56** job CI `session-scenario` (`needs: lint-and-test`, DB service, 5 trụ cho nhanh), dưới 5 phút, **log nêu phiên nào sai**; Phúc đặt nó thành **required check** trong branch protection (việc cấu hình GitHub, không nằm trong mã).
 - **AC:** 3 ca; cố ý phá phần khôi phục phiên thì PR bị chặn.
 - **Rủi ro:** T-56 phụ thuộc S-21 → có thể trượt sang sáng T4 14/10; khi đó merge T-55 trước, T-56 ngay sau, không để S-26 chặn S-21.

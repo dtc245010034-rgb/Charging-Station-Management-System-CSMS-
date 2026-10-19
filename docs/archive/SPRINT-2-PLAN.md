@@ -1,7 +1,7 @@
 # Kế hoạch chi tiết Sprint 2 (S-06 → S-16) — 20 SP
 
 > Lập: **29/9/2026** (Thứ Ba). Quyết định đã chốt: **trưởng nhóm kỹ thuật dùng `ocpp-rpc`**; **PO chọn phương án A (cam kết đủ 20 SP)**.
-> Nguồn: file backlog của PO (AC, NFR, task T-xx), Jira 28/9 (Sprint 2 = GYM-32…42, tất cả To Do, chưa gán người), `docs/spikes/K-01-ocpp-simulator.md` và mã `docs/spikes/k01/`.
+> Nguồn: file backlog của PO (AC, NFR, task T-xx), Jira 28/9 (Sprint 2 = GYM-32…42, tất cả To Do, chưa gán người), `docs/archive/spikes/K-01-ocpp-simulator.md` và mã `docs/archive/spikes/k01/`.
 > Tài liệu này là **đề xuất phân việc và lịch** để nhóm chỉnh và chốt ở buổi họp; tên người chưa gán vì tôi chưa biết thế mạnh từng thành viên.
 
 ## 0. Thực tế về thời gian — đọc trước
@@ -27,7 +27,7 @@
 3. **Trạng thái kết nối theo kết nối, không toàn cục:** `booted` (đã được `Accepted`) lưu trên đối tượng kết nối; tin đầu tiên khác `BootNotification` khi chưa `booted` → `SecurityError` (S-08 AC4). Đặt ở lớp trung gian (`client.handle(({method}) => …)` hoặc hook trước handler), không lặp trong từng handler.
 4. **Cập nhật `last_seen_at` ở tầng khung** (sự kiện `message` của kết nối), không riêng `Heartbeat` (S-09 AC2). Chỉ một câu `UPDATE` một cột, giờ = `now()` của DB.
 5. **Mỗi PR ≤ 1 story** (mẫu tên nhánh theo `CONTRIBUTING.md`, ví dụ `<tên>/GYM-32-ws-tra-ma-tru`); test acceptance theo AC (`backend/tests/acceptance/S-06.*.test.js`…) và **một test “gửi hai lần”** cho mỗi handler chạm OCPP.
-6. **Trụ ảo test:** dùng `docs/spikes/k01/virtual-charge-point.js` làm nền (đưa vào `backend/tests/helpers/` cho test và vào `docker-compose` cho S-26 sau này). Mã trụ ảo dùng tiền tố `DEMO-`/`VCP-`, tách khỏi dữ liệu thật.
+6. **Trụ ảo test:** dùng `docs/archive/spikes/k01/virtual-charge-point.js` làm nền (đưa vào `backend/tests/helpers/` cho test và vào `docker-compose` cho S-26 sau này). Mã trụ ảo dùng tiền tố `DEMO-`/`VCP-`, tách khỏi dữ liệu thật.
 
 ## 2. Các làn làm việc (cần khoảng 7–8 người; Phúc là điều phối + demo)
 
@@ -100,7 +100,7 @@ Tin nhắn khác `BootNotification` từ trụ bị khoá → `CALLERROR Securit
 
 ### S-07 · GYM-33 · 2 SP · Đọc/ghi đúng ba loại khung
 - **Làn:** L1 · **Bắt đầu:** T4 sáng · **Xong:** T4 giữa ngày (12:00–14:00) · **Cổng:** mở khoá S-08 (rồi S-09 → S-10 → S-11).
-- **Việc (nhờ `ocpp-rpc`, T-14/T-15 nhẹ hơn nhiều):** cấu hình `strictMode` + handler mặc định (`NotImplemented` + log); **hàm ghi/đọc khung** bọc mỏng nếu cần cho test thuần; **T-15** năm ca khung sai (không phải mảng, thiếu phần tử, loại khung lạ, tải không phải đối tượng, hành động chưa hỗ trợ) → `CALLERROR` đúng mã, **kết nối vẫn mở**. Dùng `docs/spikes/k01/session-log.json` làm dữ liệu mẫu.
+- **Việc (nhờ `ocpp-rpc`, T-14/T-15 nhẹ hơn nhiều):** cấu hình `strictMode` + handler mặc định (`NotImplemented` + log); **hàm ghi/đọc khung** bọc mỏng nếu cần cho test thuần; **T-15** năm ca khung sai (không phải mảng, thiếu phần tử, loại khung lạ, tải không phải đối tượng, hành động chưa hỗ trợ) → `CALLERROR` đúng mã, **kết nối vẫn mở**. Dùng `docs/archive/spikes/k01/session-log.json` làm dữ liệu mẫu.
 - **AC:** `CALL` hợp lệ → tách được mã/hành động/tải rồi chuyển đúng handler; khung sai → `CALLERROR` đúng chuẩn thay vì đóng; hành động chưa hỗ trợ → `NotImplemented` + log; `CALL` từ máy chủ xuống trụ khớp `CALLRESULT` theo mã (nền cho S-16).
 - **NFR:** mã tin nhắn của lời gọi từ máy chủ duy nhất và lưu để khớp.
 - **Rủi ro:** không viết lại khung bằng tay; **đừng để `ocpp-rpc` tự trả lời lặp** — S-14 phải bọc quanh handler (K-01: thư viện chạy lại handler khi trùng `messageId`).
@@ -197,7 +197,7 @@ Nguồn số liệu ngrok: trang *Free Plan Limits* và blog *Static dev domains
 - Frontend đang polling 15 giây (~5.760 yêu cầu/ngày cho một tab mở suốt): **đừng để tab dashboard mở cả ngày qua ngrok cho đến khi S-11 (SSE) xong.**
 - Báo trước cho PO/mentor về trang cảnh báo của ngrok ở lần vào đầu tiên.
 
-**Chạy staging công khai bằng `run.py` (đã có chế độ riêng, xem `docs/OPERATIONS.md`):**
+**Chạy staging công khai bằng `run.py` (đã có chế độ riêng, xem `docs/guides/OPERATIONS.md`):**
 `python run.py --public-url https://<tên>.ngrok-free.app`, rồi chạy ngrok trên cùng máy trỏ vào cổng 3000. Chế độ này giữ `APP_ORIGIN` đúng địa chỉ công khai, luôn dùng mật khẩu ngẫu nhiên (không bao giờ `admin`/`admin`), đặt `NODE_ENV=production` (cookie `Secure`), `TRUST_PROXY=1` (giới hạn đăng nhập theo IP thật, không dồn về IP của tunnel), khoá `BIND_HOST=127.0.0.1` (Postgres không lộ ra mạng) và **từ chối chạy nếu DB còn tài khoản mật khẩu mặc định** từ các lần chạy local trước.
 
 **Việc còn lại trước khi mở Internet:**

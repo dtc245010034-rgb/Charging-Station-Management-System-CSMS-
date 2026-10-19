@@ -124,7 +124,7 @@ export function render(ctx) {
         }
       },
     },
-    h('h3', { style: 'margin:0;font-size:16px' }, 'Nạp tiền qua cổng thanh toán'),
+    h('h2', { style: 'margin:0;font-size:16px' }, 'Nạp tiền qua cổng thanh toán'),
     h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' },
       h('span', { class: 'muted' }, 'Chọn nhanh:'),
       ...presetButtons
@@ -204,8 +204,11 @@ export function render(ctx) {
         ]);
         if (disposed) return;
 
-        const activeSub = activeSubRes.activeSubscription;
-        const plans = plansRes.plans || [];
+        // API trả MẢNG gói đang mở bán và MẢNG các lần đăng ký của tài xế; gói đang dùng là gói đã bắt đầu và chưa hết hạn.
+        const plans = Array.isArray(plansRes) ? plansRes : [];
+        const nowMs = Date.now();
+        const activeSub = (Array.isArray(activeSubRes) ? activeSubRes : [])
+          .find((sub) => Date.parse(sub.startsAt) <= nowMs && nowMs < Date.parse(sub.endsAt)) ?? null;
 
         const subCard = activeSub
           ? h('div', { class: 'card', style: 'padding:14px;background:var(--surface-sunken, #f8fafc);display:grid;gap:6px' },
@@ -250,7 +253,7 @@ export function render(ctx) {
           }, activeSub ? 'Đã có gói' : 'Mua gói');
 
           const periodDescriptions = (plan.periods || []).map((p) =>
-            `${Math.floor(p.startMinute / 60).toString().padStart(2, '0')}:${(p.startMinute % 60).toString().padStart(2, '0')} - ${Math.floor(p.endMinute / 60).toString().padStart(2, '0')}:${(p.endMinute % 60).toString().padStart(2, '0')}: ${formatDong(p.pricePerKwhDong)}/kWh`
+            `${Math.floor(p.startMinute / 60).toString().padStart(2, '0')}:${(p.startMinute % 60).toString().padStart(2, '0')} - ${Math.floor(p.endMinute / 60).toString().padStart(2, '0')}:${(p.endMinute % 60).toString().padStart(2, '0')}: ${formatDong(p.pricePerKwh)}/kWh`
           ).join(', ');
 
           return h('div', { class: 'card', style: 'padding:14px;display:grid;gap:8px' },
@@ -265,14 +268,16 @@ export function render(ctx) {
         });
 
         mount(sectionContainer,
-          h('h3', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
+          h('h2', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
           subCard,
-          planCards.length ? h('div', { style: 'display:grid;gap:10px' }, ...planCards) : null,
+          planCards.length
+            ? h('div', { style: 'display:grid;gap:10px' }, ...planCards)
+            : h('p', { class: 'muted' }, 'Hiện chưa có gói thuê bao nào được mở bán.'),
           sectionFeedback
         );
       } catch (err) {
         mount(sectionContainer,
-          h('h3', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
+          h('h2', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
           h('div', { class: 'muted' }, `Không thể tải danh sách gói: ${err.message}`)
         );
       }
