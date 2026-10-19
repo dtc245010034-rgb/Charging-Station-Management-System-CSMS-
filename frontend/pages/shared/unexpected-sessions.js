@@ -13,11 +13,21 @@ export function render(ctx) {
   let loading = false;
   let signature = '';
   const inFlight = new Set();
-  const page = h('div', { class: 'page-stack', style: 'max-width:1120px;margin:0 auto' });
+  const page = h('div', { class: 'page-stack unexpected-sessions-page' });
   const notice = h('div', { class: 'card', role: 'status', 'aria-live': 'polite', style: 'display:none;padding:12px 16px' });
-  const list = h('div', { style: 'display:grid;gap:12px' }, loadingState(2));
+  const list = h('div', { class: 'unexpected-sessions-list' }, loadingState(2));
+  const tableRows = h('tbody');
+  const table = h('div', { class: 'table-wrap' },
+    h('table', { class: 'table unexpected-table' },
+      h('caption', { class: 'sr-only' }, 'Danh sách phiên sạc bất thường'),
+      h('thead', {}, h('tr', {},
+        ['Mã phiên', 'Trụ sạc', 'Thời gian', 'Nguyên nhân bất thường', 'Năng lượng', 'Xử lý'].map((label) => h('th', { scope: 'col' }, label))
+      )),
+      tableRows
+    )
+  );
   const refreshButton = h('button', {
-    class: 'btn',
+    class: 'btn page-refresh',
     type: 'button',
     title: 'Làm mới danh sách',
     'aria-label': 'Làm mới danh sách',
@@ -25,11 +35,11 @@ export function render(ctx) {
   }, icon('refresh'));
 
   page.append(
-    h('header', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap' },
+    h('header', { class: 'page-head' },
       h('div', {},
         h('p', { class: 'eyebrow' }, 'Đối soát'),
         h('h1', { class: 'page-head__title' }, 'Phiên sạc bất thường'),
-        h('p', { class: 'muted' }, 'Các phiên cần được kiểm tra trước khi chốt dữ liệu.')
+        h('p', { class: 'page-head__sub' }, 'Các phiên cần được kiểm tra trước khi chốt dữ liệu.')
       ),
       refreshButton
     ),
@@ -69,7 +79,7 @@ export function render(ctx) {
     const needsZeroConfirm = lacksEnergyReading(session);
     const zeroEnergy = needsZeroConfirm ? h('input', { type: 'checkbox', name: 'allow_zero_energy', 'aria-label': `Đóng phiên #${session.id} với 0 kWh` }) : null;
     const form = canClose ? h('form', {
-      style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end',
+      class: 'unexpected-session-form',
       onsubmit: async (event) => {
         event.preventDefault();
         const value = reason.value.trim();
@@ -84,33 +94,25 @@ export function render(ctx) {
         await closeSession(session, value, Boolean(zeroEnergy?.checked));
       },
     },
-    h('label', { style: 'display:grid;gap:5px;flex:1 1 280px' },
+    h('label', { style: 'display:grid;gap:5px' },
       h('span', { class: 'muted' }, 'Lý do đóng'),
       reason
     ),
-    zeroEnergy ? h('label', { style: 'display:flex;gap:8px;align-items:center;flex:1 1 100%' },
+    zeroEnergy ? h('label', { class: 'unexpected-session-zero', style: 'display:flex;gap:8px;align-items:center' },
       zeroEnergy,
       h('span', { class: 'muted' }, 'Phiên chưa có số đo năng lượng: xác nhận đóng với 0 kWh')
     ) : null,
     submitBtn) : null;
 
-    return h('article', { class: 'card', style: 'padding:16px;display:grid;gap:12px' },
-      h('div', { style: 'display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap' },
-        h('div', { style: 'display:grid;gap:5px;min-width:0' },
-          h('strong', {}, `${session.charge_point_code} · Cổng ${session.connector_no}`),
-          h('span', { class: 'muted' }, session.station_name || 'Trạm chưa rõ'),
-          h('span', { class: 'muted' }, `Phiên #${session.id} · Bắt đầu ${formatDateTime(session.started_at)}`),
-          h('span', { class: 'muted' }, `Liên lạc lần cuối: ${session.last_seen_at ? formatDateTime(session.last_seen_at) : 'Chưa ghi nhận'}`),
-          h('span', { class: 'muted' }, `Lý do cần xem xét: ${reviewReasonLabel(session.review_reason) || 'Cần kiểm tra thủ công'}`)
-        ),
-        h('div', { style: 'display:grid;gap:5px;text-align:right' },
-          h('strong', {}, `Điện năng đã lấy: ${kwhLabel(session.current_kwh)}`),
-          h('span', { class: 'muted' }, energyReading
-            ? `Số đo cuối: ${energyReading.value} ${energyReading.unit || 'Wh'} · ${formatDateTime(energyReading.sampled_at)}`
-            : 'Chưa có số đo năng lượng cuối')
-        )
-      ),
-      form
+    return h('tr', {},
+      h('td', {}, h('span', { class: 'mono' }, `#${session.id}`), h('div', { class: 'badge badge--warning' }, 'Cần kiểm tra')),
+      h('td', {}, h('strong', {}, `${session.charge_point_code} · Cổng ${session.connector_no}`), h('div', { class: 'cell-sub' }, session.station_name || 'Trạm chưa rõ')),
+      h('td', {}, h('div', {}, formatDateTime(session.started_at)), h('div', { class: 'cell-sub' }, `Liên lạc lần cuối: ${session.last_seen_at ? formatDateTime(session.last_seen_at) : 'Chưa ghi nhận'}`)),
+      h('td', { class: 'unexpected-reason' }, reviewReasonLabel(session.review_reason) || 'Cần kiểm tra thủ công'),
+      h('td', {}, h('strong', {}, kwhLabel(session.current_kwh)), h('div', { class: 'cell-sub' }, energyReading
+        ? `Số đo cuối: ${energyReading.value} ${energyReading.unit || 'Wh'} · ${formatDateTime(energyReading.sampled_at)}`
+        : 'Chưa có số đo năng lượng cuối')),
+      h('td', { class: 'unexpected-action' }, form || h('span', { class: 'muted' }, 'Không có quyền xử lý'))
     );
   }
 
@@ -139,12 +141,14 @@ export function render(ctx) {
       const nextSignature = JSON.stringify(sessions);
       if (nextSignature !== signature) {
         signature = nextSignature;
-        mount(list, sessions.length
-          ? sessions.map(renderSession)
-          : h('section', { class: 'card', style: 'padding:24px' },
+        if (sessions.length) {
+          tableRows.replaceChildren(...sessions.map(renderSession));
+          mount(list, table);
+        } else {
+          mount(list, h('section', { class: 'card', style: 'padding:24px' },
             emptyState({ iconName: 'alert', title: 'Không có phiên bất thường cần xử lý' })
-          )
-        );
+          ));
+        }
       }
     } catch (error) {
       if (!signature) mount(list, errorState({ message: error.message, onRetry: () => { void refresh(); } }));

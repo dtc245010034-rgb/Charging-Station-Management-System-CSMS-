@@ -1,6 +1,6 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { run, query, resetSchema } = require('../helpers/db');
+const { run, query, resetSchema, rollbackToMigration } = require('../helpers/db');
 
 process.env.DATABASE_URL ||= process.env.TEST_DATABASE_URL || 'postgresql://csms:csms_test_only@localhost:5433/csms_test';
 process.env.JWT_SECRET ||= 'z'.repeat(40);
@@ -132,12 +132,25 @@ describe('S-41 wallet ledger migration', () => {
   });
 
   it('AC S-41: rollback migration 036 gỡ ví và ledger rồi có thể áp dụng lại', async () => {
-    const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
-    assert.equal(latest.rows[0].version, '037_audit_logs_driver_id_index.sql');
-    const downLatest = run('src/db/migrate.js', ['down']);
-    assert.strictEqual(downLatest.status, 0, downLatest.stderr);
-    const down = run('src/db/migrate.js', ['down']);
-    assert.strictEqual(down.status, 0, down.stderr);
+    await rollbackToMigration('046_reservations.sql');
+    for (const version of [
+      '046_reservations.sql',
+      '045_zero_watt_profile_limits.sql',
+      '044_alerts_power_profile_log.sql',
+      '043_station_power_limits.sql',
+      '042_data_erasure_requests.sql',
+      '041_accounting_period_locks.sql',
+      '040_accounting_periods.sql',
+      '039_notifications_and_email_outbox.sql',
+      '038_wallet_topups.sql',
+      '037_audit_logs_driver_id_index.sql',
+      '036_wallets.sql',
+    ]) {
+      const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+      assert.equal(latest.rows[0].version, version);
+      const rollback = run('src/db/migrate.js', ['down']);
+      assert.strictEqual(rollback.status, 0, rollback.stderr);
+    }
     assert.strictEqual(
       (await query("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('wallets', 'wallet_ledger')")).rowCount,
       0

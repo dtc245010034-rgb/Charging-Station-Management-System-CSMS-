@@ -120,6 +120,9 @@ function formatHistoryRow(row) {
     billingStatus: row.billing_status,
     billingReason: row.billing_reason,
     invoiceTotalDong: row.invoice_total_dong,
+    tariffSource: row.tariff_source || 'STATION',
+    subscriptionPlanName: row.subscription_plan_name || null,
+    subscriptionPlanCode: row.subscription_plan_code || null,
   };
 }
 
@@ -286,7 +289,10 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
 
   const requestedAt = new Date().toISOString();
   if (!connections.isConnected(initial.charge_point_code)) {
-    await writeRemoteStopAudit(actor.id, sessionId, 'OFFLINE', { requested_at: requestedAt }, ip);
+    await writeRemoteStopAudit(actor.id, sessionId, 'OFFLINE', {
+      charge_point_code: initial.charge_point_code,
+      requested_at: requestedAt,
+    }, ip);
     throw new AppError(409, 'CHARGE_POINT_OFFLINE', 'Không thể dừng phiên vì trụ sạc đang ngoại tuyến');
   }
 
@@ -333,6 +339,7 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
     );
     const deadline = accepted.rows[0]?.remote_stop_deadline || null;
     await writeRemoteStopAudit(actor.id, sessionId, 'ACCEPTED', {
+      charge_point_code: claim.session.charge_point_code,
       requested_at: new Date(claim.requestedAt).toISOString(),
       deadline: deadline ? new Date(deadline).toISOString() : null,
     }, ip);
@@ -351,6 +358,7 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
         [sessionId]
       );
       await writeRemoteStopAudit(actor.id, sessionId, 'OFFLINE', {
+        charge_point_code: claim.session.charge_point_code,
         requested_at: new Date(claim.requestedAt).toISOString(),
       }, ip);
       throw error;
@@ -368,6 +376,7 @@ async function requestRemoteStop(actor, sessionId, { commandSender, ip = null, d
       [sessionId, result, needsReview]
     );
     await writeRemoteStopAudit(actor.id, sessionId, result, {
+      charge_point_code: claim.session.charge_point_code,
       requested_at: new Date(claim.requestedAt).toISOString(),
       error_code: error.code || null,
     }, ip);

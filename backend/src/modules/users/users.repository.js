@@ -3,7 +3,7 @@ const { prepare } = require('../../db/pool');
 const findByEmail = (email) => prepare('SELECT * FROM users WHERE email = ?').get(email);
 const findById = (id) => prepare('SELECT * FROM users WHERE id = ?').get(id);
 
-const tokenVersionOf = async (id) => (await prepare('SELECT token_version FROM users WHERE id = ?').get(id))?.token_version ?? null;
+const tokenVersionOf = async (id) => (await prepare('SELECT token_version FROM users WHERE id = ? AND disabled_at IS NULL').get(id))?.token_version ?? null;
 // Chỉ tăng khi phiên đang đăng xuất còn hợp lệ, để token cũ không đăng xuất nhầm phiên mới.
 const bumpTokenVersion = (id, expectedVersion) => prepare('UPDATE users SET token_version = token_version + 1 WHERE id = ? AND token_version = ?').run(id, expectedVersion);
 
@@ -30,4 +30,15 @@ const insertVirtualIdTag = async (client, userId, tag) => {
   return r.rows[0];
 };
 
-module.exports = { findByEmail, findById, tokenVersionOf, bumpTokenVersion, listRoles, roleCodesOf, insertUser, assignRoleByCode, insertVirtualIdTag };
+const getAuthContext = async (id) => {
+  const user = await prepare('SELECT token_version, disabled_at FROM users WHERE id = ?').get(id);
+  if (!user) return null;
+  const roles = await roleCodesOf(id);
+  return {
+    token_version: user.token_version,
+    disabled_at: user.disabled_at,
+    roles,
+  };
+};
+
+module.exports = { findByEmail, findById, tokenVersionOf, bumpTokenVersion, listRoles, roleCodesOf, insertUser, assignRoleByCode, insertVirtualIdTag, getAuthContext };

@@ -18,6 +18,7 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
   let otherDriver;
   let driverCookie;
   let driverId;
+  let stationId;
   let chargePointId;
   let connectorIds;
   let client;
@@ -61,6 +62,7 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     admin = await createUser('s24-admin@test.invalid', 'ADMIN');
     otherDriver = await createUser('s24-other@test.invalid', 'DRIVER');
     const station = await postStation(admin, stationBody({ name: 'S-24 test station' }));
+    stationId = station.body.id;
     await query("UPDATE stations SET status = 'ACTIVE' WHERE id = $1", [station.body.id]);
     const tariff = await query(
       `INSERT INTO tariffs (station_id, version, effective_from, idle_grace_min, idle_per_min_dong)
@@ -220,6 +222,19 @@ describe('S-24 RemoteStartTransaction acceptance', { concurrency: false }, () =>
     response = await postStart(driverCookie, connectorIds[1]);
     assert.equal(response.status, 409);
     assert.equal(remoteCalls.length, beforeCalls);
+  });
+
+  it('GYM-92: trạm MAINTENANCE trả STATION_NOT_ACTIVE trước khi gửi RemoteStart', async () => {
+    const beforeCalls = remoteCalls.length;
+    await query("UPDATE stations SET status = 'MAINTENANCE' WHERE id = $1", [stationId]);
+    try {
+      const response = await postStart(driverCookie, connectorIds[0]);
+      assert.equal(response.status, 409);
+      assert.equal((await response.json()).error.code, 'STATION_NOT_ACTIVE');
+      assert.equal(remoteCalls.length, beforeCalls);
+    } finally {
+      await query("UPDATE stations SET status = 'ACTIVE' WHERE id = $1", [stationId]);
+    }
   });
 
   it('quá deadline chuyển TIMED_OUT và cho phép thử lại', async () => {

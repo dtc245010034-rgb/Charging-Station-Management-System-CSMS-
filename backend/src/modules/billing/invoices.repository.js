@@ -7,7 +7,8 @@ async function findBySessionId(dbOrPool, sessionId) {
   const result = await client.query(
     `SELECT cs.id AS session_id, cs.billing_status, cs.billing_reason,
             si.id, si.driver_id, si.station_id, si.tariff_id, si.tariff_snapshot,
-            si.timezone, si.rounding_rule, si.total_dong, si.period_date, si.issued_at
+            si.timezone, si.rounding_rule, si.total_dong, si.period_date, si.issued_at,
+            si.tariff_source, si.subscription_id
      FROM charging_sessions cs
      LEFT JOIN session_invoices si ON si.session_id = cs.id
      WHERE cs.id = $1`,
@@ -49,10 +50,14 @@ async function findBySessionId(dbOrPool, sessionId) {
       driverId: row.driver_id,
       stationId: row.station_id,
       tariffId: row.tariff_id,
+      tariffSource: row.tariff_source || 'STATION',
+      subscriptionId: row.subscription_id || null,
       tariffSnapshot: row.tariff_snapshot,
       tariff: {
+        source: row.tariff_source || 'STATION',
         version: row.tariff_snapshot?.version,
         effectiveFrom: row.tariff_snapshot?.effective_from || row.tariff_snapshot?.effectiveFrom,
+        plan: row.tariff_snapshot?.plan,
       },
       timezone: row.timezone,
       roundingRule: row.rounding_rule,

@@ -45,6 +45,9 @@ function baseMap(L, container) {
   return map;
 }
 
+// Leaflet coi chuỗi là HTML; truyền phần tử DOM để tên trạm luôn là văn bản thuần.
+const tooltipNode = (text) => h('span', null, String(text ?? ''));
+
 const pinIcon = (L, group) => L.divIcon({ className: '', html: h('div', { class: `pin pin--${group}` }), iconSize: [30, 30], iconAnchor: [15, 30] });
 
 // Bản đồ giám sát: mỗi trạm một marker, màu theo nhóm trạng thái xấu nhất của các trụ.
@@ -77,11 +80,11 @@ export function createStationMap(container, { onSelect }) {
       const existing = markers.get(String(point.id));
       if (existing) {
         if (existing.group !== point.group) { existing.marker.setIcon(pinIcon(L, point.group)); existing.group = point.group; }
-        existing.marker.setTooltipContent(point.name);
+        existing.marker.setTooltipContent(tooltipNode(point.name));
         continue;
       }
       const marker = L.marker([point.lat, point.lng], { icon: pinIcon(L, point.group), title: point.name, keyboard: true })
-        .addTo(map).bindTooltip(point.name).on('click', () => onSelect(point.id));
+        .addTo(map).bindTooltip(tooltipNode(point.name)).on('click', () => onSelect(point.id));
       markers.set(String(point.id), { marker, group: point.group });
     }
     for (const [id, entry] of markers) if (!seen.has(id)) { entry.marker.remove(); markers.delete(id); }

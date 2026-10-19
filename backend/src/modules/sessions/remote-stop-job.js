@@ -17,13 +17,15 @@ async function markExpiredRemoteStops(db, { recordAudit = null, logError = conso
      WHERE status IN ('CHARGING', 'ABNORMAL')
        AND remote_stop_status IN ('SENDING', 'ACCEPTED')
        AND remote_stop_deadline <= CURRENT_TIMESTAMP
-     RETURNING id, charge_point_id, driver_id, remote_stop_requested_by, remote_stop_deadline, remote_stop_status`,
+     RETURNING id, charge_point_id, driver_id, remote_stop_requested_by, remote_stop_deadline, remote_stop_status,
+               (SELECT cp.code FROM charge_points cp WHERE cp.id = charging_sessions.charge_point_id) AS charge_point_code`,
   );
 
   for (const row of result.rows || []) {
     try {
       const writeAudit = recordAudit || require('../audit/audit.repository').record;
       await writeAudit(row.remote_stop_requested_by, 'REMOTE_STOP', 'charging_session', row.id, {
+        charge_point_code: row.charge_point_code,
         phase: row.remote_stop_status === 'TIMED_OUT' ? 'TIMEOUT' : 'RESULT_UNKNOWN',
         result: row.remote_stop_status,
         deadline: row.remote_stop_deadline ? new Date(row.remote_stop_deadline).toISOString() : null,

@@ -4,6 +4,7 @@ import { api } from './api.js';
 const idempotencyKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export const health = () => fetch('/api/health', { credentials: 'include' }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('health'))));
+export const healthOverview = () => api('/api/health/overview');
 
 export const stations = {
   list: () => api('/api/stations'),
@@ -13,6 +14,11 @@ export const stations = {
   // Key sinh một lần cho mỗi lần mở form; gửi lại cùng key khi bấm lưu hai lần → backend không tạo trạm thứ hai.
   newKey: idempotencyKey,
   create: (body, key) => api('/api/stations', { method: 'POST', body, headers: { 'Idempotency-Key': key } }),
+  powerWindows: {
+    list: (id) => api(`/api/stations/${encodeURIComponent(id)}/power-windows`),
+    create: (id, body) => api(`/api/stations/${encodeURIComponent(id)}/power-windows`, { method: 'POST', body }),
+    delete: (stationId, windowId) => api(`/api/stations/${encodeURIComponent(stationId)}/power-windows/${encodeURIComponent(windowId)}`, { method: 'DELETE' }),
+  },
 };
 
 export const chargePoints = {
@@ -20,7 +26,13 @@ export const chargePoints = {
   get: (id) => api(`/api/charge-points/${encodeURIComponent(id)}`),
   create: (stationId, body) => api(`/api/stations/${encodeURIComponent(stationId)}/charge-points`, { method: 'POST', body }),
   update: (id, body) => api(`/api/charge-points/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
+  setConnectorPower: (id, ratedPowerKw) => api(`/api/connectors/${encodeURIComponent(id)}/power`, { method: 'PATCH', body: { rated_power_kw: ratedPowerKw } }),
   reset: (id, type) => api(`/api/charge-points/${encodeURIComponent(id)}/reset`, { method: 'POST', body: { type } }),
+  changeConfiguration: (id, key, value) => api(`/api/charge-points/${encodeURIComponent(id)}/configuration`, {
+    method: 'POST',
+    body: { key, value },
+  }),
+  getConfiguration: (id, key) => api(`/api/charge-points/${encodeURIComponent(id)}/configuration?key=${encodeURIComponent(key)}`),
   checkCode: (code) => api(`/api/charge-points/check-code?code=${encodeURIComponent(code)}`),
 };
 
@@ -35,9 +47,34 @@ export const fleetStatus = {
   snapshot: () => api('/api/fleet-status'),
 };
 
+export const alerts = {
+  list: (state = 'open') => api(`/api/alerts?state=${encodeURIComponent(state)}`),
+  close: (id) => api(`/api/alerts/${encodeURIComponent(id)}/close`, { method: 'POST', body: {} }),
+};
+
 export const admin = {
   roles: () => api('/api/roles'),
   createUser: (body) => api('/api/admin/users', { method: 'POST', body }),
+  // q tìm theo tên hoặc email; máy chủ nhận tham số `query`.
+  listUsers: ({ page = 1, limit = 20, q = '' } = {}) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (q) params.set('query', q);
+    return api(`/api/admin/users?${params}`);
+  },
+  setUserRole: (id, role) => api(`/api/admin/users/${encodeURIComponent(id)}/role`, { method: 'PUT', body: { role } }),
+  disableUser: (id) => api(`/api/admin/users/${encodeURIComponent(id)}/disable`, { method: 'POST', body: {} }),
+  enableUser: (id) => api(`/api/admin/users/${encodeURIComponent(id)}/enable`, { method: 'POST', body: {} }),
+};
+
+export const partners = {
+  list: () => api('/api/partners'),
+  shareRates: (ownerId) => api(`/api/partners/${encodeURIComponent(ownerId)}/share-rates`),
+  createShareRate: (ownerId, body) => api(`/api/partners/${encodeURIComponent(ownerId)}/share-rates`, { method: 'POST', body }),
+};
+
+export const settlements = {
+  get: (month) => api(`/api/settlements/${encodeURIComponent(month)}`),
+  generate: (month) => api(`/api/settlements/${encodeURIComponent(month)}/generate`, { method: 'POST', body: {} }),
 };
 
 export const tariffs = {

@@ -2,7 +2,7 @@
 // Trụ sạc ảo TƯƠNG TÁC (OCPP 1.6J) để demo Sprint 2 (S-06 → S-16) trên máy chủ CSMS đang chạy.
 // Giữ kết nối, tự gửi Heartbeat, trả lời lệnh Reset/RemoteStop của máy chủ, và nhận lệnh gõ tay.
 // Chỉ gửi/nhận khung JSON thô qua `ws`, không dùng thư viện OCPP, nên gửi được cả khung hỏng để thử S-07.
-// Hướng dẫn từng bước: docs/DEMO_SPRINT2.md
+// Hướng dẫn từng bước: docs/demo/SPRINT2.md
 'use strict';
 
 const fs = require('node:fs');
@@ -10,6 +10,7 @@ const path = require('node:path');
 const readline = require('node:readline');
 const { parseArgs } = require('node:util');
 const { randomUUID } = require('node:crypto');
+const { profileResult, resolveSetChargingProfile, profileLimitW, meterReading } = require('./lib/charging-profile');
 
 let WebSocket;
 try {
@@ -34,6 +35,8 @@ const USAGE = `Dùng: node tools/demo-charge-point.js [MÃ_TRỤ] [tuỳ chọn]
   --reset <chế độ>     cách trả lời lệnh Reset: accept (mặc định, trả Accepted rồi tự khởi động lại),
                        accept-only, reject, silent (không trả lời, để thử hết thời gian), error
   --remote-stop <mode> cách trả lời RemoteStopTransaction: accept (gửi StopTransaction Remote), reject, silent, error
+  --profile-result <status> cách trả lời SetChargingProfile: Accepted (mặc định), Rejected, NotSupported
+  --reservation-result <status> cách trả lời ReserveNow: Accepted (mặc định), Faulted, Unavailable, Rejected
   --protocol <tên>     subprotocol WebSocket, mặc định ocpp1.6 ("none" = không gửi, để thử S-06)
   --skew-hours <giờ>   làm đồng hồ trụ lệch so với máy chủ (thử S-09)
   --no-boot            kết nối xong KHÔNG gửi Boot (thử SecurityError của S-08)
@@ -53,6 +56,7 @@ const REFUSED_HINT = 'Không có máy chủ nào nghe ở địa chỉ này. Hã
   + 'rồi chỉ đúng cổng bằng --url ws://localhost:<cổng> nếu cần.';
 
 const RESET_MODES = ['accept', 'accept-only', 'reject', 'silent', 'error'];
+const RESERVATION_RESULTS = ['Accepted', 'Faulted', 'Unavailable', 'Rejected'];
 const OCPP_STATUSES = ['Available', 'Preparing', 'Charging', 'SuspendedEV', 'SuspendedEVSE', 'Finishing', 'Reserved', 'Unavailable', 'Faulted'];
 const BAD_FRAMES = {
   'not-json': { text: 'day-khong-phai-json', expect: 'FormationViolation' },
@@ -91,6 +95,7 @@ function readOptions() {
       allowPositionals: true,
       options: {
         url: { type: 'string' }, connectors: { type: 'string' }, heartbeat: { type: 'string' }, reset: { type: 'string' }, 'remote-stop': { type: 'string' },
+        'profile-result': { type: 'string' }, 'reservation-result': { type: 'string' },
         protocol: { type: 'string' }, 'skew-hours': { type: 'string' },
         'no-boot': { type: 'boolean' }, 'no-status': { type: 'boolean' }, help: { type: 'boolean', short: 'h' },
       },
@@ -112,6 +117,8 @@ function readOptions() {
     heartbeat: number(values.heartbeat, null),
     reset: values.reset || 'accept',
     remoteStop: values['remote-stop'] || 'accept',
+    profileResult: profileResult(values['profile-result'] || process.env.VCP_PROFILE_RESULT || 'Accepted'),
+    reservationResult: values['reservation-result'] || process.env.VCP_RESERVATION_RESULT || 'Accepted',
     protocol: values.protocol === undefined ? 'ocpp1.6' : (values.protocol === 'none' ? '' : values.protocol),
     skewHours: number(values['skew-hours'], 0),
     boot: !values['no-boot'],
@@ -121,6 +128,7 @@ function readOptions() {
   if (opts.heartbeat !== null && !(opts.heartbeat > 0)) { console.error('--heartbeat phải là số giây > 0'); process.exit(2); }
   if (!RESET_MODES.includes(opts.reset)) { console.error(`--reset phải là một trong: ${RESET_MODES.join(', ')}`); process.exit(2); }
   if (!['accept', 'reject', 'silent', 'error'].includes(opts.remoteStop)) { console.error('--remote-stop phải là một trong: accept, reject, silent, error'); process.exit(2); }
+  if (!RESERVATION_RESULTS.includes(opts.reservationResult)) { console.error(`--reservation-result phải là một trong: ${RESERVATION_RESULTS.join(', ')}`); process.exit(2); }
   if (!Number.isFinite(opts.skewHours)) { console.error('--skew-hours phải là số'); process.exit(2); }
   return opts;
 }
@@ -168,7 +176,9 @@ function createChargePoint(opts) {
   const endpoint = endpointOf(opts.base, opts.code);
   const state = {
     ws: null, count: 0, booted: false, interval: 60, heartbeatTimer: null, heartbeatSeconds: null, silent: false,
-    resetMode: opts.reset, remoteStopMode: opts.remoteStop, sessions: new Map(), skewMs: opts.skewHours * 3600 * 1000, autoBoot: opts.boot, waiter: null,
+    resetMode: opts.reset, remoteStopMode: opts.remoteStop, reservationResult: opts.reservationResult,
+    sessions: new Map(), reservations: new Map(), profiles: new Map(),
+    meterValuesTimer: null, skewMs: opts.skewHours * 3600 * 1000, autoBoot: opts.boot, waiter: null,
   };
   const pending = new Map();
   let rl = null;
@@ -217,8 +227,82 @@ function createChargePoint(opts) {
     });
   }
 
+  function stopMeterValuesReporting() {
+    clearInterval(state.meterValuesTimer);
+    state.meterValuesTimer = null;
+  }
+
+  function startMeterValuesReporting() {
+    if (state.meterValuesTimer || !state.sessions.size) return;
+    state.meterValuesTimer = setInterval(() => {
+      for (const [connectorId, session] of state.sessions) {
+        const limitW = profileLimitW(state.profiles.get(connectorId), connectorId, session.transactionId);
+        const reading = meterReading(session.meterWh, limitW);
+        session.meterWh = reading.meterWh;
+        void call('MeterValues', {
+          connectorId,
+          transactionId: session.transactionId,
+          meterValue: [{
+            timestamp: trueTime(),
+            sampledValue: [
+              { value: String(session.meterWh), context: 'Sample.Periodic', measurand: 'Energy.Active.Import.Register', unit: 'Wh' },
+              { value: String(reading.powerW), context: 'Sample.Periodic', measurand: 'Power.Active.Import', unit: 'W' },
+            ],
+          }],
+        }, { show: 'none' });
+      }
+    }, 10000);
+    state.meterValuesTimer.unref?.();
+  }
+
   function onServerCall(sock, id, action, payload) {
     say(`${c.yellow('⇦ Máy chủ gửi lệnh')} ${action} ${JSON.stringify(payload)}`);
+    if (action === 'SetChargingProfile') {
+      const result = resolveSetChargingProfile(payload, opts.profileResult);
+      if (result.status === 'Accepted') state.profiles.set(payload.connectorId, result.profile);
+      reply(sock, [3, id, { status: result.status }]);
+      return;
+    }
+    if (action === 'ReserveNow') {
+      const { connectorId, expiryDate, idTag, reservationId } = payload;
+      const existing = state.reservations.get(connectorId);
+      if (existing && Date.parse(existing.expiryDate) <= Date.now()) state.reservations.delete(connectorId);
+      let status = state.reservationResult;
+      if (state.sessions.has(connectorId)) status = 'Occupied';
+      else if (status === 'Accepted' && (
+        !Number.isInteger(connectorId)
+        || connectorId < 1
+        || connectorId > opts.connectors
+        || !Number.isSafeInteger(reservationId)
+        || typeof idTag !== 'string'
+        || !Number.isFinite(Date.parse(expiryDate))
+        || state.reservations.has(connectorId)
+      )) status = 'Rejected';
+      if (status === 'Accepted') state.reservations.set(connectorId, { expiryDate, idTag, reservationId });
+      reply(sock, [3, id, { status }]);
+      if (status === 'Accepted') {
+        void call('StatusNotification', {
+          connectorId,
+          status: 'Reserved',
+          errorCode: 'NoError',
+          timestamp: trueTime(),
+        }, { show: 'none', sock });
+      }
+      return;
+    }
+    if (action === 'CancelReservation') {
+      const reservation = [...state.reservations.entries()].find(([, item]) => item.reservationId === payload?.reservationId);
+      if (!reservation) { reply(sock, [3, id, { status: 'Rejected' }]); return; }
+      state.reservations.delete(reservation[0]);
+      reply(sock, [3, id, { status: 'Accepted' }]);
+      void call('StatusNotification', {
+        connectorId: reservation[0],
+        status: 'Available',
+        errorCode: 'NoError',
+        timestamp: trueTime(),
+      }, { show: 'none', sock });
+      return;
+    }
     if (action === 'RemoteStopTransaction') {
       const active = [...state.sessions.entries()].find(([, session]) => session.transactionId === payload?.transactionId);
       if (!active) { reply(sock, [3, id, { status: 'Rejected' }]); return; }
@@ -228,9 +312,13 @@ function createChargePoint(opts) {
       reply(sock, [3, id, { status: 'Accepted' }]);
       const [connectorId, session] = active;
       state.sessions.delete(connectorId);
+      if (state.profiles.get(connectorId)?.csChargingProfiles.transactionId === session.transactionId) {
+        state.profiles.delete(connectorId);
+      }
+      if (!state.sessions.size) stopMeterValuesReporting();
       void call('StopTransaction', {
         transactionId: session.transactionId,
-        meterStop: session.meterStart,
+        meterStop: session.meterWh,
         timestamp: trueTime(),
         reason: 'Remote',
       }, { show: 'raw', sock });
@@ -314,6 +402,7 @@ function createChargePoint(opts) {
     startHeartbeat();
     say(c.green(`Boot Accepted. Nhịp tim ${state.heartbeatSeconds}s, giờ máy chủ ${result.payload.currentTime}`));
     if (opts.status) await announceAvailable();
+    startMeterValuesReporting();
     return true;
   }
 
@@ -358,6 +447,7 @@ function createChargePoint(opts) {
         const why = reason?.length ? ` "${reason.toString()}"` : '';
         say(c.yellow(`Kết nối #${sock.n} đã đóng (mã ${code}${why}).`));
         if (state.ws === sock) { state.ws = null; state.booted = false; stopHeartbeat(); }
+        stopMeterValuesReporting();
         resolve(false);
       });
     });
@@ -431,9 +521,19 @@ function createChargePoint(opts) {
         say(c.red('Dùng: start <connectorId> [idTag=TAG-DEMO-01] [meterStartWh=10000]'));
         return;
       }
-      const result = await call('StartTransaction', { connectorId, idTag, meterStart, timestamp: trueTime() });
+      const reservation = state.reservations.get(connectorId);
+      const reservationId = reservation?.idTag === idTag ? reservation.reservationId : undefined;
+      const result = await call('StartTransaction', {
+        connectorId,
+        idTag,
+        meterStart,
+        timestamp: trueTime(),
+        ...(reservationId === undefined ? {} : { reservationId }),
+      });
       if (result.ok && result.payload.idTagInfo?.status === 'Accepted') {
-        state.sessions.set(connectorId, { transactionId: result.payload.transactionId, meterStart });
+        state.sessions.set(connectorId, { transactionId: result.payload.transactionId, meterStart, meterWh: meterStart });
+        if (reservationId !== undefined) state.reservations.delete(connectorId);
+        startMeterValuesReporting();
         say(c.green(`Phiên bắt đầu: transactionId ${result.payload.transactionId} trên đầu nối ${connectorId}.`));
       } else if (result.ok) say(c.yellow(`StartTransaction không được chấp nhận: ${result.payload.idTagInfo?.status || 'phản hồi không rõ'}`));
     },
@@ -516,6 +616,7 @@ function createChargePoint(opts) {
 
   async function shutdown() {
     stopHeartbeat();
+    stopMeterValuesReporting();
     if (state.ws && state.ws.readyState === WebSocket.OPEN) state.ws.close(1000, 'Bye');
     await sleep(200);
     process.exit(0);
@@ -550,6 +651,7 @@ const HELP = `Lệnh (gõ trong dấu nhắc):
   Phiên      start <connectorId> [idTag] [meterStartWh]   mở phiên OCPP để thử RemoteStopTransaction
   Reset      reset-mode <${RESET_MODES.join('|')}>   cách trả lời lệnh Reset của máy chủ (S-16)
   Dừng từ xa remote-stop-mode <accept|reject|silent|error>   cách trả lời lệnh RemoteStopTransaction (S-23)
+  Hồ sơ sạc --profile-result <Accepted|Rejected|NotSupported>   cách trả lời SetChargingProfile
   Khác       sleep <giây> · help`;
 
 const options = readOptions();

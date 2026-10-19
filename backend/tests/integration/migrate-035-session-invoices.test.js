@@ -1,6 +1,6 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { run, query, resetSchema } = require('../helpers/db');
+const { run, query, resetSchema, rollbackToMigration } = require('../helpers/db');
 
 const tableExists = async (tableName) => (await query(
   'SELECT 1 FROM information_schema.tables WHERE table_name = $1',
@@ -11,8 +11,18 @@ describe('migration 035: session_invoices, invoice_lines and billing_status [GYM
   before(async () => {
     await resetSchema();
     assert.strictEqual(run('src/db/migrate.js').status, 0);
+    await rollbackToMigration('046_reservations.sql');
 
     for (const version of [
+      '046_reservations.sql',
+      '045_zero_watt_profile_limits.sql',
+      '044_alerts_power_profile_log.sql',
+      '043_station_power_limits.sql',
+      '042_data_erasure_requests.sql',
+      '041_accounting_period_locks.sql',
+      '040_accounting_periods.sql',
+      '039_notifications_and_email_outbox.sql',
+      '038_wallet_topups.sql',
       '037_audit_logs_driver_id_index.sql',
       '036_wallets.sql',
       '035_session_invoices.sql',

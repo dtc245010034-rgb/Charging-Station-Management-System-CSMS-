@@ -50,11 +50,41 @@
 .topbar__actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 
 /* ---------- Workspace ---------- */
-.workspace { width: 100%; max-width: 1680px; margin: 0 auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+.workspace { width: 100%; max-width: 1400px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 18px; flex: 1; box-sizing: border-box; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-.page-head__title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
-.page-head__sub { margin-top: 2px; color: var(--text-secondary); font-size: 12.5px; }
+.page-head__title { font-size: 24px; font-weight: 700; letter-spacing: 0; }
+.page-head__sub { margin-top: 4px; color: var(--text-secondary); font-size: 14px; }
 .page-head__actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.session-page, .unexpected-sessions-page, .audit-log-page, .wallet-page { width: 100%; min-width: 0; }
+.session-list, .unexpected-sessions-list { display: grid; gap: 16px; width: 100%; }
+.session-list > .card, .unexpected-sessions-list > .card { width: 100%; box-sizing: border-box; }
+.session-list > .card:has(.state), .unexpected-sessions-list > .card:has(.state) { min-height: 260px; justify-content: center; }
+.session-page .page-head, .unexpected-sessions-page .page-head, .audit-log-page .page-head, .wallet-page .page-head { align-items: center; }
+.page-refresh { min-width: 40px; min-height: 40px; }
+
+.audit-filter.card { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 16px; }
+.audit-filter > label { display: grid; gap: 6px; min-width: 0; }
+.audit-filter .input { min-width: 0; min-height: 42px; }
+.audit-filter__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.audit-log-results { display: grid; gap: 12px; min-width: 0; }
+.audit-pagination, .pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+.wallet-search.card { display: grid; grid-template-columns: minmax(400px, 560px) max-content; align-items: end; gap: 12px; width: 100%; padding: 18px; }
+.wallet-search__field { min-width: 0; width: 100%; }
+.wallet-search .input { min-height: 42px; }
+.wallet-search-results, .wallet-details { display: grid; gap: 16px; width: 100%; min-width: 0; }
+.wallet-search-results > .card, .wallet-details > .card { box-sizing: border-box; }
+.unexpected-table { min-width: 920px; }
+.unexpected-table .unexpected-reason { min-width: 190px; max-width: 300px; white-space: normal; }
+.unexpected-table .unexpected-action { min-width: 240px; }
+.unexpected-table .unexpected-action form { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.unexpected-table .unexpected-action form > label { min-width: 0; }
+.unexpected-table .unexpected-action form > label:nth-child(2) { grid-column: 1 / -1; }
+
+@media (max-width: 1100px) {
+  .audit-filter.card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 .hero {
   display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
@@ -95,10 +125,11 @@
   .app[data-nav-open="true"] .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(0, 0, 0, 0.55); }
   .topbar { padding: 0 14px; }
   .btn.topbar__menu { display: inline-flex; }
-  .workspace { padding: 16px 14px; }
+  .workspace { padding: 16px; gap: 16px; }
   .split { grid-template-columns: minmax(0, 1fr); }
   .dash-bottom { grid-template-columns: minmax(0, 1fr); }
   .hero__side { text-align: left; justify-items: start; }
+  .wallet-search.card { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
   .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -106,6 +137,14 @@
   .topbar .select { max-width: 132px; }
   .topbar__search { flex: 0 0 auto; margin: 0 0 0 auto; }
   .topbar__actions { margin-left: 0; gap: 2px; }
+  .audit-filter.card { grid-template-columns: minmax(0, 1fr); }
+  .audit-filter__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .audit-filter__actions .btn { width: 100%; }
+  .audit-pagination, .pagination { justify-content: center; }
+  .wallet-search { padding: 14px; }
+  .wallet-search > .btn { width: 100%; }
+  .unexpected-table { min-width: 820px; }
+  .session-page .page-head, .unexpected-sessions-page .page-head, .audit-log-page .page-head, .wallet-page .page-head { align-items: flex-start; }
   .search-trigger { width: 36px; min-height: 36px; padding: 0; justify-content: center; border-color: transparent; background: none; }
   .search-trigger__text, .search-trigger__hint, .topbar__user-name { display: none; }
 }

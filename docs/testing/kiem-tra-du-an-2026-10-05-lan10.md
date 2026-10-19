@@ -8,7 +8,7 @@
 - Jira: 14/15 story Sprint 2 (GYM-7…41) đã Done; **GYM-42 (S-16) còn Review**. Mọi story của backlog đã có Parent (epic): 0 story không có epic.
 
 ## Còn lại (không chặn đóng Sprint 2)
-- S-16 chưa ghi vết vào `audit_logs` (chỉ log ứng dụng): `audit_logs` có 0 dòng cho Reset (chỉ `CREATE`). Backlog (T-35) cho phép ghi tạm và giao việc chuẩn hoá cho T-57 (S-27, Sprint 3). `docs/SPRINT_STATUS.md` (mục 10) vẫn ghi “commit S-16 chưa qua PR” — đã lỗi thời sau PR #86.
+- S-16 chưa ghi vết vào `audit_logs` (chỉ log ứng dụng): `audit_logs` có 0 dòng cho Reset (chỉ `CREATE`). Backlog (T-35) cho phép ghi tạm và giao việc chuẩn hoá cho T-57 (S-27, Sprint 3). `docs/archive/SPRINT-STATUS.md` (mục 10) vẫn ghi “commit S-16 chưa qua PR” — đã lỗi thời sau PR #86.
 - DoD “AC pass trên staging với trụ ảo chạy thật” vẫn chưa đạt (chưa có URL staging) — xem Q6 trong `SPRINT_3_PLAN.md`.
 - B5 (xác thực trụ) vẫn mở, cần PO chốt trước Sprint 4.
 

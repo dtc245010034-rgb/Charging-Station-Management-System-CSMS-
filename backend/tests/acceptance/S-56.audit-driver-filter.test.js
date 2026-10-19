@@ -2,7 +2,7 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
 const { app, closePool } = require('../helpers/app');
-const { query, run, resetSchema, truncateAll } = require('../helpers/db');
+const { query, run, resetSchema, truncateAll, rollbackToMigration } = require('../helpers/db');
 const { createUser } = require('../helpers/auth');
 const auditRepository = require('../../src/modules/audit/audit.repository');
 const { migrate, rollbackLastMigration } = require('../../src/db/migrate');
@@ -65,7 +65,23 @@ describe('S-56 audit log driver filter', { concurrency: false }, () => {
   });
 
   it('migration 037 có thể chạy tiến, lùi rồi tiến lại', async () => {
-    assert.equal(await rollbackLastMigration(), true);
+    await rollbackToMigration('046_reservations.sql');
+    for (const version of [
+      '046_reservations.sql',
+      '045_zero_watt_profile_limits.sql',
+      '044_alerts_power_profile_log.sql',
+      '043_station_power_limits.sql',
+      '042_data_erasure_requests.sql',
+      '041_accounting_period_locks.sql',
+      '040_accounting_periods.sql',
+      '039_notifications_and_email_outbox.sql',
+      '038_wallet_topups.sql',
+      '037_audit_logs_driver_id_index.sql',
+    ]) {
+      const latest = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
+      assert.equal(latest.rows[0].version, version);
+      assert.equal(await rollbackLastMigration(), true);
+    }
     assert.equal((await query(
       `SELECT 1 FROM pg_indexes
        WHERE schemaname = current_schema()

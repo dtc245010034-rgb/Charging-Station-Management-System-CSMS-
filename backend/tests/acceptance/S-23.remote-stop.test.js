@@ -139,11 +139,13 @@ describe('S-23 RemoteStopTransaction acceptance', { concurrency: false }, () => 
     );
     assert.equal(audits.rowCount, 2);
     assert.equal(audits.rows[0].result, 'ACCEPTED');
-    assert.deepEqual(Object.keys(audits.rows[0].metadata).sort(), ['deadline', 'requested_at']);
+    assert.deepEqual(Object.keys(audits.rows[0].metadata).sort(), ['charge_point_code', 'deadline', 'requested_at']);
+    assert.equal(audits.rows[0].metadata.charge_point_code, CODE);
     assert.ok(Date.parse(audits.rows[0].metadata.requested_at));
     assert.ok(Date.parse(audits.rows[0].metadata.deadline));
     assert.equal(audits.rows[1].result, 'STOPPED');
     assert.deepEqual(audits.rows[1].metadata, {
+      charge_point_code: CODE,
       reason: 'Remote',
       meter_stop: 16000,
       stopped_at: audits.rows[1].metadata.stopped_at,

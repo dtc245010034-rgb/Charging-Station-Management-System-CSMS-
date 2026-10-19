@@ -17,15 +17,16 @@
   --text-muted: #566a8c;
   --text-disabled: #9aa8c2;
 
-  --brand-primary: #0787a8;
+  --brand-primary: #05708c;
   --brand-secondary: #2563eb;
-  --brand-gradient: linear-gradient(135deg, #0787a8, #2563eb);
+  --brand-gradient: linear-gradient(135deg, #05708c, #2563eb);
   --on-brand: #ffffff;
 
   --success: #15803d;
   --info: #2563eb;
   --warning: #b45309;
   --danger: #dc2626;
+  --danger-text: #b91c1c;
   --neutral: #64748b;
 
   --shadow-sm: 0 1px 2px rgba(15, 30, 60, 0.08);

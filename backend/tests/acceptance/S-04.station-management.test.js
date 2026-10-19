@@ -69,6 +69,29 @@ describe('S-04/S-05 quản lý trạm, trụ và đầu nối', () => {
     assert.strictEqual((await patch(`/api/charge-points/${point.id}`, { code: 'CP-RENAMED' })).status, 200);
   });
 
+  it('GYM-92: đổi trạng thái ghi from/to; chủ khác nhận 403 và ACCESS_DENIED', async () => {
+    const station = await postStation(owner, stationBody({ name: 'Trạm trạng thái' }));
+    const activated = await patch(`/api/stations/${station.body.id}`, { status: 'ACTIVE' });
+    assert.strictEqual(activated.status, 200);
+    assert.strictEqual(activated.body.status, 'ACTIVE');
+    const changedRows = await query(
+      `SELECT action, metadata FROM audit_logs
+       WHERE user_id = $1 AND entity = 'station' AND entity_id = $2
+       ORDER BY id DESC LIMIT 1`,
+      [owner.id, station.body.id]
+    );
+    assert.strictEqual(changedRows.rows[0].action, 'STATION_STATUS_CHANGED');
+    assert.deepStrictEqual(changedRows.rows[0].metadata, { from: 'INACTIVE', to: 'ACTIVE' });
+
+    const forbidden = await patch(`/api/stations/${station.body.id}`, { status: 'MAINTENANCE' }, otherOwner);
+    assert.strictEqual(forbidden.status, 403);
+    const deniedRows = await query(
+      "SELECT action FROM audit_logs WHERE user_id = $1 AND action = 'ACCESS_DENIED' AND entity_id = $2",
+      [otherOwner.id, station.body.id]
+    );
+    assert.ok(deniedRows.rowCount > 0);
+  });
+
   it('restricts deleting an owner while owned stations remain', async () => {
     const isolatedOwner = await query(
       "INSERT INTO users (name, email, password_hash) VALUES ('Isolated owner', 'isolated-owner@test.invalid', 'x') RETURNING id"

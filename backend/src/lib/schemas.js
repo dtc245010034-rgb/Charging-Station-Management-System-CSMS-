@@ -40,6 +40,54 @@ const walletUnlockBody = z.object({ reason: walletReason });
 const walletSearchQuery = z.object({
   query: z.string().trim().max(200, 'Từ khóa tìm kiếm quá dài').optional().transform((value) => value || ''),
 });
+const walletTopupBody = z.object({
+  amountDong: z.union([
+    z.number().int().safe(),
+    z.string().regex(/^\d+$/, 'Số tiền nạp phải là số nguyên dương').transform((v) => Number(v)),
+  ]).refine(
+    (value) => value >= 10000 && value <= 5000000,
+    'Số tiền nạp phải là số nguyên từ 10.000 đ đến 5.000.000 đ'
+  ),
+});
+
+const notificationsQuery = z.object({
+  unread: z.enum(['0', '1']).optional(),
+});
+
+const notificationIdParam = z.object({
+  id: positiveInt('id'),
+});
+
+const topupRefParam = z.object({
+  ref: z.string().min(1, 'Mã đơn nạp không hợp lệ'),
+});
+const validDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+  && !Number.isNaN(Date.parse(`${value}T00:00:00.000Z`))
+  && new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value;
+const reportDate = z.string().refine(validDate, 'Ngày phải có dạng ngày hợp lệ YYYY-MM-DD');
+const reportPeriodQuery = z.object({
+  from: reportDate,
+  to: reportDate,
+  stationId: positiveInt('stationId').optional(),
+}).refine((value) => value.from <= value.to, {
+  message: 'from phải nhỏ hơn hoặc bằng to',
+  path: ['from'],
+});
+const reconciliationPeriodQuery = z.object({
+  from: reportDate,
+  to: reportDate,
+}).refine((value) => value.from <= value.to, {
+  message: 'from phải nhỏ hơn hoặc bằng to',
+  path: ['from'],
+});
+const accountingPeriodMonth = z.string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Kỳ phải có dạng YYYY-MM');
+const reopenPeriodBody = z.object({
+  reason: walletReason,
+});
+const erasureRejectBody = z.object({
+  reason: walletReason,
+});
 
 module.exports = {
   idParam,
@@ -50,4 +98,13 @@ module.exports = {
   walletAdjustmentBody,
   walletUnlockBody,
   walletSearchQuery,
+  walletTopupBody,
+  notificationsQuery,
+  notificationIdParam,
+  topupRefParam,
+  reportPeriodQuery,
+  reconciliationPeriodQuery,
+  accountingPeriodMonth,
+  reopenPeriodBody,
+  erasureRejectBody,
 };

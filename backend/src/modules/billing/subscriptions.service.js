@@ -1,0 +1,271 @@
+'use strict';
+
+const repo = require('./subscriptions.repository');
+const audit = require('../audit/audit.repository');
+const { withTransaction } = require('../../db/tx');
+const { postEntry } = require('../wallet/ledger.service');
+const { BadRequestError, NotFoundError, ConflictError, AppError } = require('../../lib/errors');
+const { createHash } = require('node:crypto');
+const { normalizePeriods, minutesToTime } = require('./tariff-periods');
+
+function formatPlan(plan, periods = []) {
+  return {
+    id: plan.id,
+    code: plan.code,
+    name: plan.name,
+    priceDong: plan.price_dong,
+    durationDays: plan.duration_days,
+    idleGraceMin: plan.idle_grace_min,
+    idlePerMinDong: plan.idle_per_min_dong,
+    active: plan.active,
+    createdBy: plan.created_by,
+    createdAt: plan.created_at,
+    periods: periods.map((p) => ({
+      startMinute: p.start_minute,
+      endMinute: p.end_minute,
+      from: minutesToTime(p.start_minute),
+      to: minutesToTime(p.end_minute),
+      pricePerKwh: p.price_per_kwh_dong,
+      label: p.label,
+    })),
+  };
+}
+
+function formatSubscription(sub) {
+  return {
+    id: sub.id,
+    driverId: sub.driver_id,
+    planId: sub.plan_id,
+    planCode: sub.plan_code,
+    planName: sub.plan_name,
+    startsAt: sub.starts_at,
+    endsAt: sub.ends_at,
+    priceDong: sub.price_dong,
+    idempotencyKey: sub.idempotency_key,
+    createdAt: sub.created_at,
+  };
+}
+
+async function listPlans(actor) {
+  const roles = actor?.roles || [];
+  const isAdminOrAccountant = roles.includes('ADMIN') || roles.includes('ACCOUNTANT');
+  const rawPlans = await repo.listPlans(undefined, { activeOnly: !isAdminOrAccountant });
+
+  const result = [];
+  for (const plan of rawPlans) {
+    const periods = await repo.periodsOfPlan(undefined, plan.id);
+    result.push(formatPlan(plan, periods));
+  }
+  return result;
+}
+
+async function createPlan(actor, data, idempotencyKey, ip = null) {
+  const normalized = normalizePeriods(data.periods);
+  if (!normalized.ok) {
+    const err = new BadRequestError('Biểu giá của gói phải phủ kín 24 giờ và không chồng lấn');
+    err.details = { errors: normalized.errors };
+    throw err;
+  }
+
+  const periodsToInsert = normalized.periods.map((p) => ({
+    startMinute: p.startMin,
+    endMinute: p.endMin,
+    pricePerKwhDong: p.pricePerKwh,
+    label: p.label,
+  }));
+  const requestHash = createHash('sha256').update(JSON.stringify(data)).digest('hex');
+
+  return withTransaction(async (client) => {
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`plan-create:${actor.id}:${idempotencyKey}`]);
+    // Cùng khoá + cùng nội dung: trả lại gói đã tạo (kể cả khi mã gói đã tồn tại do chính lần đó); khác nội dung: 409.
+    const prior = await client.query('SELECT request_hash, response_body FROM idempotency_keys WHERE user_id = $1 AND key = $2', [actor.id, idempotencyKey]);
+    if (prior.rowCount) {
+      if (prior.rows[0].request_hash !== requestHash) throw new ConflictError('Idempotency-Key đã được dùng cho yêu cầu khác');
+      return prior.rows[0].response_body;
+    }
+
+    if (await repo.findPlanByCode(client, data.code)) {
+      throw new ConflictError('Mã gói thuê bao đã tồn tại');
+    }
+
+    const plan = await repo.insertPlan(client, {
+      code: data.code,
+      name: data.name,
+      priceDong: data.priceDong,
+      durationDays: data.durationDays,
+      idleGraceMin: data.idleGraceMin,
+      idlePerMinDong: data.idlePerMinDong,
+      createdBy: actor.id,
+    });
+    await repo.insertPeriods(client, plan.id, periodsToInsert);
+
+    await audit.record(
+      actor.id,
+      'SUBSCRIPTION_PLAN_CREATED',
+      'subscription_plan',
+      plan.id,
+      { code: plan.code, priceDong: plan.price_dong, durationDays: plan.duration_days },
+      ip,
+      client,
+      'COMPLETED'
+    );
+
+    // Cùng hình dạng với danh sách gói (formatPlan đọc cột snake_case của DB, đơn giá là chuỗi bigint).
+    const response = JSON.parse(JSON.stringify(formatPlan(plan, periodsToInsert.map((p) => ({
+      start_minute: p.startMinute,
+      end_minute: p.endMinute,
+      price_per_kwh_dong: String(p.pricePerKwhDong),
+      label: p.label,
+    })))));
+    await client.query(
+      'INSERT INTO idempotency_keys (user_id, key, request_hash, response_body) VALUES ($1, $2, $3, $4::jsonb)',
+      [actor.id, idempotencyKey, requestHash, JSON.stringify(response)]
+    );
+    return response;
+  });
+}
+
+async function retirePlan(actor, planId, ip = null) {
+  const parsedId = Number(planId);
+  if (!Number.isSafeInteger(parsedId) || parsedId <= 0) {
+    throw new BadRequestError('Mã gói không hợp lệ');
+  }
+
+  const plan = await repo.findPlanById(undefined, parsedId);
+  if (!plan) {
+    throw new NotFoundError('Không tìm thấy gói thuê bao');
+  }
+
+  if (!plan.active) {
+    throw new ConflictError('Gói thuê bao đã ngừng bán trước đó');
+  }
+
+  const retired = await repo.retirePlan(undefined, parsedId);
+  await audit.record(
+    actor.id,
+    'SUBSCRIPTION_PLAN_RETIRED',
+    'subscription_plan',
+    parsedId,
+    { code: plan.code },
+    ip,
+    null,
+    'COMPLETED'
+  );
+
+  return { id: retired.id, code: retired.code, active: false };
+}
+
+async function buySubscription(driver, { planId }, idempotencyKey, { ip = null, now = new Date() } = {}) {
+  if (!idempotencyKey || !/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) {
+    throw new BadRequestError('Idempotency-Key không hợp lệ');
+  }
+
+  const parsedPlanId = Number(planId);
+  if (!Number.isSafeInteger(parsedPlanId) || parsedPlanId <= 0) {
+    throw new BadRequestError('Mã gói không hợp lệ');
+  }
+
+  const currentTime = now instanceof Date ? now : new Date(now);
+
+  const purchased = await withTransaction(async (client) => {
+    // Advisory lock theo idempotency key của tài xế
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
+      `subscription:${driver.id}:${idempotencyKey}`,
+    ]);
+
+    // Tuần tự hoá mọi lần mua của cùng tài xế: hai INSERT đồng thời vào ràng buộc EXCLUDE (subscriptions_no_overlap)
+    // chờ nhau và gây deadlock 40P01. Thứ tự khoá cố định: khoá khoá-lặp -> khoá tài xế -> dòng ví (trong postEntry).
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`subscription-driver:${driver.id}`]);
+
+    const prior = await repo.findSubscriptionByIdempotencyKey(client, driver.id, idempotencyKey);
+    if (prior) {
+      // Cùng khoá nhưng khác gói là yêu cầu khác: cùng cách trả lỗi như đặt chỗ và tạo trạm (409 CONFLICT).
+      if (String(prior.plan_id) !== String(parsedPlanId)) {
+        throw new ConflictError('Idempotency-Key đã được dùng cho yêu cầu khác');
+      }
+      return { subscription: prior, replayed: true };
+    }
+
+    const plan = await repo.findPlanById(client, parsedPlanId);
+    if (!plan) {
+      throw new NotFoundError('Không tìm thấy gói thuê bao');
+    }
+    if (!plan.active) {
+      throw new AppError(409, 'PLAN_NOT_ACTIVE', 'Gói thuê bao không còn hiệu lực để mua');
+    }
+
+    const startsAt = currentTime.toISOString();
+    const durationDays = plan.duration_days || 30;
+    const endsAt = new Date(currentTime.getTime() + durationDays * 86400000).toISOString();
+
+    let newSub;
+    try {
+      newSub = await repo.insertSubscription(client, {
+        driverId: driver.id,
+        planId: plan.id,
+        startsAt,
+        endsAt,
+        priceDong: plan.price_dong,
+        idempotencyKey,
+      });
+    } catch (err) {
+      if (err.code === '23P01') {
+        throw new AppError(409, 'SUBSCRIPTION_ACTIVE', 'Bạn đang có gói thuê bao còn hiệu lực.');
+      }
+      if (err.code === '23505') {
+        const replay = await repo.findSubscriptionByIdempotencyKey(client, driver.id, idempotencyKey);
+        if (replay) return { subscription: replay, replayed: true };
+      }
+      throw err;
+    }
+
+    // Trừ tiền ví qua postEntry (SUBSCRIPTION_FEE, âm).
+    // Nếu ví không đủ tiền, postEntry sẽ ném InsufficientBalanceError (409 INSUFFICIENT_BALANCE)
+    await postEntry(client, {
+      driverId: driver.id,
+      entryType: 'SUBSCRIPTION_FEE',
+      amountDong: (-BigInt(plan.price_dong)).toString(),
+      subscriptionId: newSub.id,
+      reason: `Mua gói ${plan.code}`,
+    });
+
+    await audit.record(
+      driver.id,
+      'SUBSCRIPTION_PURCHASED',
+      'subscription',
+      newSub.id,
+      {
+        planId: plan.id,
+        planCode: plan.code,
+        priceDong: plan.price_dong,
+        startsAt,
+        endsAt,
+      },
+      ip,
+      client,
+      'COMPLETED'
+    );
+
+    newSub.plan_code = plan.code;
+    newSub.plan_name = plan.name;
+    return { subscription: newSub, replayed: false };
+  });
+
+  return {
+    subscription: formatSubscription(purchased.subscription),
+    replayed: Boolean(purchased.replayed),
+  };
+}
+
+async function listMySubscriptions(driver) {
+  const subscriptions = await repo.listSubscriptionsForDriver(undefined, driver.id);
+  return subscriptions.map(formatSubscription);
+}
+
+module.exports = {
+  listPlans,
+  createPlan,
+  retirePlan,
+  buySubscription,
+  listMySubscriptions,
+};

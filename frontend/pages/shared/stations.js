@@ -33,7 +33,7 @@ export function render(ctx) {
       { key: 'status', label: 'Trạng thái', render: (s) => stationBadge(s.status) },
       { key: 'cps', label: 'Số trụ', align: 'num', render: (s) => s.charge_point_count },
       { key: 'coords', label: 'Toạ độ', render: (s) => h('span', { class: 'mono' }, s.latitude === null ? '—' : `${coordinate(s.latitude)}, ${coordinate(s.longitude)}`) },
-      canWrite && { key: 'edit', label: '', align: 'num', render: (s) => h('button', { class: 'btn btn--ghost', type: 'button', 'aria-label': `Sửa trạm ${s.name}`, onclick: (e) => { e.stopPropagation(); openStationForm({ station: s, onSaved: () => fleet.refresh() }); } }, icon('edit'), 'Sửa') },
+      canWrite && { key: 'edit', label: h('span', { class: 'sr-only' }, 'Thao tác'), align: 'num', render: (s) => h('button', { class: 'btn btn--ghost', type: 'button', 'aria-label': `Sửa trạm ${s.name}`, onclick: (e) => { e.stopPropagation(); openStationForm({ station: s, onSaved: () => fleet.refresh() }); } }, icon('edit'), 'Sửa') },
     ].filter(Boolean),
   });
 

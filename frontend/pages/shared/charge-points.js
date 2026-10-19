@@ -1,4 +1,5 @@
 import { h } from '../../app/dom.js';
+import { kilowattsToWatts } from '../../app/power.js';
 import { formatKw, formatDateTime } from '../../app/format.js';
 import { routeFor } from '../../app/workspace.js';
 import { GROUPS, pointGroup } from '../../app/status.js';
@@ -13,6 +14,39 @@ import { createFleet, watch } from './fleet.js';
 
 const silentHash = (hash) => history.replaceState(null, '', `${location.pathname}${location.search}${hash}`);
 const GROUP_FILTERS = ['ready', 'charging', 'fault', 'offline'];
+
+function connectorPowerForm(connector, onSaved) {
+  const input = h('input', {
+    class: 'input', type: 'text', inputmode: 'decimal', value: String(connector.power.ratedKw),
+    'aria-label': `Công suất danh định đầu nối ${connector.connector_no} (kW)`,
+  });
+  const save = h('button', { class: 'btn', type: 'submit' }, 'Lưu công suất');
+  const error = h('p', { class: 'field__error', role: 'alert', hidden: true });
+  return h('form', { class: 'stack', onsubmit: async (event) => {
+    event.preventDefault();
+    const value = input.value.trim();
+    const watts = value === '' ? null : kilowattsToWatts(value);
+    if (value && watts === null) {
+      error.textContent = 'Công suất phải từ 0,1 đến 100.000 kW và tối đa 1 chữ số thập phân';
+      error.hidden = false;
+      return;
+    }
+    save.disabled = true;
+    error.hidden = true;
+    try {
+      await csms.chargePoints.setConnectorPower(connector.id, value ? value : null);
+      await onSaved();
+    } catch (cause) {
+      error.textContent = cause.message;
+      error.hidden = false;
+      save.disabled = false;
+    }
+  } },
+  h('label', { class: 'field' }, h('span', { class: 'field__label' }, `Công suất danh định (kW)`), input),
+  h('span', { class: 'field__hint' }, 'Để trống để dùng công suất mặc định của trụ.'),
+  save,
+  error);
+}
 
 function openEditForm(point, onSaved) {
   const input = (id, props) => h('input', { class: 'input', id, ...props });
@@ -51,7 +85,78 @@ function openEditForm(point, onSaved) {
   });
 }
 
-function openChargePointDrawer({ id, canWrite, workspace, onChanged, onClose }) {
+function configurationForm(id) {
+  const key = h('select', { class: 'input', 'aria-label': 'Khóa cấu hình' },
+    h('option', { value: 'HeartbeatInterval' }, 'HeartbeatInterval'),
+    h('option', { value: 'MeterValueSampleInterval' }, 'MeterValueSampleInterval'));
+  const value = h('input', {
+    class: 'input',
+    type: 'number',
+    min: '10',
+    max: '86400',
+    step: '1',
+    required: true,
+    'aria-label': 'Giá trị cấu hình',
+  });
+  const apply = h('button', { class: 'btn btn--primary', type: 'submit' }, 'Áp dụng');
+  const result = h('p', { class: 'field__hint', role: 'status' });
+  const readback = h('p', { class: 'field__hint' });
+  const error = h('p', { class: 'field__error', role: 'alert', hidden: true });
+
+  function updateRange() {
+    const isHeartbeat = key.value === 'HeartbeatInterval';
+    value.min = isHeartbeat ? '10' : '0';
+    value.max = isHeartbeat ? '86400' : '3600';
+    value.value = '';
+    result.textContent = '';
+    readback.textContent = '';
+    error.textContent = '';
+    error.hidden = true;
+  }
+
+  key.addEventListener('change', updateRange);
+  updateRange();
+
+  const form = h('form', {
+    class: 'stack',
+    onsubmit: async (event) => {
+      event.preventDefault();
+      if (!value.checkValidity()) {
+        value.reportValidity();
+        return;
+      }
+      apply.disabled = true;
+      error.hidden = true;
+      try {
+        const applied = await csms.chargePoints.changeConfiguration(id, key.value, value.value);
+        result.textContent = `Kết quả: ${applied.status}`;
+        const current = await csms.chargePoints.getConfiguration(id, key.value);
+        readback.textContent = `Giá trị đọc lại: ${current.value}${current.readonly ? ' (chỉ đọc)' : ''}`;
+
+        if (applied.status === 'RebootRequired' && window.confirm('Khởi động lại trụ?')) {
+          const reset = await csms.chargePoints.reset(id, 'Soft');
+          result.textContent += ` · Reset: ${reset.status}`;
+        }
+      } catch (cause) {
+        error.textContent = cause.message;
+        error.hidden = false;
+      } finally {
+        apply.disabled = false;
+      }
+    },
+  },
+  h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Khóa cấu hình'), key),
+  h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Giá trị'), value),
+  apply,
+  result,
+  readback,
+  error);
+  return h('section', { class: 'stack' },
+    h('div', { class: 'section-title' }, 'Cấu hình trụ'),
+    form);
+}
+
+function openChargePointDrawer({ id, canWrite, canConfigure, workspace, onChanged, onClose }) {
   const drawer = openDrawer({ title: 'Chi tiết trụ sạc', body: loadingState(3), onClose });
   async function load() {
     try {
@@ -70,8 +175,11 @@ function openChargePointDrawer({ id, canWrite, workspace, onChanged, onClose }) 
         h('section', {},
           h('div', { class: 'section-title' }, `Đầu nối (${point.connectors.length})`),
           h('div', { class: 'list-rows' }, point.connectors.map((c) => h('div', { class: 'list-row' },
-            h('div', {}, h('div', { class: 'cell-strong' }, `Đầu ${c.connector_no}`), h('div', { class: 'cell-sub' }, c.type)),
+            h('div', {}, h('div', { class: 'cell-strong' }, `Đầu ${c.connector_no}`), h('div', { class: 'cell-sub' }, c.type),
+              h('div', { class: 'cell-sub' }, `${formatKw(c.power.ratedKw)} · ${c.rated_power_w === null ? 'mặc định từ trụ' : 'đã khai báo'}`),
+              canWrite && connectorPowerForm(c, async () => { await load(); onChanged(); })),
             statusBadge(c.status, c.ocpp_status))))),
+        canConfigure && configurationForm(point.id),
         canWrite && h('div', {}, h('button', { class: 'btn', type: 'button', onclick: () => openEditForm(point, async () => { await load(); onChanged(); }) }, icon('edit'), 'Sửa thông tin trụ')),
       );
     } catch (error) { drawer.setBody(errorState({ message: error.message, onRetry: load })); }
@@ -84,6 +192,7 @@ const withConnectorStatuses = (point) => ({ ...point, connector_statuses: (point
 
 export function render(ctx) {
   const canWrite = ctx.can('charge-points:write');
+  const canConfigure = ctx.can('charge-points:configure');
   const fleet = createFleet();
   const filters = { query: '', group: GROUP_FILTERS.includes(ctx.params.query.status) ? ctx.params.query.status : '', station: '' };
   let drawer = null;
@@ -110,7 +219,7 @@ export function render(ctx) {
     selectedId = id;
     silentHash(routeFor(ctx.workspace, 'charge-points', id));
     drawer = openChargePointDrawer({
-      id, canWrite, workspace: ctx.workspace,
+      id, canWrite, canConfigure, workspace: ctx.workspace,
       onChanged: () => fleet.refresh(),
       onClose: () => { selectedId = null; drawer = null; silentHash(routeFor(ctx.workspace, 'charge-points')); paint(fleet.store.get()); },
     });

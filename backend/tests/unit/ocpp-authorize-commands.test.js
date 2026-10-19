@@ -124,6 +124,18 @@ describe('commands: gửi lệnh từ server xuống trụ (nền cho S-16)', ()
     assert.deepEqual(seen, [[connection, 'Reset', { type: 'Soft' }, { timeoutMs: 7000 }]]);
   });
 
+  it('cho phép ghi đè timeout riêng cho một lệnh mà không đổi mặc định', async () => {
+    const seen = [];
+    const sender = createCommandSender({
+      getConnection: () => ({ id: 'ws-2' }),
+      sendCall: async (_connection, _action, _payload, options) => { seen.push(options); return { status: 'Accepted' }; },
+      timeoutMs: 30000,
+    });
+    await sender.send('CP-2', 'ReserveNow', {}, { timeoutMs: 10000 });
+    await sender.send('CP-2', 'Reset', {});
+    assert.deepStrictEqual(seen, [{ timeoutMs: 10000 }, { timeoutMs: 30000 }]);
+  });
+
   it('lỗi từ trụ hoặc hết thời gian được chuyển nguyên cho nơi gọi', async () => {
     const sender = createCommandSender({ getConnection: () => ({}), sendCall: async () => { throw new Error('OCPP call timed out: Reset'); } });
     await assert.rejects(() => sender.send('CP-1', 'Reset', {}), /timed out/);

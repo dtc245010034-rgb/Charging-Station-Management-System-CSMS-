@@ -55,7 +55,238 @@ export function render(ctx) {
   const requestedPage = Number(ctx.params.query.page || 1);
   let currentPage = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const entryToFocus = ctx.params.query.entry;
+  const topupRef = ctx.params.query.topup;
   const content = h('div', { style: 'display:grid;gap:12px' }, loadingState(3));
+  const topupTracker = h('div', { style: 'display:grid;gap:8px' });
+  const formFeedback = h('div', { style: 'display:grid;gap:8px' });
+  let pollTimer = null;
+  let pollCount = 0;
+  const MAX_POLLS = 100; // 100 * 3s = 300s = 5 phút
+
+  function onFeedback(message, tone = 'fault') {
+    mount(formFeedback, h('p', { class: `badge badge--${tone}`, role: tone === 'fault' ? 'alert' : 'status' }, message));
+  }
+
+  function topupSection() {
+    const amountInput = h('input', {
+      class: 'input',
+      type: 'number',
+      min: 10000,
+      max: 5000000,
+      step: 10000,
+      placeholder: 'Số tiền (10.000 - 5.000.000 đ)',
+      value: 100000,
+      style: 'max-width:260px',
+    });
+    const submitButton = h('button', {
+      class: 'btn btn--primary',
+      type: 'submit',
+    }, 'Nạp tiền vào ví');
+
+    const presetAmounts = [50000, 100000, 200000, 500000];
+    const presetButtons = presetAmounts.map((amt) => h('button', {
+      class: 'btn btn--ghost',
+      type: 'button',
+      onclick: () => { amountInput.value = amt; },
+    }, formatDong(amt)));
+
+    return h('form', {
+      class: 'card',
+      style: 'padding:16px;display:grid;gap:12px',
+      onsubmit: async (e) => {
+        e.preventDefault();
+        const amount = Number(amountInput.value);
+        if (!Number.isInteger(amount) || amount < 10000 || amount > 5000000) {
+          onFeedback('Số tiền nạp phải là số nguyên từ 10.000 đ đến 5.000.000 đ', 'fault');
+          return;
+        }
+        submitButton.disabled = true;
+        submitButton.textContent = 'Đang chuyển tới cổng...';
+        mount(formFeedback);
+        try {
+          const idempotencyKey = `topup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          const res = await api('/api/me/wallet/topups', {
+            method: 'POST',
+            headers: { 'Idempotency-Key': idempotencyKey },
+            body: { amountDong: amount },
+          });
+          if (res.redirectUrl) {
+            window.location.href = res.redirectUrl;
+          } else {
+            onFeedback('Đã tạo đơn nạp tiền thành công', 'ready');
+            submitButton.disabled = false;
+            submitButton.textContent = 'Nạp tiền vào ví';
+          }
+        } catch (err) {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Nạp tiền vào ví';
+          onFeedback(err.message || 'Lỗi khi tạo yêu cầu nạp tiền', 'fault');
+        }
+      },
+    },
+    h('h2', { style: 'margin:0;font-size:16px' }, 'Nạp tiền qua cổng thanh toán'),
+    h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' },
+      h('span', { class: 'muted' }, 'Chọn nhanh:'),
+      ...presetButtons
+    ),
+    h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' },
+      amountInput,
+      submitButton
+    ),
+    formFeedback);
+  }
+
+  async function checkTopupStatus() {
+    if (disposed) return;
+    try {
+      const res = await api(`/api/me/wallet/topups/${encodeURIComponent(topupRef)}`);
+      if (disposed) return;
+      const { status, failureReason, amountDong } = res.topup;
+
+      if (status === 'PENDING') {
+        mount(topupTracker, h('div', { class: 'badge badge--warning', style: 'padding:12px;font-size:14px;display:flex;align-items:center;gap:8px' },
+          `Đang chờ thanh toán đơn ${topupRef} (${formatDong(amountDong)})... Hệ thống tự động kiểm tra mỗi 3 giây.`
+        ));
+      } else if (status === 'SUCCESS') {
+        if (pollTimer) clearInterval(pollTimer);
+        mount(topupTracker, h('div', { class: 'badge badge--ready', style: 'padding:12px;font-size:14px' },
+          `Nạp tiền thành công ${formatDong(amountDong)}! Số dư đã được cập nhật.`
+        ));
+        void loadPage();
+      } else if (status === 'FAILED') {
+        if (pollTimer) clearInterval(pollTimer);
+        mount(topupTracker, h('div', { class: 'badge badge--fault', style: 'padding:12px;font-size:14px' },
+          `Giao dịch nạp tiền thất bại: ${failureReason || 'Lỗi thanh toán từ cổng'}`
+        ));
+      } else if (status === 'CANCELLED') {
+        if (pollTimer) clearInterval(pollTimer);
+        mount(topupTracker, h('div', { class: 'badge badge--warning', style: 'padding:12px;font-size:14px' },
+          'Giao dịch nạp tiền đã bị hủy.'
+        ));
+      } else if (status === 'EXPIRED') {
+        if (pollTimer) clearInterval(pollTimer);
+        mount(topupTracker, h('div', { class: 'badge badge--fault', style: 'padding:12px;font-size:14px' },
+          'Giao dịch nạp tiền đã hết hạn (quá 30 phút).'
+        ));
+      }
+    } catch (err) {
+      if (pollTimer) clearInterval(pollTimer);
+      mount(topupTracker, h('div', { class: 'badge badge--fault', style: 'padding:12px;font-size:14px' },
+        `Không thể kiểm tra trạng thái đơn nạp: ${err.message}`
+      ));
+    }
+  }
+
+  if (topupRef) {
+    void checkTopupStatus();
+    pollTimer = setInterval(() => {
+      pollCount += 1;
+      if (pollCount >= MAX_POLLS) {
+        if (pollTimer) clearInterval(pollTimer);
+        mount(topupTracker, h('div', { class: 'badge badge--warning', style: 'padding:12px;font-size:14px' },
+          'Hết thời gian chờ phản hồi tự động (5 phút). Bạn có thể kiểm tra lại sau.'
+        ));
+        return;
+      }
+      void checkTopupStatus();
+    }, 3000);
+  }
+
+  function subscriptionSection(wallet) {
+    const sectionContainer = h('section', { class: 'card', style: 'padding:20px;display:grid;gap:12px' });
+    const sectionFeedback = h('div', { style: 'display:grid;gap:8px' });
+
+    async function loadPlans() {
+      try {
+        const [plansRes, activeSubRes] = await Promise.all([
+          api('/api/subscription-plans'),
+          api('/api/me/subscriptions'),
+        ]);
+        if (disposed) return;
+
+        // API trả MẢNG gói đang mở bán và MẢNG các lần đăng ký của tài xế; gói đang dùng là gói đã bắt đầu và chưa hết hạn.
+        const plans = Array.isArray(plansRes) ? plansRes : [];
+        const nowMs = Date.now();
+        const activeSub = (Array.isArray(activeSubRes) ? activeSubRes : [])
+          .find((sub) => Date.parse(sub.startsAt) <= nowMs && nowMs < Date.parse(sub.endsAt)) ?? null;
+
+        const subCard = activeSub
+          ? h('div', { class: 'card', style: 'padding:14px;background:var(--surface-sunken, #f8fafc);display:grid;gap:6px' },
+              h('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap' },
+                h('strong', { style: 'color:var(--brand-primary)' }, `Gói đang dùng: ${activeSub.planName || activeSub.planCode}`),
+                h('span', { class: 'badge badge--success' }, 'Đang hiệu lực')
+              ),
+              h('span', { class: 'muted' }, `Thời hạn: ${formatDateTime(activeSub.startsAt)} – ${formatDateTime(activeSub.endsAt)}`),
+              h('span', { class: 'muted' }, `Giá gói: ${formatDong(activeSub.priceDong)}`)
+            )
+          : h('div', { class: 'muted' }, 'Bạn chưa đăng ký gói thuê bao nào.');
+
+        const planCards = plans.map((plan) => {
+          const buyButton = h('button', {
+            class: 'btn btn--primary',
+            type: 'button',
+            disabled: !!activeSub,
+            onclick: async () => {
+              if (activeSub) return;
+              if (BigInt(wallet.balanceDong) < BigInt(plan.priceDong)) {
+                mount(sectionFeedback, h('p', { class: 'badge badge--fault' }, 'Số dư ví không đủ để mua gói này. Vui lòng nạp thêm tiền!'));
+                return;
+              }
+              buyButton.disabled = true;
+              buyButton.textContent = 'Đang xử lý...';
+              mount(sectionFeedback);
+              try {
+                const idempotencyKey = `sub-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+                await api('/api/me/subscriptions', {
+                  method: 'POST',
+                  headers: { 'Idempotency-Key': idempotencyKey },
+                  body: { planId: plan.id },
+                });
+                mount(sectionFeedback, h('p', { class: 'badge badge--success' }, 'Mua gói thuê bao thành công!'));
+                void loadPage();
+              } catch (err) {
+                buyButton.disabled = false;
+                buyButton.textContent = 'Mua gói';
+                mount(sectionFeedback, h('p', { class: 'badge badge--fault' }, err.message || 'Lỗi khi mua gói'));
+              }
+            },
+          }, activeSub ? 'Đã có gói' : 'Mua gói');
+
+          const periodDescriptions = (plan.periods || []).map((p) =>
+            `${Math.floor(p.startMinute / 60).toString().padStart(2, '0')}:${(p.startMinute % 60).toString().padStart(2, '0')} - ${Math.floor(p.endMinute / 60).toString().padStart(2, '0')}:${(p.endMinute % 60).toString().padStart(2, '0')}: ${formatDong(p.pricePerKwh)}/kWh`
+          ).join(', ');
+
+          return h('div', { class: 'card', style: 'padding:14px;display:grid;gap:8px' },
+            h('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap' },
+              h('strong', {}, plan.name),
+              h('strong', { style: 'color:var(--brand-primary);font-size:18px' }, formatDong(plan.priceDong))
+            ),
+            h('span', { class: 'muted' }, `Thời hạn: ${plan.durationDays} ngày`),
+            periodDescriptions ? h('span', { class: 'muted' }, `Biểu giá: ${periodDescriptions}`) : null,
+            buyButton
+          );
+        });
+
+        mount(sectionContainer,
+          h('h2', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
+          subCard,
+          planCards.length
+            ? h('div', { style: 'display:grid;gap:10px' }, ...planCards)
+            : h('p', { class: 'muted' }, 'Hiện chưa có gói thuê bao nào được mở bán.'),
+          sectionFeedback
+        );
+      } catch (err) {
+        mount(sectionContainer,
+          h('h2', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
+          h('div', { class: 'muted' }, `Không thể tải danh sách gói: ${err.message}`)
+        );
+      }
+    }
+
+    void loadPlans();
+    return sectionContainer;
+  }
+
   const prevButton = h('button', {
     class: 'btn',
     type: 'button',
@@ -80,9 +311,13 @@ export function render(ctx) {
   const pagination = h('div', {
     style: 'display:flex;align-items:center;justify-content:space-between;gap:12px',
   }, prevButton, pageLabel, nextButton);
+  const subscriptionSlot = h('div');
 
   ctx.root.replaceChildren(
     h('header', {}, h('p', { class: 'eyebrow' }, 'Tài xế'), h('h1', { class: 'page-head__title' }, 'Ví của tôi')),
+    topupTracker,
+    topupSection(),
+    subscriptionSlot,
     content,
     pagination
   );
@@ -107,6 +342,7 @@ export function render(ctx) {
       prevButton.disabled = currentPage <= 1;
       nextButton.disabled = !transactions.hasMore;
       const balance = BigInt(wallet.balanceDong);
+      mount(subscriptionSlot, subscriptionSection(wallet));
       const banners = [
         wallet.inDebt
           ? h('p', { class: 'badge badge--warning', role: 'status' }, `Đang nợ ${formatDong(-balance)}.`)
@@ -144,5 +380,8 @@ export function render(ctx) {
   }
 
   void loadPage();
-  return () => { disposed = true; };
+  return () => {
+    disposed = true;
+    if (pollTimer) clearInterval(pollTimer);
+  };
 }
