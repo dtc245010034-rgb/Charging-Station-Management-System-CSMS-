@@ -195,6 +195,16 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `POWER_SCHEDULE_TICK_MS` | Chu kỳ job quét ranh giới khung giờ công suất và rebalance trạm (S-45) | Mili giây | `15000` |
 | `RESERVATION_EXPIRY_JOB_MS` | Chu kỳ job quét chỗ đặt quá hạn và trừ phí không đến (S-50) | Mili giây | `15000` |
 | `DEMO_PASSWORD` | Mật khẩu tài khoản dựng sẵn khi khởi tạo demo qua `npm run seed-demo` (≥ 12 ký tự) | Chuỗi bí mật | — |
+| `ALLOW_DEMO_SEED` | Cờ xác nhận môi trường demo; `npm run seed-demo` chỉ chạy khi bằng `1`; không bật trên dữ liệu thật | `1` | không đặt |
+| `DEMO_EMAIL_DOMAIN` | Miền email tài khoản demo (`owner@<miền>`…) | Tên miền | `demo.csms.local` |
+| `DEMO_STATUSES` | `1`: trụ mới của seed demo nhận trạng thái OCPP xoay vòng; `0`: để `UNKNOWN` | `0` hoặc `1` | `1` |
+| `ALLOW_WEAK_ADMIN_PASSWORD` | Chỉ máy cá nhân: cho `npm run create-admin` nhận mật khẩu ngắn tới 4 ký tự; bị từ chối khi `NODE_ENV=production` | `1` | không đặt |
+| `APP_BASE_URL` | Địa chỉ server mà `tools/demo-smoke.js` gọi (công cụ, server không đọc) | URL | `http://localhost:3000` |
+| `NODE_ENV` | Môi trường chạy; `production` bật cookie `Secure` và từ chối mật khẩu yếu | `development`, `test`, `production` | `development` |
+| `OCPP_COMMAND_TIMEOUT_SECONDS` | Thời gian chờ phản hồi CALL từ trụ trước khi báo hết hạn | Giây | `30` |
+| `ALERT_OFFLINE_THRESHOLD_MINUTES` | Trụ không gửi tin quá số phút này thì bị coi là ngoại tuyến và mở cảnh báo | Phút | `10` |
+| `ALERT_ERROR_WINDOW_MINUTES` | Cửa sổ thời gian đếm lỗi đầu nối của một trụ để mở cảnh báo lỗi | Phút | `30` |
+| `ALERT_ERROR_THRESHOLD` | Số lỗi đầu nối trong cửa sổ trên từ đó mở cảnh báo lỗi | Số lỗi | `5` |
 
 ---
 
