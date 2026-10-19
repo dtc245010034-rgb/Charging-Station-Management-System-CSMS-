@@ -40,7 +40,7 @@ function stubLeaflet() {
       else delete globalThis[name];
     }
   };
-  return { marker, restore };
+  return { marker, restore, FakeNode };
 }
 
 describe('C1: bản đồ trạm không chèn HTML từ tên trạm', () => {
@@ -52,7 +52,7 @@ describe('C1: bản đồ trạm không chèn HTML từ tên trạm', () => {
       const stub = stubLeaflet();
       restore = stub.restore;
       const { createStationMap } = await load('components/station-map.js');
-      const map = createStationMap(new Node(), { onSelect() {} });
+      const map = createStationMap(new stub.FakeNode(), { onSelect() {} });
       map.update([{ id: 1, name: payload, lat: 10, lng: 106, group: 'ok' }]);
       await map.ready;
 
@@ -66,7 +66,7 @@ describe('C1: bản đồ trạm không chèn HTML từ tên trạm', () => {
       const stub = stubLeaflet();
       restore = stub.restore;
       const { createStationMap } = await load('components/station-map.js');
-      const map = createStationMap(new Node(), { onSelect() {} });
+      const map = createStationMap(new stub.FakeNode(), { onSelect() {} });
       map.update([{ id: 1, name: 'Trạm A', lat: 10, lng: 106, group: 'ok' }]);
       await map.ready;
       map.update([{ id: 1, name: payload, lat: 10, lng: 106, group: 'ok' }]);
@@ -82,7 +82,7 @@ describe('C1: bản đồ trạm không chèn HTML từ tên trạm', () => {
     const stub = stubLeaflet();
     restore = stub.restore;
     const { createStationMap } = await load('components/station-map.js');
-    const map = createStationMap(new Node(), { onSelect() {} });
+    const map = createStationMap(new stub.FakeNode(), { onSelect() {} });
     map.update([{ id: 1, name: 'Trạm sạc Nguyễn Văn Cừ', lat: 10, lng: 106, group: 'ok' }, { id: 2, name: null, lat: 11, lng: 106, group: 'ok' }]);
     await map.ready;
     assert.strictEqual(stub.marker.tooltips[0].textContent, 'Trạm sạc Nguyễn Văn Cừ');
