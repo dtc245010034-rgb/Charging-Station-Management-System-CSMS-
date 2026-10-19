@@ -21,7 +21,7 @@
 
 ## 2. Kiểm tra chất lượng mã nguồn (T - 20 phút)
 - [ ] **Kiểm tra Lint**: Chạy `python test.py --lint-only` -> KẾT QUẢ: ĐẠT.
-- [ ] **Kiểm tra Unit Tests**: Chạy `python test.py --only unit` -> KẾT QUẢ: ĐẠT (504+ test pass).
+- [ ] **Kiểm tra Unit Tests**: Chạy `python test.py --only unit` -> KẾT QUẢ: ĐẠT (không còn test đỏ).
 - [ ] **Kiểm tra Acceptance Chặng 9**:
   ```bash
   python test.py --file tests/acceptance/S-45.power-windows.test.js
@@ -36,14 +36,15 @@
 ## 3. Khởi tạo dữ liệu mẫu (T - 15 phút)
 - [ ] **Nạp dữ liệu mẫu Demo**:
   ```bash
-  node tools/seed-demo.js
+  cd backend
+  ALLOW_DEMO_SEED=1 npm run seed-demo      # cần DATABASE_URL trỏ đúng CSDL demo và DEMO_PASSWORD (>= 12 ký tự)
   ```
-  Xác nhận in ra: `Khởi tạo dữ liệu mẫu Demo THÀNH CÔNG (Idempotent)`.
+  Xác nhận in ra dòng `Seed demo xong: ...` và `Dữ liệu nền mới: ...`. Đây là bộ seed duy nhất; chạy lại lần hai phải in `0 tài khoản mới, 0 trạm mới, 0 trụ mới` và `0 biểu giá, 0 khung công suất, 0 lần nạp ví, 0 gói thuê bao`.
 - [ ] **Chạy kiểm khói toàn diện qua API thật**:
   ```bash
-  node tools/demo-smoke.js
+  node tools/demo-smoke.js     # cần server đang chạy và cùng DEMO_PASSWORD
   ```
-  Xác nhận in ra: `KẾT QUẢ KIỂM KHÓI: 12/12 BƯỚC ĐẠT (PASS)`.
+  Xác nhận in ra: `KẾT QUẢ KIỂM KHÓI: 6/6 NHÓM ĐẠT (PASS)` (thoát mã khác 0 nếu có nhóm lỗi).
 
 ---
 
@@ -52,9 +53,9 @@
 - [ ] Mở sẵn địa chỉ ứng dụng: `http://localhost:3000`.
 - [ ] Mở sẵn tài liệu [`KICH-BAN-DEMO.md`](KICH-BAN-DEMO.md) trên màn hình thứ hai để theo dõi.
 - [ ] Chuẩn bị sẵn danh sách tài khoản demo:
-  * Quản trị: `demo.admin@csms.local`
-  * Kế toán: `demo.accountant@csms.local`
-  * Vận hành: `demo.operator@csms.local`
-  * Chủ trạm: `demo.owner1@csms.local`
-  * Tài xế: `demo.driver@csms.local`
+  * Quản trị: `admin@demo.csms.local`
+  * Kế toán: `accountant@demo.csms.local`
+  * Vận hành: `operator@demo.csms.local`
+  * Chủ trạm: `owner@demo.csms.local` (và `owner2@demo.csms.local`)
+  * Tài xế: `driver@demo.csms.local`
   * Mật khẩu: `$DEMO_PASSWORD`

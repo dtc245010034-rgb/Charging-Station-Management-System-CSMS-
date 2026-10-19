@@ -28,7 +28,7 @@ describe('GYM-14 seed-demo', () => {
     assert.strictEqual(r.status, 0, r.stderr);
     assert.ok(!r.stdout.includes(demo.DEMO_PASSWORD) && !r.stderr.includes(demo.DEMO_PASSWORD));
     const roles = await query("SELECT u.email, array_agg(r.code ORDER BY r.code) AS roles FROM users u JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id GROUP BY u.email ORDER BY u.email");
-    assert.strictEqual(roles.rowCount, 6);
+    assert.strictEqual(roles.rowCount, 7); // C2: thêm tài khoản admin demo cho demo-smoke
     assert.deepStrictEqual(roles.rows.find((x) => x.email.startsWith('multi@')).roles, ['OPERATOR', 'STATION_OWNER']);
     const counts = (await query('SELECT (SELECT count(*)::int FROM stations) s, (SELECT count(*)::int FROM charge_points) c, (SELECT count(*)::int FROM connectors) k')).rows[0];
     assert.deepStrictEqual(counts, { s: 6, c: 12, k: 24 });
@@ -41,7 +41,7 @@ describe('GYM-14 seed-demo', () => {
     const r = run('scripts/seed-demo.js', [], demo);
     assert.strictEqual(r.status, 0, r.stderr);
     assert.match(r.stdout, /0 tài khoản mới, 0 trạm mới, 0 trụ mới/);
-    assert.strictEqual((await query('SELECT count(*)::int n FROM users')).rows[0].n, 6);
+    assert.strictEqual((await query('SELECT count(*)::int n FROM users')).rows[0].n, 7);
     assert.strictEqual((await query("SELECT status FROM charge_points WHERE code = 'DEMO-ST01-CP1'")).rows[0].status, 'Available');
   });
 

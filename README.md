@@ -131,7 +131,7 @@ ngrok http 3000 --url https://abc.ngrok.dev              # mở tunnel, chạy �
 python3 run.py --local                                   # quay về chế độ chạy trên máy này
 ```
 
-Chế độ này bật cookie `Secure` (`NODE_ENV=production`), đặt `TRUST_PROXY=1`, sinh **mật khẩu ngẫu nhiên** cho admin và tài khoản demo (in một lần), ép cổng ứng dụng và Postgres chỉ mở cho `127.0.0.1`, và **từ chối khởi động nếu DB còn tài khoản mật khẩu mặc định** (`admin/admin`, `demo12345`): khi đó chạy `python3 run.py reset --yes` rồi chạy lại. Chi tiết: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) mục 3.
+Chế độ này bật cookie `Secure` (`NODE_ENV=production`), đặt `TRUST_PROXY=1`, sinh **mật khẩu ngẫu nhiên** cho admin và tài khoản demo (in một lần), ép cổng ứng dụng và Postgres chỉ mở cho `127.0.0.1`, và **từ chối khởi động nếu DB còn tài khoản mật khẩu mặc định** (`admin/admin`, `demo12345`, `demo12345678`): khi đó chạy `python3 run.py reset --yes` rồi chạy lại. Chi tiết: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) mục 3.
 
 - **Tên miền ngrok:** tài khoản miễn phí có 1 tên miền "development"; đuôi tên miền có thể là `ngrok.dev` hoặc `ngrok-free.app`, `run.py` nhận mọi địa chỉ `https://` gốc. Cú pháp `--url` theo [tài liệu ngrok](https://ngrok.com/docs/agent/cli/) (`--domain` đã bị đánh dấu lỗi thời); kiểm bằng `ngrok http --help`.
 - **Giới hạn gói miễn phí ngrok** ([nguồn](https://ngrok.com/docs/pricing-limits/free-plan-limits)): 20.000 yêu cầu HTTP, 1 GB dữ liệu ra và 5.000 kết nối TCP mỗi tháng; trang cảnh báo chỉ hiện với trình duyệt. Chưa kiểm chứng WebSocket OCPP qua ngrok thật: thử 1 trụ ảo bằng `wss://` trước.
@@ -145,9 +145,9 @@ Chỉ có **trên máy cá nhân** (do `python run.py` tạo):
 | Tài khoản | Mật khẩu | Vai trò |
 |---|---|---|
 | `admin@csms.local` | `admin` | Quản trị |
-| `owner@`, `owner2@`, `operator@`, `accountant@`, `driver@`, `multi@` + `demo.csms.local` | `demo12345` | Chủ trạm A, Chủ trạm B, Vận hành, Kế toán, Tài xế, Vận hành + Chủ trạm |
+| `admin@`, `owner@`, `owner2@`, `operator@`, `accountant@`, `driver@`, `multi@` + `demo.csms.local` | `demo12345678` | Quản trị (demo), Chủ trạm A, Chủ trạm B, Vận hành, Kế toán, Tài xế, Vận hành + Chủ trạm |
 
-> ⚠️ **`admin/admin` và `demo12345` chỉ dành cho máy cá nhân.** Chúng chỉ được tạo khi cổng mở riêng cho `127.0.0.1` (mặc định). Đặt `BIND_HOST=0.0.0.0` hoặc dùng `--public-url` thì script tự sinh mật khẩu ngẫu nhiên và in một lần. Mật khẩu yếu bị **từ chối tuyệt đối khi `NODE_ENV=production`**; staging Render **không có tài khoản mặc định**.
+> ⚠️ **`admin/admin` và `demo12345678` chỉ dành cho máy cá nhân.** Chúng chỉ được tạo khi cổng mở riêng cho `127.0.0.1` (mặc định). Đặt `BIND_HOST=0.0.0.0` hoặc dùng `--public-url` thì script tự sinh mật khẩu ngẫu nhiên và in một lần. Mật khẩu yếu bị **từ chối tuyệt đối khi `NODE_ENV=production`**; staging Render **không có tài khoản mặc định**.
 > Đã đổi mật khẩu admin thì chạy lại `python run.py` không đổi lại; quên mật khẩu thì `python run.py reset`.
 
 ### Biến môi trường
@@ -194,7 +194,7 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `AUDIT_DENIED_LIMIT_PER_MINUTE` | Số dòng `ACCESS_DENIED` tối đa ghi vào `audit_logs` mỗi tài khoản (phản hồi vẫn 403) | Dòng/phút | `20` |
 | `POWER_SCHEDULE_TICK_MS` | Chu kỳ job quét ranh giới khung giờ công suất và rebalance trạm (S-45) | Mili giây | `15000` |
 | `RESERVATION_EXPIRY_JOB_MS` | Chu kỳ job quét chỗ đặt quá hạn và trừ phí không đến (S-50) | Mili giây | `15000` |
-| `DEMO_PASSWORD` | Mật khẩu tài khoản dựng sẵn khi khởi tạo demo qua `tools/seed-demo.js` (≥ 12 ký tự) | Chuỗi bí mật | — |
+| `DEMO_PASSWORD` | Mật khẩu tài khoản dựng sẵn khi khởi tạo demo qua `npm run seed-demo` (≥ 12 ký tự) | Chuỗi bí mật | — |
 
 ---
 

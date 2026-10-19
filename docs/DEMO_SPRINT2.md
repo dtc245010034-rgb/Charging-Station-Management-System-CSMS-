@@ -39,7 +39,7 @@ Mọi kết quả "mong đợi" bên dưới đã được chạy thật trên b
    | Cửa sổ | Dùng để | Lệnh / địa chỉ |
    |---|---|---|
    | Trình duyệt 1 | **Admin** (trang Trạng thái trụ) | `admin@csms.local` / `admin` |
-   | Trình duyệt 2 (ẩn danh) | **Chủ trạm 2** | `owner2@demo.csms.local` / `demo12345` |
+   | Trình duyệt 2 (ẩn danh) | **Chủ trạm 2** | `owner2@demo.csms.local` / `demo12345678` |
    | Terminal A | Trụ ảo | `node tools/demo-charge-point.js DEMO-ST05-CP1` |
    | Terminal B | Log ứng dụng | `python run.py logs` |
 
@@ -52,9 +52,9 @@ Mọi kết quả "mong đợi" bên dưới đã được chạy thật trên b
 | Tài khoản | Mật khẩu | Thấy gì |
 |---|---|---|
 | `admin@csms.local` | `admin` | Tất cả; **khoá/mở khoá trạm**; Reset |
-| `operator@demo.csms.local` | `demo12345` | Tất cả trạm; Reset |
-| `owner@demo.csms.local` | `demo12345` | 4 trạm ST01–ST04; **không** có nút Reset |
-| `owner2@demo.csms.local` | `demo12345` | 2 trạm ST05–ST06 |
+| `operator@demo.csms.local` | `demo12345678` | Tất cả trạm; Reset |
+| `owner@demo.csms.local` | `demo12345678` | 4 trạm ST01–ST04; **không** có nút Reset |
+| `owner2@demo.csms.local` | `demo12345678` | 2 trạm ST05–ST06 |
 
 | Mã trụ | Trạm | Trạng thái trạm | Dùng cho |
 |---|---|---|---|

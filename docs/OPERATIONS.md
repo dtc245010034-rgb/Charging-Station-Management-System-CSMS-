@@ -33,7 +33,7 @@ Script (`run.py`, chỉ dùng thư viện chuẩn của Python) làm theo thứ 
 Tuỳ chọn: `--port N`, `--no-open`, `--no-demo`, `--rebuild`. Máy chưa build gì chạy đúng lệnh này là đủ.
 
 ### Tài khoản trên máy cá nhân
-`admin@csms.local` / `admin`; demo `owner@`, `owner2@`, `operator@`, `accountant@`, `driver@`, `multi@` + `demo.csms.local` / `demo12345`.
+`admin@csms.local` / `admin`; demo `owner@`, `owner2@`, `operator@`, `accountant@`, `driver@`, `multi@`, `admin@` + `demo.csms.local` / `demo12345678`.
 
 **Chốt chặn an toàn:**
 - Chỉ tạo mật khẩu yếu khi `BIND_HOST` là `127.0.0.1` (mặc định của `docker-compose.yml`, cổng chỉ mở cho máy này). Đặt `BIND_HOST=0.0.0.0` trong `.env` để máy khác truy cập thì admin dùng **mật khẩu ngẫu nhiên** in ra một lần.
@@ -53,7 +53,7 @@ python run.py --local        # quay về chế độ chạy trên máy này
 
 Chế độ này tự áp các chốt chặn (đã kiểm chứng bằng docker giả, chưa thử với ngrok thật):
 - `APP_ORIGIN` = địa chỉ công khai (không bị ghi đè về `localhost`). Chỉ nhận `https://` gốc, không nhận `localhost`, đường dẫn hay tài khoản trong URL.
-- **Không bao giờ** dùng mật khẩu `admin`/`admin` hay `demo12345`: mật khẩu admin và demo là ngẫu nhiên (in một lần; mật khẩu demo lưu trong `.env`, chmod 600).
+- **Không bao giờ** dùng mật khẩu `admin`/`admin` hay `demo12345678`: mật khẩu admin và demo là ngẫu nhiên (in một lần; mật khẩu demo lưu trong `.env`, chmod 600).
 - **Từ chối chạy** nếu database còn tài khoản mật khẩu mặc định từ lần chạy local trước (đăng nhập thử `admin@csms.local`/`admin` và các tài khoản demo); app bị dừng, rồi chạy `python run.py reset --yes` và chạy lại.
 - `NODE_ENV=production` (cookie đăng nhập có cờ `Secure`; truy cập bằng địa chỉ HTTPS công khai) và `TRUST_PROXY=1` (giới hạn đăng nhập theo IP thật, không dồn về IP của tunnel).
 - `BIND_HOST` bị ép về `127.0.0.1`: cổng ứng dụng và Postgres chỉ mở cho máy này, ra Internet chỉ qua tunnel.
@@ -138,11 +138,12 @@ Cổng vẫn bị chiếm sau khi tắt (process mồ côi): `lsof -i :3000` (Li
 Khởi tạo dữ liệu mẫu cho buổi demo (chạy sau khi server app & db đã sẵn sàng):
 ```bash
 export DEMO_PASSWORD="MatKhauDemoBaoMat2026!"
-node tools/seed-demo.js
+cd backend && ALLOW_DEMO_SEED=1 npm run seed-demo
 ```
-Kiểm khói toàn diện các luồng API thật của 5 vai trò (Driver, Owner, Operator, Accountant, Admin):
+Đây là bộ seed duy nhất (idempotent, chạy lại không nhân đôi dữ liệu). Danh sách tài khoản nằm ở `backend/scripts/lib/demo-accounts.js`.
+Kiểm khói toàn diện các luồng API thật của 5 vai trò (Driver, Owner, Operator, Accountant, Admin); kỳ vọng `6/6 NHÓM ĐẠT`, thoát mã ≠ 0 nếu có nhóm lỗi:
 ```bash
-node tools/demo-smoke.js
+DEMO_PASSWORD="MatKhauDemoBaoMat2026!" node tools/demo-smoke.js
 ```
 Xem thêm chi tiết tại [`docs/demo/KICH-BAN-DEMO.md`](demo/KICH-BAN-DEMO.md) và [`docs/demo/CHECKLIST-TRUOC-DEMO.md`](demo/CHECKLIST-TRUOC-DEMO.md).
 
@@ -237,7 +238,7 @@ Kiểm tra nhanh sau mỗi lần deploy: `/api/health` → `"ok":true`; đăng n
 | `OCPP_HANDSHAKE_LIMIT_PER_10S` | cả hai | Không | `5` lần bắt tay/10 giây/(IP, mã trụ), kiểm trước khi truy vấn DB |
 | `AUDIT_DENIED_LIMIT_PER_MINUTE` | cả hai | Không | `20` dòng `ACCESS_DENIED`/phút/tài khoản trong `audit_logs` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | cho `create-admin` | Khi tạo admin | mật khẩu ≥ 12 ký tự, tránh ký tự `#` |
-| `ALLOW_DEMO_SEED`, `DEMO_PASSWORD`, `DEMO_EMAIL_DOMAIN`, `DEMO_STATUSES` | cho `seed-demo` | Khi seed | `=1` xác nhận; mật khẩu ≥ 8; miền mặc định `demo.csms.local`; `DEMO_STATUSES=0` để trụ ở trạng thái chưa rõ |
+| `ALLOW_DEMO_SEED`, `DEMO_PASSWORD`, `DEMO_EMAIL_DOMAIN`, `DEMO_STATUSES` | cho `seed-demo` | Khi seed | `=1` xác nhận; mật khẩu ≥ 12; miền mặc định `demo.csms.local`; `DEMO_STATUSES=0` để trụ ở trạng thái chưa rõ |
 | `CSMS_SKIP_DOTENV` | chỉ test | Không | `=1` bỏ nạp `backend/.env` |
 | `BIND_HOST` | `.env` gốc | Không | `127.0.0.1` (chỉ máy này). `0.0.0.0` để máy khác truy cập — khi đó `run.py` không tạo mật khẩu yếu |
 | `ALLOW_WEAK_ADMIN_PASSWORD` | chỉ `run.py` | Không | `=1` hạ ngưỡng mật khẩu `create-admin` xuống 4 ký tự; bị từ chối khi `NODE_ENV=production` |
