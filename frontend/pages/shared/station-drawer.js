@@ -11,115 +11,6 @@ import { openStationForm } from './station-form.js';
 
 const slug = (text) => text.normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toUpperCase().slice(0, 24) || 'STATION';
 
-function powerWindowSection(station, canWrite, reload) {
-  if (!canWrite) return null;
-  const start = h('input', { class: 'input', type: 'text', inputmode: 'numeric', placeholder: '08:00', pattern: '(?:[01]\\d|2[0-3]):[0-5]\\d', required: true, 'aria-label': 'Giờ bắt đầu' });
-  const end = h('input', { class: 'input', type: 'text', inputmode: 'numeric', placeholder: '18:00 hoặc 24:00', pattern: '(?:(?:[01]\\d|2[0-3]):[0-5]\\d|24:00)', required: true, 'aria-label': 'Giờ kết thúc' });
-  const limit = h('input', { class: 'input', type: 'text', inputmode: 'decimal', placeholder: 'Ví dụ 30.0', required: true, 'aria-label': 'Hạn mức kW' });
-  const error = h('p', { class: 'form-alert', role: 'alert', hidden: true });
-  const rows = h('div', { class: 'list-rows' }, loadingState());
-  const baseLimitRequired = station.power?.limitKw === null || station.power?.limitKw === undefined;
-  const form = h('form', {
-    class: 'stack',
-    novalidate: true,
-    onsubmit: async (event) => {
-      event.preventDefault();
-      error.hidden = true;
-      const startMatch = /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(start.value);
-      const endMatch = /^(?:(?:[01]\d|2[0-3]):[0-5]\d|24:00)$/.test(end.value);
-      const toMinute = (value) => value === '24:00' ? 1440 : Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
-      if (!startMatch || !endMatch || toMinute(end.value) <= toMinute(start.value)) {
-        error.textContent = 'Nhập giờ hợp lệ và giờ kết thúc phải sau giờ bắt đầu.';
-        error.hidden = false;
-        return;
-      }
-      if (!/^\d+(?:\.\d)?$/.test(limit.value.trim()) || Number(limit.value) <= 0 || Number(limit.value) > 100000) {
-        error.textContent = 'Hạn mức phải lớn hơn 0 và tối đa 100.000 kW, tối đa 1 chữ số thập phân.';
-        error.hidden = false;
-        return;
-      }
-      const submit = form.querySelector('button[type="submit"]');
-      submit.disabled = true;
-      try {
-        await csms.stations.createPowerWindow(station.id, {
-          startTime: start.value,
-          endTime: end.value,
-          limitKw: limit.value.trim(),
-        });
-        toast('Đã thêm khung giờ hạn mức.');
-        await reload();
-      } catch (requestError) {
-        error.textContent = requestError.message;
-        error.hidden = false;
-        submit.disabled = false;
-      }
-    },
-  },
-  h('div', { class: 'form-grid' },
-    h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Bắt đầu'), start),
-    h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Kết thúc'), end),
-    h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Hạn mức (kW)'), limit)),
-  h('div', { class: 'toolbar' }, h('button', { class: 'btn btn--primary', type: 'submit', disabled: baseLimitRequired }, icon('plus'), 'Thêm khung giờ')),
-  error);
-
-  async function load() {
-    try {
-      const windows = await csms.stations.powerWindows(station.id);
-      const windowRows = windows.length
-        ? windows.map((window) => {
-          const remove = h('button', {
-            class: 'btn btn--ghost',
-            type: 'button',
-            'aria-label': `Xoá khung ${window.startTime}–${window.endTime}`,
-            onclick: () => {
-              const cancel = h('button', { class: 'btn', type: 'button' }, 'Giữ lại');
-              const confirm = h('button', { class: 'btn btn--danger', type: 'button' }, 'Xoá khung giờ');
-              const modal = openModal({
-                title: 'Xoá khung giờ hạn mức?',
-                body: h('p', {}, `Khung ${window.startTime}–${window.endTime} sẽ không còn được áp dụng.`),
-                footer: [cancel, confirm],
-              });
-              cancel.addEventListener('click', () => modal.close());
-              confirm.addEventListener('click', async () => {
-                confirm.disabled = true;
-                try {
-                  await csms.stations.deletePowerWindow(station.id, window.id);
-                  modal.close();
-                  toast('Đã xoá khung giờ hạn mức.');
-                  await reload();
-                } catch (requestError) {
-                  modal.close();
-                  error.textContent = requestError.message;
-                  error.hidden = false;
-                }
-              });
-            },
-          }, icon('x'), 'Xoá');
-          return h('div', { class: 'list-row' },
-            h('div', {}, h('div', { class: 'cell-strong' }, `${window.startTime}–${window.endTime}`),
-              h('div', { class: 'cell-sub' }, `${window.limitKw} kW · giờ địa phương của trạm`)),
-            remove);
-        })
-        : [emptyState({ iconName: 'calendar', title: 'Chưa có khung giờ hạn mức' })];
-      rows.replaceChildren(...windowRows);
-    } catch (requestError) {
-      rows.replaceChildren(errorState({
-        message: requestError.message,
-        onRetry: load,
-      }));
-    }
-  }
-
-  const section = h('section', { class: 'stack' },
-    h('div', { class: 'section-title' }, 'Hạn mức theo khung giờ'),
-    h('p', { class: 'field__hint' }, `Khung lặp lại hằng ngày theo múi giờ ${station.timezone || 'Asia/Ho_Chi_Minh'}.`),
-    baseLimitRequired && h('p', { class: 'field__hint' }, 'Cần khai hạn mức nền trong “Sửa thông tin trạm” trước khi thêm khung giờ.'),
-    rows,
-    form);
-  load();
-  return section;
-}
-
 function chargePointForm(station, canWrite, reload) {
   if (!canWrite) return null;
   const code = h('input', { class: 'input', id: 'cp-code', maxlength: 50, autocomplete: 'off', required: true, 'aria-describedby': 'cp-hint' });
@@ -240,6 +131,151 @@ function operatingStatusSection(station, canWrite, reload) {
     error);
 }
 
+function powerWindowsSection(station, canWrite, reload) {
+  if (!canWrite) return null;
+  const container = h('section', { class: 'stack' });
+  const title = h('div', { class: 'section-title' }, 'Hạn mức theo giờ');
+  const errorEl = h('p', { class: 'form-alert', role: 'alert', hidden: true });
+
+  if (station.power?.limitKw === null || station.power?.limitKw === undefined) {
+    container.append(
+      title,
+      h('p', { class: 'field__hint' }, 'Cần khai báo hạn mức nền của trạm trước khi cài đặt hạn mức theo giờ.')
+    );
+    return container;
+  }
+
+  const listEl = h('div', { class: 'stack' });
+
+  async function refreshWindows() {
+    errorEl.hidden = true;
+    try {
+      const windows = await csms.stations.powerWindows.list(station.id);
+      listEl.replaceChildren();
+      if (!windows.length) {
+        listEl.append(h('p', { class: 'field__hint' }, 'Chưa có khung giờ nào được thiết lập.'));
+        return;
+      }
+      for (const w of windows) {
+        const delBtn = h('button', {
+          class: 'btn btn--sm btn--danger',
+          type: 'button',
+          onclick: async () => {
+            delBtn.disabled = true;
+            try {
+              await csms.stations.powerWindows.delete(station.id, w.id);
+              toast('Đã xoá khung giờ.');
+              await refreshWindows();
+              await reload();
+            } catch (err) {
+              errorEl.textContent = err.message;
+              errorEl.hidden = false;
+              delBtn.disabled = false;
+            }
+          },
+        }, 'Xoá');
+
+        const row = h('div', {
+          class: 'list-row',
+          style: 'display:flex;justify-content:space-between;align-items:center',
+        },
+          h('span', {}, `${w.startTime} – ${w.endTime}: ${formatKw(w.limitKw)}`),
+          delBtn
+        );
+        listEl.append(row);
+      }
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    }
+  }
+
+  const startInput = h('input', { class: 'input', type: 'time', required: true, style: 'width:120px' });
+  const endInput = h('input', { class: 'input', type: 'time', required: true, style: 'width:120px' });
+  const kwInput = h('input', { class: 'input', type: 'number', step: '0.1', min: '0.1', max: '100000', placeholder: 'kW', required: true, style: 'width:100px' });
+
+  const addBtn = h('button', { class: 'btn btn--primary', type: 'button' }, 'Thêm khung');
+  const overnightBtn = h('button', { class: 'btn', type: 'button' }, 'Qua nửa đêm');
+
+  addBtn.onclick = async () => {
+    errorEl.hidden = true;
+    const startTime = startInput.value.trim();
+    const endTime = endInput.value.trim();
+    const limitKw = Number(kwInput.value);
+    if (!startTime || !endTime) {
+      errorEl.textContent = 'Vui lòng nhập giờ bắt đầu và kết thúc';
+      errorEl.hidden = false;
+      return;
+    }
+    if (!limitKw || limitKw <= 0) {
+      errorEl.textContent = 'Hạn mức công suất (kW) phải lớn hơn 0';
+      errorEl.hidden = false;
+      return;
+    }
+    addBtn.disabled = true;
+    try {
+      await csms.stations.powerWindows.create(station.id, { startTime, endTime, limitKw });
+      toast('Đã thêm khung giờ.');
+      startInput.value = '';
+      endInput.value = '';
+      kwInput.value = '';
+      await refreshWindows();
+      await reload();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    } finally {
+      addBtn.disabled = false;
+    }
+  };
+
+  overnightBtn.onclick = async () => {
+    errorEl.hidden = true;
+    const startTime = startInput.value.trim();
+    const endTime = endInput.value.trim();
+    const limitKw = Number(kwInput.value);
+    if (!startTime || !endTime) {
+      errorEl.textContent = 'Vui lòng nhập giờ bắt đầu và kết thúc';
+      errorEl.hidden = false;
+      return;
+    }
+    if (!limitKw || limitKw <= 0) {
+      errorEl.textContent = 'Hạn mức công suất (kW) phải lớn hơn 0';
+      errorEl.hidden = false;
+      return;
+    }
+    overnightBtn.disabled = true;
+    try {
+      await csms.stations.powerWindows.create(station.id, { startTime, endTime: '24:00', limitKw });
+      await csms.stations.powerWindows.create(station.id, { startTime: '00:00', endTime, limitKw });
+      toast('Đã tạo 2 khung giờ qua nửa đêm.');
+      startInput.value = '';
+      endInput.value = '';
+      kwInput.value = '';
+      await refreshWindows();
+      await reload();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    } finally {
+      overnightBtn.disabled = false;
+    }
+  };
+
+  const formEl = h('div', { class: 'stack', style: 'margin-top:8px' },
+    h('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' },
+      h('label', { style: 'display:flex;flex-direction:column;font-size:12px' }, 'Bắt đầu', startInput),
+      h('label', { style: 'display:flex;flex-direction:column;font-size:12px' }, 'Kết thúc', endInput),
+      h('label', { style: 'display:flex;flex-direction:column;font-size:12px' }, 'Công suất (kW)', kwInput),
+    ),
+    h('div', { style: 'display:flex;gap:8px;margin-top:4px' }, addBtn, overnightBtn)
+  );
+
+  container.append(title, listEl, formEl, errorEl);
+  void refreshWindows();
+  return container;
+}
+
 function render(station, { canWrite, canLock, onEdit, reload, onOpenChargePoint }) {
   const points = station.charge_points ?? [];
   return [
@@ -251,7 +287,7 @@ function render(station, { canWrite, canLock, onEdit, reload, onOpenChargePoint 
       h('dt', {}, 'Vĩ độ'), h('dd', {}, coordinate(station.latitude)),
       h('dt', {}, 'Kinh độ'), h('dd', {}, coordinate(station.longitude))),
     operatingStatusSection(station, canWrite, reload),
-    powerWindowSection(station, canWrite, reload),
+    powerWindowsSection(station, canWrite, reload),
     h('section', {},
       h('div', { class: 'section-title' }, `Trụ sạc (${points.length})`),
       points.length

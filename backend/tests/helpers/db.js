@@ -49,9 +49,16 @@ async function truncateAll() {
     ALTER TABLE settlement_statements DISABLE TRIGGER settlement_statements_no_truncate;
     ALTER TABLE settlement_lines DISABLE TRIGGER settlement_lines_no_truncate;
     ALTER TABLE wallet_ledger DISABLE TRIGGER wallet_ledger_no_truncate;
+    ALTER TABLE subscription_plans DISABLE TRIGGER subscription_plans_no_truncate;
+    ALTER TABLE subscription_plan_periods DISABLE TRIGGER subscription_plan_periods_no_truncate;
+    ALTER TABLE subscriptions DISABLE TRIGGER subscriptions_no_truncate;
     TRUNCATE audit_logs, login_throttle, connectors, charge_points, stations, user_roles, users,
       tariffs, tariff_periods, wallets, wallet_ledger, wallet_topups, notifications, email_outbox,
-      partner_share_rates, settlement_statements, settlement_lines RESTART IDENTITY CASCADE;
+      partner_share_rates, settlement_statements, settlement_lines,
+      subscription_plans, subscription_plan_periods, subscriptions RESTART IDENTITY CASCADE;
+    ALTER TABLE subscriptions ENABLE TRIGGER subscriptions_no_truncate;
+    ALTER TABLE subscription_plan_periods ENABLE TRIGGER subscription_plan_periods_no_truncate;
+    ALTER TABLE subscription_plans ENABLE TRIGGER subscription_plans_no_truncate;
     ALTER TABLE wallet_ledger ENABLE TRIGGER wallet_ledger_no_truncate;
     ALTER TABLE settlement_lines ENABLE TRIGGER settlement_lines_no_truncate;
     ALTER TABLE settlement_statements ENABLE TRIGGER settlement_statements_no_truncate;

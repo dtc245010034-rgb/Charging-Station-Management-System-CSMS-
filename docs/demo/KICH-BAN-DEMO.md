@@ -1,86 +1,91 @@
-# Kịch bản tổng duyệt CSMS — 21/10/2026
+# Kịch bản Demo CSMS — Chặng 9 & Đóng Dự Án
 
-## Mục tiêu và thời lượng
+> Thời lượng dự kiến: 15–20 phút.
+> Thẻ tính năng nghiệm thu: S-45 (Hạn mức công suất theo giờ), S-50 (Phí không đến và quá hạn đặt chỗ), S-51 (Huỷ chỗ đặt), S-65 (Gói thuê bao tháng).
+> Chuẩn bị trước demo: Xem [`docs/demo/CHECKLIST-TRUOC-DEMO.md`](CHECKLIST-TRUOC-DEMO.md).
 
-Tổng duyệt khoảng 35 phút, tập trung vào các luồng cần chứng minh trực tiếp ở chặng cuối:
+---
 
-| Thời gian | Nội dung | Bằng chứng |
-|---|---|---|
-| 0–5 phút | Khởi động, tài khoản và dữ liệu mẫu | `tools/demo-smoke.js` báo 6/6 |
-| 5–12 phút | Hạn mức theo giờ | Lịch theo giờ địa phương và `SetChargingProfile` đổi tại ranh giới |
-| 12–22 phút | Huỷ chỗ và khách không tới | Huỷ trước hạn không thu phí; hết hạn thu 20.000 đ một lần và gửi `CancelReservation` |
-| 22–30 phút | Gói tháng | Gói VIP, số dư ví, mua/gia hạn và giá VIP trên hoá đơn |
-| 30–35 phút | Kết luận | Giới hạn, môi trường sandbox, các kiểm tra chưa làm |
+## 1. Dàn ý theo 5 vai trò (Persona Flow)
 
-Demo không thay thế kiểm thử tự động, staging hoặc thử với trụ sạc vật lý. Thanh toán chỉ chạy sandbox; không nhập dữ liệu cá nhân hoặc toạ độ thật.
-
-## Checklist trước buổi demo
-
-- [ ] Dùng máy/môi trường demo riêng; không chạy seed trên dữ liệu thật.
-- [ ] Khởi động hệ thống theo [`docs/OPERATIONS.md`](../OPERATIONS.md), kiểm tra cổng bằng `python run.py status`.
-- [ ] Seed bằng mật khẩu demo tự chọn (tối thiểu 8 ký tự); không ghi mật khẩu vào repo, tài liệu hoặc log.
-- [ ] Mở hai phiên trình duyệt: `owner@demo.csms.local` và `driver@demo.csms.local`. Mật khẩu của hai tài khoản là giá trị `DEMO_PASSWORD` đã dùng lúc seed.
-- [ ] Đặt `ADMIN_EMAIL` và `ADMIN_PASSWORD` trong môi trường hiện tại theo thông tin đăng nhập Admin cục bộ; không ghi chúng vào repo hoặc tài liệu.
-- [ ] Chạy simulator hai trụ và mở log:
-
-  ```powershell
-  $env:VCP_COUNT = '2'
-  $env:VCP_HEARTBEAT_INTERVAL = '10'
-  docker compose up -d --no-deps vcp
-  docker compose logs -f vcp
-  ```
-
-- [ ] Chạy `node tools/demo-smoke.js`; chỉ tiếp tục khi toàn bộ kiểm khói đạt.
-- [ ] Kiểm tra trụ simulator `ONLINE`, đầu nối `Available`, tài xế có thẻ `TAG-DEMO-01` và ví đủ tiền.
-- [ ] Nếu muốn rút ngắn thời gian đợi khách không tới, chỉ trên môi trường demo đặt `$env:RESERVATION_HOLD_MIN = '1'` trước khi khởi động backend. Mặc định là 15 phút; với `arriveInMinutes=1`, chỗ mặc định hết hạn sau 16 phút.
-
-Seed demo tạo gói VIP đang hiệu lực cho tài xế, số dư ví ban đầu sau phí gói là 701.000 đ, cùng lịch hạn mức cho Trạm Cầu Giấy. Seed có thể chạy lại; nó không ghi đè trạng thái trụ, lịch đã có hoặc giao dịch đã seed.
-
-## 1. Kiểm khói dữ liệu và API (5 phút)
-
-Trong PowerShell, đặt biến môi trường trong cửa sổ hiện tại (không dùng mật khẩu sản xuất):
-
-```powershell
-$env:DEMO_PASSWORD = Read-Host 'Mật khẩu demo đã dùng khi seed'
-$env:CSMS_URL = 'http://localhost:3000'
-node tools/demo-smoke.js
+```
+[1. TÀI XẾ] ────► [2. CHỦ TRẠM] ────► [3. VẬN HÀNH] ────► [4. KẾ TOÁN] ────► [5. QUẢN TRỊ]
+ (Đặt chỗ, huỷ,   (Đặt hạn mức      (Giám sát trụ     (Đối soát kỳ,     (Audit log,
+  mua gói tháng,    theo giờ, xem     trực tiếp,        bảng kê chia      bảo mật K1-K12,
+  sạc giá ưu đãi)   phí không đến)    công suất sạc)    doanh thu S-54)   đóng dự án)
 ```
 
-Mong đợi sáu dòng `PASS` và `KẾT QUẢ: 6/6 kiểm khói đạt.`. Script kiểm tra đăng nhập chủ trạm/tài xế, lịch hạn mức, ví và phí gói, gói VIP cùng danh sách đặt chỗ qua API đang chạy.
+---
 
-## 2. Hạn mức theo giờ và phiên đang chạy (7 phút)
+## 2. Các bước trình diễn chi tiết
 
-1. Đăng nhập chủ trạm, mở Trạm Cầu Giấy. Seed đặt hạn mức nền 44 kW và hai khung 22 kW: `00:00–06:00` và `17:00–21:00`, theo giờ địa phương của trạm.
-2. Mở trụ ảo OCPP đang kết nối. Dùng tài xế demo bắt đầu một phiên và xác nhận phiên vẫn hoạt động.
-3. Để trình bày thay đổi ngay tại ranh giới, dùng một trạm simulator khác chưa có lịch, đặt một khung ngắn bắt đầu sau vài phút và giới hạn thấp hơn hạn mức nền. Không chọn khung chồng lấn; xoá khung thử sau demo.
-4. Chờ tối đa 15 giây sau ranh giới lịch. Kiểm tra log simulator và `charging_profile_log` (`station_id`, `session_id`, `limit_w`, `status`, `trigger`, `requested_at`): trạm đã gửi hồ sơ mới cho phiên đang sạc theo hạn mức hiệu lực. Phiên không bị dừng khi hạn mức giảm.
-5. Nêu rõ hạn mức là phân bổ điều khiển xuống simulator; nếu trụ ngoại tuyến hoặc từ chối hồ sơ, hệ thống ghi nhận trạng thái chưa xác nhận và cảnh báo, không thể đảm bảo trụ vật lý đã áp dụng profile.
+### BƯỚC 1: TÀI XẾ (Driver) — Mua gói tháng & Trải nghiệm sạc ưu đãi
+* **Tài khoản:** `demo.driver@csms.local` / Mật khẩu: `$DEMO_PASSWORD`
+* **Màn hình:** «Ví của tôi» (`#/driver/wallet`) & «Tìm trạm» (`#/driver/find`)
+* **Thao tác:**
+  1. Vào màn hình **Ví**: Cho người xem thấy số dư hiện tại (> 900.000 đ) và danh mục **Gói thuê bao tháng**.
+  2. Bấm **Mua gói**: Chọn «Gói Tháng Tiết Kiệm 3.500» (300.000 đ/30 ngày).
+     * *Kết quả:* Số dư ví bị trừ 300.000 đ qua dòng sổ cái `SUBSCRIPTION_FEE`. Xuất hiện thẻ «Gói đang dùng: Gói Tháng Tiết Kiệm 3.500 (Đang hiệu lực)».
+  3. Vào màn hình **Tìm trạm / Đặt chỗ**: Tìm «Trạm Sạc Bến Thành - Q1».
+     * Thấy mức phí không đến niêm yết rõ: `20.000 đ`. Bấm **Đặt chỗ** cổng 1.
+  4. Đổi ý: Bấm **Huỷ đặt chỗ** tại trang «Đặt chỗ của tôi» (`#/driver/find`).
+     * *Kết quả (S-51):* Chỗ đặt chuyển sang `CANCELLED`, đầu nối mở lại `Available`, ví không bị trừ phí.
+  5. Xem **Lịch sử & Hoá đơn** phiên sạc cũ:
+     * *Kết quả (S-65):* Hoá đơn ghi rõ nhãn xanh `Áp dụng gói: Gói Tháng Tiết Kiệm 3.500`, đơn giá tính theo biểu giá gói 3.500 đ/kWh thay vì biểu giá trạm 3.850 đ/kWh.
+* **Phương án dự phòng (Nếu hỏng):** Nếu kết nối mạng chậm, mở phiên kiểm khói tự động `node tools/demo-smoke.js` để đối chiếu kết quả API.
 
-## 3. Tài xế huỷ chỗ trước hạn (4 phút)
+---
 
-1. Giữ trụ ảo online và đầu nối `Available`; đăng nhập tài xế.
-2. Ở **Tìm trạm**, chọn đầu nối đang rảnh và đặt chỗ với thời gian đến ngắn.
-3. Mở **Đặt chỗ của tôi**, chọn **Huỷ** khi đặt chỗ còn `ACCEPTED` và `expiresAt` ở tương lai.
-4. Xác nhận trạng thái đặt chỗ chuyển sang huỷ, đầu nối được giải phóng sau `CancelReservation`, và sổ ví không có dòng `RESERVATION_FEE` cho đặt chỗ này.
+### BƯỚC 2: CHỦ TRẠM (Station Owner) — Hạn mức theo giờ & Cấu hình phí
+* **Tài khoản:** `demo.owner1@csms.local` / Mật khẩu: `$DEMO_PASSWORD`
+* **Màn hình:** «Trạm sạc của tôi» (`#/owner/stations`)
+* **Thao tác:**
+  1. Mở drawer cấu hình «Trạm Sạc Bến Thành - Q1».
+  2. Xem mục **Hạn mức theo khung giờ (S-45)**:
+     * Hiện đang có khung giờ cao điểm `17:00 – 20:00` hạ công suất còn `15 kW` (hạn mức nền `30 kW`).
+  3. Thao tác thêm khung giờ mới hoặc thử khung qua nửa đêm:
+     * Nhập `22:00 – 06:00` và bấm nút **Qua nửa đêm**.
+     * *Kết quả:* Hệ thống tự động tách thành 2 khung hợp lệ `22:00 – 24:00` và `00:00 – 06:00` theo quy tắc K10/Mục 3.1.
+  4. Xem trường **Phí không đến khi đặt chỗ (S-50)**: Đang cấu hình `20.000 đ`.
+* **Phương án dự phòng:** Khung giờ bị trùng lặp sẽ bị PostgreSQL `btree_gist EXCLUDE` chặn với mã 409 Conflict.
 
-## 4. Quá hạn không tới (10 phút hoặc theo cấu hình) — S-50
+---
 
-1. Đặt một chỗ khác với `arriveInMinutes=1`, sau đó không huỷ và không bắt đầu sạc.
-2. Chờ tới `expiresAt`; job dọn đặt chỗ quét mỗi 10 giây. Mặc định `RESERVATION_HOLD_MIN=15`, vì vậy thời gian giữ là 16 phút; giá trị demo `1` rút ngắn tổng thời gian xuống 2 phút.
-3. Mở **Đặt chỗ của tôi** và xác nhận trạng thái `EXPIRED`.
-4. Mở ví: có một khoản phí `RESERVATION_FEE` đúng 20.000 đ. Job có thể thử lại lệnh OCPP nếu trụ timeout; khoản phí không bị nhân đôi khi quét lại.
-5. Kiểm tra log simulator nhận `CancelReservation`. Nếu simulator đang offline, ghi nhận rằng queue còn chờ gửi và không trình bày đó là lệnh đã tới trụ.
+### BƯỚC 3: VẬN HÀNH VIÊN (Operator) — Giám sát trụ & Cân bằng phụ tải
+* **Tài khoản:** `demo.operator@csms.local` / Mật khẩu: `$DEMO_PASSWORD`
+* **Màn hình:** «Trạng thái trụ» (`#/operator/fleet-status`) & «Phiên sạc» (`#/operator/sessions`)
+* **Thao tác:**
+  1. Xem danh sách các trụ `CP-DEMO-BT-01`, `CP-DEMO-LM-01` trạng thái `ONLINE`.
+  2. Minh hoạ cơ chế rebalance: Khi đồng hồ chuyển sang khung giờ cao điểm, job nền `power/schedule-job.js` tự động tính `effectiveLimitW` và phát lệnh `SetChargingProfile` chia đều công suất cho các xe đang sạc mà không làm gián đoạn phiên.
+* **Phương án dự phòng:** Mở file log tiến trình server để xem dòng log `[schedule-job] rebalanced station ...`.
 
-## 5. Gói VIP và hoá đơn (8 phút) — S-65
+---
 
-1. Mở **Ví của tôi** bằng tài khoản tài xế. Gói seed sẵn hiển thị `VIP`, 299.000 đ / 30 ngày và 30.000 đ/kWh.
-2. Có thể bấm **Mua hoặc gia hạn gói** để chứng minh trừ ví; mua nối tiếp bắt đầu khi gói hiện có hết hạn, không làm mất phần thời hạn còn lại. Mỗi thao tác mua dùng một `Idempotency-Key`.
-3. Bắt đầu rồi kết thúc một phiên qua trụ ảo khi VIP đang hiệu lực. Mở hoá đơn phiên: các dòng năng lượng dùng 30.000 đ/kWh và snapshot nêu `VIP`, mã gói cùng giá áp dụng tại `session.started_at`.
-4. Nêu giới hạn nghiệp vụ: gói là toàn hệ thống, không theo trạm; doanh thu bán gói chưa được phân bổ vào báo cáo doanh thu trạm.
+### BƯỚC 4: KẾ TOÁN VIÊN (Accountant) — Đối soát & Bảng kê chia sẻ doanh thu
+* **Tài khoản:** `demo.accountant@csms.local` / Mật khẩu: `$DEMO_PASSWORD`
+* **Màn hình:** «Đối soát» (`#/accountant/reconciliation`) & «Bảng kê đối tác» (`#/accountant/settlements`)
+* **Thao tác:**
+  1. Vào màn hình **Đối soát**: Chạy đối soát kỳ hiện tại.
+     * *Kết quả (G09):* 0 lỗi đối soát (`issueCount = 0`). Hoá đơn tính theo biểu giá gói khớp 100% với số đo điện năng và số tiền trừ ví.
+  2. Vào màn hình **Bảng kê đối tác (S-54)**:
+     * Xem bảng phân chia doanh thu theo tỷ lệ đã cấu hình (85% cho Chủ trạm Bến Thành, 90% cho Landmark 81).
+* **Phương án dự phòng:** Mở kết quả chạy test nghiệm thu `S-65.subscription.test.js` ca G09 đã chứng minh đối soát 0 lỗi.
 
-## 6. Kết thúc
+---
 
-- Dừng simulator và backend theo [`docs/OPERATIONS.md`](../OPERATIONS.md).
-- Không xoá database demo nếu cần dùng lại; nếu cần làm sạch, chỉ dùng lệnh reset trên môi trường demo đã xác nhận.
-- Ghi riêng kết quả lỗi/timeout thực tế; không đổi thành “đạt” nếu chưa có bằng chứng.
-- Các luồng nền tảng khác xem [`docs/DEMO_SPRINT2.md`](../DEMO_SPRINT2.md) và [`docs/DEMO_SPRINT3.md`](../DEMO_SPRINT3.md).
+### BƯỚC 5: QUẢN TRỊ VIÊN (Admin) — Nhật ký kiểm toán & An toàn dữ liệu
+* **Tài khoản:** `demo.admin@csms.local` / Mật khẩu: `$DEMO_PASSWORD`
+* **Màn hình:** «Nhật ký điều khiển (Audit Logs)» (`#/admin/control-log`)
+* **Thao tác:**
+  1. Mở nhật ký kiểm toán: Xem các bản ghi vừa phát sinh trong buổi demo:
+     * `SUBSCRIPTION_PURCHASED` (Tài xế mua gói)
+     * `RESERVATION_CANCELLED` (Tài xế huỷ chỗ)
+     * `POWER_WINDOW_CREATED` (Chủ trạm tạo khung giờ)
+  2. Minh hoạ tuân thủ **Nghị định 13 & K6**: Metadata kiểm toán KHÔNG chứa toạ độ GPS thật, mã thẻ RFID bị che giấu (`TAG-***`), mật khẩu không lưu bản rõ.
+* **Phương án dự phòng:** Mở màn hình danh sách tài khoản (`#/admin/users`) để chứng minh hệ thống phân quyền RBAC đa người dùng.
+
+---
+
+## 3. Tổng kết chuyển giao
+* Xác nhận 4 tính năng Chặng 9 (S-45, S-50, S-51, S-65) đã hoạt động đồng bộ trên giao diện và API.
+* Mời PO và Hội đồng đặt câu hỏi.

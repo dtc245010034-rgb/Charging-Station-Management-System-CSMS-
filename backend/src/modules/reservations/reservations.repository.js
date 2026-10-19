@@ -11,7 +11,8 @@ async function findIdempotencyKey(client, driverId, key) {
 async function findById(client, id) {
   const result = await client.query(
     `SELECT id, ocpp_reservation_id, driver_id, connector_id, id_tag_id, status,
-            starts_at, expires_at, reject_reason
+            starts_at, expires_at, reject_reason, no_show_fee_dong, cancel_status,
+            cancel_attempts, cancelled_at, expired_at
      FROM reservations WHERE id = $1`,
     [id]
   );
@@ -21,11 +22,10 @@ async function findById(client, id) {
 async function listForDriver(db, driverId) {
   const result = await db.query(
     `SELECT r.id, r.ocpp_reservation_id, r.connector_id, r.status, r.starts_at, r.expires_at, r.reject_reason,
-            rcq.status AS cancel_command_status,
+            r.no_show_fee_dong, r.cancel_status,
             s.name AS station_name, s.address AS station_address,
             cp.code AS charge_point_code, c.connector_no, c.type AS connector_type
      FROM reservations r
-     LEFT JOIN reservation_cancellation_queue rcq ON rcq.reservation_id = r.id
      JOIN connectors c ON c.id = r.connector_id
      JOIN charge_points cp ON cp.id = c.charge_point_id
      JOIN stations s ON s.id = cp.station_id
@@ -40,7 +40,7 @@ async function findConnector(client, connectorId, { forUpdate = false } = {}) {
   const result = await client.query(
     `SELECT c.id AS connector_id, c.connector_no, c.status AS connector_status, c.ocpp_status,
             cp.code AS charge_point_code, s.id AS station_id, s.status AS station_status,
-            s.locked_at AS station_locked_at
+            s.locked_at AS station_locked_at, s.no_show_fee_dong AS station_no_show_fee_dong
      FROM connectors c
      JOIN charge_points cp ON cp.id = c.charge_point_id
      JOIN stations s ON s.id = cp.station_id
@@ -64,12 +64,12 @@ async function findActiveTag(client, driverId, now) {
   return result.rows[0] || null;
 }
 
-async function insertPending(client, { driverId, connectorId, idTagId, startsAt, expiresAt }) {
+async function insertPending(client, { driverId, connectorId, idTagId, startsAt, expiresAt, noShowFeeDong = 0 }) {
   const result = await client.query(
-    `INSERT INTO reservations (driver_id, connector_id, id_tag_id, starts_at, expires_at)
-     VALUES ($1, $2, $3, $4::timestamptz, $5::timestamptz)
-     RETURNING id, ocpp_reservation_id, driver_id, connector_id, id_tag_id, status, starts_at, expires_at, reject_reason`,
-    [driverId, connectorId, idTagId, startsAt, expiresAt]
+    `INSERT INTO reservations (driver_id, connector_id, id_tag_id, starts_at, expires_at, no_show_fee_dong)
+     VALUES ($1, $2, $3, $4::timestamptz, $5::timestamptz, $6)
+     RETURNING id, ocpp_reservation_id, driver_id, connector_id, id_tag_id, status, starts_at, expires_at, reject_reason, no_show_fee_dong, cancel_status, cancel_attempts, cancelled_at, expired_at`,
+    [driverId, connectorId, idTagId, startsAt, expiresAt, noShowFeeDong]
   );
   return result.rows[0];
 }
@@ -100,7 +100,19 @@ async function findWalletForUpdate(client, driverId) {
   return result.rows[0] || null;
 }
 
-async function findActiveForDriver(client, driverId) {
+async function expireStaleForDriver(client, driverId, now = new Date()) {
+  await client.query(
+    `UPDATE reservations
+     SET status = 'EXPIRED', updated_at = CURRENT_TIMESTAMP
+     WHERE driver_id = $1
+       AND status = 'ACCEPTED'
+       AND expires_at <= $2::timestamptz`,
+    [driverId, now]
+  );
+}
+
+async function findActiveForDriver(client, driverId, now = new Date()) {
+  await expireStaleForDriver(client, driverId, now);
   const result = await client.query(
     `SELECT id FROM reservations
      WHERE driver_id = $1 AND status IN ('PENDING', 'ACCEPTED')
@@ -148,10 +160,34 @@ async function fulfillAcceptedReservation(db, { reservationId, connectorId, driv
   return result.rows[0] || null;
 }
 
+async function existsById(id) {
+  const result = await pool.query('SELECT 1 FROM reservations WHERE id = $1', [id]);
+  return Boolean(result.rowCount);
+}
+
+async function cancelAcceptedReservation(client, id, now = new Date()) {
+  const isoTime = now instanceof Date ? now.toISOString() : new Date(now).toISOString();
+  const result = await client.query(
+    `UPDATE reservations
+     SET status = 'CANCELLED',
+         cancelled_at = $2::timestamptz,
+         cancel_status = 'PENDING',
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1
+       AND status = 'ACCEPTED'
+       AND expires_at > $2::timestamptz
+     RETURNING id, ocpp_reservation_id, connector_id, cancel_status`,
+    [id, isoTime]
+  );
+  return result.rows[0] || null;
+}
+
 module.exports = {
   pool,
   findIdempotencyKey,
   findById,
+  existsById,
+  cancelAcceptedReservation,
   listForDriver,
   findConnector,
   findActiveTag,
@@ -159,6 +195,7 @@ module.exports = {
   updateStatus,
   insertIdempotencyKey,
   findWalletForUpdate,
+  expireStaleForDriver,
   findActiveForDriver,
   findAvailableSuggestions,
   fulfillAcceptedReservation,

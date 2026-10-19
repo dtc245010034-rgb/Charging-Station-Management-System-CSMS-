@@ -6,8 +6,6 @@
 
 > **Ràng buộc:** thanh toán chỉ chạy môi trường sandbox. Vị trí và lịch sử di chuyển của tài xế là dữ liệu cá nhân theo Nghị định 13/2023/NĐ-CP.
 
-Tài liệu tổng duyệt và trạng thái đóng dự án: [`docs/demo/KICH-BAN-DEMO.md`](docs/demo/KICH-BAN-DEMO.md), [`docs/dev/TONG-KET-DU-AN.md`](docs/dev/TONG-KET-DU-AN.md).
-
 ## Bắt đầu nhanh
 
 Cần: **Git**, **Docker**, **Python 3.8+**. Không cần cài Node, Postgres hay tự tạo `.env`.
@@ -194,6 +192,9 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `REGISTER_CONFLICT_LIMIT_PER_HOUR` | Số lần đăng ký trùng email (409) mỗi IP; quá mức mọi yêu cầu đăng ký từ IP đó trả 429 | Lần/giờ | `5` |
 | `OCPP_HANDSHAKE_LIMIT_PER_10S` | Số lần bắt tay WebSocket mỗi cặp (IP, mã trụ), kiểm tra trước khi truy vấn DB; quá mức trả 429 | Lần/10 giây | `5` |
 | `AUDIT_DENIED_LIMIT_PER_MINUTE` | Số dòng `ACCESS_DENIED` tối đa ghi vào `audit_logs` mỗi tài khoản (phản hồi vẫn 403) | Dòng/phút | `20` |
+| `POWER_SCHEDULE_TICK_MS` | Chu kỳ job quét ranh giới khung giờ công suất và rebalance trạm (S-45) | Mili giây | `15000` |
+| `RESERVATION_EXPIRY_JOB_MS` | Chu kỳ job quét chỗ đặt quá hạn và trừ phí không đến (S-50) | Mili giây | `15000` |
+| `DEMO_PASSWORD` | Mật khẩu tài khoản dựng sẵn khi khởi tạo demo qua `tools/seed-demo.js` (≥ 12 ký tự) | Chuỗi bí mật | — |
 
 ---
 
@@ -254,7 +255,6 @@ Tạo sẵn 6 tài khoản (mỗi vai trò một, cộng 1 tài khoản nhiều 
 
 - **Máy cá nhân:** `python run.py` tự seed. Chạy tay: `docker compose exec -e ALLOW_DEMO_SEED=1 -e DEMO_PASSWORD=... app npm run seed-demo`.
 - **Staging (Render):** đặt `ALLOW_DEMO_SEED=1` và `DEMO_PASSWORD` (≥ 8 ký tự) rồi deploy lại; xoá `ALLOW_DEMO_SEED` để tắt. Đổi miền email bằng `DEMO_EMAIL_DOMAIN`.
-- Seed tạo lịch hạn mức theo giờ trên Trạm Cầu Giấy và gói VIP demo đang hiệu lực cho tài xế. Sau khi seed và bật ứng dụng, kiểm tra API thật bằng `DEMO_PASSWORD=... node tools/demo-smoke.js` (PowerShell: `$env:DEMO_PASSWORD` và `node tools/demo-smoke.js`).
 - ⚠️ Trạng thái trụ (Đang sạc, Lỗi…) trong seed là **giả lập để trình diễn**, không phải dữ liệu OCPP thật. Không chạy trên dữ liệu thật; script từ chối chạy nếu thiếu `ALLOW_DEMO_SEED=1`.
 
 ### Thử trụ sạc ảo (OCPP)

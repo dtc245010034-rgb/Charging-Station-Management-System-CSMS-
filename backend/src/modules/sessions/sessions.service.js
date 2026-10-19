@@ -120,6 +120,9 @@ function formatHistoryRow(row) {
     billingStatus: row.billing_status,
     billingReason: row.billing_reason,
     invoiceTotalDong: row.invoice_total_dong,
+    tariffSource: row.tariff_source || 'STATION',
+    subscriptionPlanName: row.subscription_plan_name || null,
+    subscriptionPlanCode: row.subscription_plan_code || null,
   };
 }
 

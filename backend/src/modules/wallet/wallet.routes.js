@@ -13,7 +13,6 @@ const {
 const walletReadService = require('./wallet-read.service');
 const walletAdminService = require('./wallet-admin.service');
 const topupService = require('./topup.service');
-const subscriptionService = require('./subscription.service');
 
 const router = secureRouter();
 const readAccess = [...access('wallets:read-own'), ...access('wallets:read')];
@@ -61,17 +60,6 @@ router.post('/me/wallet/topups', { access: access('wallets:topup') }, async (req
 router.get('/me/wallet/topups/:ref', { access: access('wallets:topup') }, async (req, res) => {
   const { ref } = topupRefParam.parse(req.params);
   res.json(await topupService.getTopup(req.user, ref));
-});
-
-router.get('/me/subscription', { access: access('wallets:topup') }, async (req, res) => {
-  res.json(await subscriptionService.getSubscription(req.user));
-});
-
-router.post('/me/subscription', { access: access('wallets:topup') }, async (req, res) => {
-  res.status(201).json(await subscriptionService.purchaseSubscription(
-    req.user,
-    req.get('Idempotency-Key')
-  ));
 });
 
 module.exports = router;

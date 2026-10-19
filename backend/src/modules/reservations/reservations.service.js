@@ -5,13 +5,11 @@ const { getMinBalanceDong } = require('../wallet/min-balance.service');
 const connections = require('../charge-points/connection-registry');
 const audit = require('../audit/audit.repository');
 const repo = require('./reservations.repository');
-const {
-  dispatchReservationCancellation,
-  expireStaleAcceptedReservations,
-} = require('./pending-cleanup-job');
 const { OcppCommandError } = require('../ocpp/commands');
 const { OcppRemoteCallError } = require('../ocpp/message-handler');
 const { sanitizeErrorMessage } = require('../../lib/constants');
+const { denyOrNotFound } = require('../../lib/ownership');
+const { sendCancelReservation } = require('./cancel-retry-job');
 const {
   AppError,
   BadRequestError,
@@ -36,6 +34,8 @@ function toResponse(row) {
     expiresAt: expiresAt.toISOString(),
     arriveInMinutes,
     rejectReason: row.reject_reason,
+    noShowFeeDong: Number(row.no_show_fee_dong || 0),
+    cancelStatus: row.cancel_status || 'NONE',
   };
 }
 
@@ -43,7 +43,6 @@ async function listMine(driverId, db = repo.pool) {
   const rows = await repo.listForDriver(db, driverId);
   return rows.map((row) => ({
     ...toResponse(row),
-    cancelCommandStatus: row.cancel_command_status || null,
     stationName: row.station_name,
     stationAddress: row.station_address,
     chargePointCode: row.charge_point_code,
@@ -88,10 +87,6 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
   const startsAt = now.toISOString();
   const expiresAt = new Date(now.getTime() + (data.arriveInMinutes + env.RESERVATION_HOLD_MIN) * 60000).toISOString();
   const requestHash = createHash('sha256').update(JSON.stringify(data)).digest('hex');
-  const expired = await expireStaleAcceptedReservations(db, driver.id);
-  for (const reservation of expired.rows) {
-    await dispatchReservationCancellation(db, commandSender, reservation.id);
-  }
 
   let created;
   let conflictContext = null;
@@ -140,7 +135,7 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
       if (connector.ocpp_status !== 'Available' || connector.connector_status !== 'AVAILABLE') {
         throw new AppError(409, 'CONNECTOR_UNAVAILABLE', 'Đầu nối không ở trạng thái sẵn sàng để đặt chỗ.');
       }
-      if (await repo.findActiveForDriver(client, driver.id)) {
+      if (await repo.findActiveForDriver(client, driver.id, now)) {
         throw new AppError(409, 'RESERVATION_ALREADY_ACTIVE', 'Bạn đang có một chỗ đặt còn hiệu lực.');
       }
 
@@ -150,6 +145,7 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
         idTagId: tag.id,
         startsAt,
         expiresAt,
+        noShowFeeDong: connector.station_no_show_fee_dong || 0,
       });
       await repo.insertIdempotencyKey(client, driver.id, idempotencyKey, requestHash, reservation.id);
       return { reservation, connector, tag, replayed: false };
@@ -238,61 +234,77 @@ async function create(driver, data, idempotencyKey, { commandSender, ip = null, 
   throw new ServiceUnavailableError('Trụ sạc trả phản hồi ReserveNow không hợp lệ');
 }
 
-async function cancel(driver, reservationId, { commandSender, ip = null, db = repo.pool } = {}) {
-  const due = await expireStaleAcceptedReservations(db, driver.id);
-  for (const reservation of due.rows) {
-    await dispatchReservationCancellation(db, commandSender, reservation.id);
+async function cancel(driver, reservationId, { commandSender, ip = null, db = repo.pool, now = new Date() } = {}) {
+  const parsedId = Number(reservationId);
+  if (!Number.isSafeInteger(parsedId) || parsedId <= 0) {
+    throw new BadRequestError('Mã đặt chỗ không hợp lệ');
   }
 
-  const result = await withTransaction(async (client) => {
-    const selected = await client.query(
-      `SELECT id, ocpp_reservation_id, driver_id, connector_id, id_tag_id, status,
-              starts_at, expires_at, reject_reason
-       FROM reservations
-       WHERE id = $1 AND driver_id = $2
-       FOR UPDATE`,
-      [reservationId, driver.id]
-    );
-    const reservation = selected.rows[0];
-    if (!reservation) throw new NotFoundError('Không tìm thấy đặt chỗ');
-    if (reservation.status === 'CANCELLED') return { reservation, changed: false };
-    if (reservation.status !== 'ACCEPTED') {
-      if (reservation.status === 'EXPIRED') {
-        throw new AppError(409, 'RESERVATION_EXPIRED', 'Đặt chỗ đã hết hạn và bị tính phí vắng mặt.');
+  const reservation = await repo.findById(db, parsedId);
+  if (!reservation || String(reservation.driver_id) !== String(driver.id)) {
+    await denyOrNotFound(driver, 'reservation', parsedId, repo.existsById, 'Không tìm thấy đặt chỗ');
+  }
+
+  if (reservation.status === 'CANCELLED') {
+    return { already: true, status: 'CANCELLED' };
+  }
+
+  if (reservation.status === 'PENDING') {
+    throw new AppError(409, 'RESERVATION_PENDING', 'Không thể huỷ đặt chỗ đang chờ xác nhận từ trụ');
+  }
+
+  const currentTime = now instanceof Date ? now : new Date(now);
+  const expiresAt = new Date(reservation.expires_at);
+
+  if (expiresAt <= currentTime || reservation.status === 'EXPIRED') {
+    throw new AppError(409, 'RESERVATION_EXPIRED', 'Đặt chỗ đã quá hạn, đã tính phí');
+  }
+
+  if (reservation.status !== 'ACCEPTED') {
+    throw new AppError(409, 'INVALID_RESERVATION_STATUS', 'Không thể huỷ đặt chỗ ở trạng thái hiện tại');
+  }
+
+  const updated = await repo.cancelAcceptedReservation(db, parsedId, currentTime);
+  if (!updated) {
+    const refreshed = await repo.findById(db, parsedId);
+    if (refreshed?.status === 'CANCELLED') {
+      return { already: true, status: 'CANCELLED' };
+    }
+    if (new Date(refreshed?.expires_at) <= currentTime || refreshed?.status === 'EXPIRED') {
+      throw new AppError(409, 'RESERVATION_EXPIRED', 'Đặt chỗ đã quá hạn, đã tính phí');
+    }
+    throw new AppError(409, 'RESERVATION_CANCEL_CONFLICT', 'Không thể huỷ đặt chỗ');
+  }
+
+  await audit.record(
+    driver.id,
+    'RESERVATION_CANCELLED',
+    'reservation',
+    parsedId,
+    { cancelledBy: driver.id },
+    ip,
+    null,
+    'COMPLETED'
+  );
+
+  if (commandSender && updated.ocpp_reservation_id) {
+    try {
+      const connector = await repo.findConnector(db, updated.connector_id);
+      if (connector?.charge_point_code) {
+        void sendCancelReservation({
+          db,
+          commandSender,
+          reservationId: parsedId,
+          chargePointCode: connector.charge_point_code,
+          ocppReservationId: updated.ocpp_reservation_id,
+        });
       }
-      throw new AppError(409, 'RESERVATION_NOT_CANCELLABLE', 'Chỉ có thể huỷ đặt chỗ đã được trụ xác nhận.');
+    } catch (err) {
+      console.warn('[Reservation] Không gửi được CancelReservation:', sanitizeErrorMessage(err?.message || err));
     }
-
-    const cancelled = await client.query(
-      `UPDATE reservations
-       SET status = 'CANCELLED', updated_at = clock_timestamp()
-       WHERE id = $1 AND status = 'ACCEPTED' AND expires_at > clock_timestamp()
-       RETURNING id, ocpp_reservation_id, driver_id, connector_id, id_tag_id, status,
-                 starts_at, expires_at, reject_reason`,
-      [reservationId]
-    );
-    if (!cancelled.rows[0]) return { reservation, expired: true };
-    await client.query(
-      `INSERT INTO reservation_cancellation_queue (reservation_id)
-       VALUES ($1) ON CONFLICT (reservation_id) DO NOTHING`,
-      [reservationId]
-    );
-    return { reservation: cancelled.rows[0], changed: true };
-  }, db);
-
-  if (result.expired) {
-    const expired = await expireStaleAcceptedReservations(db, driver.id);
-    for (const reservation of expired.rows) {
-      await dispatchReservationCancellation(db, commandSender, reservation.id);
-    }
-    throw new AppError(409, 'RESERVATION_EXPIRED', 'Đặt chỗ đã hết hạn và bị tính phí vắng mặt.');
   }
 
-  if (result.changed) {
-    await recordAudit(driver.id, 'RESERVATION_CANCELLED', result.reservation, {}, ip, 'CANCELLED');
-  }
-  const cancelCommandStatus = await dispatchReservationCancellation(db, commandSender, reservationId);
-  return { ...toResponse(result.reservation), cancelCommandStatus };
+  return { id: parsedId, status: 'CANCELLED', cancelledAt: currentTime.toISOString() };
 }
 
-module.exports = { RESERVATION_CALL_TIMEOUT_MS, create, cancel, listMine, toResponse };
+module.exports = { RESERVATION_CALL_TIMEOUT_MS, create, listMine, cancel, toResponse };

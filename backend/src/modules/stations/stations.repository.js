@@ -45,48 +45,19 @@ const connectorsOf = (chargePointId) => prepare(
    FROM connectors c JOIN charge_points cp ON cp.id = c.charge_point_id
    WHERE c.charge_point_id = ? ORDER BY c.connector_no`
 ).all(chargePointId);
-const resolvePowerLimitW = (station = {}) => {
-  const directWatts = station.power_limit_w;
-  if (directWatts !== undefined && directWatts !== null) return directWatts;
-  if (station.power_limit_kw !== undefined && station.power_limit_kw !== null) {
-    const kw = Number(station.power_limit_kw);
-    return Number.isFinite(kw) ? Math.round(kw * 1000) : null;
-  }
-  return null;
-};
-
 const insertForIdempotency = async (client, actor, station) => {
-  const powerLimitW = resolvePowerLimitW(station);
   const result = await client.query(
-    'INSERT INTO stations (name, address, latitude, longitude, owner_id, timezone, power_limit_w, power_profile) VALUES ($1, $2, $3, $4, $5, COALESCE($6, \'Asia/Ho_Chi_Minh\'), $7, $8::jsonb) RETURNING *',
-    [station.name, station.address, station.latitude, station.longitude, actor.id, station.timezone || null, powerLimitW, JSON.stringify(station.power_profile ?? [])]
+    'INSERT INTO stations (name, address, latitude, longitude, owner_id, timezone, power_limit_w) VALUES ($1, $2, $3, $4, $5, COALESCE($6, \'Asia/Ho_Chi_Minh\'), $7) RETURNING *',
+    [station.name, station.address, station.latitude, station.longitude, actor.id, station.timezone || null, station.power_limit_w ?? null]
   );
   return result.rows[0];
 };
 
-const UPDATABLE = ['name', 'address', 'latitude', 'longitude', 'status', 'timezone', 'power_limit_w', 'power_profile'];
-
+const UPDATABLE = ['name', 'address', 'latitude', 'longitude', 'status', 'timezone', 'power_limit_w', 'no_show_fee_dong'];
 const update = (id, fields) => {
-  const normalized = { ...fields };
-  if (normalized.power_limit_kw !== undefined && normalized.power_limit_w === undefined) {
-    const kw = Number(normalized.power_limit_kw);
-    normalized.power_limit_w = Number.isFinite(kw) ? Math.round(kw * 1000) : normalized.power_limit_kw;
-  }
-  if (normalized.power_limit_kw !== undefined) delete normalized.power_limit_kw;
-
-  const keys = UPDATABLE.filter((key) => normalized[key] !== undefined);
-  return prepare(`UPDATE stations SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
-    .run(...keys.map((key) => normalized[key]), id);
-};
-const updateWithClient = (client, id, fields) => {
   const keys = UPDATABLE.filter((key) => fields[key] !== undefined);
-  const values = keys.map((key) => fields[key]);
-  const assignments = keys.map((key, index) => `${key} = $${index + 1}`);
-  values.push(id);
-  return client.query(
-    `UPDATE stations SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${values.length}`,
-    values
-  );
+  return prepare(`UPDATE stations SET ${keys.map((key) => `${key} = ?`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+    .run(...keys.map((key) => fields[key]), id);
 };
 
 const setLock = (id, locked, actorId) => {
@@ -114,6 +85,6 @@ const updateConnectorPower = (id, watts) => prepare(
 ).run(watts, id);
 
 module.exports = {
-  list, searchCandidates, searchConnectors, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, updateWithClient, setLock, UPDATABLE,
+  list, searchCandidates, searchConnectors, findById, existsById, chargePointsOf, connectorsOf, insertForIdempotency, update, setLock, UPDATABLE,
   connectorById, connectorExistsById, updateConnectorPower,
 };

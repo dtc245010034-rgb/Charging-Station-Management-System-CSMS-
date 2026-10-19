@@ -14,7 +14,6 @@ const powerKilowatts = z.union([z.string(), z.number()]).transform((value, conte
   }
   return watts;
 });
-
 const coordinate = (label, min, max) => z.union([
   z.number().finite(),
   z.string().trim().regex(/^-?\d+(?:\.\d{1,8})?$/, `${label} phải có tối đa 8 chữ số thập phân`),
@@ -29,31 +28,6 @@ const timezoneSchema = z.string().trim().refine((val) => {
   }
 }, 'Múi giờ không hợp lệ');
 
-const powerProfileSlot = z.object({
-  start: z.string().regex(/^([0-1]?\d|2[0-3]):[0-5]\d$/).optional(),
-  end: z.string().regex(/^([0-1]?\d|2[0-3]):[0-5]\d$/).optional(),
-  maxKw: z.coerce.number().min(0).optional(),
-});
-
-const normalizeStationPowerLimit = (data) => {
-  const limitKw = data.power_limit_kw !== undefined ? data.power_limit_kw : data.power_limit_w;
-  if (limitKw === undefined) return data;
-  if (limitKw === null) {
-    data.power_limit_w = null;
-    delete data.power_limit_kw;
-    return data;
-  }
-
-  const watts = typeof limitKw === 'number' && Number.isFinite(limitKw)
-    ? limitKw
-    : kilowattsToWatts(limitKw);
-
-  if (watts === null) return data;
-  data.power_limit_w = watts;
-  delete data.power_limit_kw;
-  return data;
-};
-
 const createBody = z.object({
   name: text(REQUIRED),
   address: text(REQUIRED),
@@ -61,10 +35,20 @@ const createBody = z.object({
   longitude: coordinate('Kinh độ', -180, 180),
   timezone: timezoneSchema.optional(),
   power_limit_kw: powerKilowatts.nullable().optional(),
-  power_limit_w: z.coerce.number().int().nonnegative().nullable().optional(),
-  power_profile: z.array(powerProfileSlot).optional(),
+  no_show_fee_dong: z.coerce.number().int().min(0).max(1000000).optional(),
+  noShowFeeDong: z.coerce.number().int().min(0).max(1000000).optional(),
   status: z.undefined({ message: NO_STATUS }).optional(),
-}, { message: REQUIRED }).transform((data) => normalizeStationPowerLimit(data));
+}, { message: REQUIRED }).transform((data) => {
+  if (data.power_limit_kw !== undefined) {
+    data.power_limit_w = data.power_limit_kw;
+    delete data.power_limit_kw;
+  }
+  if (data.noShowFeeDong !== undefined) {
+    data.no_show_fee_dong = data.noShowFeeDong;
+    delete data.noShowFeeDong;
+  }
+  return data;
+});
 
 const updateBody = z.object({
   name: z.string().trim().min(1).optional(),
@@ -73,14 +57,24 @@ const updateBody = z.object({
   longitude: coordinate('Kinh độ', -180, 180).optional(),
   timezone: timezoneSchema.optional(),
   power_limit_kw: powerKilowatts.nullable().optional(),
-  power_limit_w: z.coerce.number().int().nonnegative().nullable().optional(),
-  power_profile: z.array(powerProfileSlot).optional(),
+  no_show_fee_dong: z.coerce.number().int().min(0).max(1000000).optional(),
+  noShowFeeDong: z.coerce.number().int().min(0).max(1000000).optional(),
   status: status.optional(),
 }).superRefine((data, context) => {
   if ((data.latitude !== undefined) !== (data.longitude !== undefined)) {
     context.addIssue({ code: 'custom', message: 'Vĩ độ và kinh độ phải được cập nhật cùng nhau', path: ['latitude'] });
   }
-}).transform((data) => normalizeStationPowerLimit(data));
+}).transform((data) => {
+  if (data.power_limit_kw !== undefined) {
+    data.power_limit_w = data.power_limit_kw;
+    delete data.power_limit_kw;
+  }
+  if (data.noShowFeeDong !== undefined) {
+    data.no_show_fee_dong = data.noShowFeeDong;
+    delete data.noShowFeeDong;
+  }
+  return data;
+});
 
 const lockBody = z.object({
   locked: z.boolean({ message: 'locked phải là boolean' }),
@@ -104,4 +98,27 @@ const stationSearchBody = z.object({
   }
 });
 
-module.exports = { createBody, updateBody, lockBody, connectorPowerBody, stationSearchBody };
+const powerWindowBody = z.object({
+  startTime: z.string({ message: 'startTime là bắt buộc' }).trim().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'startTime phải có dạng HH:MM (00:00 - 23:59)'),
+  endTime: z.string({ message: 'endTime là bắt buộc' }).trim().regex(/^(?:([01]\d|2[0-3]):[0-5]\d|24:00)$/, 'endTime phải có dạng HH:MM hoặc 24:00'),
+  limitKw: powerKilowatts,
+}, { message: 'Dữ liệu khung giờ là bắt buộc' }).transform((data) => ({
+  startTime: data.startTime,
+  endTime: data.endTime,
+  limit_w: data.limitKw,
+}));
+
+const windowIdParam = z.object({
+  id: z.coerce.number().int().positive('id phải là số nguyên dương'),
+  windowId: z.coerce.number().int().positive('windowId phải là số nguyên dương'),
+});
+
+module.exports = {
+  createBody,
+  updateBody,
+  lockBody,
+  connectorPowerBody,
+  stationSearchBody,
+  powerWindowBody,
+  windowIdParam,
+};

@@ -133,6 +133,19 @@ Giới hạn gói miễn phí ngrok, đối chiếu lại ngày 04/10/2026 tại
 
 Cổng vẫn bị chiếm sau khi tắt (process mồ côi): `lsof -i :3000` (Linux) hoặc `netstat -ano | findstr :3000` (Windows) rồi kết thúc process. `down` không xoá `.env`; chỉ `reset` xoá dữ liệu Postgres.
 
+### Dữ liệu demo & Kiểm khói hệ thống (Chặng 9)
+
+Khởi tạo dữ liệu mẫu cho buổi demo (chạy sau khi server app & db đã sẵn sàng):
+```bash
+export DEMO_PASSWORD="MatKhauDemoBaoMat2026!"
+node tools/seed-demo.js
+```
+Kiểm khói toàn diện các luồng API thật của 5 vai trò (Driver, Owner, Operator, Accountant, Admin):
+```bash
+node tools/demo-smoke.js
+```
+Xem thêm chi tiết tại [`docs/demo/KICH-BAN-DEMO.md`](demo/KICH-BAN-DEMO.md) và [`docs/demo/CHECKLIST-TRUOC-DEMO.md`](demo/CHECKLIST-TRUOC-DEMO.md).
+
 ## 5. Lệnh Docker tương đương (khi cần làm tay)
 
 ```
@@ -178,8 +191,6 @@ $ python test.py --verbose
 (`python run.py test` là cùng một lệnh.) Chạy trong container Node 22 với Postgres test riêng (cổng 5433, trong RAM, dừng lại sau khi xong), `node_modules` nằm trong volume Docker riêng nên không lẫn với máy. Mã thoát 0 = đạt; log đầy đủ ở `.run/test-output.log`.
 
 Trạng thái hiện tại (03/10/2026): **lint sạch, 280/280 test backend pass** (3 lần liên tiếp, khoảng 105–115 s) + 20 test của `run.py` (`tools/`). Test S-09 T-19 cần Docker; hai test tắt máy sạch (N4) bỏ qua trên Windows. Test chỉ chạy trên DB có tên kết thúc `_test`. `backend/.env` không ảnh hưởng (test tự tắt nạp `.env` bằng `CSMS_SKIP_DOTENV=1`). CI chạy lint, quét phụ thuộc, test backend và test của `tools/`.
-
-Kiểm khói sau khi seed demo, trên ứng dụng đang chạy: đặt `DEMO_PASSWORD` bằng đúng giá trị lúc seed, tuỳ chọn `CSMS_URL`, rồi chạy `node tools/demo-smoke.js`. Script kiểm tra endpoint bằng đăng nhập thật; không dùng trên dữ liệu production.
 
 ## 9. Staging (Render)
 

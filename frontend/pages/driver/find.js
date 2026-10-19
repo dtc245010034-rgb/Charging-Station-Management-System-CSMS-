@@ -3,8 +3,6 @@ import { api } from '../../services/api.js';
 import { errorState, loadingState } from '../../components/empty-state.js';
 import { icon } from '../../components/icons.js';
 import { formatDateTime } from '../../app/format.js';
-import { openModal } from '../../components/modal.js';
-import { toast } from '../../components/toast.js';
 
 const dongFormat = new Intl.NumberFormat('vi-VN');
 const distanceFormat = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -58,9 +56,12 @@ function stationResult(station, chargePoints, onReserve) {
       const connector = connectorChoices.find((item) => item.connectorId === connectorSelect.value);
       if (!connector) return;
       confirmation.hidden = false;
+      const noShowFee = station.noShowFeeDong || 0;
+      const totalHoldMinutes = Number(arriveSelect.value) + 15;
       mount(confirmation,
         h('strong', {}, 'Xác nhận đặt chỗ'),
-        h('p', { class: 'muted' }, `${connector.chargePointCode} · Đầu ${connector.connectorNo}; dự kiến đến sau ${arriveSelect.value} phút.`),
+        h('p', { class: 'muted' }, `${connector.chargePointCode} · Đầu ${connector.connectorNo}; dự kiến đến sau ${arriveSelect.value} phút (hạn giữ: ${totalHoldMinutes} phút).`),
+        h('p', { class: 'muted' }, `Phí không đến: ${formatDong(noShowFee)} (sẽ trừ ví nếu quá hạn mà không đến sạc).`),
         h('div', { class: 'toolbar' },
           h('button', {
             class: 'btn btn--primary',
@@ -143,55 +144,46 @@ function renderMyReservations(ctx) {
           ? h('span', { class: 'mono', 'aria-live': 'polite' }, timeRemaining(reservation.expiresAt))
           : h('span', { class: 'muted' }, '—');
         if (['PENDING', 'ACCEPTED'].includes(reservation.status)) countdowns.push({ el: countdown, expiresAt: reservation.expiresAt });
+
+        let badgeTone = 'badge--warning';
+        if (reservation.status === 'ACCEPTED') badgeTone = 'badge--ready';
+        else if (reservation.status === 'FULFILLED') badgeTone = 'badge--charging';
+        else if (reservation.status === 'EXPIRED') badgeTone = 'badge--fault';
+        else if (reservation.status === 'CANCELLED') badgeTone = 'badge--muted';
+
         const canCancel = reservation.status === 'ACCEPTED' && Date.parse(reservation.expiresAt) > Date.now();
-        const cancelButton = canCancel && h('button', {
-          class: 'btn btn--danger',
+        const cancelBtn = canCancel ? h('button', {
+          class: 'btn btn--danger btn--sm',
           type: 'button',
-          onclick: () => {
-            const dismiss = h('button', { class: 'btn', type: 'button' }, 'Giữ đặt chỗ');
-            const confirm = h('button', { class: 'btn btn--danger', type: 'button' }, 'Huỷ đặt chỗ');
-            const requestError = h('p', { class: 'form-alert', role: 'alert', hidden: true });
-            const modal = openModal({
-              title: 'Huỷ đặt chỗ?',
-              body: h('div', {},
-                h('p', {}, 'Huỷ trước hạn sẽ không mất phí. Nếu đặt chỗ hết hạn trước khi yêu cầu được xử lý, phí vắng mặt 20.000 đ có thể được ghi nhận.'),
-                requestError),
-              footer: [dismiss, confirm],
-            });
-            dismiss.addEventListener('click', () => modal.close());
-            confirm.addEventListener('click', async () => {
-              confirm.disabled = true;
-              try {
-                const result = await api(`/api/me/reservations/${encodeURIComponent(reservation.id)}`, {
-                  method: 'DELETE',
-                  body: {},
-                });
-                modal.close();
-                toast(result.cancelCommandStatus === 'PENDING'
-                  ? 'Đã huỷ chỗ; lệnh tới trụ đang chờ gửi lại.'
-                  : 'Đã huỷ đặt chỗ.');
-                await load();
-              } catch (error) {
-                requestError.textContent = error.message;
-                requestError.hidden = false;
-                confirm.disabled = false;
-              }
-            });
+          onclick: async () => {
+            if (!confirm('Bạn có chắc chắn muốn huỷ đặt chỗ này?')) return;
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = 'Đang huỷ…';
+            try {
+              await api(`/api/reservations/${reservation.id}/cancel`, { method: 'POST' });
+              void load();
+            } catch (err) {
+              alert(err.message);
+              cancelBtn.disabled = false;
+              cancelBtn.textContent = 'Huỷ đặt chỗ';
+            }
           },
-        }, icon('x'), 'Huỷ đặt chỗ');
+        }, 'Huỷ đặt chỗ') : null;
+
         return h('article', { class: 'card', style: 'padding:14px;display:grid;gap:8px' },
           h('div', { style: 'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap' },
             h('strong', {}, reservation.stationName),
-            h('span', { class: `badge ${reservation.status === 'ACCEPTED' ? 'badge--ready' : 'badge--warning'}` }, status)
+            h('span', { class: `badge ${badgeTone}` }, status)
           ),
           h('p', { class: 'muted' }, reservation.stationAddress),
           h('p', {}, `${reservation.chargePointCode} · Đầu ${reservation.connectorNo} · ${reservation.connectorType}`),
           h('p', { class: 'muted' }, `Hạn giữ: ${formatDateTime(reservation.expiresAt)}`),
-          h('p', { class: 'muted' }, 'Thời gian còn lại: ', countdown),
+          h('p', { class: 'muted' }, 'Phí không đến: ', formatDong(reservation.noShowFeeDong || 0)),
+          ['PENDING', 'ACCEPTED'].includes(reservation.status)
+            ? h('p', { class: 'muted' }, 'Thời gian còn lại: ', countdown)
+            : null,
           reservation.rejectReason ? h('p', { role: 'status' }, reservation.rejectReason) : null,
-          reservation.cancelCommandStatus === 'PENDING' && h('p', { class: 'field__hint', role: 'status' }, 'Lệnh huỷ đang chờ được gửi tới trụ.'),
-          reservation.cancelCommandStatus === 'REJECTED' && h('p', { class: 'form-alert', role: 'alert' }, 'Trụ đã từ chối lệnh huỷ.'),
-          cancelButton
+          cancelBtn ? h('div', { class: 'toolbar' }, cancelBtn) : null
         );
       });
       mount(content, ...(cards.length ? cards : [h('section', { class: 'card', style: 'padding:18px' },

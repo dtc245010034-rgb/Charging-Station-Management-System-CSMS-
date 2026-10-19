@@ -2,25 +2,38 @@
 
 const { toLocalParts } = require('../billing/tz');
 
-function effectiveLimitW({ baseLimitW, windows, timezone, at }) {
-  if (baseLimitW !== null && baseLimitW !== undefined
-    && (!Number.isSafeInteger(Number(baseLimitW)) || Number(baseLimitW) <= 0)) {
-    throw new TypeError('baseLimitW must be a positive safe integer or null');
-  }
-  if (!Array.isArray(windows)) throw new TypeError('windows must be an array');
+/**
+ * Tính hạn mức công suất hiệu lực theo khung giờ và múi giờ trạm.
+ * Tuân thủ K1 (W nguyên) và K2 (theo múi giờ trạm).
+ *
+ * @param {Object} params
+ * @param {number|null} params.baseLimitW - Hạn mức nền (W)
+ * @param {Array<Object>} [params.windows=[]] - Danh sách khung giờ [{ id, start_minute, end_minute, limit_w, ... }]
+ * @param {string} [params.timezone='Asia/Ho_Chi_Minh'] - Múi giờ IANA của trạm
+ * @param {string|number|Date} [params.at] - Thời điểm cần tính (mặc định là Date.now())
+ * @returns {{ limitW: number|null, source: 'WINDOW'|'BASE', windowId?: number|string }}
+ */
+function effectiveLimitW({ baseLimitW, windows = [], timezone = 'Asia/Ho_Chi_Minh', at = Date.now() }) {
+  if (Array.isArray(windows) && windows.length > 0) {
+    const { minuteOfDay } = toLocalParts(at, timezone);
+    // Khung là nửa mở [start, end)
+    const matched = windows.find((w) => {
+      const start = Number(w.start_minute);
+      const end = Number(w.end_minute);
+      return minuteOfDay >= start && minuteOfDay < end;
+    });
 
-  const minuteOfDay = toLocalParts(at, timezone).minuteOfDay;
-  const window = windows.find((item) => (
-    minuteOfDay >= item.startMinute && minuteOfDay < item.endMinute
-  ));
-  if (window) {
-    if (!Number.isSafeInteger(Number(window.limitW)) || Number(window.limitW) <= 0) {
-      throw new TypeError('window limitW must be a positive safe integer');
+    if (matched) {
+      return {
+        limitW: Number(matched.limit_w),
+        source: 'WINDOW',
+        windowId: matched.id,
+      };
     }
-    return { limitW: Number(window.limitW), source: 'WINDOW', windowId: window.id };
   }
+
   return {
-    limitW: baseLimitW === null || baseLimitW === undefined ? null : Number(baseLimitW),
+    limitW: baseLimitW !== undefined && baseLimitW !== null ? Number(baseLimitW) : null,
     source: 'BASE',
   };
 }

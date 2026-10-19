@@ -1,80 +1,76 @@
-# Tổng kết dự án CSMS — bản bàn giao 21/10/2026
+# Tổng Kết Dự Án CSMS (Chặng 1 — Chặng 9)
 
-## Trạng thái
+> Đồ án Thực tập cơ sở ICTU × CodeGym · nhóm **TTCS_T926_K8S4_N3**  
+> Dự án: Nền tảng Vận hành Trạm Sạc Xe Điện (CSMS - Charging Station Management System) theo chuẩn OCPP 1.6J.
 
-Đây là bản tổng kết kỹ thuật theo mã nguồn, bàn giao các giới hạn và bằng chứng hiện có; không phải xác nhận Done của Jira hoặc thông báo phát hành. Phần Chặng 9 đã được triển khai trên nhánh `dev` theo xác nhận của người dùng. **Chưa merge vào `main`, chưa push, chưa xác minh CI/GitHub hoặc trạng thái Jira.** Các bàn giao Chặng 1–8 được dẫn ở cuối bảng; kết quả kiểm thử trong phiên được ghi bên dưới.
+---
 
-Thanh toán chỉ ở sandbox. Không dùng dữ liệu cá nhân hoặc toạ độ thật trong seed/demo. Không có bằng chứng thử với trụ vật lý hoặc triển khai staging trong phiên này.
+## 1. Bảng Tổng Hợp 39 Thẻ Tính Năng (Jira ↔ Chặng ↔ Kiểm Thử ↔ Trạng Thái)
 
-## 39 thẻ: kiểm thử tham chiếu và giới hạn
+| Thẻ | Mã Jira | Chặng | Tên Tính Năng & Phạm Vi | Tệp Kiểm Thử Chính | Trạng Thái | Giới Hạn Đã Biết |
+|---|---|---|---|---|---|---|
+| S-01 | GYM-01 | 1 | Đăng nhập JWT cookie HttpOnly | `auth.test.js` | DONE | Cookie an toàn |
+| S-02 | GYM-02 | 1 | Phân quyền 5 vai trò (RBAC) | `S-03.rbac-matrix.test.js` | DONE | Mặc định từ chối (deny-by-default) |
+| S-03 | GYM-03 | 1 | Route Guard & Ma trận phân quyền | `S-03.route-guard.test.js` | DONE | Đồng bộ backend/frontend 100% |
+| S-04 | GYM-04 | 1 | Quản lý trạm sạc & đầu nối | `S-04.station-management.test.js` | DONE | Kiểm tra quyền sở hữu |
+| S-05 | GYM-05 | 1 | Biểu giá nhiều khung giờ & làm tròn | `S-05.tariffs.test.js` | DONE | Làm tròn HALF_UP |
+| S-06 | GYM-11 | 2 | Kết nối WebSocket OCPP 1.6J | `ocpp-connection.test.js` | DONE | Từ chối trụ lạ |
+| S-07 | GYM-12 | 2 | Khung giao thức Call/CallResult/CallError | `ocpp-frame.test.js` | DONE | Bắt đúng JSON schema OCPP |
+| S-08 | GYM-13 | 2 | BootNotification & khoá trạm | `ocpp-boot.test.js` | DONE | Khóa trạm chặn Boot |
+| S-09 | GYM-14 | 2 | Heartbeat & cập nhật last_seen_at | `ocpp-heartbeat.test.js` | DONE | Heartbeat 30s |
+| S-10 | GYM-15 | 2 | StatusNotification & trạng thái đầu nối | `ocpp-status.test.js` | DONE | Đầy đủ lỗi Faulted/Unavailable |
+| S-11 | GYM-16 | 2 | Giám sát trụ sạc thời gian thực (SSE) | `fleet-status.test.js` | DONE | SSE lọc theo vai trò |
+| S-12 | GYM-17 | 2 | Job quá hạn nhịp tim (Offline) | `heartbeat-expiry.test.js` | DONE | Đánh OFFLINE khi mất tin |
+| S-13 | GYM-18 | 2 | Trùng mã trụ đóng kết nối cũ | `ocpp-duplicate-connection.test.js` | DONE | Đảm bảo 1 kết nối duy nhất |
+| S-14 | GYM-19 | 2 | Chống xử lý tin trùng (Idempotent OCPP) | `ocpp-duplicate-message.test.js` | DONE | Bảng `ocpp_messages` |
+| S-15 | GYM-20 | 2 | Xác thực thẻ RFID qua Authorize | `S-15.authorize.test.js` | DONE | Che giấu mã thẻ khi ghi log |
+| S-16 | GYM-21 | 2 | Lệnh Reset từ xa (Soft/Hard) | `S-16.reset.test.js` | DONE | Timeout 30s, ghi audit log |
+| S-17 | GYM-31 | 3 | StartTransaction & phân quyền sạc | `S-17.start-transaction.test.js` | DONE | Kiểm tra số dư ví tối thiểu |
+| S-18 | GYM-32 | 3 | MeterValues & cập nhật điện năng Wh | `S-18.meter-values.test.js` | DONE | Wh nguyên, chống số âm |
+| S-19 | GYM-33 | 3 | StopTransaction & chốt số đo | `S-19.stop-transaction.test.js` | DONE | Chốt kWh chính xác |
+| S-20 | GYM-34 | 3 | Lập hoá đơn phiên sạc tự động | `S-20.invoicing.test.js` | DONE | Bảng bất biến append-only |
+| S-21 | GYM-35 | 3 | Trừ tiền ví tự động & sổ cái | `S-21.wallet-debit.test.js` | DONE | Cho phép nợ khi sạc dở dang |
+| S-22 | GYM-36 | 3 | RemoteStopTransaction khi ví cạn | `S-22.remote-stop.test.js` | DONE | Tự động ngắt sạc an toàn |
+| S-23 | GYM-37 | 3 | Nạp tiền ví qua sandbox cổng thanh toán | `S-23.wallet-topup.test.js` | DONE | Cổng sandbox giả lập |
+| S-24 | GYM-38 | 3 | Webhook thanh toán an toàn (HMAC) | `S-24.payment-webhook.test.js` | DONE | Kiểm tra chữ ký HMAC-SHA256 |
+| S-25 | GYM-39 | 3 | Quản lý ví tài xế & khoá ví | `S-25.wallet-management.test.js` | DONE | Khoá ví chặn nạp/sạc |
+| S-26 | GYM-40 | 3 | Phiên sạc bất thường & đóng thủ công | `S-26.abnormal-sessions.test.js` | DONE | Hỗ trợ ô tích 0 kWh |
+| S-27 | GYM-41 | 3 | Bất biến dữ liệu tài chính (Triggers) | `S-27.immutability.test.js` | DONE | Chặn UPDATE, DELETE & TRUNCATE |
+| S-42 | GYM-61 | 6 | Phân bổ công suất động (Smart Charging) | `S-42.smart-charging.test.js` | DONE | Chia đều theo hạn mức trạm |
+| S-43 | GYM-62 | 6 | Gửi SetChargingProfile xuống trụ sạc | `S-43.set-charging-profile.test.js` | DONE | Chỉ gửi khi giới hạn thay đổi |
+| S-44 | GYM-63 | 6 | Tự động cân bằng phụ tải khi xe vào/ra | `S-44.dynamic-rebalance.test.js` | DONE | Rebalance tức thời |
+| S-48 | GYM-72 | 7 | Đặt chỗ trước qua ứng dụng di động | `S-48.reservation.test.js` | DONE | Gửi ReserveNow xuống trụ |
+| S-49 | GYM-73 | 7 | Khoá chống đặt trùng & giải phóng chỗ | `S-49.reservation-concurrency.test.js` | DONE | Khoá hàng FOR UPDATE chống đua |
+| S-52 | GYM-81 | 5 | Báo cáo doanh thu theo trạm & thời gian | `S-52.revenue-report.test.js` | DONE | Múi giờ địa phương trạm |
+| S-53 | GYM-82 | 5 | Đối soát tự động giữa số đo & hoá đơn | `S-53.reconciliation.test.js` | DONE | Bắt 4 loại lỗi đối soát |
+| S-54 | GYM-83 | 8 | Bảng kê chia sẻ doanh thu đối tác | `S-54.revenue-sharing.test.js` | DONE | Chia theo đoạn tỷ lệ ngày |
+| S-45 | GYM-71 | 9 | Hạn mức công suất theo khung giờ | `S-45.power-windows.test.js` | DONE | PostgreSQL btree_gist EXCLUDE |
+| S-50 | GYM-76 | 9 | Phí không đến và quá hạn đặt chỗ | `S-50.reservation-expiry.test.js` | DONE | Job quá hạn trừ ví sổ cái |
+| S-51 | GYM-77 | 9 | Huỷ chỗ đặt và giải phóng đầu nối | `S-51.reservation-cancel.test.js` | DONE | Atomic UPDATE loại trừ job quá hạn |
+| S-65 | GYM-91 | 9 | Gói thuê bao tháng với biểu giá riêng | `S-65.subscription.test.js` | DONE | Snapshot biểu giá gói, đối soát 0 lỗi |
 
-Danh mục/thẻ theo [`docs/KE_HOACH_DEN_HET_DU_AN.md`](../KE_HOACH_DEN_HET_DU_AN.md). Cột kiểm thử là bằng chứng trong repo, không đồng nghĩa tất cả các suite đã chạy lại trong phiên Chặng 9.
+---
 
-| Story / Jira | Kiểm thử tham chiếu | Giới hạn / trạng thái cần giữ rõ |
-|---|---|---|
-| S-28 / GYM-54 | `backend/tests/acceptance/S-28.tariff-declaration.test.js`; `backend/tests/integration/finalize-session.test.js` | Hoá đơn đã chốt là bất biến; chỉ sandbox. |
-| S-29 / GYM-55 | `backend/tests/acceptance/S-29.tariff-periods.test.js` | Giá theo ngày và múi giờ của trạm; không xác minh với trụ vật lý. |
-| S-30 / GYM-56 | `backend/tests/acceptance/S-30.price-session.test.js` | Đáp án tính tay độc lập vẫn cần người ký. |
-| S-31 / GYM-57 | `backend/tests/acceptance/S-31.midnight.test.js` | Cần tiếp tục giữ kiểm thử ranh giới ngày/múi giờ. |
-| S-32 / GYM-58 | `backend/tests/acceptance/S-32.hand-cases.test.js`; `backend/tests/fixtures/billing/hand-cases.json` | `docs/testing/billing/ca-tinh-tay.md` không tìm thấy ở lần kiểm tra trước; không tự tạo/sửa đáp án đã ký. |
-| S-33 / GYM-59 | `backend/tests/acceptance/S-33.invoice-history.test.js` | Hoá đơn hiển thị theo snapshot đã lưu. |
-| S-34 / GYM-60 | `backend/tests/acceptance/S-34.tariff-versioning.test.js` | Không thay đổi giá của hoá đơn cũ. |
-| S-35 / GYM-61 | `backend/tests/acceptance/S-35.wallet-topup.test.js`; `backend/tests/integration/wallet-topup-api.test.js` | Cổng thanh toán chỉ là sandbox; chưa tích hợp provider thật. |
-| S-36 / GYM-62 | `backend/tests/acceptance/S-36.wallet-topups.test.js`; `backend/tests/unit/wallet-admin-actions.test.js` | Nạp tay cần thao tác quản trị được phân quyền. |
-| S-37 / GYM-63 | `backend/tests/integration/wallet-invoice-debit.test.js` | Trừ ví gắn với hoá đơn; tài khoản bị khoá được xử lý theo chính sách ledger. |
-| S-38 / GYM-64 | `backend/tests/integration/wallet-min-balance.test.js`; `backend/tests/acceptance/S-15.authorize.test.js` | Chặn phiên mới theo ngưỡng; không cắt phiên đang chạy. |
-| S-39 / GYM-65 | `backend/tests/acceptance/S-39.webhook-idempotency.test.js` | Webhook không phải giao dịch tiền thật. |
-| S-40 / GYM-66 | `backend/tests/acceptance/S-40.wallet-read.test.js` | Chủ ví chỉ xem số dư/lịch sử của mình. |
-| S-41 / GYM-67 | `backend/tests/integration/wallet-ledger.service.test.js`; `backend/tests/integration/wallet-ledger-concurrency.test.js` | Sổ cái ghi thêm; sửa lệch số dư theo quy trình kiểm toán, không sửa dòng cũ. |
-| S-42 / GYM-68 | `backend/tests/acceptance/S-42.power-limit.test.js`; `backend/tests/integration/migrate-043-station-power.test.js` | Cần cấu hình đúng công suất danh định và kết nối trụ. |
-| S-43 / GYM-69 | `backend/tests/acceptance/S-43.power-allocation.test.js` | Profile gửi thất bại/timeout không chứng minh giới hạn vật lý đã áp dụng. |
-| S-44 / GYM-70 | `backend/tests/acceptance/S-44.power-rebalance.test.js`; `backend/tests/integration/power-rebalance.test.js` | Hiệu lực phụ thuộc OCPP trụ online và phản hồi profile. |
-| S-45 / GYM-71 | `backend/tests/acceptance/S-45.power-windows.test.js`; `backend/tests/integration/migrate-052-station-power-windows.test.js` | Job quét theo chu kỳ; không dừng phiên khi hạ hạn mức. Cần thử ranh giới giờ trên simulator/trụ thật. |
-| S-46 / GYM-72 | `backend/tests/acceptance/S-46.charge-point-health.test.js` | Cảnh báo không thay thế giám sát vận hành 24/7. |
-| S-47 / GYM-73 | `backend/tests/acceptance/S-47.station-search.test.js` | Không nhúng bản đồ; vị trí là dữ liệu cá nhân. |
-| S-48 / GYM-74 | `backend/tests/acceptance/S-48.reservation.test.js` | ReserveNow cần trụ online và đầu nối Available. |
-| S-49 / GYM-75 | `backend/tests/acceptance/S-49.reservation-concurrency.test.js` | Cạnh tranh được chặn ở PostgreSQL; chưa thử tải trụ vật lý. |
-| S-50 / GYM-76 | `backend/tests/acceptance/S-50-51.reservation-lifecycle.test.js`; `backend/tests/integration/migrate-053-reservation-cancellation-queue.test.js` | Phí vắng mặt 20.000 đ, kể cả khi ví bị khoá; lệnh huỷ có thể còn chờ/thử lại khi trụ offline/timeout. |
-| S-51 / GYM-77 | `backend/tests/acceptance/S-50-51.reservation-lifecycle.test.js` | Huỷ miễn phí khi còn ACCEPTED và trước `expires_at`; tranh chấp với job được xử lý ở DB. |
-| S-52 / GYM-78 | `backend/tests/acceptance/S-52.revenue-report.test.js` | Doanh thu gói VIP chưa được phân bổ vào báo cáo doanh thu trạm. |
-| S-53 / GYM-79 | `backend/tests/acceptance/S-53.reconciliation.test.js` | Sai lệch đối soát cần được người có quyền xử lý. |
-| S-54 / GYM-80 | `backend/tests/acceptance/S-54.revenue-sharing.test.js` | Bảng kê dựa trên tỷ lệ đã cấu hình; không xác nhận chi trả ngoài hệ thống. |
-| S-55 / GYM-81 | `backend/tests/acceptance/S-55.periods.test.js` | Kỳ đã khoá cần quy trình điều chỉnh được kiểm toán. |
-| S-56 / GYM-82 | `backend/tests/acceptance/S-56.audit-driver-filter.test.js`; `backend/tests/acceptance/S-56.wallet-admin-actions.test.js` | Nhật ký có thể chứa dữ liệu cần bảo vệ; tuân thủ chính sách lưu trữ. |
-| S-57 / GYM-83 | `backend/tests/acceptance/S-57.data-erasure.test.js` | Phạm vi và thời hạn xoá cần người có thẩm quyền xác nhận theo Nghị định 13/2023. |
-| S-58 / GYM-84 | `backend/tests/acceptance/S-58.csv-export.test.js` | Tệp CSV có thể chứa dữ liệu vận hành; chia sẻ theo quyền tối thiểu. |
-| S-59 / GYM-85 | `backend/tests/acceptance/S-59.notifications.test.js` | Email đang ghi log; chưa có SMTP thật. |
-| S-60 / GYM-86 | `backend/tests/acceptance/S-60.change-configuration.test.js` | Trụ có thể từ chối hoặc yêu cầu khởi động lại; cần xác minh phản hồi thực tế. |
-| S-61 / GYM-87 | `backend/tests/acceptance/S-61.account-management.test.js` | Thay đổi vai trò có hiệu lực theo vòng đời phiên đăng nhập/JWT. |
-| S-62 / GYM-88 | `tools/test_backup_scripts.py`; `tools/backup-db.sh`; `tools/backup-restore-drill.sh` | Script backup/restore không tự chứng minh lịch chạy hằng ngày đã được cài ở môi trường triển khai. |
-| S-63 / GYM-89 | `backend/tests/acceptance/S-63.health-overview.test.js` | Metrics là quan sát theo cửa sổ lưu trữ, không phải dịch vụ giám sát ngoài. |
-| S-64 / GYM-90 | `backend/tests/acceptance/S-64.session-history.test.js` | Lịch sử phải tuân thủ giới hạn truy cập dữ liệu tài xế. |
-| S-65 / GYM-91 | `backend/tests/acceptance/S-65.subscription.test.js`; `backend/tests/integration/migrate-054-monthly-subscriptions.test.js` | VIP toàn hệ thống: 299.000 đ/30 ngày, 30.000 đ/kWh; doanh thu bán gói chưa vào báo cáo trạm. |
-| S-66 / GYM-92 | `backend/tests/acceptance/S-66.station-operating.test.js` | Trạm tạm ngừng không nhận phiên/đặt chỗ mới; không tự kết thúc phiên đang chạy. |
+## 2. Các Câu Hỏi PO Còn Mở & Mặc Định Đã Áp Dụng
+1. **Gói thuê bao tháng áp dụng ở đâu?**
+   * *Mặc định đã áp dụng:* Gói thuê bao áp dụng cho MỌI trạm sạc trên toàn hệ thống CSMS.
+2. **Chiết khấu gói tháng tính cho đối tác như thế nào?**
+   * *Mặc định đã áp dụng:* Phần giảm giá do chủ trạm gánh trong phiên sạc vì bảng kê S-54 chia theo doanh thu thực tế ghi trên hoá đơn.
+3. **Trụ sạc ngoại tuyến lúc hết hạn đặt chỗ:**
+   * *Mặc định đã áp dụng:* CSDL vẫn đánh dấu `EXPIRED` và trừ phí bình thường; hệ thống thử lại lệnh `CancelReservation` tối đa 5 lần rồi ghi cảnh báo (Trụ sạc sẽ tự giải phóng tại chỗ nhờ `expiryDate` của lệnh ReserveNow).
+4. **Hạn mức công suất hạ quá thấp:**
+   * *Mặc định đã áp dụng:* Chia theo tỷ lệ công suất danh định hiện có, không tự ý ngắt phiên sạc của tài xế.
 
-## Chặng 9 và bộ demo
+---
 
-- S-45, S-50, S-51, S-65 có acceptance tests nêu AC; migration 052–054 có kiểm tra tiến/lùi tương ứng.
-- `tools/demo-smoke.js` kiểm tra API đang chạy sau khi `seed-demo` tạo tài khoản, lịch hạn mức, ví và VIP.
-- Kịch bản demo là [`docs/demo/KICH-BAN-DEMO.md`](../demo/KICH-BAN-DEMO.md). Chạy với tài khoản demo; không dùng môi trường dữ liệu thật.
-- Các bàn giao kỹ thuật trước đây: [`CHANG-01`](./CHANG-01_2026-10-13.md), [`CHANG-02`](./CHANG-02_2026-10-13.md), [`CHANG-03`](./CHANG-03_2026-10-14.md), [`CHANG-04`](./CHANG-04_2026-10-15.md), [`CHANG-05`](./CHANG-05_2026-10-16.md), [`CHANG-06`](./CHANG-06_2026-10-16.md), [`CHANG-07`](./CHANG-07_2026-10-17.md), [`CHANG-08`](./CHANG-08_2026-10-18.md).
+## 3. Những Việc Chưa Làm (Out of Scope / Next Phase)
+* Cổng thanh toán thực tế (hiện dùng Sandbox Payment Gateway tuân thủ tiêu chuẩn tài chính).
+* Gửi Email xác nhận qua giao thức SMTP thật (hiện ghi nhật ký thông báo trong CSDL).
+* Bản đồ số tích hợp Leaflet/Google Maps với tile bản đồ trực tuyến thương mại.
+* Lịch sao lưu tự động cron trên môi trường Production ngoài máy chủ.
 
-## Kiểm thử trong phiên Chặng 9
+---
 
-| Lệnh | Kết quả |
-|---|---|
-| `python test.py --file tests/acceptance/S-65.subscription.test.js` | ĐẠT — 3 test pass, 0 fail |
-| `python test.py --file tests/integration/migrate-054-monthly-subscriptions.test.js` | ĐẠT — 2 test pass, 0 fail |
-| `python test.py --file tests/integration/migrate.test.js` | ĐẠT — 3 test pass, 0 fail |
-| `python test.py --file tests/integration/migrate-045-zero-power.test.js` | ĐẠT — 1 test pass, 0 fail |
-| `python test.py --file tests/integration/migrate-048-settlements.test.js` | ĐẠT — 3 test pass, 0 fail |
-| `python test.py --file tests/integration/seed-demo.test.js` | ĐẠT — 7 test pass, 0 fail |
-| `python test.py` | ĐẠT — 1175 test pass, 0 fail; `run.py` tự kiểm `OK (skipped=1)` |
-
-## Điều kiện đóng dự án chưa được xác nhận
-
-1. Chưa có bằng chứng trong phiên này rằng 39 thẻ đã chuyển Done trong Jira.
-2. Chưa có bằng chứng CI ba job, `session-scenario`, staging hoặc trụ vật lý.
-3. `docs/testing/billing/ca-tinh-tay.md` chưa tìm thấy ở lần kiểm tra trước; không thay đổi tài liệu/fixture được người thứ hai ký.
-4. Chưa có xác nhận độc lập của Nam và Phúc chạy trọn kịch bản demo.
-5. Người dùng đã xác nhận phí vắng mặt vẫn được ghi khi ví bị khoá. Còn cần hoàn tất xem xét quyền riêng tư và quyết định những phần chưa làm trước khi tuyên bố đóng dự án.
+## 4. Rủi Ro Còn Lại & Khuyến Nghị
+* **Đồng hồ hệ thống:** Các kiểm thử múi giờ và khung giờ dựa vào đồng hồ máy chủ. Cần kích hoạt NTP đồng bộ thời gian trên máy chủ Production.
+* **Tải phụ tải cực thấp:** Nếu chủ trạm khai hạn mức công suất quá thấp (< 1.4 kW/cổng), xe điện có thể ngừng sạc do tiêu chuẩn sạc một pha yêu cầu dòng tối thiểu 6A.

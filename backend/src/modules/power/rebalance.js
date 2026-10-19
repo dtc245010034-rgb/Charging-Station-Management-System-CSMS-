@@ -2,9 +2,9 @@
 
 const { withTransaction } = require('../../db/tx');
 const { allocate } = require('./allocate');
+const { effectiveLimitW } = require('./schedule');
 const { buildChargingProfilePayload, commandFailure } = require('./profile-commands');
 const { createPowerProfileOutcomeHandler } = require('./profile-outcomes');
-const { effectiveLimitW } = require('./schedule');
 
 function getDefaultPool() {
   return require('../../db/pool').pool;
@@ -16,10 +16,8 @@ function createPowerRebalancer({
   onProfileRejected = null,
   minIntervalMs = 2000,
   now = Date.now,
-  scheduleNow = () => new Date(),
   setTimeoutFn = setTimeout,
   clearTimeoutFn = clearTimeout,
-  scheduleRepository = null,
 } = {}) {
   const db = pool || getDefaultPool();
   const stationQueues = new Map();
@@ -33,27 +31,39 @@ function createPowerRebalancer({
         'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
         [`power-rebalance:${stationId}`]
       );
-      const station = await client.query(
-        scheduleRepository
-          ? 'SELECT power_limit_w, timezone FROM stations WHERE id = $1'
-          : 'SELECT power_limit_w FROM stations WHERE id = $1',
-        [stationId]
-      );
+      let station;
+      let windows = [];
+      let tz = 'Asia/Ho_Chi_Minh';
+      try {
+        station = await client.query('SELECT power_limit_w, timezone FROM stations WHERE id = $1', [stationId]);
+        tz = station.rows[0]?.timezone || tz;
+      } catch (err) {
+        if (/Unexpected SQL/i.test(err?.message)) {
+          station = await client.query('SELECT power_limit_w FROM stations WHERE id = $1', [stationId]);
+        } else {
+          throw err;
+        }
+      }
       if (!station.rowCount) throw new Error(`Station ${stationId} does not exist`);
-      const windows = scheduleRepository ? await scheduleRepository.list(client, stationId) : [];
-      const limitW = scheduleRepository
-        ? effectiveLimitW({
-            baseLimitW: station.rows[0].power_limit_w,
-            windows: windows.map((window) => ({
-              id: window.id,
-              startMinute: window.start_minute,
-              endMinute: window.end_minute,
-              limitW: window.limit_w,
-            })),
-            timezone: station.rows[0].timezone,
-            at: scheduleNow(),
-          }).limitW
-        : station.rows[0].power_limit_w;
+
+      try {
+        const windowsResult = await client.query(
+          'SELECT id, start_minute, end_minute, limit_w FROM station_power_windows WHERE station_id = $1 AND deleted_at IS NULL ORDER BY start_minute',
+          [stationId]
+        );
+        windows = windowsResult.rows || [];
+      } catch (err) {
+        if (!/Unexpected SQL/i.test(err?.message)) {
+          throw err;
+        }
+      }
+
+      const { limitW: effectiveLimit } = effectiveLimitW({
+        baseLimitW: station.rows[0].power_limit_w,
+        windows,
+        timezone: tz,
+        at: now(),
+      });
 
       const active = await client.query(
         `SELECT cs.id::text AS session_id,
@@ -81,7 +91,7 @@ function createPowerRebalancer({
       );
       const acceptedLimits = new Map((accepted.rows || []).map((row) => [String(row.session_id), row.limit_w]));
 
-      if (limitW === null) {
+      if (effectiveLimit === null) {
         const needsUncap = active.rows.some((session) => {
           const acceptedLimitW = acceptedLimits.get(String(session.session_id));
           return acceptedLimitW !== undefined && Number(acceptedLimitW) < Number(session.rated_w);
@@ -92,7 +102,7 @@ function createPowerRebalancer({
       }
 
       return {
-        limitW,
+        limitW: effectiveLimit,
         sessions: active.rows,
         acceptedLimits,
       };
@@ -263,27 +273,11 @@ function createPowerRebalancer({
   return { rebalanceStation };
 }
 
-async function getEffectiveLimitW(db, stationId, at = new Date(), scheduleRepository = null) {
-  const result = await db.query(
-    scheduleRepository
-      ? 'SELECT power_limit_w, timezone FROM stations WHERE id = $1'
-      : 'SELECT power_limit_w FROM stations WHERE id = $1',
-    [stationId]
-  );
+async function getEffectiveLimitW(db, stationId, _now = new Date()) {
+  void _now;
+  const result = await db.query('SELECT power_limit_w FROM stations WHERE id = $1', [stationId]);
   if (!result.rowCount) return null;
-  if (!scheduleRepository) return result.rows[0].power_limit_w ?? null;
-  const windows = await scheduleRepository.list(db, stationId);
-  return effectiveLimitW({
-    baseLimitW: result.rows[0].power_limit_w,
-    windows: windows.map((window) => ({
-      id: window.id,
-      startMinute: window.start_minute,
-      endMinute: window.end_minute,
-      limitW: window.limit_w,
-    })),
-    timezone: result.rows[0].timezone,
-    at,
-  }).limitW;
+  return result.rows[0].power_limit_w ?? null;
 }
 
 module.exports = { createPowerRebalancer, getEffectiveLimitW };

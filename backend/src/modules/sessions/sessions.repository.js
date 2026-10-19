@@ -335,7 +335,10 @@ async function listDriverSessionHistory(dbOrPool, driverId, {
               cp.code AS charge_point_code, c.connector_no,
               s.name AS station_name, s.address AS station_address,
               s.timezone AS station_timezone,
-              si.total_dong AS invoice_total_dong
+              si.total_dong AS invoice_total_dong,
+              si.tariff_source,
+              si.tariff_snapshot->'plan'->>'name' AS subscription_plan_name,
+              si.tariff_snapshot->'plan'->>'code' AS subscription_plan_code
        FROM charging_sessions cs
        JOIN charge_points cp ON cp.id = cs.charge_point_id
        JOIN connectors c ON c.id = cs.connector_id
@@ -362,7 +365,10 @@ async function listDriverSessionHistory(dbOrPool, driverId, {
             cp.code AS charge_point_code, c.connector_no,
             s.name AS station_name, s.address AS station_address,
             s.timezone AS station_timezone,
-            si.total_dong AS invoice_total_dong
+            si.total_dong AS invoice_total_dong,
+            si.tariff_source,
+            si.tariff_snapshot->'plan'->>'name' AS subscription_plan_name,
+            si.tariff_snapshot->'plan'->>'code' AS subscription_plan_code
      FROM charging_sessions cs
      JOIN charge_points cp ON cp.id = cs.charge_point_id
      JOIN connectors c ON c.id = cs.connector_id

@@ -1,5 +1,3 @@
-const { rebalanceCapacity } = require('./plan');
-
 function compareSessionId(left, right) {
   const leftText = String(left);
   const rightText = String(right);
@@ -9,10 +7,6 @@ function compareSessionId(left, right) {
     return leftId < rightId ? -1 : leftId > rightId ? 1 : 0;
   }
   return leftText.localeCompare(rightText);
-}
-
-function rebalanceStation({ stationLimitKw, activeSessions = [] }) {
-  return rebalanceCapacity({ stationLimitKw, activeSessions });
 }
 
 function allocate({ limitW, sessions }) {
@@ -43,5 +37,4 @@ function allocate({ limitW, sessions }) {
   });
 }
 
-module.exports = { rebalanceStation, rebalanceCapacity, allocate };
-
+module.exports = { allocate };

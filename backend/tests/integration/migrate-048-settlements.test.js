@@ -71,21 +71,8 @@ describe('migration 048: settlement_statements & settlement_lines append-only', 
   });
 
   it('migration 048 rolls back and reapplies', async () => {
-    for (const expectedLast of [
-      '053_reservation_cancellation_queue.sql',
-      '052_station_power_windows.sql',
-      '052_station_power_profiles.sql',
-      '051_users_disabled_at.sql',
-      '050_health_minutes.sql',
-      '049_alerts_notified_at.sql',
-      '048_settlement_statements.sql',
-      '047_partner_share_rates.sql',
-    ]) {
-      const down = run('src/db/migrate.js', ['down']);
-      assert.strictEqual(down.status, 0, down.stderr);
-      const last = await query('SELECT version FROM schema_migrations ORDER BY id DESC LIMIT 1');
-      assert.equal(last.rows[0].version, expectedLast);
-    }
+    const { rollbackToMigration } = require('../helpers/db');
+    await rollbackToMigration('047_partner_share_rates.sql');
     const absent = await query("SELECT to_regclass('public.settlement_statements') AS t");
     assert.equal(absent.rows[0].t, null);
 

@@ -93,9 +93,6 @@ async function postEntry(client, {
   if (entryType === 'SESSION_DEBIT' && sessionId == null) {
     throw new BadRequestError('SESSION_DEBIT phải tham chiếu tới phiên sạc');
   }
-  if (entryType === 'SUBSCRIPTION_FEE' && subscriptionId == null) {
-    throw new BadRequestError('SUBSCRIPTION_FEE phải tham chiếu tới gói thuê bao');
-  }
 
   await client.query(
     'INSERT INTO wallets (driver_id) VALUES ($1) ON CONFLICT (driver_id) DO NOTHING',

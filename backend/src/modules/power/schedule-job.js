@@ -1,66 +1,94 @@
 'use strict';
 
-const { pool } = require('../../db/pool');
 const { sanitizeErrorMessage } = require('../../lib/constants');
 
 const POWER_SCHEDULE_TICK_MS = 15000;
 
-function createPowerScheduleJob({
-  db = pool,
-  rebalanceStation,
-  logError = console.error,
-} = {}) {
-  if (typeof rebalanceStation !== 'function') throw new TypeError('rebalanceStation is required');
-
-  async function run() {
-    const stations = await db.query(
-      `SELECT DISTINCT s.id
-       FROM stations s
-       JOIN station_power_windows w ON w.station_id = s.id AND w.deleted_at IS NULL
-       WHERE EXISTS (
-         SELECT 1 FROM charging_sessions cs
-         JOIN connectors c ON c.id = cs.connector_id
-         JOIN charge_points cp ON cp.id = c.charge_point_id
-         WHERE cp.station_id = s.id AND cs.status = 'CHARGING'
-       )
-       ORDER BY s.id`
-    );
-    const results = [];
-    for (const { id } of stations.rows) {
-      try {
-        results.push(await rebalanceStation(id, { reason: 'SCHEDULE' }));
-      } catch (error) {
-        logError(
-          `[Power schedule] Rebalance station ${id} failed:`,
-          sanitizeErrorMessage(error?.message || error)
-        );
-      }
-    }
-    return results;
-  }
-
-  return { run };
+function getDb(db) {
+  return db || require('../../db/pool').pool;
 }
 
+/**
+ * Quét các trạm có ít nhất 1 khung giờ đang hoạt động và ít nhất 1 phiên đang sạc (CHARGING),
+ * sau đó kích hoạt rebalanceStation(stationId, { reason: 'SCHEDULE' }).
+ *
+ * @param {Object} options
+ * @param {Function} options.rebalanceStation - Hàm rebalanceStation(stationId, { reason })
+ * @param {Object} [options.db] - Database pool / client
+ * @returns {Promise<Array<number|string>>} Danh sách stationId đã được rebalance
+ */
+async function tickPowerSchedule({ rebalanceStation, db = null } = {}) {
+  if (typeof rebalanceStation !== 'function') return [];
+  const database = getDb(db);
+
+  const query = `
+    SELECT DISTINCT s.id
+    FROM stations s
+    JOIN station_power_windows spw ON spw.station_id = s.id AND spw.deleted_at IS NULL
+    JOIN charge_points cp ON cp.station_id = s.id
+    JOIN connectors c ON c.charge_point_id = cp.id
+    JOIN charging_sessions cs ON cs.connector_id = c.id AND cs.status = 'CHARGING'
+  `;
+
+  const { rows } = await database.query(query);
+  const rebalanced = [];
+
+  for (const row of rows) {
+    try {
+      await rebalanceStation(row.id, { reason: 'SCHEDULE' });
+      rebalanced.push(row.id);
+    } catch {
+      // K4: không ngắt vòng lặp khi một trạm lỗi
+    }
+  }
+
+  return rebalanced;
+}
+
+/**
+ * Khởi động job định kỳ chạy tickPowerSchedule.
+ *
+ * @param {Object} options
+ * @param {Function} options.rebalanceStation
+ * @param {number} [options.intervalMs]
+ * @param {Object} [options.db]
+ * @param {Function} [options.logError]
+ * @returns {{ stop: Function, tick: Function }}
+ */
 function startPowerScheduleJob({
+  rebalanceStation,
   intervalMs = POWER_SCHEDULE_TICK_MS,
+  db = null,
   logError = console.error,
-  ...options
 } = {}) {
-  const job = createPowerScheduleJob({ ...options, logError });
   let running = null;
+
   async function tick() {
     if (running) return running;
-    running = job.run().catch((error) => {
-      logError(`[Power schedule] Scan failed: ${sanitizeErrorMessage(error?.message || error)}`);
-      return null;
-    }).finally(() => { running = null; });
+    running = (async () => {
+      try {
+        return await tickPowerSchedule({ rebalanceStation, db });
+      } catch (error) {
+        logError(`[Power schedule job] Lỗi: ${sanitizeErrorMessage(error?.message || error)}`);
+        return [];
+      }
+    })().finally(() => {
+      running = null;
+    });
     return running;
   }
+
   const timer = setInterval(() => { void tick(); }, intervalMs);
   timer.unref?.();
-  void tick();
-  return { run: tick, stop: () => clearInterval(timer) };
+
+  return {
+    stop: () => clearInterval(timer),
+    tick,
+  };
 }
 
-module.exports = { POWER_SCHEDULE_TICK_MS, createPowerScheduleJob, startPowerScheduleJob };
+module.exports = {
+  POWER_SCHEDULE_TICK_MS,
+  tickPowerSchedule,
+  startPowerScheduleJob,
+};

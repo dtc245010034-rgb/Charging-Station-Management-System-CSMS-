@@ -30,7 +30,6 @@ const schema = z.object({
   OCPP_COMMAND_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(30),
   // Cửa sổ gộp các sự kiện chia lại công suất tại cùng một trạm
   POWER_REBALANCE_MIN_INTERVAL_MS: z.coerce.number().int().positive().default(2000),
-  POWER_SCHEDULE_TICK_MS: z.coerce.number().int().positive().default(15000),
   // Thời gian chờ StopTransaction sau RemoteStopTransaction Accepted, mặc định 2 phút
   REMOTE_STOP_WAIT_SECONDS: z.coerce.number().int().positive().default(120),
   // Thời gian giữ thêm sau giờ tài xế dự kiến đến khi đặt reservation
@@ -72,6 +71,8 @@ const schema = z.object({
     z.string().url().optional()
   ),
   EMAIL_TRANSPORT: z.enum(['log', 'smtp']).default('log'),
+  POWER_SCHEDULE_TICK_MS: z.coerce.number().int().positive().default(15000),
+  RESERVATION_EXPIRY_JOB_MS: z.coerce.number().int().positive().default(15000),
 }).superRefine((data, ctx) => {
   if (data.SANDBOX_GATEWAY === 1 && (!data.PAYMENT_WEBHOOK_SECRET || data.PAYMENT_WEBHOOK_SECRET.length < 32)) {
     ctx.addIssue({

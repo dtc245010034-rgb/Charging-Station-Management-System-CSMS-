@@ -1,1 +1,1 @@
-DROP TABLE station_power_windows;
+DROP TABLE IF EXISTS station_power_windows;
