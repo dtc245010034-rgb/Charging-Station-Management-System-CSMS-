@@ -124,7 +124,7 @@ export function render(ctx) {
         }
       },
     },
-    h('h3', { style: 'margin:0;font-size:16px' }, 'Nạp tiền qua cổng thanh toán'),
+    h('h2', { style: 'margin:0;font-size:16px' }, 'Nạp tiền qua cổng thanh toán'),
     h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' },
       h('span', { class: 'muted' }, 'Chọn nhanh:'),
       ...presetButtons
@@ -265,14 +265,14 @@ export function render(ctx) {
         });
 
         mount(sectionContainer,
-          h('h3', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
+          h('h2', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
           subCard,
           planCards.length ? h('div', { style: 'display:grid;gap:10px' }, ...planCards) : null,
           sectionFeedback
         );
       } catch (err) {
         mount(sectionContainer,
-          h('h3', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
+          h('h2', { style: 'margin:0;font-size:18px' }, 'Gói thuê bao tháng'),
           h('div', { class: 'muted' }, `Không thể tải danh sách gói: ${err.message}`)
         );
       }

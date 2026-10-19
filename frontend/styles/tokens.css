@@ -26,6 +26,7 @@
   --info: #3b82f6;
   --warning: #f59e0b;
   --danger: #ef4444;
+  --danger-text: #f87171; /* chữ/biểu tượng màu lỗi trên nền tối: --danger (#ef4444) chỉ đạt 4,4:1 */
   --neutral: #94a3b8;
 
   /* Nhóm trạng thái hiển thị của trụ (gom từ 9 trạng thái OCPP, xem app/status.js) */

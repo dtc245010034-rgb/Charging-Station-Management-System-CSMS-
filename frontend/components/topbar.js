@@ -59,7 +59,7 @@ export function createTopbar({ user, workspaceId, onMenu, onSearch, onSwitch, on
     : roleTag(WORKSPACES[workspaceId].role);
 
   const userMenu = popover(
-    h('button', { class: 'user-trigger', type: 'button' },
+    h('button', { class: 'user-trigger', type: 'button', 'aria-label': `Tài khoản: ${user.name}` },
       h('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(user.name)),
       h('span', { class: 'topbar__user-name' }, user.name), icon('chevron', { size: 16 })),
     (close) => [
