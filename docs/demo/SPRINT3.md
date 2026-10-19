@@ -2,7 +2,7 @@
 
 Mục tiêu: trong khoảng **25–30 phút**, chứng minh bằng chạy thật mục tiêu Sprint 3: **một phiên sạc chạy trọn vẹn từ lúc cắm tới lúc rút với số kWh đúng, dù trụ có mất kết nối giữa chừng.** Gồm 11 story: phiên sạc bắt đầu/kết thúc (S-17, S-18), số đo điện (S-19, S-20), khôi phục khi trụ nối lại (S-21), màn hình tài xế (S-22, S-24), vận hành dừng từ xa (S-23), phiên bất thường (S-25), trụ ảo trong compose/CI (S-26) và nhật ký điều khiển (S-27).
 
-Công cụ dùng: trụ sạc ảo tương tác [`tools/demo-charge-point.js`](../tools/demo-charge-point.js) (mở phiên, ngắt/nối) và đội trụ ảo [`tools/vcp-fleet.js`](../tools/vcp-fleet.js) chạy trong `docker-compose` (tự gửi `MeterValues`, tự trả lời `RemoteStart/RemoteStop`).
+Công cụ dùng: trụ sạc ảo tương tác [`tools/demo-charge-point.js`](../../tools/demo-charge-point.js) (mở phiên, ngắt/nối) và đội trụ ảo [`tools/vcp-fleet.js`](../../tools/vcp-fleet.js) chạy trong `docker-compose` (tự gửi `MeterValues`, tự trả lời `RemoteStart/RemoteStop`).
 
 > **Trạng thái đã đo (12/10/2026, trên `main` + nhánh sửa lỗi rà soát):** xem mục 7. Mọi kết quả "mong đợi" trong tài liệu này lấy từ lần chạy thật ngày 12/10/2026 trên backend + PostgreSQL trong Docker, trừ chỗ ghi **CHƯA KIỂM**.
 
@@ -149,7 +149,7 @@ Vai trò: **chỉ Admin** đọc nhật ký (Vận hành/Kế toán/Chủ trạm
 | `remote-stop-mode accept\|reject\|silent\|error` | Cách trả lời `RemoteStopTransaction` (S-23); `accept` gửi `StopTransaction` lý do `Remote` |
 | `drop`, `kill`, `connect` | Ngắt êm, cắt đột ngột, nối lại (S-21) |
 
-Các lệnh Sprint 2 (`boot`, `hb`, `status`, `auth`, `dup`, `badframe`, `reset-mode`…) xem [`DEMO_SPRINT2.md`](DEMO_SPRINT2.md) mục 4.
+Các lệnh Sprint 2 (`boot`, `hb`, `status`, `auth`, `dup`, `badframe`, `reset-mode`…) xem [`SPRINT2.md`](SPRINT2.md) mục 4.
 
 ## 5. Kiểm chứng trong cơ sở dữ liệu
 
@@ -180,8 +180,8 @@ select id, action, result, user_id, created_at from audit_logs order by id desc 
 | `python test.py` sau khi sửa lỗi rà soát (nhánh `loc/GYM-51-ra-soat-sprint3`), 12/10/2026 | **ĐẠT, 723 test pass, 0 fail, 332 giây** (+13 test mới) |
 | `python3 -m unittest discover -s tools -q` | 21 test, OK |
 | `npm audit --omit=dev --audit-level=high` | 0 vulnerabilities |
-| Số đo (S-20): cũ, trùng, lùi, mẫu đến lệch thứ tự | `backend/tests/unit/meter-rules.test.js`, `ocpp-meter-values.test.js`; hồ sơ [`kiem-thu-S-20.md`](testing/stories/S/kiem-thu-S-20.md) |
-| Khôi phục khi nối lại (S-21) | `ocpp-presence-lifecycle.test.js`, `ocpp-stop-transaction-server.test.js`, `ws-connection-rate-limit.test.js`; hồ sơ [`kiem-thu-S-21.md`](testing/stories/S/kiem-thu-S-21.md) |
+| Số đo (S-20): cũ, trùng, lùi, mẫu đến lệch thứ tự | `backend/tests/unit/meter-rules.test.js`, `ocpp-meter-values.test.js`; hồ sơ [`kiem-thu-S-20.md`](../testing/stories/S/kiem-thu-S-20.md) |
+| Khôi phục khi nối lại (S-21) | `ocpp-presence-lifecycle.test.js`, `ocpp-stop-transaction-server.test.js`, `ws-connection-rate-limit.test.js`; hồ sơ [`kiem-thu-S-21.md`](../testing/stories/S/kiem-thu-S-21.md) |
 | Dừng từ xa (S-23), bắt đầu từ xa (S-24) | `S-23.remote-stop.test.js`, `S-24.remote-start.test.js` |
 
 ## 7. Số liệu đo thật ngày 12/10/2026 (script tạm, không nằm trong repo)
@@ -201,7 +201,7 @@ Luồng giao diện đã duyệt bằng Chrome: Admin dừng phiên từ xa → 
 
 | Hiện tượng | Nguyên nhân | Cách xử lý |
 |---|---|---|
-| `KeyError: 'ContainerConfig'` khi `docker-compose up` | docker-compose 1.x với Docker mới (như trong `DEMO_SPRINT2.md`); container `app` bị dừng và đổi tên thành `<mã>_…_app_1` | `docker rm` container đã dừng đó rồi `python run.py` (hoặc `python run.py down` rồi `python run.py`) |
+| `KeyError: 'ContainerConfig'` khi `docker-compose up` | docker-compose 1.x với Docker mới (như trong `SPRINT2.md`); container `app` bị dừng và đổi tên thành `<mã>_…_app_1` | `docker rm` container đã dừng đó rồi `python run.py` (hoặc `python run.py down` rồi `python run.py`) |
 | Đăng nhập admin báo sai mật khẩu sau khi chạy `docker-compose up app` | Script tạo admin của compose đặt lại mật khẩu về mặc định của compose | Chạy lại `python run.py` (nó đặt lại mật khẩu cục bộ). Luôn dùng `run.py` để khởi động ứng dụng |
 | `vcp` báo `HTTP 401` rồi `HTTP 429` | `ADMIN_PASSWORD` truyền cho `vcp` khác mật khẩu admin thật; dịch vụ tự khởi động lại và thử tiếp nên tài khoản bị khoá tạm (15 phút, lưu trong bảng `login_throttle`, **không** mất khi khởi động lại ứng dụng) | `docker stop` dịch vụ `vcp`, chờ hết khoá, truyền đúng mật khẩu rồi bật lại. Trên máy cục bộ có thể `delete from login_throttle;` |
 | `HTTP 429` khi trụ ảo kết nối | Quá 5 lần bắt tay / 10 giây với cùng mã | Chờ 10 giây |
@@ -212,7 +212,7 @@ Luồng giao diện đã duyệt bằng Chrome: Admin dừng phiên từ xa → 
 
 | Câu hỏi | Trả lời trung thực |
 |---|---|
-| Trụ nào cũng kết nối được nếu biết mã? | **Còn đúng (B5):** trụ chưa xác thực. Đã có kiểm chứng cùng trụ khi gửi `StopTransaction`/`MeterValues` (chỉ trụ sở hữu phiên mới sửa được số đo, D12), nhưng chưa có khoá/mật khẩu trụ. Phải chốt **trước khi tính tiền** (Sprint 4). Xem [`B5-xac-thuc-tru-de-xuat-thiet-ke.md`](B5-xac-thuc-tru-de-xuat-thiet-ke.md). |
+| Trụ nào cũng kết nối được nếu biết mã? | **Còn đúng (B5):** trụ chưa xác thực. Đã có kiểm chứng cùng trụ khi gửi `StopTransaction`/`MeterValues` (chỉ trụ sở hữu phiên mới sửa được số đo, D12), nhưng chưa có khoá/mật khẩu trụ. Phải chốt **trước khi tính tiền** (Sprint 4). Xem [`B5-xac-thuc-tru-de-xuat-thiet-ke.md`](../guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md). |
 | Một tài xế có thể sạc hai xe cùng lúc không? | **Không qua ứng dụng:** bắt đầu từ xa bị chặn khi tài xế đang có phiên `CHARGING` (409). Nhưng **trụ vẫn có thể gửi `StartTransaction` với thẻ của tài xế** trên đầu nối khác (thẻ vật lý cắm tại trụ): hệ thống ghi cả hai phiên, màn hình Tài xế chỉ hiển thị một. Đây là quy tắc nghiệp vụ cần PO chốt. |
 | Phiên mở bằng thẻ bị khoá thì sao? | Máy chủ trả `Blocked` nhưng **vẫn tạo phiên** `CHARGING` có cờ cần xem xét (theo AC của S-17); phiên đó hiện ở **Phiên sạc**, không hiện ở **Phiên bất thường** (vì chưa `ABNORMAL`). Cần PO xác nhận trụ có tiếp tục cấp điện hay không (trụ thật tự quyết theo `idTagInfo`). |
 | Chủ trạm và Kế toán có xem được phiên sạc không? | API cho Chủ trạm xem phiên của trạm mình (và trả cả `driver_id`, **dữ liệu cá nhân theo NĐ 13**, cần PO xác nhận có che không), nhưng **giao diện chưa có menu "Phiên sạc"** cho Chủ trạm và Kế toán (Sprint 3 chưa cam kết màn này cho hai vai trò). Kế toán chỉ có "Phiên bất thường". |

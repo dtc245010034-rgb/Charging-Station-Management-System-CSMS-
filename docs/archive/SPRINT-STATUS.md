@@ -26,8 +26,8 @@
 | GYM-8 | S-02 Đăng nhập email + mật khẩu, khoá tạm khi sai nhiều lần | 2 | Done | `S-02.login*.test.js`; khoá 15 phút sau 5 lần sai theo email và theo IP; không lộ email tồn tại | Chưa có “quên mật khẩu” (ngoài phạm vi) |
 | GYM-9 | S-03 Mỗi vai trò chỉ thấy phần việc của mình | 2 | Done | `S-03.rbac*.test.js`, ma trận quyền một nguồn, route chưa khai quyền bị chặn, chủ trạm chỉ thấy trạm của mình, nhật ký truy cập trái phép | Vai trò lấy từ JWT 8 giờ: đổi vai trò không có hiệu lực tới khi đăng nhập lại |
 | GYM-10 | S-04 Chủ trạm tạo và sửa trạm | 2 | Done | `S-04.station-management.test.js`; `Idempotency-Key`; kiểm toạ độ; giao diện đã kiểm trên trình duyệt | — |
-| GYM-11 | S-05 Thêm trụ và đầu nối, mã trụ duy nhất | 1 | Done | `S-05.charge-point-code.test.js`; mã luôn chữ hoa; 1–4 đầu nối | AC “không đổi mã sau khi có phiên sạc” **chưa thể thực thi** vì chưa có bảng phiên sạc (xem `docs/spikes/S-05-AC3-ghi-nhan-cho-PO.md`) |
-| GYM-12 | K-01 Spike: trụ ảo nối máy chủ WebSocket | 2 | Done (làm lại 28/9) | `docs/spikes/K-01-ocpp-simulator.md`, `docs/spikes/k01/` — phiên sạc trọn vẹn, R-08, trụ lạ, tin nhắn trùng | Bản 27/9 chưa đạt AC; bản mới đạt nhưng **chưa thử trụ thật** (mục 6 của tài liệu K-01) |
+| GYM-11 | S-05 Thêm trụ và đầu nối, mã trụ duy nhất | 1 | Done | `S-05.charge-point-code.test.js`; mã luôn chữ hoa; 1–4 đầu nối | AC “không đổi mã sau khi có phiên sạc” **chưa thể thực thi** vì chưa có bảng phiên sạc (xem `docs/archive/spikes/S-05-AC3-ghi-nhan-cho-PO.md`) |
+| GYM-12 | K-01 Spike: trụ ảo nối máy chủ WebSocket | 2 | Done (làm lại 28/9) | `docs/archive/spikes/K-01-ocpp-simulator.md`, `docs/archive/spikes/k01/` — phiên sạc trọn vẹn, R-08, trụ lạ, tin nhắn trùng | Bản 27/9 chưa đạt AC; bản mới đạt nhưng **chưa thử trụ thật** (mục 6 của tài liệu K-01) |
 | GYM-14 | SM-02 Chuẩn bị demo Sprint 1 | — | In Progress | Dữ liệu demo (`npm run seed-demo`), 30 ảnh chụp giao diện `docs/design/screenshots/` | Cần bật staging Render và seed trước Thứ Tư; mở trang 5 phút trước demo (gói free ngủ) |
 
 **Velocity Sprint 1: 12 SP** (đúng kế hoạch). Chưa đủ dữ liệu để dự báo; theo R-05, đo 3 sprint đầu rồi mới tính lại kế hoạch.
@@ -69,7 +69,7 @@ Phụ thuộc và mức ưu tiên **theo file backlog của PO**. Cột “Trên
 | GYM-41 | S-15 Xác thực thẻ qua `Authorize` | 2 | **Must** | S-08 | **Có** (#85) | Bảng `id_tags` (migration 016, unique `UPPER(tag)`); hàm thuần `evaluateIdTag` cho S-17; log chỉ 4 ký tự cuối; `idTag` > 20 ký tự → `FormationViolation`. Hồ sơ: `testing/stories/S/kiem-thu-S-15.md` |
 | GYM-42 | S-16 Reset từ xa | 1 | **Should** | S-11 | **Có trên `main` cục bộ** (`6e74180`), **chưa qua PR** | AC chức năng đạt (6 ca acceptance trên server thật). **Chưa đạt:** NFR “ghi vết ai bấm” mới ghi log ứng dụng, chưa ghi `audit_logs`; commit không theo quy ước `CONTRIBUTING.md`. Hồ sơ: `testing/stories/S/kiem-thu-S-16.md` |
 
-> **Quyết định (29/9):** PO chọn **phương án A, cam kết đủ 20 SP**. Trưởng nhóm kỹ thuật ban đầu chốt `ocpp-rpc`, nhưng bản triển khai trên `main` dùng **`ws` thuần + bộ khung tự viết** (`backend/src/modules/ocpp/`); `SPRINT_2_PLAN.md` ghi kế hoạch gốc nên còn nhắc `ocpp-rpc`. Kế hoạch chi tiết: [`SPRINT_2_PLAN.md`](./SPRINT_2_PLAN.md).
+> **Quyết định (29/9):** PO chọn **phương án A, cam kết đủ 20 SP**. Trưởng nhóm kỹ thuật ban đầu chốt `ocpp-rpc`, nhưng bản triển khai trên `main` dùng **`ws` thuần + bộ khung tự viết** (`backend/src/modules/ocpp/`); `SPRINT_2_PLAN.md` ghi kế hoạch gốc nên còn nhắc `ocpp-rpc`. Kế hoạch chi tiết: [`SPRINT_2_PLAN.md`](./SPRINT-2-PLAN.md).
 
 ### Phân tích
 
@@ -100,7 +100,7 @@ Thứ tự cắt nếu trễ (chốt sớm với PO, ví dụ tối Thứ Tư 30
 
 ### Cách rút ngắn chuỗi (không đổi phạm vi)
 1. **Quyết định `ocpp-rpc` ngay hôm nay** (trưởng nhóm kỹ thuật): nó thu S-07 còn khoảng nửa ngày (khung, mã lỗi, kiểm schema có sẵn).
-2. **Làm trước, song song:** toàn bộ migration (`last_seen_at`, thông tin trụ, `connector_errors`, `ocpp_messages`), khung giao diện handler (mỗi handler một file theo mẫu T-16), trụ ảo kịch bản (dựa `docs/spikes/k01/`), và bật staging.
+2. **Làm trước, song song:** toàn bộ migration (`last_seen_at`, thông tin trụ, `connector_errors`, `ocpp_messages`), khung giao diện handler (mỗi handler một file theo mẫu T-16), trụ ảo kịch bản (dựa `docs/archive/spikes/k01/`), và bật staging.
 3. **Ràng buộc phụ thuộc là ở mức chạy tích hợp, không phải mức viết mã:** sau S-07, các handler S-08/S-09/S-10 viết được song song rồi ghép; T-23 (truy vấn cây) chỉ cần bảng, không cần đợi S-10 chạy.
 4. Sau S-08, ba việc chạy song song: S-09, S-14, S-15. Sau S-09: S-10 và S-12.
 
@@ -154,7 +154,7 @@ Thứ tự cắt nếu trễ (chốt sớm với PO, ví dụ tối Thứ Tư 30
 
 ## 9. Vòng sửa lỗi 6 (03/10/2026) — đã merge (#74)
 
-Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VONG-6.md).
+Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](../testing/BAO-CAO-VONG-6.md).
 
 | Hạng mục | Kết quả đã chạy thật |
 |---|---|
@@ -171,7 +171,7 @@ Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VON
 | Mã | Việc | Người/nơi quyết |
 |---|---|---|
 | S-16 | Ghi vết Reset vào `audit_logs` (`audit.record(...)`, có assert trong `S-16.reset.test.js`); đưa commit `6e74180` qua PR có review, sửa thông điệp commit theo `CONTRIBUTING.md`; kiểm nút Reset trên trình duyệt | Dev + người review |
-| B5 | Xác thực trụ. Rủi ro ghi nhận và chấp nhận tạm cho demo/staging; đề xuất thiết kế ở [`B5-xac-thuc-tru-de-xuat-thiet-ke.md`](B5-xac-thuc-tru-de-xuat-thiet-ke.md) | PO Lê Đình Tuấn |
+| B5 | Xác thực trụ. Rủi ro ghi nhận và chấp nhận tạm cho demo/staging; đề xuất thiết kế ở [`B5-xac-thuc-tru-de-xuat-thiet-ke.md`](../guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md) | PO Lê Đình Tuấn |
 | F5 | Đã lưu trạng thái mức trụ (migration 013); còn quy tắc ảnh hưởng trạng thái tổng của trụ/trạm | PO |
 | Hiển thị | Trụ `ONLINE` có đầu nối `UNKNOWN` hiện “Sẵn sàng” (xanh) | PO / QA (Nguyễn Hà Nam) |
 | Staging | Chạy 50 trụ ảo, WebSocket qua proxy Render, `TRUST_PROXY=2` | Phúc (cần URL staging) |
@@ -180,19 +180,19 @@ Chi tiết và bằng chứng: [`testing/BAO-CAO-VONG-6.md`](testing/BAO-CAO-VON
 
 ## 11. S-22 (GYM-48) — tiến độ sửa lỗi review (10/10/2026)
 
-**Chưa Done.** Bản giao đầu (xem [`dev/S-22_2026-10-10.md`](dev/S-22_2026-10-10.md)) nằm ở nhánh `nam/gym48-s-22`, chưa vào `main`. Các lỗi của báo cáo review lần 27 đã sửa trên nhánh `phuc/GYM-48-sua-loi-review-s22`; chưa mở PR, chưa được duyệt.
+**Chưa Done.** Bản giao đầu (xem [`project/handover/S-22_2026-10-10.md`](../project/handover/S-22_2026-10-10.md)) nằm ở nhánh `nam/gym48-s-22`, chưa vào `main`. Các lỗi của báo cáo review lần 27 đã sửa trên nhánh `phuc/GYM-48-sua-loi-review-s22`; chưa mở PR, chưa được duyệt.
 
 | Hạng mục | Tình trạng (10/10/2026) |
 |---|---|
 | Đã sửa trên nhánh | kWh và công suất tính theo đúng đơn vị trụ gửi (Wh thập phân, kWh, W, kW; hết lỗi 500); lưu `SoC` (0–100 %) để thẻ Pin xe có số liệu; SSE lọc theo tài xế trước khi truy vấn và phát đúng thứ tự; lỗi phát SSE được ghi log; phiên cũ bị đóng `ABNORMAL` được báo tới đúng tài xế; trang phiên có màn hình kết thúc, định dạng W/kW và đồng bộ lại khi SSE nối lại |
 | Test | 7 file unit của đợt sửa: 79/79 đạt (10/10/2026, container Node 22). Test integration mới (`S-22.so-do-thap-phan`, `S-22.sse-pipeline`): 14/14 đạt. Toàn bộ bộ test sau sửa lỗi, chạy đúng môi trường CI (10/10/2026): 647 test, 646 đạt, 0 lỗi, 1 bỏ qua (cần Docker CLI). Lint sạch |
-| Kiểm tay trên trình duyệt | **Chưa chạy.** Danh sách 12 bước ở [`testing/stories/S/kiem-thu-S-22.md`](testing/stories/S/kiem-thu-S-22.md) mục 1B |
+| Kiểm tay trên trình duyệt | **Chưa chạy.** Danh sách 12 bước ở [`testing/stories/S/kiem-thu-S-22.md`](../testing/stories/S/kiem-thu-S-22.md) mục 1B |
 | Hợp đồng S-19 | Nới thêm `SoC` vào danh sách đại lượng được lưu; cần PO/tester S-19 xác nhận |
-| Còn lại | Mở PR và review; kiểm tay; chạy toàn bộ test trong môi trường CI và ghi tổng số; tách thẻ riêng cho các phát hiện ngoài phạm vi ([`dev/S-22_2026-10-10.md`](dev/S-22_2026-10-10.md) mục 4: giới hạn số kết nối SSE mỗi tài khoản, SSE không đóng khi thu hồi token, pool không có `query_timeout`, tài liệu chứa mật khẩu, `VULN-S04-FE01`, `WEB-01`) |
+| Còn lại | Mở PR và review; kiểm tay; chạy toàn bộ test trong môi trường CI và ghi tổng số; tách thẻ riêng cho các phát hiện ngoài phạm vi ([`project/handover/S-22_2026-10-10.md`](../project/handover/S-22_2026-10-10.md) mục 4: giới hạn số kết nối SSE mỗi tài khoản, SSE không đóng khi thu hồi token, pool không có `query_timeout`, tài liệu chứa mật khẩu, `VULN-S04-FE01`, `WEB-01`) |
 
 ## 12. S-23 (GYM-49) — Vận hành viên dừng phiên từ xa (10/10/2026)
 
-**Đã hoàn thành kiểm thử nghiệm thu.** Bản giao nằm ở nhánh `minh/GYM49-S23` (commit `e836b3a`). Hồ sơ kiểm thử: [`docs/testing/stories/S/kiem-thu-S-23.md`](testing/stories/S/kiem-thu-S-23.md).
+**Đã hoàn thành kiểm thử nghiệm thu.** Bản giao nằm ở nhánh `minh/GYM49-S23` (commit `e836b3a`). Hồ sơ kiểm thử: [`docs/testing/stories/S/kiem-thu-S-23.md`](../testing/stories/S/kiem-thu-S-23.md).
 
 | Hạng mục | Tình trạng (10/10/2026) |
 |---|---|

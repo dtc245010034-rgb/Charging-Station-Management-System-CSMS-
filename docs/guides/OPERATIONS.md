@@ -1,6 +1,6 @@
 # Vận hành CSMS — build, chạy, dừng, khởi động lại, dữ liệu, staging
 
-> Cập nhật: 03/10/2026 (khớp `main` sau PR #74). Đây là sổ tay **vận hành**. Hướng dẫn chạy lần đầu từng bước nằm ở [`README.md`](../README.md); tình trạng dự án ở [`SPRINT_STATUS.md`](./SPRINT_STATUS.md).
+> Cập nhật: 03/10/2026 (khớp `main` sau PR #74). Đây là sổ tay **vận hành**. Hướng dẫn chạy lần đầu từng bước nằm ở [`README.md`](../../README.md); tình trạng dự án ở [`SPRINT_STATUS.md`](../archive/SPRINT-STATUS.md).
 > Ký hiệu: `$` = shell của Linux/Git Bash. Windows dùng `py run.py` nếu không có lệnh `python`; `curl.exe` thay `curl` trong PowerShell.
 
 ## 1. Thành phần và cổng
@@ -58,7 +58,7 @@ Chế độ này tự áp các chốt chặn (đã kiểm chứng bằng docker 
 - `NODE_ENV=production` (cookie đăng nhập có cờ `Secure`; truy cập bằng địa chỉ HTTPS công khai) và `TRUST_PROXY=1` (giới hạn đăng nhập theo IP thật, không dồn về IP của tunnel).
 - `BIND_HOST` bị ép về `127.0.0.1`: cổng ứng dụng và Postgres chỉ mở cho máy này, ra Internet chỉ qua tunnel.
 
-Lưu ý gói ngrok miễn phí: khoảng 20.000 yêu cầu HTTP và 1 GB băng thông mỗi tháng; có trang cảnh báo ở lần vào đầu của trình duyệt. Trụ ảo và kiểm thử tự động nên chạy trên chính máy chủ (gọi `localhost`), không đi qua tunnel. Chi tiết: `docs/SPRINT_2_PLAN.md` mục 6 (Q4).
+Lưu ý gói ngrok miễn phí: khoảng 20.000 yêu cầu HTTP và 1 GB băng thông mỗi tháng; có trang cảnh báo ở lần vào đầu của trình duyệt. Trụ ảo và kiểm thử tự động nên chạy trên chính máy chủ (gọi `localhost`), không đi qua tunnel. Chi tiết: `docs/archive/SPRINT-2-PLAN.md` mục 6 (Q4).
 
 ### Máy chủ nhóm (laptop/homelab chạy 24/7 + ngrok)
 
@@ -115,7 +115,7 @@ python3 -m unittest discover -s tools -q          # kiểm run.py (20 test)
 ```
 Giới hạn gói miễn phí ngrok, đối chiếu lại ngày 04/10/2026 tại <https://ngrok.com/docs/pricing-limits/free-plan-limits>: 20.000 yêu cầu HTTP, 1 GB dữ liệu ra, 5.000 kết nối TCP mỗi tháng; tốc độ tối đa 4.000 yêu cầu HTTP/phút và 100 kết nối TCP/phút; tối đa 3 endpoint online, 3 agent, 1 tên miền development; trang cảnh báo trước lưu lượng HTML của trình duyệt (bỏ qua bằng header `ngrok-skip-browser-warning`). Tài liệu không nêu giới hạn riêng cho WebSocket. **Chưa kiểm chứng WebSocket OCPP qua ngrok thật**: thử 1 trụ ảo bằng `wss://` trước khi cho trụ thật dùng.
 
-⚠️ **B5 (chưa xử lý):** trụ chỉ nhận diện bằng mã trong URL `/ocpp/<mã>`, chưa có xác thực. Khi mở ra Internet, ai biết mã trụ cũng kết nối được và đá trụ thật khỏi kết nối. Dùng mã trụ khó đoán trên môi trường công khai, không nạp dữ liệu thật. Thiết kế đề xuất: `docs/B5-xac-thuc-tru-de-xuat-thiet-ke.md` (chưa làm).
+⚠️ **B5 (chưa xử lý):** trụ chỉ nhận diện bằng mã trong URL `/ocpp/<mã>`, chưa có xác thực. Khi mở ra Internet, ai biết mã trụ cũng kết nối được và đá trụ thật khỏi kết nối. Dùng mã trụ khó đoán trên môi trường công khai, không nạp dữ liệu thật. Thiết kế đề xuất: `docs/guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md` (chưa làm).
 
 ## 4. Dừng, khởi động lại
 
@@ -145,7 +145,7 @@ Kiểm khói toàn diện các luồng API thật của 5 vai trò (Driver, Owne
 ```bash
 DEMO_PASSWORD="MatKhauDemoBaoMat2026!" node tools/demo-smoke.js
 ```
-Xem thêm chi tiết tại [`docs/demo/KICH-BAN-DEMO.md`](demo/KICH-BAN-DEMO.md) và [`docs/demo/CHECKLIST-TRUOC-DEMO.md`](demo/CHECKLIST-TRUOC-DEMO.md).
+Xem thêm chi tiết tại [`docs/demo/KICH-BAN-DEMO.md`](../demo/KICH-BAN-DEMO.md) và [`docs/demo/CHECKLIST-TRUOC-DEMO.md`](../demo/CHECKLIST-TRUOC-DEMO.md).
 
 ## 5. Lệnh Docker tương đương (khi cần làm tay)
 
@@ -248,7 +248,7 @@ Có **hai** file `.env` độc lập (gốc cho Compose, `backend/.env` cho Node
 ## 11. Chạy lại spike K-01 (mã thử vứt đi)
 
 ```
-$ cd docs/spikes/k01 && npm install && node run-all.js
+$ cd docs/archive/spikes/k01 && npm install && node run-all.js
 ```
 Ghi lại `session-log.json` và `findings.json` (phiên sạc đầy đủ, R-08, từ chối trụ lạ, tin nhắn trùng). Không ảnh hưởng backend.
 

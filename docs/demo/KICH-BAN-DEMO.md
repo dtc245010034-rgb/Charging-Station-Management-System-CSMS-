@@ -31,7 +31,7 @@
      * Thấy mức phí không đến niêm yết rõ: `20.000 đ`. Bấm **Đặt chỗ** cổng 1.
   4. Đổi ý: Bấm **Huỷ đặt chỗ** tại trang «Đặt chỗ của tôi» (`#/driver/find`).
      * *Kết quả (S-51):* Chỗ đặt chuyển sang `CANCELLED`, đầu nối mở lại `Available`, ví không bị trừ phí.
-  5. Chạy một phiên sạc **sau khi mua gói** (gói chỉ áp dụng cho phiên bắt đầu sau thời điểm mua): dùng trụ ảo `node tools/demo-charge-point.js DEMO-ST01-CP1` với thẻ `TAG-DEMO-01` của tài xế (hướng dẫn: [`docs/DEMO_SPRINT3.md`](../DEMO_SPRINT3.md)), rồi xem **Lịch sử & Hoá đơn**:
+  5. Chạy một phiên sạc **sau khi mua gói** (gói chỉ áp dụng cho phiên bắt đầu sau thời điểm mua): dùng trụ ảo `node tools/demo-charge-point.js DEMO-ST01-CP1` với thẻ `TAG-DEMO-01` của tài xế (hướng dẫn: [`docs/demo/SPRINT3.md`](SPRINT3.md)), rồi xem **Lịch sử & Hoá đơn**:
      * *Kết quả (S-65):* Hoá đơn ghi rõ nhãn xanh `Áp dụng gói: Gói Tháng Tiết Kiệm 3.500`, đơn giá tính theo biểu giá gói 3.500 đ/kWh thay vì biểu giá trạm 3.850 đ/kWh (ví dụ 20 kWh: 70.000 đ thay vì 77.000 đ).
      * Seed không tạo sẵn phiên sạc lịch sử; hoá đơn đầu tiên xuất hiện sau bước này.
 * **Phương án dự phòng (Nếu hỏng):** Nếu kết nối mạng chậm, chạy kiểm khói tự động `DEMO_PASSWORD=... node tools/demo-smoke.js` (kỳ vọng `6/6 NHÓM ĐẠT`) để đối chiếu kết quả API.

@@ -27,7 +27,7 @@
 
 ### 🔴 BUG-S19-01: Vi phạm Quyết định D5 — Trả lời CALLRESULT trước khi ghi DB (Bất đồng bộ)
 - **Cội nguồn lỗi (Root Cause):**
-  - Trong tài liệu sơ khai T-41 có câu gợi ý cũ: *"gợi ý: trả lời trước, ghi sau để p95 < 200ms"*. Tuy nhiên, tại buổi họp Sprint 3 Planning (`docs/SPRINT_3_PLAN.md` mục 1), nhóm kỹ thuật đã thống nhất quyết định **D5** phủ quyết gợi ý này: *"MeterValues: ghi đồng bộ bằng một câu INSERT nhiều dòng rồi mới trả lời... Trả lời CALLRESULT trước khi dữ liệu xuống DB nghĩa là nếu ghi lỗi/tiến trình chết thì trụ đã xoá bộ đệm còn hệ thống mất số đo → sai kWh"*.
+  - Trong tài liệu sơ khai T-41 có câu gợi ý cũ: *"gợi ý: trả lời trước, ghi sau để p95 < 200ms"*. Tuy nhiên, tại buổi họp Sprint 3 Planning (`docs/archive/SPRINT-3-PLAN.md` mục 1), nhóm kỹ thuật đã thống nhất quyết định **D5** phủ quyết gợi ý này: *"MeterValues: ghi đồng bộ bằng một câu INSERT nhiều dòng rồi mới trả lời... Trả lời CALLRESULT trước khi dữ liệu xuống DB nghĩa là nếu ghi lỗi/tiến trình chết thì trụ đã xoá bộ đệm còn hệ thống mất số đo → sai kWh"*.
   - Lập trình viên phụ trách nhánh `feat/ocpp-meter-values` đã bám theo gợi ý cũ mà không đối chiếu D5, đưa hook `afterResponse` / `setImmediate` vào handler và viết cả unit test để ép buộc hành vi bất đồng bộ này.
 - **Giải pháp vá (Dev Master):**
   - Loại bỏ hoàn toàn `afterResponse` và `setImmediate` khỏi `meter-values.js`.
@@ -103,7 +103,7 @@
 ## 6. KẾT LUẬN VÀ KHUYẾN NGHỊ
 
 1. **Kết luận:**
-   - Story S-19 (GYM-45) đã đạt **100% Tiêu chí chấp nhận (AC)** và **100% Yêu cầu phi chức năng (NFR)** theo đúng `docs/SPRINT_3_PLAN.md`.
+   - Story S-19 (GYM-45) đã đạt **100% Tiêu chí chấp nhận (AC)** và **100% Yêu cầu phi chức năng (NFR)** theo đúng `docs/archive/SPRINT-3-PLAN.md`.
    - Toàn bộ các vi phạm kiến trúc (D5, D6, DoS, coverage) đã được sửa triệt để và kiểm chứng bằng bằng chứng thực thi cụ thể.
 2. **Khuyến nghị:**
    - **Đủ điều kiện tạo Pull Request và merge nhánh `feat/ocpp-meter-values` vào `main`.**

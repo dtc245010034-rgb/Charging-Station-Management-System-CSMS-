@@ -1,6 +1,6 @@
 # Hướng dẫn demo Sprint 2 (S-06 → S-16) cho mentor
 
-Mục tiêu: trong khoảng **20–25 phút**, chứng minh bằng chạy thật cả 11 story của Sprint 2 (kết nối OCPP, nhịp tim, trạng thái đầu nối, màn hình realtime, ngoại tuyến, chống trùng, kiểm thẻ, Reset từ xa), không cần trụ sạc thật. Công cụ dùng: **trụ sạc ảo tương tác** [`tools/demo-charge-point.js`](../tools/demo-charge-point.js).
+Mục tiêu: trong khoảng **20–25 phút**, chứng minh bằng chạy thật cả 11 story của Sprint 2 (kết nối OCPP, nhịp tim, trạng thái đầu nối, màn hình realtime, ngoại tuyến, chống trùng, kiểm thẻ, Reset từ xa), không cần trụ sạc thật. Công cụ dùng: **trụ sạc ảo tương tác** [`tools/demo-charge-point.js`](../../tools/demo-charge-point.js).
 
 Mọi kết quả "mong đợi" bên dưới đã được chạy thật trên backend + Postgres ngày 07/10/2026 (nhịp tim 5 giây và thời gian chờ lệnh 5 giây; riêng nhịp tim 2 giây đã kiểm lại ngày 07/10/2026 trên chính cấu hình dưới đây).
 
@@ -266,7 +266,7 @@ select action, created_at from audit_logs order by id desc limit 5;
 
 | Câu hỏi | Trả lời trung thực |
 |---|---|
-| Trụ nào cũng kết nối được nếu biết mã? | **Đúng, đây là rủi ro B5**: trụ chưa xác thực (chưa có khoá/mật khẩu trụ). Đã có đề xuất thiết kế ở [`B5-xac-thuc-tru-de-xuat-thiet-ke.md`](B5-xac-thuc-tru-de-xuat-thiet-ke.md), chờ PO chọn. |
+| Trụ nào cũng kết nối được nếu biết mã? | **Đúng, đây là rủi ro B5**: trụ chưa xác thực (chưa có khoá/mật khẩu trụ). Đã có đề xuất thiết kế ở [`B5-xac-thuc-tru-de-xuat-thiet-ke.md`](../guides/B5-XAC-THUC-TRU-DE-XUAT-THIET-KE.md), chờ PO chọn. |
 | Reset có ghi vết ai bấm không? | **Chưa vào `audit_logs`** (đã kiểm: bảng không có dòng nào sau khi Reset), mới ghi log ứng dụng. `SPRINT_STATUS.md` ghi S-16 **chưa Done** vì NFR "ghi vết ai bấm" và vì commit `6e74180` chưa qua PR. Khoá/mở khoá trạm thì đã ghi `audit_logs`. |
 | Chạy nổi 50 trụ chưa? | **Chưa kiểm**: `SPRINT_STATUS.md` ghi "staging chạy thật được kiểm với 50 trụ ảo" là việc còn thiếu. Công cụ này chỉ mô phỏng **một** trụ mỗi lần chạy. Registry kết nối nằm trong bộ nhớ, đúng khi chạy **một tiến trình**. |
 | Trụ thật có chạy được không? | Chưa thử với trụ thật. Trụ ảo ở đây gửi khung OCPP 1.6J viết tay qua thư viện `ws` (không dùng lại khung của backend), nên là phép thử độc lập; ngoài ra còn bộ test tự động (`python run.py test`). |

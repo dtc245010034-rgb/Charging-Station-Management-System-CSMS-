@@ -6,7 +6,7 @@
 - **Công cụ đã dùng:** `curl.exe`, `docker compose`, `docker exec`, `psql`, Node.js WebSocket client (`ws`), kịch bản kiểm thử tự động, `python test.py`.
 - **Phạm vi kiểm thử:** Story **S-07** ("Hệ thống đọc và ghi đúng ba loại khung tin nhắn OCPP"), nhiệm vụ con **T-14** (Hàm đọc/ghi khung `CALL`, `CALLRESULT`, `CALLERROR`), **T-15** (Bộ test khung sai định dạng trả `CALLERROR` đúng mã lỗi) và smoke chuỗi phụ thuộc (S-06, T-13).
 - **Đường dẫn module đọc/ghi khung:** `backend/src/modules/ocpp/frames.js` và `backend/src/modules/ocpp/message-handler.js`.
-- **Đường dẫn bản ghi K-01:** `docs/spikes/k01/session-log.json` (chứa 72 mục, trong đó có 66 khung OCPP 1.6J trọn vẹn).
+- **Đường dẫn bản ghi K-01:** `docs/archive/spikes/k01/session-log.json` (chứa 72 mục, trong đó có 66 khung OCPP 1.6J trọn vẹn).
 
 ---
 
@@ -45,7 +45,7 @@
 | TC-A-03 | **PASS** | WS Handshake `/ocpp/QA-S07-CP-01` (`ocpp1.6`) | Bắt tay 101 Switching Protocols thành công | Mở (`readyState = 1`) | Log client: `WebSocket OPEN, readyState = 1 protocol = ocpp1.6` | S-06 hoạt động tốt |
 | TC-A-04 | **PASS** | WS Handshake `/ocpp/QA-S07-KHONG-CO` | Bị từ chối HTTP 403 Forbidden trong 2 ms | Đóng | Đo thực tế: 2 ms (< 1s), Log: `[SECURITY_WARN] Unauthorized WebSocket attempt \| ...` | T-13 hoạt động chuẩn |
 | TC-A-05 | **PASS** | Kiểm tra mã nguồn S-07 | Tìm thấy đầy đủ `frames.js`, `message-handler.js`, `ocpp-frames.test.js`, `ocpp-message-handler.test.js` | N/A | File: `backend/src/modules/ocpp/frames.js` (85 dòng), `message-handler.js` (136 dòng) | S-07 đã triển khai |
-| TC-A-06 | **PASS** | Tìm bản ghi K-01 | Tìm thấy file `docs/spikes/k01/session-log.json` | N/A | Phân tích JSON: chứa 72 mục, 66 khung OCPP 1.6J | K-01 khả dụng |
+| TC-A-06 | **PASS** | Tìm bản ghi K-01 | Tìm thấy file `docs/archive/spikes/k01/session-log.json` | N/A | Phân tích JSON: chứa 72 mục, 66 khung OCPP 1.6J | K-01 khả dụng |
 
 ---
 

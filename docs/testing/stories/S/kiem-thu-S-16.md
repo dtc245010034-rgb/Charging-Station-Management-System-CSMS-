@@ -25,7 +25,7 @@
 
 ---
 
-## Đối chiếu tiêu chí chấp nhận (`docs/SPRINT_2_PLAN.md` mục S-16)
+## Đối chiếu tiêu chí chấp nhận (`docs/archive/SPRINT-2-PLAN.md` mục S-16)
 
 | Tiêu chí | Kết quả | Bằng chứng / ghi chú |
 |---|---|---|
@@ -34,7 +34,7 @@
 | Không trả lời → hết thời gian, huỷ lời gọi | **Đạt** | TC-05 (đặt thời gian chờ 1 giây): HTTP 504 `OCPP_CALL_TIMEOUT` sau khoảng 1 giây. |
 | Không chặn tin khác trên cùng kết nối | **Đạt** | TC-05 và test integration: trong lúc Reset đang chờ, `Heartbeat` vẫn nhận `CALLRESULT` ngay. |
 | Chỉ Vận hành viên và Quản trị gọi được; backend kiểm quyền | **Đạt** | TC-01: `STATION_OWNER`, `DRIVER` nhận 403 `FORBIDDEN`, không có `CALL` nào được gửi. Ma trận quyền frontend/backend khớp nhau (`frontend-permissions.test.js`). |
-| NFR: ghi vết ai bấm (nền cho S-27) | **Đạt một phần** | Chỉ ghi **log ứng dụng**: `[OCPP] Remote Reset requested \| actorId \| chargePoint \| type` (TC-02 kiểm dòng log). **Chưa ghi vào bảng `audit_logs`**, dù bảng và `modules/audit/audit.repository.js` đã có từ S-01/S-03 và kế hoạch `docs/design/S15-S16-ke-hoach.md` ghi là ghi `audit_logs`. Log mất khi xoay vòng, không truy vấn được để làm S-27. |
+| NFR: ghi vết ai bấm (nền cho S-27) | **Đạt một phần** | Chỉ ghi **log ứng dụng**: `[OCPP] Remote Reset requested \| actorId \| chargePoint \| type` (TC-02 kiểm dòng log). **Chưa ghi vào bảng `audit_logs`**, dù bảng và `modules/audit/audit.repository.js` đã có từ S-01/S-03 và kế hoạch `docs/archive/design/S15-S16-KE-HOACH.md` ghi là ghi `audit_logs`. Log mất khi xoay vòng, không truy vấn được để làm S-27. |
 | NFR: cơ chế chờ viết chung cho S-23/S-24 | **Đạt** | `createCommandSender(...).send(code, action, payload)` không gắn riêng với Reset. |
 | Nút trên màn hình trụ, chọn mềm/cứng, chỉ OPERATOR/ADMIN thấy | **Đạt theo code, chưa kiểm trên trình duyệt** | Nút nằm ở màn hình "Trạng thái trụ" (`fleet-status.js`), không phải drawer `charge-points.js` như kế hoạch. Không có test giao diện tự động cho nút này. |
 

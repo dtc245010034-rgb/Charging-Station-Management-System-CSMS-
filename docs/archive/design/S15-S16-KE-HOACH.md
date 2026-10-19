@@ -1,6 +1,6 @@
 # Kế hoạch S-15 (Authorize) và S-16 (Reset từ xa)
 
-Trạng thái: **S-16 backend Reset từ xa đã triển khai**; giao diện Reset và S-15 còn lại chưa làm. Nguồn AC: `docs/SPRINT_2_PLAN.md` mục S-15, S-16.
+Trạng thái: **S-16 backend Reset từ xa đã triển khai**; giao diện Reset và S-15 còn lại chưa làm. Nguồn AC: `docs/archive/SPRINT-2-PLAN.md` mục S-15, S-16.
 
 ## 1. Đã sẵn sàng trong repo
 
