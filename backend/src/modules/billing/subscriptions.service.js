@@ -161,6 +161,10 @@ async function buySubscription(driver, { planId }, idempotencyKey, { ip = null, 
 
     const prior = await repo.findSubscriptionByIdempotencyKey(client, driver.id, idempotencyKey);
     if (prior) {
+      // Cùng khoá nhưng khác gói là yêu cầu khác: cùng cách trả lỗi như đặt chỗ và tạo trạm (409 CONFLICT).
+      if (String(prior.plan_id) !== String(parsedPlanId)) {
+        throw new ConflictError('Idempotency-Key đã được dùng cho yêu cầu khác');
+      }
       return { subscription: prior, replayed: true };
     }
 
