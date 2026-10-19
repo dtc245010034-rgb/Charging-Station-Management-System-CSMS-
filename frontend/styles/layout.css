@@ -68,7 +68,7 @@
 .audit-filter .input { min-width: 0; min-height: 42px; }
 .audit-filter__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .audit-log-results { display: grid; gap: 12px; min-width: 0; }
-.audit-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.audit-pagination, .pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
 .wallet-search.card { display: grid; grid-template-columns: minmax(400px, 560px) max-content; align-items: end; gap: 12px; width: 100%; padding: 18px; }
 .wallet-search__field { min-width: 0; width: 100%; }
@@ -140,7 +140,7 @@
   .audit-filter.card { grid-template-columns: minmax(0, 1fr); }
   .audit-filter__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .audit-filter__actions .btn { width: 100%; }
-  .audit-pagination { justify-content: center; }
+  .audit-pagination, .pagination { justify-content: center; }
   .wallet-search { padding: 14px; }
   .wallet-search > .btn { width: 100%; }
   .unexpected-table { min-width: 820px; }

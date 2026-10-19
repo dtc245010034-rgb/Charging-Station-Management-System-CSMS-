@@ -8,23 +8,73 @@ const ROLE_LABELS = {
   ADMIN: 'Quản trị', STATION_OWNER: 'Chủ trạm', OPERATOR: 'Vận hành viên', ACCOUNTANT: 'Kế toán', DRIVER: 'Tài xế',
 };
 
+const PAGE_SIZES = [10, 20, 50, 100];
+const SEARCH_DEBOUNCE_MS = 300;
+
 export async function render(ctx) {
   let roles;
-  let users;
   try {
-    const [roleList, userResult] = await Promise.all([csms.admin.roles(), csms.admin.listUsers()]);
-    roles = roleList;
-    users = userResult.users;
+    roles = await csms.admin.roles();
   } catch (error) {
     ctx.root.append(emptyState({ iconName: 'alert', title: 'Không tải được tài khoản quản trị', text: error.message }));
     return;
   }
 
+  let users = [];
+  let total = 0;
+  let page = 1;
+  let limit = 20;
+  let query = '';
+  let loading = false;
+  let requestSeq = 0;
+
   const search = h('input', { class: 'input', type: 'search', placeholder: 'Tìm theo tên hoặc email', 'aria-label': 'Tìm người dùng' });
+  const pageSizeSelect = h('select', { class: 'select', 'aria-label': 'Số tài khoản mỗi trang' },
+    PAGE_SIZES.map((size) => h('option', { value: String(size), selected: size === limit }, `${size} / trang`)));
   const userRows = h('tbody');
+  const listError = h('p', { class: 'form-alert', role: 'alert', hidden: true });
+  const previousButton = h('button', { class: 'btn', type: 'button', onclick: () => goTo(page - 1) }, 'Trang trước');
+  const nextButton = h('button', { class: 'btn', type: 'button', onclick: () => goTo(page + 1) }, 'Trang sau');
+  const pageStatus = h('span', { class: 'muted', 'aria-live': 'polite' });
+  const pagination = h('div', { class: 'pagination' }, previousButton, pageStatus, nextButton);
+
+  const pageCount = () => Math.max(1, Math.ceil(total / limit));
+  const renderPagination = () => {
+    const from = total ? (page - 1) * limit + 1 : 0;
+    const to = Math.min(page * limit, total);
+    pageStatus.textContent = `Hiện ${from}–${to} / ${total} · Trang ${page} / ${pageCount()}`;
+    previousButton.disabled = loading || page <= 1;
+    nextButton.disabled = loading || page >= pageCount();
+  };
+
+  // Chỉ kết quả của lần gọi mới nhất được dùng, tránh trả lời cũ ghi đè khi gõ tìm kiếm nhanh.
+  async function load() {
+    const seq = ++requestSeq;
+    loading = true;
+    renderPagination();
+    try {
+      const result = await csms.admin.listUsers({ page, limit, q: query });
+      if (seq !== requestSeq) return;
+      users = result.users;
+      total = result.total;
+      listError.hidden = true;
+      if (!users.length && total > 0 && page > 1) { page = pageCount(); loading = false; await load(); return; }
+    } catch (error) {
+      if (seq !== requestSeq) return;
+      listError.textContent = error.message;
+      listError.hidden = false;
+    }
+    loading = false;
+    renderUsers();
+    renderPagination();
+  }
+  function goTo(next) {
+    page = Math.min(Math.max(1, next), pageCount());
+    void load();
+  }
+
   const renderUsers = () => {
-    const query = search.value.trim().toLocaleLowerCase();
-    const filtered = users.filter((user) => `${user.name} ${user.email}`.toLocaleLowerCase().includes(query));
+    const filtered = users;
     if (!filtered.length) {
       userRows.replaceChildren(h('tr', {}, h('td', { colspan: '5' }, query ? 'Không tìm thấy người dùng' : 'Chưa có tài khoản')));
       return;
@@ -81,7 +131,12 @@ export async function render(ctx) {
       );
     }));
   };
-  search.addEventListener('input', renderUsers);
+  let searchTimer;
+  search.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { query = search.value.trim(); page = 1; void load(); }, SEARCH_DEBOUNCE_MS);
+  });
+  pageSizeSelect.addEventListener('change', () => { limit = Number(pageSizeSelect.value); page = 1; void load(); });
 
   const name = h('input', { class: 'input', id: 'u-name', autocomplete: 'off', required: true });
   const email = h('input', { class: 'input', id: 'u-email', type: 'email', autocomplete: 'off', required: true });
@@ -103,9 +158,8 @@ export async function render(ctx) {
     try {
       const { user } = await csms.admin.createUser({ name: values.name.trim(), email: values.email.trim(), password: values.password, role: role.value });
       toast(`Đã tạo tài khoản ${user.email} (${ROLE_LABELS[user.role] ?? user.role}).`);
-      users = [...users, user];
-      renderUsers();
       form.reset();
+      await load();
     } catch (error) {
       const fieldErrors = {};
       for (const { field, message } of error.details ?? []) if (errors[field]) fieldErrors[field] ??= message;
@@ -130,15 +184,17 @@ export async function render(ctx) {
     ),
     h('section', { class: 'card', 'aria-label': 'Danh sách người dùng' },
       h('div', { class: 'card__body' },
-        h('div', { class: 'toolbar' }, search),
+        h('div', { class: 'toolbar' }, search, pageSizeSelect),
+        listError,
         h('div', { class: 'table-wrap' },
           h('table', { class: 'table' },
             h('thead', {}, h('tr', {}, ['Họ và tên', 'Email', 'Trạng thái', 'Vai trò', 'Thao tác'].map((label) => h('th', { scope: 'col' }, label)))),
             userRows
           )
-        )
+        ),
+        pagination
       )
     )
   );
-  renderUsers();
+  await load();
 }
