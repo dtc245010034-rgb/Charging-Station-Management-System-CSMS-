@@ -206,6 +206,34 @@ Có **hai** file `.env` độc lập, đều không commit: `.env` ở gốc (Do
 | `ALERT_ERROR_WINDOW_MINUTES` | Cửa sổ thời gian đếm lỗi đầu nối của một trụ để mở cảnh báo lỗi | Phút | `30` |
 | `ALERT_ERROR_THRESHOLD` | Số lỗi đầu nối trong cửa sổ trên từ đó mở cảnh báo lỗi | Số lỗi | `5` |
 
+
+#### Biến chỉ dùng cho công cụ và kiểm thử (`tools/`, test) — máy chủ không đọc
+
+| Biến | Dùng ở đâu | Mặc định |
+|---|---|---|
+| `APP_BASE_URL` | `demo-smoke.js`: địa chỉ server cần kiểm khói | `http://localhost:3000` |
+| `BASE_URL` | `test-n2-live.js`: địa chỉ HTTP của server | `http://localhost:3000` |
+| `WS_URL` | `test-n2-live.js`: địa chỉ WebSocket OCPP của server | `ws://localhost:3000` |
+| `CSMS_URL` | `demo-charge-point.js`: địa chỉ server (ghi đè mặc định, thay cho `--url`) | theo máy chủ cục bộ |
+| `NO_COLOR` | `demo-charge-point.js`: đặt bất kỳ giá trị để tắt màu ANSI | không đặt |
+| `VCP_PROFILE_RESULT` | `demo-charge-point.js`: trụ ảo trả lời `SetChargingProfile` (`Accepted`, `Rejected`…) | `Accepted` |
+| `VCP_RESERVATION_RESULT` | `demo-charge-point.js`: trụ ảo trả lời `ReserveNow` (`Accepted`, `Rejected`…) | `Accepted` |
+| `S21_TEST_TAG` | `test-s21-reconnect-fleet.js`: `idTag` dùng cho các trụ ảo | `TAG-DEMO-01` |
+| `STAGING_BASE_URL` | `test-s21-reconnect-fleet.js`, `test-ocpp-offline-reconnect-live.js`: địa chỉ server staging | **bắt buộc** |
+| `STAGING_DATABASE_URL` | `test-s21-reconnect-fleet.js`: DB staging để đối chiếu kết quả (rơi về `TEST_DATABASE_URL` rồi `DATABASE_URL`) | không đặt |
+| `TEST_DATABASE_URL` | Test backend và `verify-ui-round6.js`: DB phải có tên kết thúc `_test` | `postgresql://csms:csms_test_only@localhost:5433/csms_test` |
+| `TEST_USER_EMAIL` | `test-ocpp-offline-reconnect-live.js`: tài khoản đăng nhập thử | **bắt buộc** |
+| `TEST_USER_PASSWORD` | `test-ocpp-offline-reconnect-live.js`: mật khẩu tài khoản thử (không ghi vào repo) | **bắt buộc** |
+| `CHARGE_POINT_CODE` | `test-ocpp-offline-reconnect-live.js`: mã trụ thử | **bắt buộc** |
+| `CHK_ADMIN_DATABASE_URL` | `verify-round6-live.js`, `verify-db-fault-round6.js`: kết nối quản trị để tạo/xoá DB tạm | DB `postgres` cục bộ (cổng 5433) |
+| `CHK_DB_NAME` | `verify-round6-live.js`, `verify-db-fault-round6.js`: tên DB tạm | `csms_r6live_chk` / `csms_r6fault_chk` |
+| `CSMS_BACKEND_DIR` | `verify-db-down-round6.js`, `verify-db-fault-round6.js`: thư mục backend | `backend/` của repo |
+| `CHROME_PATH` | `verify-ui-round6.js`: đường dẫn trình duyệt Chrome | `/usr/bin/google-chrome` |
+| `PW_CORE` | `verify-ui-round6.js`: module `playwright-core` cần nạp | `playwright-core` |
+| `UI_OUT` | `verify-ui-round6.js`: thư mục ghi ảnh/kết quả | `docs/testing/ui-round6` |
+| `UI_TARGETS` | `verify-ui-round6.js`: danh sách trang cần chụp, phân tách bằng dấu phẩy | rỗng |
+| `VERIFY_REPORT` | `verify-round6-live.js`: đường dẫn tệp báo cáo Markdown (không đặt thì không ghi) | không đặt |
+
 ---
 
 ## 2. Dùng thử hệ thống

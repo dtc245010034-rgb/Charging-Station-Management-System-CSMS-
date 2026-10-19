@@ -47,3 +47,22 @@ describe('S8 / K12: mọi biến môi trường backend đọc đều có tài l
     assert.deepStrictEqual(missing.sort(), []);
   });
 });
+
+describe('S8 / K12: biến môi trường của công cụ trong tools/ cũng có tài liệu', () => {
+  const toolsDir = path.resolve(backend, '../tools');
+  const names = new Set();
+  for (const file of fs.readdirSync(toolsDir).filter((f) => f.endsWith('.js'))) {
+    for (const match of fs.readFileSync(path.join(toolsDir, file), 'utf8').matchAll(/process\.env\.([A-Z][A-Z0-9_]+)/g)) names.add(match[1]);
+  }
+  for (const name of ['PATH', 'DEMO_PASSWORD', 'DEMO_EMAIL_DOMAIN', 'DATABASE_URL', 'ADMIN_EMAIL', 'ADMIN_PASSWORD', 'JWT_SECRET', 'APP_ORIGIN']) names.delete(name); // đã nằm ở bảng chính
+  const example = read('.env.example');
+  const readme = fs.readFileSync(path.resolve(backend, '../README.md'), 'utf8');
+
+  it('phát hiện được biến công cụ (kiểm tra bộ quét)', () => {
+    assert.ok(names.has('APP_BASE_URL') && names.has('STAGING_BASE_URL'));
+  });
+  it('mỗi biến có trong .env.example và README', () => {
+    assert.deepStrictEqual([...names].filter((n) => !new RegExp(`^#?\\s*${n}=`, 'm').test(example)).sort(), []);
+    assert.deepStrictEqual([...names].filter((n) => !new RegExp(`^\\|\\s*\`${n}\`\\s*\\|`, 'm').test(readme)).sort(), []);
+  });
+});
