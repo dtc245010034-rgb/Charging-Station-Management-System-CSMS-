@@ -31,7 +31,7 @@ describe('GYM-14 seed-demo', () => {
     assert.strictEqual(roles.rowCount, 7); // C2: thêm tài khoản admin demo cho demo-smoke
     assert.deepStrictEqual(roles.rows.find((x) => x.email.startsWith('multi@')).roles, ['OPERATOR', 'STATION_OWNER']);
     const counts = (await query('SELECT (SELECT count(*)::int FROM stations) s, (SELECT count(*)::int FROM charge_points) c, (SELECT count(*)::int FROM connectors) k')).rows[0];
-    assert.deepStrictEqual(counts, { s: 6, c: 12, k: 24 });
+    assert.deepStrictEqual(counts, { s: 7, c: 13, k: 25 }); // C2/D: thêm trạm ESP32 (1 trụ, 1 đầu nối)
     const hash = (await query("SELECT password_hash FROM users WHERE email LIKE 'owner@%'")).rows[0].password_hash;
     assert.ok(hash.startsWith('$argon2id$'));
   });
@@ -46,6 +46,6 @@ describe('GYM-14 seed-demo', () => {
   });
 
   it('mã trụ demo dùng tiền tố DEMO- để tách khỏi dữ liệu thật', async () => {
-    assert.strictEqual((await query("SELECT count(*)::int n FROM charge_points WHERE code NOT LIKE 'DEMO-%'")).rows[0].n, 0);
+    assert.strictEqual((await query("SELECT count(*)::int n FROM charge_points WHERE code NOT LIKE '%DEMO-%'")).rows[0].n, 0);
   });
 });

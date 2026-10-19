@@ -59,3 +59,4 @@
   * Chủ trạm: `owner@demo.csms.local` (và `owner2@demo.csms.local`)
   * Tài xế: `driver@demo.csms.local`
   * Mật khẩu: `$DEMO_PASSWORD`
+  * Nếu demo kèm trụ vật lý ESP32: xem [`THONG-SO-NOI-TRU-VAT-LY.md`](THONG-SO-NOI-TRU-VAT-LY.md).

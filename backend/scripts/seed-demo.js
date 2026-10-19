@@ -21,6 +21,10 @@ if (!input.success) {
 }
 const { DEMO_PASSWORD, DEMO_EMAIL_DOMAIN, DEMO_STATUSES } = input.data;
 
+// Mã trụ vật lý ESP32 và thẻ RFID dùng khi nối thiết bị thật (xem docs/demo/THONG-SO-NOI-TRU-VAT-LY.md).
+const ESP32_CHARGE_POINT_CODE = 'ESP32-DEMO-01';
+const ESP32_ID_TAG = 'TAG-ESP32-01';
+
 // [owner, tên, địa chỉ, vĩ độ, kinh độ, trạng thái trạm, {powerLimitW, noShowFeeDong, priceDong}]
 // priceDong: giá điện đồng/kWh của biểu giá nền (3.850 đ/kWh ở trạm đầu tiên, để so với gói tháng 3.500 đ/kWh).
 const STATIONS = [
@@ -30,6 +34,11 @@ const STATIONS = [
   ['owner', 'Trạm Long Biên', '8 Nguyễn Văn Cừ, Long Biên, Hà Nội', 21.0453, 105.8748, 'MAINTENANCE', { priceDong: 3850 }],
   ['owner2', 'Trạm ICTU Thái Nguyên', 'Đại học CNTT&TT, Quyết Thắng, Thái Nguyên', 21.5847, 105.8069, 'ACTIVE', { noShowFeeDong: 10000, priceDong: 3700 }],
   ['owner2', 'Trạm Sông Công', 'Quốc lộ 3, Sông Công, Thái Nguyên', 21.4737, 105.8404, 'INACTIVE', { priceDong: 3700 }],
+  // Trạm cho trụ vật lý ESP32 (mục D): 1 trụ, 1 đầu nối đã khai báo; trạng thái UNKNOWN cho tới khi thiết bị BootNotification.
+  ['owner', 'Trạm Demo ESP32', 'Phòng thí nghiệm ICTU, Thái Nguyên', 21.585, 105.8072, 'ACTIVE', {
+    priceDong: 3850,
+    chargePoints: [{ code: ESP32_CHARGE_POINT_CODE, vendor: 'Espressif', model: 'ESP32-DEMO', powerKw: 7.4, connectors: 1 }],
+  }],
 ];
 
 // Gói thuê bao demo theo đáp án chặng 9: 300.000 đ/30 ngày, đồng giá 3.500 đ/kWh cả ngày.
@@ -78,16 +87,18 @@ async function seedStations(client, ownerIds) {
     }
     stationConfigs.push({ stationId: station.id, ownerKey: owner, ...config });
     const serial = String(position + 1).padStart(2, '0');
-    for (let n = 1; n <= 2; n += 1) {
-      const code = `DEMO-ST${serial}-CP${n}`;
-      if ((await client.query('SELECT 1 FROM charge_points WHERE code = $1', [code])).rowCount) continue;
-      const state = DEMO_STATUSES === '1' ? CYCLE[index % CYCLE.length] : 'UNKNOWN';
-      index += 1;
+    const chargePoints = config.chargePoints ?? [1, 2].map((n) => ({
+      code: `DEMO-ST${serial}-CP${n}`, vendor: 'DemoVendor', model: n === 1 ? 'AC-22' : 'DC-60', powerKw: n === 1 ? 22 : 60, connectors: 2, cycleStatus: true,
+    }));
+    for (const spec of chargePoints) {
+      if ((await client.query('SELECT 1 FROM charge_points WHERE code = $1', [spec.code])).rowCount) continue;
+      let state = 'UNKNOWN';
+      if (spec.cycleStatus && DEMO_STATUSES === '1') { state = CYCLE[index % CYCLE.length]; index += 1; }
       const cp = await client.query(
         'INSERT INTO charge_points (station_id, code, vendor, model, status, power_kw) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-        [station.id, code, 'DemoVendor', n === 1 ? 'AC-22' : 'DC-60', state, n === 1 ? 22 : 60],
+        [station.id, spec.code, spec.vendor, spec.model, state, spec.powerKw],
       );
-      for (let c = 1; c <= 2; c += 1) {
+      for (let c = 1; c <= spec.connectors; c += 1) {
         await client.query('INSERT INTO connectors (charge_point_id, connector_no, status) VALUES ($1, $2, $3)', [cp.rows[0].id, c, state]);
       }
       points += 1;
@@ -177,6 +188,7 @@ async function seedIdTags(client, ids) {
   const driverId = ids.driver;
   const demoTags = [
     { tag: 'TAG-DEMO-01', user_id: driverId, status: 'ACTIVE', expires_at: null },
+    { tag: ESP32_ID_TAG, user_id: driverId, status: 'ACTIVE', expires_at: null },
     { tag: 'TAG-BLOCKED-01', user_id: driverId, status: 'BLOCKED', expires_at: null },
     { tag: 'TAG-EXPIRED-01', user_id: driverId, status: 'ACTIVE', expires_at: '2025-01-01T00:00:00Z' },
   ];

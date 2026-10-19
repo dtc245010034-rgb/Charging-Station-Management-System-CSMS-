@@ -32,7 +32,7 @@ describe('C2: một bộ seed demo duy nhất', () => {
     assert.strictEqual(second.status, 0, second.stderr);
     assert.match(second.stdout, /0 biểu giá, 0 khung công suất, 0 lần nạp ví, 0 gói thuê bao, 0 tỷ lệ chia sẻ doanh thu/);
     assert.deepStrictEqual(await snapshot(), before);
-    assert.deepStrictEqual(before, { users: ACCOUNTS.length, tariffs: 6, periods: 6, plans: 1, plan_periods: 1, ledger: 1, windows: 1, shares: 2 });
+    assert.deepStrictEqual(before, { users: ACCOUNTS.length, tariffs: 7, periods: 7, plans: 1, plan_periods: 1, ledger: 1, windows: 1, shares: 2 });
   });
 
   it('có đủ tài khoản trong bảng dùng chung, kể cả ADMIN, đăng nhập bằng DEMO_PASSWORD băm argon2id', async () => {
