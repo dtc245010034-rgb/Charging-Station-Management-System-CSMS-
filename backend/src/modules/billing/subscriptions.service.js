@@ -155,6 +155,10 @@ async function buySubscription(driver, { planId }, idempotencyKey, { ip = null, 
       `subscription:${driver.id}:${idempotencyKey}`,
     ]);
 
+    // Tuần tự hoá mọi lần mua của cùng tài xế: hai INSERT đồng thời vào ràng buộc EXCLUDE (subscriptions_no_overlap)
+    // chờ nhau và gây deadlock 40P01. Thứ tự khoá cố định: khoá khoá-lặp -> khoá tài xế -> dòng ví (trong postEntry).
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`subscription-driver:${driver.id}`]);
+
     const prior = await repo.findSubscriptionByIdempotencyKey(client, driver.id, idempotencyKey);
     if (prior) {
       return { subscription: prior, replayed: true };
@@ -216,7 +220,7 @@ async function buySubscription(driver, { planId }, idempotencyKey, { ip = null, 
         endsAt,
       },
       ip,
-      null,
+      client,
       'COMPLETED'
     );
 
