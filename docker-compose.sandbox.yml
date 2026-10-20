@@ -1,0 +1,8 @@
+# Bật cổng thanh toán giả lập (sandbox) cho app. KHÔNG tự nạp: `python run.py --sandbox` thêm file này vào
+# (-f docker-compose.yml -f docker-compose.sandbox.yml) và ghi PAYMENT_WEBHOOK_SECRET vào .env.
+# Tắt: `python run.py --no-sandbox`. Chỉ dùng cho máy cá nhân/demo, không dùng cho môi trường thật.
+services:
+  app:
+    environment:
+      SANDBOX_GATEWAY: "1"
+      PAYMENT_WEBHOOK_SECRET: "${PAYMENT_WEBHOOK_SECRET:?đặt PAYMENT_WEBHOOK_SECRET (>=32 ký tự) trong .env hoặc chạy: python run.py --sandbox}"

@@ -1,4 +1,5 @@
 import { h } from '../../app/dom.js';
+import { routeFor } from '../../app/workspace.js';
 import { formatNumber } from '../../app/format.js';
 import * as csms from '../../services/csms.js';
 import { statusBadge } from '../../components/badge.js';
@@ -26,7 +27,7 @@ const STATE_BADGES = {
 export function render(ctx) {
   let disposed = false;
   const canWrite = ctx.can('tariffs:write');
-  const stationId = ctx.id;
+  const stationId = ctx.params.id;
 
   const root = h('div', { class: 'page-stack', style: 'max-width:1000px;margin:0 auto;padding-bottom:40px' });
   ctx.root.replaceChildren(root);
@@ -42,6 +43,7 @@ export function render(ctx) {
         iconName: 'station',
         title: 'Chưa chọn trạm sạc',
         text: 'Vui lòng mở một trạm từ danh sách trạm để xem hoặc thiết lập biểu giá.',
+        action: h('a', { class: 'btn', href: routeFor(ctx.workspace, 'stations') }, icon('station'), 'Mở danh sách trạm'),
       })
     );
     return () => { disposed = true; };
